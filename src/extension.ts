@@ -71,6 +71,16 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
         return undefined;
     }
 
+    async function runShell(command: string, args: string[]) {
+        await vscode.tasks.executeTask(new vscode.Task(
+            { type: 'shell' },
+            vscode.TaskScope.Global,
+            '初始化Y3项目',
+            'y3-helper',
+            new vscode.ShellExecution(command, args),
+        ));
+    }
+
     let disposable = vscode.commands.registerCommand('y3-helper.initProject', async () => {
         let mapFolder = await searchProjectPath();
         if (!mapFolder) {
@@ -78,6 +88,39 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
             return;
         };
         vscode.window.showInformationMessage(`地图路径：${mapFolder.fsPath}`);
+
+        // 先检查一下是不是已经有 `script` 目录了
+        let scriptFolder = vscode.Uri.joinPath(mapFolder, 'script');
+        try {
+            let state = await vscode.workspace.fs.stat(scriptFolder);
+            if (state.type === vscode.FileType.Directory) {
+                // 直接删除这个目录
+                try {
+                    await vscode.workspace.fs.delete(scriptFolder, {
+                        recursive: true,
+                        useTrash: true,
+                    });
+                    vscode.window.showInformationMessage(`已将原有的 ${scriptFolder.fsPath} 目录移至回收站`);
+                } catch (error) {
+                    vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                    return;
+                }
+                return;
+            } else {
+                vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                return;
+            };
+        } catch (error) {
+            // ignore
+        }
+
+        // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
+        await runShell("git", [
+            "clone",
+            "https://github.com/y3-editor/y3-lualib.git",
+            scriptFolder.fsPath
+        ]);
+        
     });
 
     context.subscriptions.push(disposable);
