@@ -6,11 +6,11 @@ import winreg from 'winreg';
 let OutputChannel: vscode.OutputChannel;
 let Context: vscode.ExtensionContext;
 
-async function runShell(command: string, args: string[], cwd?: vscode.Uri) {
+async function runShell(title: string, command: string, args: string[], cwd?: vscode.Uri) {
     let task = await vscode.tasks.executeTask(new vscode.Task(
         { type: 'shell' },
         vscode.TaskScope.Global,
-        '初始化Y3项目',
+        title,
         'y3-helper',
         new vscode.ShellExecution(command, args, cwd ? {
             cwd: cwd.fsPath,
@@ -57,7 +57,7 @@ async function getY3Version(): Promise<Y3Version> {
     if (!editorUri) {
         return 'unknown';
     };
-    let folder = path.normalize(path.join(editorUri.fsPath, '../..'));
+    let folder = path.join(editorUri.fsPath, '../..');
     let folderName = path.basename(folder);
     if (folderName === '1.0') {
         return '1.0';
@@ -65,7 +65,7 @@ async function getY3Version(): Promise<Y3Version> {
     return '2.0';
 }
 
-function registerCommandOfInitProject(context: vscode.ExtensionContext) {
+function registerCommandOfInitProject() {
     async function searchMapPathInProject(folder: vscode.Uri, depth: number): Promise<vscode.Uri | undefined> {
         // 递归搜索目录下的 `header.map` 文件所在目录
         try {
@@ -174,7 +174,7 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
 
             // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
             let y3Uri = vscode.Uri.joinPath(scriptFolder, 'y3');
-            await runShell("git", [
+            await runShell("初始化Y3项目", "git", [
                 "clone",
                 "https://github.com/y3-editor/y3-lualib.git",
                 y3Uri.fsPath,
@@ -183,7 +183,7 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
             // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
             let y3Version = await getY3Version();
             if (y3Version === '1.0') {
-                await runShell("git", [
+                await runShell("初始化Y3项目", "git", [
                     "checkout",
                     "-b",
                     "1.0",
@@ -202,11 +202,90 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
             }
 
             // 打开项目
+            Context.globalState.update("NewProjectPath", scriptFolder.fsPath);
             await vscode.commands.executeCommand('vscode.openFolder', scriptFolder);
         });
     });
 
-    context.subscriptions.push(disposable);
+    Context.subscriptions.push(disposable);
+}
+
+async function launchGame() {
+    let scriptFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!scriptFolder) {
+        vscode.window.showErrorMessage("没有打开工作目录！");
+        return;
+    }
+    let editorUri = await searchY3Editor();
+    if (!editorUri) {
+        vscode.window.showErrorMessage("未找到编辑器！");
+        return;
+    }
+    let mapPath = path.join(scriptFolder.uri.fsPath, '..');
+    await runShell(
+        "启动游戏",
+        editorUri.fsPath,
+        [
+            "-dx11",
+            "-console",
+            "-start=Python",
+            "-python-args=type@editor_game,subtype@editor_game,release@true,editor_map_path@" + mapPath,
+            "-plugin-config=Plugins-PyQt",
+            "-python-debug=1",
+        ],
+    );
+}
+
+function registerTask() {
+    let disposable = vscode.tasks.registerTaskProvider("y3-helper", {
+        provideTasks: () => {
+            let task = new vscode.Task(
+                { type: "y3-helper", task: "launch" },
+                vscode.TaskScope.Workspace,
+                "运行地图",
+                "Launch Game",
+                new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
+                    return {
+                        onDidWrite: () => { return new vscode.Disposable(() => {}); },
+                        close: () => {},
+                        open: async () => {
+                            await launchGame();
+                        },
+                    };
+                }),
+                "",
+            );
+            return [task];
+        },
+        resolveTask: (task) => {
+            return task;
+        },
+    });
+    Context.subscriptions.push(disposable);
+}
+
+function checkNewProject() {
+    let newProjectPath = Context.globalState.get("NewProjectPath");
+    if (!newProjectPath) {
+        return;
+    };
+    if (!vscode.workspace.workspaceFolders) {
+        return;
+    };
+    let workspaceUri = vscode.workspace.workspaceFolders[0].uri;
+    if (!workspaceUri) {
+        return ;
+    };
+    if (Context.globalState.get("NewProjectPath") === workspaceUri.fsPath) {
+        Context.globalState.update("NewProjectPath", undefined);
+        new Promise(async () => {
+            await vscode.commands.executeCommand(
+                'vscode.open',
+                vscode.Uri.joinPath(workspaceUri, 'main.lua'),
+            );
+            vscode.window.showInformationMessage("欢迎使用Y3编辑器！");
+        });
+    };
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -216,7 +295,9 @@ export function activate(context: vscode.ExtensionContext) {
     OutputChannel.clear();
     context.subscriptions.push(OutputChannel);
 
-    registerCommandOfInitProject(context);
+    registerCommandOfInitProject();
+    registerTask();
+    checkNewProject();
 }
 
 export function deactivate() {}

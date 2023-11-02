@@ -9,7 +9,10 @@
     "categories": [
         "Other"
     ],
-    "activationEvents": [],
+    "activationEvents": [
+        "workspaceContains:y3/开发计划.md",
+        "onTaskType:y3-helper"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
@@ -18,7 +21,35 @@
                 "title": "初始化Y3开发环境",
                 "icon": "image/logo.png"
             }
-        ]
+        ],
+        "taskDefinitions": [
+            {
+                "type": "y3-helper",
+                "required": [
+                    "task"
+                ],
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "enum": [
+                            "launch"
+                        ]
+                    }
+                }
+            }
+        ],
+        "configuration": {
+            "title": "Y3-Helper",
+            "type": "object",
+            "properties": {
+                "Y3-Helper.EditorPath": {
+                    "type": "string",
+                    "default": "",
+                    "ignoreSync": true,
+                    "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。"
+                }
+            }
+        }
     },
     "icon": "images/logo.png",
     "scripts": {
