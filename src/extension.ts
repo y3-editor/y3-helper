@@ -1,4 +1,69 @@
+import path from 'path';
+import * as os from 'os';
 import * as vscode from 'vscode';
+import winreg from 'winreg';
+
+let OutputChannel: vscode.OutputChannel;
+let Context: vscode.ExtensionContext;
+
+async function runShell(command: string, args: string[], cwd?: vscode.Uri) {
+    let task = await vscode.tasks.executeTask(new vscode.Task(
+        { type: 'shell' },
+        vscode.TaskScope.Global,
+        '初始化Y3项目',
+        'y3-helper',
+        new vscode.ShellExecution(command, args, cwd ? {
+            cwd: cwd.fsPath,
+        } : undefined),
+    ));
+    await new Promise<void>((resolve) => {
+        let disposable = vscode.tasks.onDidEndTask((taskEndEvent) => {
+            if (task === taskEndEvent.execution) {
+                disposable.dispose();
+                resolve();
+            };
+        });
+    });
+}
+
+async function searchY3Editor(): Promise<vscode.Uri | undefined> {
+    let platform = os.platform();
+    if (platform !== 'win32') {
+        return undefined;
+    };
+    let regKey = new winreg({
+        hive: winreg.HKLM,
+        key: "\\SOFTWARE\\Classes\\y3editor",
+    });
+    let path = await new Promise<string|undefined>((resolve, reject) => {
+        regKey.get(winreg.DEFAULT_VALUE, (err, item) => {
+            if (err) {
+                resolve(undefined);
+            }
+            resolve(item.value);
+        });
+    });
+    if (!path) {
+        return undefined;
+    }
+    OutputChannel.appendLine(`编辑器路径：${path}`);
+    return vscode.Uri.file(path);
+}
+
+type Y3Version = '1.0' | '2.0' | 'unknown';
+
+async function getY3Version(): Promise<Y3Version> {
+    let editorUri = await searchY3Editor();
+    if (!editorUri) {
+        return 'unknown';
+    };
+    let folder = path.normalize(path.join(editorUri.fsPath, '../..'));
+    let folderName = path.basename(folder);
+    if (folderName === '1.0') {
+        return '1.0';
+    };
+    return '2.0';
+}
 
 function registerCommandOfInitProject(context: vscode.ExtensionContext) {
     async function searchMapPathInProject(folder: vscode.Uri, depth: number): Promise<vscode.Uri | undefined> {
@@ -71,62 +136,84 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
         return undefined;
     }
 
-    async function runShell(command: string, args: string[]) {
-        await vscode.tasks.executeTask(new vscode.Task(
-            { type: 'shell' },
-            vscode.TaskScope.Global,
-            '初始化Y3项目',
-            'y3-helper',
-            new vscode.ShellExecution(command, args),
-        ));
-    }
-
     let disposable = vscode.commands.registerCommand('y3-helper.initProject', async () => {
-        let mapFolder = await searchProjectPath();
-        if (!mapFolder) {
-            vscode.window.showErrorMessage('未找到地图路径，请先用编辑器创建地图！');
-            return;
-        };
-        vscode.window.showInformationMessage(`地图路径：${mapFolder.fsPath}`);
-
-        // 先检查一下是不是已经有 `script` 目录了
-        let scriptFolder = vscode.Uri.joinPath(mapFolder, 'script');
-        try {
-            let state = await vscode.workspace.fs.stat(scriptFolder);
-            if (state.type === vscode.FileType.Directory) {
-                // 直接删除这个目录
-                try {
-                    await vscode.workspace.fs.delete(scriptFolder, {
-                        recursive: true,
-                        useTrash: true,
-                    });
-                    vscode.window.showInformationMessage(`已将原有的 ${scriptFolder.fsPath} 目录移至回收站`);
-                } catch (error) {
-                    vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
-                    return;
-                }
-                return;
-            } else {
-                vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: '正在初始化Y3项目...',
+        }, async (progress, token) => {
+            let mapFolder = await searchProjectPath();
+            if (!mapFolder) {
+                vscode.window.showErrorMessage('未找到地图路径，请先用编辑器创建地图！');
                 return;
             };
-        } catch (error) {
-            // ignore
-        }
+            OutputChannel.append(`地图路径：${mapFolder.fsPath}`);
+    
+            // 先检查一下是不是已经有 `script` 目录了
+            let scriptFolder = vscode.Uri.joinPath(mapFolder, 'script');
+            try {
+                let state = await vscode.workspace.fs.stat(scriptFolder);
+                if (state.type === vscode.FileType.Directory) {
+                    // 直接删除这个目录
+                    try {
+                        await vscode.workspace.fs.delete(scriptFolder, {
+                            recursive: true,
+                            useTrash: true,
+                        });
+                        OutputChannel.appendLine(`已将原有的 ${scriptFolder.fsPath} 目录移至回收站`);
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                        return;
+                    }
+                } else {
+                    vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                    return;
+                };
+            } catch (error) {
+                // ignore
+            }
+    
+            // 创建初始文件
+            await vscode.workspace.fs.createDirectory(scriptFolder);
+            await vscode.workspace.fs.writeFile(
+                vscode.Uri.joinPath(scriptFolder,'main.lua'),
+                new TextEncoder().encode('-- 游戏启动后会自动运行此文件'),
+            );
+    
+            // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
+            let y3Uri = vscode.Uri.joinPath(scriptFolder, 'y3');
+            await runShell("git", [
+                "clone",
+                "https://github.com/y3-editor/y3-lualib.git",
+                y3Uri.fsPath,
+            ]);
+    
+            // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
+            let y3Version = await getY3Version();
+            if (y3Version === '1.0') {
+                await runShell("git", [
+                    "checkout",
+                    "-b",
+                    "1.0",
+                    "origin/1.0"
+                ], y3Uri);
+            }
 
-        // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
-        await runShell("git", [
-            "clone",
-            "https://github.com/y3-editor/y3-lualib.git",
-            scriptFolder.fsPath
-        ]);
-        
+            // 初始化配置
+            await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptFolder, 'log'));
+            await vscode.workspace.fs.copy(vscode.Uri.joinPath(y3Uri, '演示/项目配置'), vscode.Uri.joinPath(scriptFolder, '.vscode'));
+        });
     });
 
     context.subscriptions.push(disposable);
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    Context = context;
+
+    OutputChannel = vscode.window.createOutputChannel("Y3 - Helper", { log: true });
+    OutputChannel.clear();
+    context.subscriptions.push(OutputChannel);
+
     registerCommandOfInitProject(context);
 }
 
