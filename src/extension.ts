@@ -171,14 +171,7 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
             } catch (error) {
                 // ignore
             }
-    
-            // 创建初始文件
-            await vscode.workspace.fs.createDirectory(scriptFolder);
-            await vscode.workspace.fs.writeFile(
-                vscode.Uri.joinPath(scriptFolder,'main.lua'),
-                new TextEncoder().encode('-- 游戏启动后会自动运行此文件'),
-            );
-    
+
             // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
             let y3Uri = vscode.Uri.joinPath(scriptFolder, 'y3');
             await runShell("git", [
@@ -200,7 +193,16 @@ function registerCommandOfInitProject(context: vscode.ExtensionContext) {
 
             // 初始化配置
             await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptFolder, 'log'));
-            await vscode.workspace.fs.copy(vscode.Uri.joinPath(y3Uri, '演示/项目配置'), vscode.Uri.joinPath(scriptFolder, '.vscode'));
+            let copySource = vscode.Uri.joinPath(y3Uri, '演示/项目配置');
+            for await (const entry of await vscode.workspace.fs.readDirectory(copySource)) {
+                await vscode.workspace.fs.copy(
+                    vscode.Uri.joinPath(copySource, entry[0]),
+                    vscode.Uri.joinPath(scriptFolder, entry[0]),
+                );
+            }
+
+            // 打开项目
+            await vscode.commands.executeCommand('vscode.openFolder', scriptFolder);
         });
     });
 
