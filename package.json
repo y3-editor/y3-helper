@@ -2,7 +2,11 @@
     "name": "y3-helper",
     "displayName": "Y3开发助手",
     "description": "",
+    "publisher": "sumneko",
     "version": "0.0.1",
+    "repository": {
+        "url": "https://github.com/y3-editor/y3-helper"
+    },
     "engines": {
         "vscode": "^1.83.0"
     },
@@ -51,7 +55,7 @@
             }
         }
     },
-    "icon": "images/logo.png",
+    "icon": "image/logo.png",
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
