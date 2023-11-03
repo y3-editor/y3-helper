@@ -2,29 +2,11 @@ import path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import winreg from 'winreg';
+import { runShell } from './runShell';
+import { LuaDocMaker } from './makeLuaDoc';
 
 let OutputChannel: vscode.OutputChannel;
 let Context: vscode.ExtensionContext;
-
-async function runShell(title: string, command: string, args: string[], cwd?: vscode.Uri) {
-    let task = await vscode.tasks.executeTask(new vscode.Task(
-        { type: 'shell' },
-        vscode.TaskScope.Global,
-        title,
-        'y3-helper',
-        new vscode.ShellExecution(command, args, cwd ? {
-            cwd: cwd.fsPath,
-        } : undefined),
-    ));
-    await new Promise<void>((resolve) => {
-        let disposable = vscode.tasks.onDidEndTask((taskEndEvent) => {
-            if (task === taskEndEvent.execution) {
-                disposable.dispose();
-                resolve();
-            };
-        });
-    });
-}
 
 async function searchY3Editor(): Promise<vscode.Uri | undefined> {
     let platform = os.platform();
@@ -288,6 +270,18 @@ function checkNewProject() {
     };
 }
 
+function registerCommandOfMakeLuaDoc() {
+    vscode.commands.registerCommand('y3-helper.makeLuaDoc', async () => {
+        await vscode.window.withProgress({
+            title: '正在生成文档...',
+            location: vscode.ProgressLocation.Window,
+        }, async (progress) => {
+            let luaDocMaker = new LuaDocMaker(Context);
+            await luaDocMaker.make();
+        });
+    });
+}
+
 export function activate(context: vscode.ExtensionContext) {
     Context = context;
 
@@ -296,6 +290,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(OutputChannel);
 
     registerCommandOfInitProject();
+    registerCommandOfMakeLuaDoc();
     registerTask();
     checkNewProject();
 }
