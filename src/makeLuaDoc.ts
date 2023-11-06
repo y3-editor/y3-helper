@@ -5,6 +5,7 @@ type Doc = DocClass[];
 type DocClass = {
     name: string,
     desc: string,
+    type: string,
     defines?: DocDefine[],
     fields?: DocField[],
 };
@@ -87,9 +88,13 @@ export class LuaDocMaker {
             if (!this.isValidName(docClass.name)) {
                 continue;
             }
+            if (docClass.type !== 'type') {
+                continue;
+            }
             let filtedDocClass: DocClass = {
                 name: docClass.name,
                 desc: docClass.desc,
+                type: docClass.type,
                 defines: [],
                 fields: [],
             };
@@ -123,7 +128,7 @@ export class LuaDocMaker {
         for (let index = 0; index < filtedDoc.length; index++) {
             const docClass = filtedDoc[index];
             markdown.appendMarkdown(`# ${docClass.name}\n`);
-            if (docClass.desc) {
+            if (docClass.desc && docClass.desc !== 'unknown') {
                 markdown.appendMarkdown(`${docClass.desc}`);
             }
             if (docClass.defines) {
@@ -170,7 +175,7 @@ export class LuaDocMaker {
         ) {
             return false;
         }
-        if (/[A-Z]$/.test(name)) {
+        if (/[A-Z0-9]$/.test(name)) {
             return false;
         }
         return true;
