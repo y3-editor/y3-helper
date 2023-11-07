@@ -22,12 +22,12 @@
         "commands": [
             {
                 "command": "y3-helper.initProject",
-                "title": "初始化Y3开发环境",
+                "title": "Y3:初始化开发环境",
                 "icon": "image/logo.png"
             },
             {
                 "command": "y3-helper.makeLuaDoc",
-                "title": "生成Lua文档"
+                "title": "Y3:生成接口文档"
             }
         ],
         "taskDefinitions": [
