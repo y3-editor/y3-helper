@@ -25,7 +25,7 @@ type DocField = {
 };
 
 export class LuaDocMaker {
-    private _context: vscode.ExtensionContext;
+    private context: vscode.ExtensionContext;
 
     private exeUri?: vscode.Uri;
     private y3Uri?: vscode.Uri;
@@ -35,7 +35,7 @@ export class LuaDocMaker {
     }
 
     constructor(context: vscode.ExtensionContext) {
-        this._context = context;
+        this.context = context;
         let sumneko = vscode.extensions.getExtension('sumneko.lua');
         if (!sumneko) {
             vscode.window.showErrorMessage('请先安装 sumneko.lua 扩展！');
@@ -52,13 +52,13 @@ export class LuaDocMaker {
         this.y3Uri = y3Uri;
     }
 
-    public async make(): Promise<string | undefined> {
+    public async make() {
         if (!this.valid) {
             return undefined;
         }
 
-        await vscode.workspace.fs.createDirectory(this._context.globalStorageUri);
-        let logUri = vscode.Uri.joinPath(this._context.globalStorageUri, 'doc');
+        await vscode.workspace.fs.createDirectory(this.context.globalStorageUri);
+        let logUri = vscode.Uri.joinPath(this.context.globalStorageUri, 'doc');
 
         await runShell(
             "导出文档",
