@@ -130,32 +130,34 @@ function registerCommandOfInitProject() {
             };
             OutputChannel.append(`地图路径：${mapFolder.fsPath}`);
     
-            // 先检查一下是不是已经有 `script` 目录了
+            // 先检查一下是不是已经有 `script/y3` 目录了
             let scriptFolder = vscode.Uri.joinPath(mapFolder, 'script');
+            let y3Uri = vscode.Uri.joinPath(scriptFolder, 'y3');
             try {
-                let state = await vscode.workspace.fs.stat(scriptFolder);
+                let state = await vscode.workspace.fs.stat(y3Uri);
                 if (state.type === vscode.FileType.Directory) {
                     // 直接删除这个目录
                     try {
-                        await vscode.workspace.fs.delete(scriptFolder, {
+                        await vscode.workspace.fs.delete(y3Uri, {
                             recursive: true,
                             useTrash: true,
                         });
-                        OutputChannel.appendLine(`已将原有的 ${scriptFolder.fsPath} 目录移至回收站`);
+                        OutputChannel.appendLine(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
                     } catch (error) {
-                        vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                        vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
                         return;
                     }
                 } else {
-                    vscode.window.showErrorMessage(`${scriptFolder.fsPath} 已被占用，请手动删除它！`);
+                    vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
                     return;
                 };
             } catch (error) {
                 // ignore
             }
 
+            vscode.workspace.fs.createDirectory(y3Uri);
+
             // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
-            let y3Uri = vscode.Uri.joinPath(scriptFolder, 'y3');
             await runShell("初始化Y3项目", "git", [
                 "clone",
                 "https://github.com/y3-editor/y3-lualib.git",
