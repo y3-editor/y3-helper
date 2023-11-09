@@ -1,21 +1,27 @@
 import * as vscode from 'vscode';
+import { Env } from './env';
+import * as path from 'path';
+import { runShell } from './runShell';
 
 export class GameLauncher {
-    constructor() {
+    private env: Env;
+
+    constructor(env: Env) {
+        this.env = env;
     }
 
     public async launch() {
-        let scriptFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!scriptFolder) {
+        let scriptUri = this.env.scriptUri;
+        let editorUri = this.env.editorUri;
+        if (!scriptUri) {
             vscode.window.showErrorMessage("没有打开工作目录！");
             return;
         }
-        let editorUri = await searchY3Editor();
         if (!editorUri) {
             vscode.window.showErrorMessage("未找到编辑器！");
             return;
         }
-        let mapPath = path.join(scriptFolder.uri.fsPath, '..');
+        let mapPath = path.join(scriptUri.fsPath, '..');
         await runShell(
             "启动游戏",
             editorUri.fsPath,

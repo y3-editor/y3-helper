@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { Env } from './env';
+import { GameLauncher } from './launchGame';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -101,6 +102,18 @@ class Helper {
         });
     }
 
+    private registerCommandOfLaunchGame() {
+        vscode.commands.registerCommand('y3-helper.launchGame', async () => {
+            await vscode.window.withProgress({
+                title: '正在启动游戏...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let gameLauncher = new GameLauncher(this.env);
+                await gameLauncher.launch();
+            });
+        });
+    }
+
     private regsiterTaskOfLaunchGame() {
         vscode.tasks.registerTaskProvider("y3-helper", {
             provideTasks: () => {
@@ -114,7 +127,7 @@ class Helper {
                             onDidWrite: () => { return new vscode.Disposable(() => {}); },
                             close: () => {},
                             open: async () => {
-                                await launchGame();
+                                //await launchGame();
                             },
                         };
                     }),
@@ -155,7 +168,7 @@ class Helper {
     public start() {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
-        this.regsiterCommandOfLaunchGame();
+        this.registerCommandOfLaunchGame();
         this.regsiterTaskOfLaunchGame();
 
         this.checkNewProject();
