@@ -171,25 +171,31 @@ export class Env {
     public status: 'not ready' | 'initing' | 'ready' = 'not ready';
     public editorVersion?: EditorVersion;
     public editorUri?: vscode.Uri;
+    public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
+    public projectUri?: vscode.Uri;
 
     private async init() {
         await Promise.allSettled([
-            async () => {
+            (async () => {
                 this.editorUri = await this.searchEditorUri();
                 this.editorVersion = await this.getEditorVersion();
-            },
-            async () => {
-                this.scriptUri = await this.searchProjectPath();
-                if (this.scriptUri) {
+            })(),
+            (async () => {
+                this.mapUri = await this.searchProjectPath();
+                if (this.mapUri) {
+                    this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
+                    this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
                     this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
                 }
-            }
+            })(),
         ]);
 
         this.logger.appendLine(`editorUri: ${this.editorUri?.fsPath}`);
         this.logger.appendLine(`editorVersion: ${this.editorVersion}`);
+        this.logger.appendLine(`mapUri: ${this.mapUri}`);
+        this.logger.appendLine(`projectUri: ${this.projectUri}`);
         this.logger.appendLine(`scriptUri: ${this.scriptUri?.fsPath}`);
         this.logger.appendLine(`y3Uri: ${this.y3Uri?.fsPath}`);
     }

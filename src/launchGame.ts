@@ -12,9 +12,9 @@ export class GameLauncher {
 
     public async launch() {
         await this.env.waitReady();
-        let scriptUri = this.env.scriptUri;
+        let projectUri = this.env.projectUri;
         let editorUri = this.env.editorUri;
-        if (!scriptUri) {
+        if (!projectUri) {
             vscode.window.showErrorMessage("没有打开工作目录！");
             return;
         }
@@ -22,17 +22,16 @@ export class GameLauncher {
             vscode.window.showErrorMessage("未找到编辑器！");
             return;
         }
-        let mapPath = path.join(scriptUri.fsPath, '..');
         await runShell(
             "启动游戏",
             editorUri.fsPath,
             [
-                "-dx11",
-                "-console",
-                "-start=Python",
-                "-python-args=type@editor_game,subtype@editor_game,release@true,editor_map_path@" + mapPath,
-                "-plugin-config=Plugins-PyQt",
-                "-python-debug=1",
+                "--dx11",
+                "--console",
+                "--start=Python",
+                "--python-args=type@editor_game,subtype@editor_game,release@true,editor_map_path@" + projectUri.fsPath,
+                "--plugin-config=Plugins-PyQt",
+                "--python-debug=1",
             ],
         );
     }
