@@ -18,7 +18,7 @@ class Helper {
     }
 
     private registerCommandOfInitProject() {
-        let disposable = vscode.commands.registerCommand('y3-helper.initProject', async () => {
+        vscode.commands.registerCommand('y3-helper.initProject', async () => {
             vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: '正在初始化Y3项目...',

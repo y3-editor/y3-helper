@@ -11,6 +11,7 @@ export class GameLauncher {
     }
 
     public async launch() {
+        await this.env.waitReady();
         let scriptUri = this.env.scriptUri;
         let editorUri = this.env.editorUri;
         if (!scriptUri) {

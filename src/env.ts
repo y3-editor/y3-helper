@@ -12,7 +12,7 @@ export class Env {
         this.logger = logger;
     }
 
-    private async searchEditorUri(): Promise<vscode.Uri | undefined> {
+    private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
         let platform = os.platform();
         if (platform !== 'win32') {
             return undefined;
@@ -21,7 +21,7 @@ export class Env {
             hive: winreg.HKLM,
             key: "\\SOFTWARE\\Classes\\y3editor",
         });
-        let path = await new Promise<string|undefined>((resolve, reject) => {
+        let editorPath = await new Promise<string|undefined>((resolve, reject) => {
             regKey.get(winreg.DEFAULT_VALUE, (err, item) => {
                 if (err) {
                     resolve(undefined);
@@ -29,10 +29,58 @@ export class Env {
                 resolve(item.value);
             });
         });
-        if (!path) {
+        if (!editorPath) {
             return undefined;
         }
-        return vscode.Uri.file(path);
+        return vscode.Uri.file(editorPath);
+    }
+
+    private async isValidEditorPath(editorPath: string): Promise<boolean> {
+        if (path.basename(editorPath) !== 'Editor.exe'
+        &&  path.basename(editorPath) !== 'Game_x64h.exe') {
+            return false;
+        }
+        try {
+            let state = await vscode.workspace.fs.stat(vscode.Uri.file(editorPath));
+            if (state.type === vscode.FileType.File) {
+                return true;
+            }
+        } catch (error) {
+        }
+        return false;
+    }
+
+    private async searchEditorUri(): Promise<vscode.Uri | undefined> {
+        // 先看看设置里有没有
+        let editorPath: string|undefined = vscode.workspace.getConfiguration('Y3-Helper').get('EditorPath');
+        if (editorPath && await this.isValidEditorPath(editorPath)) {
+            return vscode.Uri.file(editorPath);
+        }
+
+        // 再看看注册表里有没有
+        let editorUri = await this.searchEditorUriByReg();
+        if (editorUri) {
+            return editorUri;
+        }
+
+        // 如果没有，则询问用户
+        while (true) {
+            let selectedFiles = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                openLabel: '选择编辑器路径',
+                filters: {
+                    '编辑器': ['exe']
+                }
+            });
+            let selectedExe = selectedFiles?.[0];
+            if (!selectedExe) {
+                return undefined;
+            }
+            if (await this.isValidEditorPath(selectedExe.fsPath)) {
+                await vscode.workspace.getConfiguration('Y3-Helper').update('EditorPath', selectedExe.fsPath);
+                return selectedExe;
+            }
+        }
     }
 
     private async getEditorVersion(): Promise<EditorVersion> {
