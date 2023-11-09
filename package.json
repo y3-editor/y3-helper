@@ -28,6 +28,10 @@
             {
                 "command": "y3-helper.makeLuaDoc",
                 "title": "Y3:生成接口文档"
+            },
+            {
+                "command": "y3-helper.launchGame",
+                "title": "Y3:启动游戏"
             }
         ],
         "taskDefinitions": [
