@@ -149,7 +149,7 @@ export class LuaDocMaker {
                     markdown.appendCodeblock(docField.extends.view, 'lua');
                     markdown.appendMarkdown('\n');
                     if (docField.desc) {
-                        markdown.appendCodeblock(`${docField.desc}\n`, 'lua');
+                        markdown.appendMarkdown(`${docField.desc}\n`);
                     }
                 }
             }
