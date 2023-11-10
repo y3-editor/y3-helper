@@ -32,6 +32,10 @@
             {
                 "command": "y3-helper.launchGame",
                 "title": "Y3:启动游戏"
+            },
+            {
+                "command": "y3-helper.launchGameAndAttach",
+                "title": "Y3:启动游戏并附加调试"
             }
         ],
         "taskDefinitions": [

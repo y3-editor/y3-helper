@@ -10,17 +10,17 @@ export class GameLauncher {
         this.env = env;
     }
 
-    public async launch() {
+    public async launch(): Promise<boolean> {
         await this.env.waitReady();
         let projectUri = this.env.projectUri;
         let editorUri = this.env.editorUri;
         if (!projectUri) {
             vscode.window.showErrorMessage("没有打开工作目录！");
-            return;
+            return false;
         }
         if (!editorUri) {
             vscode.window.showErrorMessage("未找到编辑器！");
-            return;
+            return false;
         }
         await runShell(
             "启动游戏",
@@ -34,5 +34,6 @@ export class GameLauncher {
                 "--python-debug=1",
             ],
         );
+        return true;
     }
 }

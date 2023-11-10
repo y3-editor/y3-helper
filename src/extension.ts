@@ -114,30 +114,20 @@ class Helper {
         });
     }
 
-    private regsiterTaskOfLaunchGame() {
-        vscode.tasks.registerTaskProvider("y3-helper", {
-            provideTasks: () => {
-                let task = new vscode.Task(
-                    { type: "y3-helper", task: "launch" },
-                    vscode.TaskScope.Workspace,
-                    "运行地图",
-                    "Launch Game",
-                    new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-                        return {
-                            onDidWrite: () => { return new vscode.Disposable(() => {}); },
-                            close: () => {},
-                            open: async () => {
-                                //await launchGame();
-                            },
-                        };
-                    }),
-                    "",
-                );
-                return [task];
-            },
-            resolveTask: (task) => {
-                return task;
-            },
+    private registerCommandOfLaunchGameAndAttach() {
+        vscode.commands.registerCommand('y3-helper.launchGameAndAttach', async () => {
+            await vscode.window.withProgress({
+                title: '正在启动游戏...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let gameLauncher = new GameLauncher(this.env);
+                let suc = gameLauncher.launch();
+                if (!suc) {
+                    return;
+                }
+
+                vscode.debug.startDebugging(vscode.workspace.workspaceFolders?.[0], "💡附加");
+            });
         });
     }
 
@@ -169,7 +159,7 @@ class Helper {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
-        this.regsiterTaskOfLaunchGame();
+        this.registerCommandOfLaunchGameAndAttach();
 
         this.checkNewProject();
     }
