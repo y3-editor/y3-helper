@@ -14,8 +14,7 @@
         "Other"
     ],
     "activationEvents": [
-        "workspaceContains:y3/开发计划.md",
-        "onTaskType:y3-helper"
+        "workspaceContains:y3/开发计划.md"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -36,22 +35,6 @@
             {
                 "command": "y3-helper.launchGameAndAttach",
                 "title": "Y3:启动游戏并附加调试"
-            }
-        ],
-        "taskDefinitions": [
-            {
-                "type": "y3-helper",
-                "required": [
-                    "task"
-                ],
-                "properties": {
-                    "task": {
-                        "type": "string",
-                        "enum": [
-                            "launch"
-                        ]
-                    }
-                }
             }
         ],
         "configuration": {

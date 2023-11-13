@@ -77,10 +77,15 @@ class Helper {
                 await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, 'log'));
                 let copySource = vscode.Uri.joinPath(y3Uri, '演示/项目配置');
                 for await (const entry of await vscode.workspace.fs.readDirectory(copySource)) {
-                    await vscode.workspace.fs.copy(
-                        vscode.Uri.joinPath(copySource, entry[0]),
-                        vscode.Uri.joinPath(scriptUri, entry[0]),
-                    );
+                    try {
+                        await vscode.workspace.fs.copy(
+                            vscode.Uri.joinPath(copySource, entry[0]),
+                            vscode.Uri.joinPath(scriptUri, entry[0]),
+                            {
+                                overwrite: true,
+                            }
+                        );
+                    } catch {}
                 }
 
                 // 打开项目
