@@ -36,8 +36,7 @@ export class Env {
     }
 
     private async isValidEditorPath(editorPath: string): Promise<boolean> {
-        if (path.basename(editorPath) !== 'Editor.exe'
-        &&  path.basename(editorPath) !== 'Game_x64h.exe') {
+        if (path.basename(editorPath) !== 'Editor.exe') {
             return false;
         }
         try {
@@ -168,9 +167,18 @@ export class Env {
         return undefined;
     }
 
+    private getEditorExeUri(): vscode.Uri | undefined {
+        if (!this.editorUri) {
+            return undefined;
+        }
+        let editorExeUri = vscode.Uri.joinPath(this.editorUri, '../Engine/Binaries/Win64/Game_x64h.exe');
+        return editorExeUri;
+    }
+
     public status: 'not ready' | 'initing' | 'ready' = 'not ready';
     public editorVersion?: EditorVersion;
     public editorUri?: vscode.Uri;
+    public editorExeUri?: vscode.Uri;
     public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
@@ -181,6 +189,7 @@ export class Env {
             (async () => {
                 this.editorUri = await this.searchEditorUri();
                 this.editorVersion = await this.getEditorVersion();
+                this.editorExeUri = this.getEditorExeUri();
             })(),
             (async () => {
                 this.mapUri = await this.searchProjectPath();
@@ -193,6 +202,7 @@ export class Env {
         ]);
 
         this.logger.appendLine(`editorUri: ${this.editorUri?.fsPath}`);
+        this.logger.appendLine(`editorExeUri: ${this.editorExeUri?.fsPath}`);
         this.logger.appendLine(`editorVersion: ${this.editorVersion}`);
         this.logger.appendLine(`mapUri: ${this.mapUri}`);
         this.logger.appendLine(`projectUri: ${this.projectUri}`);
