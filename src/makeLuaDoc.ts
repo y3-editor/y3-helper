@@ -76,9 +76,12 @@ export class LuaDocMaker {
 
         let clippedDoc = this.clipDoc(doc);
         let markdownMap = this.splitDoc(clippedDoc);
+        let menu = this.makeMenu(markdownMap);
+        let menuUri = vscode.Uri.joinPath(this.y3Uri!, 'doc/API.md');
+        await vscode.workspace.fs.writeFile(menuUri, new TextEncoder().encode(menu));
         for (const [name, doc] of markdownMap) {
             let markdown = this.convertDocToMarkdown(doc);
-            let outputUri = vscode.Uri.joinPath(this.y3Uri!, `doc/${name}.md`);
+            let outputUri = vscode.Uri.joinPath(this.y3Uri!, `doc/API/${name}.md`);
             await vscode.workspace.fs.writeFile(outputUri, new TextEncoder().encode(markdown));
         }
     }
@@ -148,6 +151,20 @@ export class LuaDocMaker {
             docList.push(docClass);
         }
         return map;
+    }
+
+    private makeMenu(docMap: Map<string, Doc>): string {
+        let markdown = new vscode.MarkdownString();
+        for (const [name, doc] of docMap) {
+            markdown.appendMarkdown(`# [${name}](API/${name}.md)\n\n`);
+            for (let index = 0; index < doc.length; index++) {
+                const docClass = doc[index];
+                if (docClass.name === name && docClass.desc && docClass.desc !== 'unknown') {
+                    markdown.appendMarkdown(`${docClass.desc}\n\n`);
+                }
+            }
+        }
+        return markdown.value;
     }
 
     private convertDocToMarkdown(doc: Doc): string {
