@@ -74,14 +74,17 @@ export class LuaDocMaker {
         let content = new TextDecoder().decode(await vscode.workspace.fs.readFile(jsonUri));
         let doc: Doc = JSON.parse(content);
 
-        let markdown = this.convertDocToMarkdown(doc);
-        let outputUri = vscode.Uri.joinPath(this.y3Uri!, 'doc/doc.md');
-        await vscode.workspace.fs.writeFile(outputUri, new TextEncoder().encode(markdown));
+        let clippedDoc = this.clipDoc(doc);
+        let markdownMap = this.splitDoc(clippedDoc);
+        for (const [name, doc] of markdownMap) {
+            let markdown = this.convertDocToMarkdown(doc);
+            let outputUri = vscode.Uri.joinPath(this.y3Uri!, `doc/${name}.md`);
+            await vscode.workspace.fs.writeFile(outputUri, new TextEncoder().encode(markdown));
+        }
     }
 
-    private convertDocToMarkdown(doc: Doc): string {
-        let markdown = new vscode.MarkdownString();
-        let filtedDoc: Doc = [];
+    private clipDoc(doc: Doc): Doc {
+        let clippedDoc: Doc = [];
 
         for (let index = 0; index < doc.length; index++) {
             const docClass = doc[index];
@@ -109,7 +112,7 @@ export class LuaDocMaker {
             if (filtedDocClass.defines!.length === 0) {
                 continue;
             }
-            filtedDoc.push(filtedDocClass);
+            clippedDoc.push(filtedDocClass);
             if (docClass.fields) {
                 let mark: { [name: string]: boolean } = {};
                 for (let index = 0; index < docClass.fields.length; index++) {
@@ -124,12 +127,37 @@ export class LuaDocMaker {
                 }
             }
         }
+        return clippedDoc;
+    }
 
-        for (let index = 0; index < filtedDoc.length; index++) {
-            const docClass = filtedDoc[index];
-            markdown.appendMarkdown(`# ${docClass.name}\n`);
+    private splitDoc(doc: Doc): Map<string, Doc> {
+        let map = new Map<string, Doc>();
+        for (let index = 0; index < doc.length; index++) {
+            const docClass = doc[index];
+            let name = docClass.name;
+            if (name.startsWith('y3.Const')) {
+                name = 'Const';
+            } else if (name.includes('.')) {
+                name = name.split('.')[0];
+            }
+            let docList = map.get(name);
+            if (!docList) {
+                docList = [];
+                map.set(name, docList);
+            }
+            docList.push(docClass);
+        }
+        return map;
+    }
+
+    private convertDocToMarkdown(doc: Doc): string {
+        let markdown = new vscode.MarkdownString();
+
+        for (let index = 0; index < doc.length; index++) {
+            const docClass = doc[index];
+            markdown.appendMarkdown(`# ${docClass.name}\n\n`);
             if (docClass.desc && docClass.desc !== 'unknown') {
-                markdown.appendMarkdown(`${docClass.desc}`);
+                markdown.appendMarkdown(`${docClass.desc}\n\n`);
             }
             if (docClass.defines) {
                 for (let index = 0; index < docClass.defines.length; index++) {
