@@ -134,16 +134,16 @@ class Helper {
                 await this.env.waitReady();
                 const logUri = vscode.Uri.joinPath(this.env.scriptUri!, 'log');
                 const waitdbgUri = vscode.Uri.joinPath(logUri, 'waitdbg');
-                await vscode.workspace.fs.createDirectory(logUri);
-                await vscode.workspace.fs.writeFile(waitdbgUri, new Uint8Array(0));
+                try {
+                    await vscode.workspace.fs.createDirectory(logUri);
+                    await vscode.workspace.fs.writeFile(waitdbgUri, new Uint8Array(0));
+                } catch (error) { }
                 await vscode.debug.startDebugging(vscode.workspace.workspaceFolders?.[0], "💡附加");
                 try {
                     if ((await vscode.workspace.fs.stat(waitdbgUri)).type === vscode.FileType.File) {
                         await vscode.workspace.fs.delete(waitdbgUri);
                     };
-                } catch (error) {
-                    // ignore
-                }
+                } catch (error) { }
             });
         });
     }
