@@ -29,6 +29,14 @@ export class LuaDocMaker {
 
     private exeUri?: vscode.Uri;
     private y3Uri?: vscode.Uri;
+    private bannedClass: string[] = [
+        'Class', 'CustomEvent', 'Doctor', 'Dump', 'ECABind',
+        'Object', 'Event', 'EventConfig', 'EventManager', 'GCHost',
+        'GCNode', 'Helper', 'KV', 'LinkedTable', 'Log', 'ObjectEvent',
+        'PYConverter', 'PYEventRef', 'PYEventRegister', 'Proxy',
+        'Ref', 'Serialization', 'SortByScoreCallback', 'Storage',
+        'switch',
+    ];
 
     get valid(): boolean {
         return this.exeUri !== undefined && this.y3Uri !== undefined;
@@ -143,6 +151,9 @@ export class LuaDocMaker {
             } else if (name.includes('.')) {
                 name = name.split('.')[0];
             }
+            if (this.bannedClass.includes(name)) {
+                continue;
+            }
             let docList = map.get(name);
             if (!docList) {
                 docList = [];
@@ -153,15 +164,40 @@ export class LuaDocMaker {
         return map;
     }
 
+    private getTitleAndDesc(name: string, doc: Doc): [string, string] {
+        let descs: string[] = [];
+        for (let index = 0; index < doc.length; index++) {
+            const docClass = doc[index];
+            if (docClass.name === name && docClass.desc && docClass.desc !== 'unknown') {
+                descs.push(docClass.desc);
+            }
+        }
+        if (descs.length === 0) {
+            return ['', ''];
+        }
+        let fullDesc = descs.join('\n\n').replaceAll('\r\n', '\n');
+        let lines = fullDesc.split('\n');
+        let title = lines[0];
+        let firstNonEmptyIndex = 1;
+        for (let index = 1; index < lines.length; index++) {
+            const line = lines[index];
+            if (line.trim() === "") {
+                firstNonEmptyIndex = index + 1;
+            } else {
+                break;
+            }
+        }
+        let desc = lines.slice(firstNonEmptyIndex).join('\n').trim();
+        return [title, desc];
+    }
+
     private makeMenu(docMap: Map<string, Doc>): string {
         let markdown = new vscode.MarkdownString();
         for (const [name, doc] of docMap) {
-            markdown.appendMarkdown(`# [${name}](API/${name}.md)\n\n`);
-            for (let index = 0; index < doc.length; index++) {
-                const docClass = doc[index];
-                if (docClass.name === name && docClass.desc && docClass.desc !== 'unknown') {
-                    markdown.appendMarkdown(`${docClass.desc}\n\n`);
-                }
+            let [title, desc] = this.getTitleAndDesc(name, doc);
+            markdown.appendMarkdown(`# [${name}](API/${name}.md) ${title}\n\n`);
+            if (desc) {
+                markdown.appendMarkdown(`${desc}\n\n`);
             }
         }
         return markdown.value;
