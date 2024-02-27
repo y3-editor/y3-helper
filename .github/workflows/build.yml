@@ -3,7 +3,7 @@ name: build
 on: [ push ]
 
 env:
-  VSIX_NAME: y3-helper-${GITHUB_SHA}.vsix
+  VSIX_NAME: y3-helper-${{ github.sha }}.vsix
 
 jobs:
   build:
