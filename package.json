@@ -57,6 +57,10 @@
             }
         ]
     },
+    "extensionDependencies ": [
+        "sumneko.lua",
+        "actboy168.lua-debug"
+    ],
     "icon": "image/logo.png",
     "scripts": {
         "vscode:prepublish": "npm run compile",
