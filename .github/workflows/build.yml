@@ -18,7 +18,7 @@ jobs:
         run: |
           npm install -g @vscode/vsce
           VSIX_NAME = "y3-helper-${GITHUB_SHA}.vsix"
-          vsce package -o "${VSIX_NAME}""
+          vsce package -o "${VSIX_NAME}"
 
       - name: Upload vsix
         uses: actions/upload-artifact@v3
