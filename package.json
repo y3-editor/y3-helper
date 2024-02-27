@@ -57,7 +57,7 @@
             }
         ]
     },
-    "extensionDependencies ": [
+    "extensionDependencies": [
         "sumneko.lua",
         "actboy168.lua-debug"
     ],
