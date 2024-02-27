@@ -1,5 +1,10 @@
 name: build
+
 on: [ push ]
+
+env:
+  VSIX_NAME: y3-helper-${GITHUB_SHA}.vsix
+
 jobs:
   build:
     runs-on: windows-latest
@@ -17,11 +22,10 @@ jobs:
         shell: bash
         run: |
           npm install -g @vscode/vsce
-          VSIX_NAME = "y3-helper-${GITHUB_SHA}.vsix"
-          vsce package -o "${VSIX_NAME}"
+          vsce package -o "${{ env.VSIX_NAME }}"
 
       - name: Upload vsix
         uses: actions/upload-artifact@v3
         with:
-          name: "${VSIX_NAME}"
-          path: "${VSIX_NAME}"
+          name: ${{ env.VSIX_NAME }}
+          path: ${{ env.VSIX_NAME }}
