@@ -25,7 +25,7 @@ jobs:
           vsce package -o "${{ env.VSIX_NAME }}"
 
       - name: Upload vsix
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.VSIX_NAME }}
           path: ${{ env.VSIX_NAME }}
