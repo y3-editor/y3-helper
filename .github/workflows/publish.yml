@@ -1,0 +1,37 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  VSIX_NAME: y3-helper-${{ github.ref_name }}.vsix
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Client
+        shell: bash
+        run: |
+          npm install
+          npm install -g typescript
+          tsc -p ./
+
+      - name: Pack vsix
+        shell: bash
+        run: |
+          npm install -g @vscode/vsce
+          vsce package -o "${{ env.VSIX_NAME }}" ${{ github.ref_name }}
+
+      - name: Upload vsix
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VSIX_NAME }}
+          path: ${{ env.VSIX_NAME }}
+
+      - name: Publish to VSCode Market
+        run: vsce publish -i ${{ env.VSIX_NAME }} -p ${{ secrets.VSCODE_TOKEN }}
