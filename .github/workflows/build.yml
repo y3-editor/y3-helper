@@ -1,0 +1,27 @@
+name: build
+on: [ push ]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Client
+        shell: bash
+        run: |
+          npm install
+          npm install -g typescript
+          tsc -p ./
+
+      - name: Pack vsix
+        shell: bash
+        run: |
+          npm install -g @vscode/vsce
+          VSIX_NAME = "y3-helper-${GITHUB_SHA}.vsix"
+          vsce package -o "${VSIX_NAME}""
+
+      - name: Upload vsix
+        uses: actions/upload-artifact@v3
+        with:
+          name: "${VSIX_NAME}"
+          path: "${VSIX_NAME}"
