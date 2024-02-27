@@ -61,7 +61,18 @@ class Helper {
                     "https://github.com/y3-editor/y3-lualib.git",
                     y3Uri.fsPath,
                 ]);
-        
+
+                // 如果clone失败，则尝试从备用地址 clone 项目，地址为 “https://gitee.com/tsukiko/y3-lualib”
+                try {
+                    await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, 'README.md'));
+                } catch {
+                    await runShell("初始化Y3项目（备用地址）", "git", [
+                        "clone",
+                        "https://gitee.com/tsukiko/y3-lualib.git",
+                        y3Uri.fsPath,
+                    ]);
+                }
+
                 // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
                 let editorVersion = this.env.editorVersion;
                 if (editorVersion === '1.0') {
