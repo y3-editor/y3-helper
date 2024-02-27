@@ -48,7 +48,14 @@
                     "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。"
                 }
             }
-        }
+        },
+        "keybindings": [
+            {
+                "command": "y3-helper.launchGameAndAttach",
+                "key": "shift+f5",
+                "when": "debuggersAvailable && !inDebugMode"
+            }
+        ]
     },
     "icon": "image/logo.png",
     "scripts": {
