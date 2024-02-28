@@ -11,10 +11,19 @@ class Helper {
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        this.logger = vscode.window.createOutputChannel("Y3 - Helper", { log: true });
+        this.logger = vscode.window.createOutputChannel("Y3开发助手", { log: true });
         this.logger.clear();
 
         this.env = new Env(this.logger);
+    }
+
+    private reloadEnvWhenConfigChange() {
+        vscode.workspace.onDidChangeConfiguration(async (event) => {
+            if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
+                this.env = new Env(this.logger);
+                this.logger.appendLine('配置已更新，已重新加载环境');
+            }
+        });
     }
 
     private registerCommandOfInitProject() {
@@ -190,6 +199,7 @@ class Helper {
         this.registerCommandOfLaunchGameAndAttach();
 
         this.checkNewProject();
+        this.reloadEnvWhenConfigChange();
     }
 }
 
