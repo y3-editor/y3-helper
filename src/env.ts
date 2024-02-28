@@ -6,9 +6,9 @@ import path from 'path';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 export class Env {
-    private logger: vscode.OutputChannel;
+    private logger: vscode.LogOutputChannel;
 
-    constructor(logger: vscode.OutputChannel) {
+    constructor(logger: vscode.LogOutputChannel) {
         this.logger = logger;
     }
 
@@ -201,13 +201,13 @@ export class Env {
             })(),
         ]);
 
-        this.logger.appendLine(`editorUri: ${this.editorUri?.fsPath}`);
-        this.logger.appendLine(`editorExeUri: ${this.editorExeUri?.fsPath}`);
-        this.logger.appendLine(`editorVersion: ${this.editorVersion}`);
-        this.logger.appendLine(`mapUri: ${this.mapUri}`);
-        this.logger.appendLine(`projectUri: ${this.projectUri}`);
-        this.logger.appendLine(`scriptUri: ${this.scriptUri?.fsPath}`);
-        this.logger.appendLine(`y3Uri: ${this.y3Uri?.fsPath}`);
+        this.logger.info(`editorUri: ${this.editorUri?.fsPath}`);
+        this.logger.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
+        this.logger.info(`editorVersion: ${this.editorVersion}`);
+        this.logger.info(`mapUri: ${this.mapUri}`);
+        this.logger.info(`projectUri: ${this.projectUri}`);
+        this.logger.info(`scriptUri: ${this.scriptUri?.fsPath}`);
+        this.logger.info(`y3Uri: ${this.y3Uri?.fsPath}`);
     }
 
     public async waitReady() {

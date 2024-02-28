@@ -6,7 +6,7 @@ import { GameLauncher } from './launchGame';
 
 class Helper {
     private context: vscode.ExtensionContext;
-    private logger: vscode.OutputChannel;
+    private logger: vscode.LogOutputChannel;
     private env: Env;
 
     constructor(context: vscode.ExtensionContext) {
@@ -21,7 +21,7 @@ class Helper {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
                 this.env = new Env(this.logger);
-                this.logger.appendLine('配置已更新，已重新加载环境');
+                this.logger.info('配置已更新，已重新加载环境');
             }
         });
     }
@@ -49,7 +49,7 @@ class Helper {
                                 recursive: true,
                                 useTrash: true,
                             });
-                            this.logger.appendLine(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
+                            this.logger.info(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
                         } catch (error) {
                             vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
                             return;
