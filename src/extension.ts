@@ -3,6 +3,9 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { Env } from './env';
 import { GameLauncher } from './launchGame';
+import * as https from 'https';
+import * as JSZip from 'jszip';
+import * as fs from 'fs';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -40,6 +43,37 @@ class Helper {
 
                 let scriptUri = this.env.scriptUri!;
                 let y3Uri = this.env.y3Uri!;
+                let ui_path = vscode.Uri.joinPath(this.env.projectUri!, 'ui_plugin');
+                await https.get('https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb', (resp) => {
+                    // 收到数据
+                    const chunks: any[] = [];
+                    resp.on('data', (chunk) => {
+                        chunks.push(chunk);
+                    });
+                    // 数据接收完毧
+                    resp.on('end', () => {
+                        // 将所有数据块拼接在一起
+                        const data = Buffer.concat(chunks);
+                        // 加压到目标文件夹
+                        JSZip.loadAsync(data).then((zip) => {
+                            zip.forEach((relativePath, file) => {
+                                if(file.dir){
+                                    fs.mkdirSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, {recursive: true});
+                                }
+                                else{
+                                    file.async('nodebuffer').then((content) => {
+                                        fs.writeFileSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, content);
+                                    });
+                                }
+                            });
+                            console.log('ZIP 数据已解压缩到文件系统');
+                        });
+                    });
+                }).on("error", (err) => {
+                    console.log("download ui error" + err.message);
+                });
+
+
                 try {
                     let state = await vscode.workspace.fs.stat(y3Uri);
                     if (state.type === vscode.FileType.Directory) {
