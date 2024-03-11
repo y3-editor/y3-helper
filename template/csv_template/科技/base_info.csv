@@ -1,0 +1,3 @@
+key,uid,name,trigger,affect_all,affect_tags,description,max_lv,suffix,tags
+ID,UID,名称,触发器,影响全部单位,影响单位标签,描述信息,最大等级,编辑器后缀,标签
+201388188,201388188,这是一个科技,201388188,True,(),描述信息,5,,()

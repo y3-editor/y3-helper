@@ -10,6 +10,7 @@ export class Env {
 
     constructor(logger: vscode.LogOutputChannel) {
         this.logger = logger;
+        this.updateTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
     }
 
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
@@ -183,6 +184,54 @@ export class Env {
     public scriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
     public projectUri?: vscode.Uri;
+    public editorTableUri?: vscode.Uri;// 物编数据
+
+    // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
+    public defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
+        unit: "./resource/editor_table/单位",
+        decoration: "./resource/editor_table/装饰物",
+        item: "./resource/editor_table/物品",
+        ability: "./resource/editor_table/技能",
+        modifier: "./resource/editor_table/魔法效果",
+        projectile: "./resource/editor_table/投射物",
+        technology: "./resource/editor_table/科技",
+        destructible: "./resource/editor_table/可破坏物",
+        sound: "./resource/editor_table/声音"
+    };
+
+    // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
+    public tableTypeToCSVfolderPath: { [key: string]: string } = {
+        unit: "./resource/editor_table/单位",
+        decoration: "./resource/editor_table/装饰物",
+        item: "./resource/editor_table/物品",
+        ability: "./resource/editor_table/技能",
+        modifier: "./resource/editor_table/魔法效果",
+        projectile: "./resource/editor_table/投射物",
+        technology: "./resource/editor_table/科技",
+        destructible: "./resource/editor_table/可破坏物",
+        sound: "./resource/editor_table/声音"
+    };
+
+    
+    /**
+     * 从插件配置中更新物编数据类型对应的CSV文件保存地址
+     */
+    public updateTableTypeToCSVfolderPath(): void {
+        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
+        //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
+        for (const key in this.defaultTableTypeToCSVfolderPath) {
+            this.tableTypeToCSVfolderPath[key] = this.defaultTableTypeToCSVfolderPath[key];
+            console.log(key + " " + this.tableTypeToCSVfolderPath[key]);
+        }
+        
+        for (const key in csvPathConfig) {
+            if (key in this.defaultTableTypeToCSVfolderPath) {
+                this.tableTypeToCSVfolderPath[key] = csvPathConfig[key];
+                console.log("update:"+key + " " + csvPathConfig[key]);
+            }
+        }
+
+    }
 
     private async init() {
         await Promise.allSettled([
@@ -197,6 +246,7 @@ export class Env {
                     this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
                     this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
                     this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
+                    this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
                 }
             })(),
         ]);
@@ -208,6 +258,7 @@ export class Env {
         this.logger.info(`projectUri: ${this.projectUri}`);
         this.logger.info(`scriptUri: ${this.scriptUri?.fsPath}`);
         this.logger.info(`y3Uri: ${this.y3Uri?.fsPath}`);
+        this.logger.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
     }
 
     public async waitReady() {

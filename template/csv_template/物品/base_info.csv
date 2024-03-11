@@ -1,0 +1,3 @@
+key,uid,name,trigger,auto_use,cur_charge,cur_stack,delete_on_discard,description,disable_overlapping,discard_enable,discard_when_dead,drop_stay_time,maximum_charging,maximum_stacking,stack_type,suffix,tags,use_consume
+ID,UID,名称,触发器,自动使用,默认充能数,默认堆叠数,掉落后时间到期消失,描述,开启碰撞,可以遗弃,持有者死亡时掉落,消失时间,最大充能数,最大堆叠,堆叠类型,编辑器后缀,物品标签,使用消耗次数
+134257216,134257216,这是一个物品,134257216,False,0,1,False,<html><body><p>这是一个物品</p></body></html>,False,True,False,9999,5,5,0,,[],1

@@ -1,0 +1,151 @@
+{
+    "_custom_": true, 
+    "_ref_": 201388188, 
+    "affect_all": "True", 
+    "affect_tags": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "cells": {
+        "__tuple__": true, 
+        "items": [
+            [
+                1, 
+                {
+                    "attr_list": [
+                        [
+                            "attack_phy", 
+                            10
+                        ], 
+                        [
+                            "defense_phy", 
+                            2
+                        ]
+                    ], 
+                    "buy_res_list": [
+                        [
+                            "official_res_1", 
+                            100
+                        ]
+                    ], 
+                    "icon": 100016, 
+                    "level": 1, 
+                    "name": "1\u7ea7\u79d1\u6280", 
+                    "precondition_list": []
+                }
+            ], 
+            [
+                2, 
+                {
+                    "attr_list": [
+                        [
+                            "attack_phy", 
+                            20
+                        ], 
+                        [
+                            "defense_phy", 
+                            4
+                        ]
+                    ], 
+                    "buy_res_list": [
+                        [
+                            "official_res_1", 
+                            200
+                        ]
+                    ], 
+                    "icon": 100016, 
+                    "level": 2, 
+                    "name": "2\u7ea7\u79d1\u6280", 
+                    "precondition_list": []
+                }
+            ], 
+            [
+                3, 
+                {
+                    "attr_list": [
+                        [
+                            "attack_phy", 
+                            30
+                        ], 
+                        [
+                            "defense_phy", 
+                            6
+                        ]
+                    ], 
+                    "buy_res_list": [
+                        [
+                            "official_res_1", 
+                            300
+                        ]
+                    ], 
+                    "icon": 100016, 
+                    "level": 3, 
+                    "name": "3\u7ea7\u79d1\u6280", 
+                    "precondition_list": []
+                }
+            ], 
+            [
+                4, 
+                {
+                    "attr_list": [
+                        [
+                            "attack_phy", 
+                            40
+                        ], 
+                        [
+                            "defense_phy", 
+                            8
+                        ]
+                    ], 
+                    "buy_res_list": [
+                        [
+                            "official_res_1", 
+                            400
+                        ]
+                    ], 
+                    "icon": 100016, 
+                    "level": 4, 
+                    "name": "4\u7ea7\u79d1\u6280", 
+                    "precondition_list": []
+                }
+            ], 
+            [
+                5, 
+                {
+                    "attr_list": [
+                        [
+                            "attack_phy", 
+                            50
+                        ], 
+                        [
+                            "defense_phy", 
+                            10
+                        ]
+                    ], 
+                    "buy_res_list": [
+                        [
+                            "official_res_1", 
+                            500
+                        ]
+                    ], 
+                    "icon": 100016, 
+                    "level": 5, 
+                    "name": "5\u7ea7\u79d1\u6280", 
+                    "precondition_list": []
+                }
+            ]
+        ]
+    }, 
+    "description": "\u63cf\u8ff0\u4fe1\u606f", 
+    "key": 201388188, 
+    "kv": {}, 
+    "max_lv": 5, 
+    "name": "\u8fd9\u662f\u4e00\u4e2a\u79d1\u6280", 
+    "suffix": "", 
+    "tags": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "trigger": 201388188, 
+    "uid": "201388188"
+}

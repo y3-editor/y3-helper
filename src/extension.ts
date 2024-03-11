@@ -3,9 +3,9 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { Env } from './env';
 import { GameLauncher } from './launchGame';
-import * as https from 'https';
-import * as JSZip from 'jszip';
-import * as fs from 'fs';
+import { CSVimporter } from './CSVimporter';
+import * as utility from './utility';
+import { TemplateGenerator }  from './templateGenerator';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -43,37 +43,6 @@ class Helper {
 
                 let scriptUri = this.env.scriptUri!;
                 let y3Uri = this.env.y3Uri!;
-                let ui_path = vscode.Uri.joinPath(this.env.projectUri!, 'ui_plugin');
-                await https.get('https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb', (resp) => {
-                    // 收到数据
-                    const chunks: any[] = [];
-                    resp.on('data', (chunk) => {
-                        chunks.push(chunk);
-                    });
-                    // 数据接收完毧
-                    resp.on('end', () => {
-                        // 将所有数据块拼接在一起
-                        const data = Buffer.concat(chunks);
-                        // 加压到目标文件夹
-                        JSZip.loadAsync(data).then((zip) => {
-                            zip.forEach((relativePath, file) => {
-                                if(file.dir){
-                                    fs.mkdirSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, {recursive: true});
-                                }
-                                else{
-                                    file.async('nodebuffer').then((content) => {
-                                        fs.writeFileSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, content);
-                                    });
-                                }
-                            });
-                            console.log('ZIP 数据已解压缩到文件系统');
-                        });
-                    });
-                }).on("error", (err) => {
-                    console.log("download ui error" + err.message);
-                });
-
-
                 try {
                     let state = await vscode.workspace.fs.stat(y3Uri);
                     if (state.type === vscode.FileType.Directory) {
@@ -202,6 +171,160 @@ class Helper {
         });
     }
 
+    
+    /**注册从CSV格式文件中导入物体编辑数据的命令(需要用户选定文件夹)
+     * @deprecated
+     */
+    private registerCommandOfImportObjectDataFromCSV()
+    {
+        vscode.commands.registerCommand('y3-helper.importObjectDataFromCSV', async () => {
+            await this.env.waitReady();
+            let projectUri = this.env.projectUri;
+            let editorExeUri = this.env.editorExeUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+            if (!editorExeUri) {
+                vscode.window.showErrorMessage("未找到编辑器！");
+                return false;
+            }
+            await vscode.window.withProgress({
+                title: '正在导入...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let csv_uri=(await utility.askUserTargetDirectory());
+                console.log("csv_uri="+csv_uri?.fsPath);
+                if (!csv_uri || !utility.isPathValid(csv_uri.fsPath))
+                {
+                    vscode.window.showErrorMessage("提供的csv文件路径非法");
+                    return;
+                }
+                // import csv
+                let csvImporter = new CSVimporter(this.env);
+                let maxSearchDepth = vscode.workspace.getConfiguration("csvImpoterConfig").get<string>("max_recursive_search_depth");
+                await csvImporter.recursiveSearchCSVandImport(csv_uri, 10);// 需要改动
+                
+            });
+        });
+    }
+
+    /**
+     * 根据用户配置的路径 导入全部物编数据
+     */
+    private registerCommandOfImportObjectDataFromAllCSVbyConfig() {
+        vscode.commands.registerCommand('y3-helper.importObjectDataFromAllCSV', async () => {
+            await this.env.waitReady();
+            let projectUri = this.env.projectUri;
+            let editorExeUri = this.env.editorExeUri;
+            let scriptUri= this.env.scriptUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+            if (!editorExeUri) {
+                vscode.window.showErrorMessage("未找到编辑器！");
+                return false;
+            }
+            if (!scriptUri) {
+                vscode.window.showErrorMessage("scriptUri不存在");
+                return false;
+            }
+            await vscode.window.withProgress({
+                title: '正在导入...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let csvImporter = new CSVimporter(this.env);
+                await csvImporter.importCSVFromOrderFolder();
+
+            });
+        });
+    }
+
+    /**
+     * 注册生成指定类型的CSV文件模板的命令
+     * @deprecated
+     */
+    private registerCommandOfGenerateTemplateCSV() {
+        vscode.commands.registerCommand('y3-helper.generateTemplateCSV', async () => {
+            console.log("y3-helper.generateTemplateCSV");
+            await this.env.waitReady();
+            let projectUri = this.env.projectUri;
+            let editorExeUri = this.env.editorExeUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+            if (!editorExeUri) {
+                vscode.window.showErrorMessage("未找到编辑器！");
+                return false;
+            }
+            // todo: 生成csv模板
+            let templateGenerator = new TemplateGenerator(this.env);
+            let targetUri=await utility.askUserTargetDirectory();
+            if (!targetUri) {
+                vscode.window.showErrorMessage("指定的路径不存在");
+                return;
+            }
+            
+            const items: vscode.QuickPickItem[] = [
+                { label: '单位', description: 'unit' },
+                { label: '装饰物', description: 'decoration' },
+                { label: '物品', description: 'item' },
+                { label: '技能', description: 'ability' },
+                { label: '魔法效果', description: 'modifier' },
+                { label: '投射物', description: 'projectile' },
+                { label: '科技', description: 'technology' },
+                { label: '可破坏物', description: 'destructible' },
+            ];
+
+            vscode.window.showQuickPick(items, {
+                placeHolder: '选择你要生成的模板类型'
+            }).then(selection => {
+                if (selection) {
+                    vscode.window.showInformationMessage(`你选择了: ${selection.label}`);
+                }
+                let templateGenerator: TemplateGenerator = new TemplateGenerator(this.env);
+                if (selection?.description!==undefined&&targetUri!==undefined) {
+                    templateGenerator.generateTemplateCSVToTargetPath(selection.label, vscode.Uri.joinPath(targetUri, selection.label));
+                }
+                else {
+                    vscode.window.showErrorMessage(`selection?.description===undefined||targetUri===undefined`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`${selection.label}数据模板生成成功`);
+            });
+
+        });
+    }
+
+    private registerCommandOfGenerateAllTemplateCSV() {
+        vscode.commands.registerCommand('y3-helper.generateAllTemplateCSV', async () => {
+            console.log("y3-helper.generateTemplateCSV");
+            await this.env.waitReady();
+            let projectUri = this.env.projectUri;
+            let editorExeUri = this.env.editorExeUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+            if (!editorExeUri) {
+                vscode.window.showErrorMessage("未找到编辑器！");
+                return false;
+            }
+            if (!this.env.scriptUri) {
+                vscode.window.showErrorMessage("未找到script文件夹");
+                return false;
+            }
+            // todo: 生成csv模板
+            let templateGenerator = new TemplateGenerator(this.env);
+            
+            let targetUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri,"./resource/editor_table/"); 
+            templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
+               
+        });
+    }
+
     private checkNewProject() {
         let newProjectPath = this.context.globalState.get("NewProjectPath");
         if (!newProjectPath) {
@@ -231,6 +354,8 @@ class Helper {
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
+        this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
+        this.registerCommandOfGenerateAllTemplateCSV();
 
         this.checkNewProject();
         this.reloadEnvWhenConfigChange();

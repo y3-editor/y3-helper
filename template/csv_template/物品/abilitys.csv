@@ -1,0 +1,3 @@
+key,uid,name,attached_ability,attached_passive_abilities,cd_type
+ID,UID,名称,主动技能,被动技能,CD组
+134257216,134257216,这是一个物品,(),"[[134265579, 1]]",

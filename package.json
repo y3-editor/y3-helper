@@ -18,6 +18,24 @@
     ],
     "main": "./out/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "Y3-Helper-container",
+                    "title": "Y3-Helper",
+                    "icon": "image/logo.png"
+                }
+            ]
+        },
+        "views": {
+            "editor_table-container": [
+                {
+                    "id": "editor_table-view",
+                    "type": "webview",
+                    "name": "editor_table"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "y3-helper.initProject",
@@ -35,6 +53,14 @@
             {
                 "command": "y3-helper.launchGameAndAttach",
                 "title": "Y3:启动游戏并附加调试"
+            },
+            {
+                "command": "y3-helper.importObjectDataFromAllCSV",
+                "title": "Y3:导入物编数据（CSV）"
+            },
+            {
+                "command": "y3-helper.generateAllTemplateCSV",
+                "title": "Y3:生成物编模板（CSV）"
             }
         ],
         "configuration": {
@@ -42,10 +68,65 @@
             "type": "object",
             "properties": {
                 "Y3-Helper.EditorPath": {
+                    "title": "Y3编辑器路径",
+                    "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。",
                     "type": "string",
                     "default": "",
-                    "ignoreSync": true,
-                    "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。"
+                    "ignoreSync": true
+                },
+                "Y3-Helper.CSVPath": {
+                    "title": "CSV物编路径",
+                    "description": "",
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": false,
+                    "properties": {
+                        "unit": {
+                            "type": "string",
+                            "default": "./resource/editor_table/单位",
+                            "description": "单位的CSV物编数据的默认存放文件夹名"
+                        },
+                        "decoration": {
+                            "type": "string",
+                            "default": "./resource/editor_table/装饰物",
+                            "description": "装饰物的CSV物编数据的默认存放文件夹名"
+                        },
+                        "item": {
+                            "type": "string",
+                            "default": "./resource/editor_table/物品",
+                            "description": "物品的CSV物编数据的默认存放文件夹名"
+                        },
+                        "ability": {
+                            "type": "string",
+                            "default": "./resource/editor_table/技能",
+                            "description": "技能的CSV物编数据的默认存放文件夹名"
+                        },
+                        "modifier": {
+                            "type": "string",
+                            "default": "./resource/editor_table/魔法效果",
+                            "description": "魔法效果的CSV物编数据的默认存放文件夹名"
+                        },
+                        "projectile": {
+                            "type": "string",
+                            "default": "./resource/editor_table/投射物",
+                            "description": "投射物的CSV物编数据的默认存放文件夹名"
+                        },
+                        "technology": {
+                            "type": "string",
+                            "default": "./resource/editor_table/科技",
+                            "description": "科技的CSV物编数据的默认存放文件夹名"
+                        },
+                        "destructible": {
+                            "type": "string",
+                            "default": "./resource/editor_table/可破坏物",
+                            "description": "可破坏物的CSV物编数据的默认存放文件夹名"
+                        },
+                        "sound": {
+                            "type": "string",
+                            "default": "./resource/editor_table/声音",
+                            "description": "声音的CSV物编数据的默认存放文件夹名"
+                        }
+                    }
                 }
             }
         },
@@ -68,22 +149,27 @@
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
-        "test": "node ./out/test/runTest.js"
+        "test": "node ./out/src/test/runTest.js"
     },
     "dependencies": {
+        "@types/uuid": "^9.0.8",
+        "csv-parser": "^3.0.0",
+        "fs-extra": "^11.2.0",
+        "uuid": "^9.0.1",
         "winreg": "^1.2.5"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.3",
-        "@types/node": "18.x",
+        "@types/node": "^18.19.18",
         "@types/vscode": "^1.83.0",
         "@types/winreg": "^1.2.34",
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",
         "@vscode/test-electron": "^2.3.6",
-        "eslint": "^8.52.0",
+        "eslint": "^8.57.0",
         "glob": "^10.3.10",
         "mocha": "^10.2.0",
+        "ts-node": "^10.9.2",
         "typescript": "^5.2.2"
     }
 }

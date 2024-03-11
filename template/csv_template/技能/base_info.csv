@@ -1,0 +1,3 @@
+key,uid,name,trigger,ability_cast_type,ability_max_level,camp_priority_enemy,camp_priority_friend,camp_priority_neutral,camp_priority_self,can_cache,description,is_charge_ability,is_immediate,is_meele,need_turn_to_target,precondition_list,release_immediately_out_of_range,required_level,sp_count_down,suffix,tags,type_priority_building,type_priority_creature,type_priority_destructible,type_priority_hero,type_priority_item
+ID,UID,名称,触发器,技能释放类型,技能最大等级,敌人,队友,中立,己方,可以缓存,描述,是否为蓄力技能,立刻施法,近战,是否转身,前置条件,可以超出范围施法,允许学习等级,显示准备倒计时,编辑器后缀,标签,建筑,生物,可破坏物,英雄,物品
+134265579,134265579,这是一个技能,134265579,3,1,1,1,1,1,True,<html><body><p>991052467</p></body></html>,False,False,False,True,(),False,"{'formula': '', 'required_levels': [1, 2, 3, 4, 5]}",False,,(),1,1,1,1,1

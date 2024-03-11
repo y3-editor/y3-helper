@@ -1,0 +1,3 @@
+key,uid,name,attach_model_list,get_effect_list,lose_effect_list,material_alpha,material_change,material_color,material_color_intensity,modifier_icon,show_on_ui
+ID,UID,名称,最大持续时间,最大持续时间,最大持续时间,不透明度,材质变化,基础材质变色,材质变色强度,图标,显示图标
+134240918,134240918,这是一个modifier,(),"[[134227466, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.6, 0.6, 0.6), 1.0, 'root', False, 0]]",(),0,0,"(255, 255, 255)",0,106533,True

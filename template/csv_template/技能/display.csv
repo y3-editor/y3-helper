@@ -1,0 +1,3 @@
+key,uid,name,ability_icon,bs_sfx_list,bs_sound_effect,building_attack_range_sfx,cst_sfx_list,cst_sound_effect,end_sfx_list,end_sound_effect,hit_sfx_list,hit_sound_effect,ps_sfx_list,ps_sound_effect,show_building_attack_range,sp_sfx_list,sp_sound_effect
+ID,UID,名称,图标,后摇特效,后摇音效,攻击范围预览特效,施法特效,施法音效,结束特效,结束音效,受击特效,击中音效,前摇特效,前摇音效,攻击范围预览,准备特效,准备音效
+134265579,134265579,这是一个技能,106543,(),(),101492,(),(),(),(),(),(),(),(),False,(),()

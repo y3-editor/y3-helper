@@ -1,0 +1,3 @@
+key,uid,name,die_on_source_run_out,is_collected,source_desc,source_item,source_nums_init,source_nums_max,source_player_prop,source_refresh_count,source_refresh_interval,source_type
+ID,UID,名称,资源耗尽时死亡,可被采集,资源名称,物品类型,资源初始数量,资源最大数量,玩家属性资源,资源回复数量,资源回复间隔,资源类型
+201359127,201359127,这是一个可破坏物,False,True,金币,0,0,10000,official_res_1,0,1.0,0

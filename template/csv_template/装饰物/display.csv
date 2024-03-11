@@ -1,0 +1,3 @@
+key,uid,name,attach_models,base_color_mod,base_tint_color,cast_shadow,effect_list,enable_occlusion_perspective,fresnel_color,fresnel_emissive_color_strength,fresnel_exp,icon,material_alpha,material_change,material_color,material_color_intensity,model,model_opacity,receive_decal,scale,use_base_tint_color,use_fresnel,use_virtual_light
+ID,UID,名称,挂接物列表,材质颜色叠加类型,基础材质变色,是否产生阴影,获得特效列表,遮挡透视,菲涅尔颜色,菲涅尔强度,菲涅尔指数,暂未配置55,不透明度,材质变化,基础材质变色,材质变色强度,模型,模型不透明度,接收贴花,缩放,是否启用基础材质变色,启用菲涅尔效果,启用补光效果
+201367371,201367371,这是一个装饰品,(),1,"(255, 255, 255, 0.5)",False,(),,,,,100000,1,0,"(2, 2, 2)",1,200003,0,False,0.25,False,,
