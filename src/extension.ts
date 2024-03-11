@@ -145,6 +145,10 @@ class Helper {
                     } catch {}
                 }
 
+                // 初始化CSV表
+                let csvImporter = new CSVimporter(this.env);
+                await csvImporter.importCSVFromOrderFolder();
+
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
