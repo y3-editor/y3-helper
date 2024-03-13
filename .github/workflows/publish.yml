@@ -39,6 +39,8 @@ jobs:
 
       - name: Publish Release
         uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.Y3_COMMIT_TOKEN }}
         with:
           generate_release_notes: true
           files: |
