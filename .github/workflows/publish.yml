@@ -23,6 +23,8 @@ jobs:
 
       - name: Pack vsix
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.Y3_COMMIT_TOKEN }}
         run: |
           npm install -g @vscode/vsce
           git config --global user.email "sumneko@hotmail.com"
