@@ -2,6 +2,8 @@ name: publish
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "*"
 
@@ -13,6 +15,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Compile Client
         shell: bash

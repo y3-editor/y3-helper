@@ -1,6 +1,9 @@
 name: build
 
-on: [ push ]
+on: 
+  push:
+    tags-ignore:
+      - '*'
 
 env:
   VSIX_NAME: y3-helper-${{ github.sha }}.vsix
