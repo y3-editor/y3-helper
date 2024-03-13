@@ -30,6 +30,8 @@ jobs:
           git config --global user.email "sumneko@hotmail.com"
           git config --global user.name "sumneko"
           vsce package -o "${{ env.VSIX_NAME }}" ${{ github.ref_name }}
+          git pull
+          git push
 
       - name: Upload vsix
         uses: actions/upload-artifact@v4
