@@ -9,7 +9,7 @@ env:
   VSIX_NAME: y3-helper-${{ github.ref_name }}.vsix
 
 jobs:
-  build:
+  publish:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,8 @@ jobs:
         shell: bash
         run: |
           npm install -g @vscode/vsce
+          git config --global user.email "sumneko@hotmail.com"
+          git config --global user.name "sumneko"
           vsce package -o "${{ env.VSIX_NAME }}" ${{ github.ref_name }}
 
       - name: Upload vsix
