@@ -2,10 +2,8 @@ name: publish
 
 on:
   push:
-    branches:
-      - main
     tags:
-      - "*"
+      - '*'
 
 env:
   VSIX_NAME: y3-helper-${{ github.ref_name }}.vsix
