@@ -6,12 +6,12 @@
 2. 选择地图路径
 3. 完成！
 
-## 生成CSV格式的物编数据表格
-在使用从CSV格式的表格中导入物编数据的功能之前，推荐使用此功能生成模板以填写需要的数据。
-1. 按 `F1` 打开命令列表，使用命令 `Y3:生成CSV格式的物编数据表格`将在当前工程项目的script文件夹下的resource/editor_table文件夹下生成CSV格式的物编数据表格
-请直接在生成的表格中填写物编数据，导入时会按此导入。
-## 从CSV格式的表格中导入物体编辑数据
-1. 按 `F1` 打开命令列表，使用命令 `Y3:从CSV格式的表格中导入物体编辑数据`
-从刚刚从生成的CSV表格中导入物编数据
+## 生成物编
 
-**推荐和[Edit csv](https://marketplace.visualstudio.com/items?itemName=janisdd.vscode-edit-csv)插件配合使用，以便在Visual Code内编辑CSV表格，无需打开新的窗口**
+初始化后，你的项目中会生成 `resource\editor_table` 文件夹，你可以修改这些CSV文件来生成物编。
+
+之后使用命令 `Y3:导入物编数据（CSV）` 即可将这些物编写入地图。
+
+> 推荐和[Edit csv](https://marketplace.visualstudio.com/items?itemName=janisdd.vscode-edit-csv)插件配合使用，以便在Visual Code内编辑CSV表格，无需打开新的窗口
+
+> 你可以通过 `Y3-Helper.CSVPath` 设置修改这些CSV文件的路径
