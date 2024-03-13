@@ -28,11 +28,10 @@
             ]
         },
         "views": {
-            "editor_table-container": [
+            "Y3-Helper-container": [
                 {
                     "id": "editor_table-view",
-                    "type": "webview",
-                    "name": "editor_table"
+                    "name": "物编数据"
                 }
             ]
         },
@@ -150,6 +149,7 @@
         "test": "node ./out/src/test/runTest.js"
     },
     "dependencies": {
+        "@types/fs-extra": "^11.0.4",
         "@types/uuid": "^9.0.8",
         "csv-parser": "^3.0.0",
         "fs-extra": "^11.2.0",

@@ -135,3 +135,89 @@ export function getFileNameByVscodeUri(uri: vscode.Uri) :string{
     let fsPathSplitArray = (fsPath.split('\\'));
     return fsPathSplitArray[fsPathSplitArray.length - 1];
 }
+
+/**
+ * 获取字符串的编码
+ * @param s 
+ * @returns 
+ */
+export function toCode(s: string):number[]{
+    let res: number[] = [];
+    for (let i = 0; i < s.length; i++){
+        res.push(s.charCodeAt(i));
+    }
+    return res;
+}
+
+
+/**
+ * 对字符串进行哈希，用以分配字符串在zhlanguage.json中的key
+ * @param s 
+ * @param seed 
+ * @returns 
+ */
+export function hash(s:string,seed:number=0x0): number{
+    
+    let key = toCode(s);
+
+    function fmix(h: number):number {
+        h ^= h >> 16;
+        h = (h * 0x85ebca6b) & 0xFFFFFFFF;
+        h ^= h >> 13;
+        h = (h * 0xc2b2ae35) & 0xFFFFFFFF;
+        h ^= h >> 16;
+        return h;
+    }
+
+    let length = key.length;
+    let nblocks = Math.floor(length / 4);
+
+    let h1 = seed;
+
+    let c1 = 0xcc9e2d51;
+    let c2 = 0x1b873593;
+
+	// body
+    for (let block_start: number = 0; block_start < nblocks * 4;block_start+=4 ){
+        let k1: number = key[block_start + 3] << 24 | key[block_start + 2] << 16 | key[block_start + 1] << 8 | key[block_start + 0];
+
+        k1 = (c1 * k1) & 0xFFFFFFFF;
+        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;
+        k1 = (c2 * k1) & 0xFFFFFFFF;
+
+        h1 ^= k1;
+        h1 = (h1 << 13 | h1 >> 19) & 0xFFFFFFFF;
+        h1 = (h1 * 5 + 0xe6546b64) & 0xFFFFFFFF;
+    }
+		
+    // tail
+    let tail_index: number = nblocks * 4;
+    let k1: number = 0;
+    let tail_size: number = length & 3;
+
+    if (tail_size >= 3) {
+        k1 ^= key[tail_index + 2] << 16;
+    }
+    if (tail_size >= 2) {
+        k1 ^= key[tail_index + 1] << 8;
+    }
+    if (tail_size >= 1) {
+        k1 ^= key[tail_index + 0];
+    }
+
+    if (tail_size > 0) {
+        k1 = (k1 * c1) & 0xFFFFFFFF;
+        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;  // inlined ROTL32
+        k1 = (k1 * c2) & 0xFFFFFFFF;
+        h1 ^= k1;
+    }
+
+    // finalization
+    let unsigned_val:number = fmix(h1 ^ length);
+    if ((unsigned_val & 0x80000000) === 0) {
+        return unsigned_val;
+    }
+    else {
+        return -((unsigned_val ^ 0xFFFFFFFF) + 1);
+    }
+}

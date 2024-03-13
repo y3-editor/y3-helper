@@ -3,10 +3,11 @@ import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
 import { Env } from "./env";
-import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri } from './utility';
+import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri, hash } from './utility';
 
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { log } from 'console';
 
 export class CSVimporter
 {
@@ -372,11 +373,11 @@ export class CSVimporter
                         // 自定义属性的描述要加到工程文件的attr.json中
                         try {
                             if (this.env.mapUri) {
-                                attrJson = vscode.workspace.fs.readFile(vscode.Uri.joinPath(this.env.mapUri, "attr.json"));
+                                attrJson = await fs.readFileSync(vscode.Uri.joinPath(this.env.mapUri, "attr.json").fsPath);
                                 attrJson = JSON.parse(attrJson);
                             }
                             else {
-                                vscode.window.showErrorMessage("mapUri未定义或");
+                                vscode.window.showErrorMessage("mapUri未定义");
                                 return false;
                             }
                         }
@@ -386,7 +387,7 @@ export class CSVimporter
                         }
 
                         for (let customChineseKey in value) {
-                            customChineseKey = toUnicodeIgnoreASCII(customChineseKey);
+                            //customChineseKey = toUnicodeIgnoreASCII(customChineseKey);
                             const uuidKey = uuidv4();
                             let customAttrData: any;
                             customAttrData.__tuple__ = true;
@@ -399,7 +400,7 @@ export class CSVimporter
                             attrJson['c'].push(customAttrData);
                         }
                         try {
-                            vscode.workspace.fs.writeFile(vscode.Uri.joinPath(this.env.mapUri, "attr.json"), attrJson);
+                            await fs.writeFileSync(vscode.Uri.joinPath(this.env.mapUri, "attr.json").fsPath, toUnicodeIgnoreASCII(JSON.stringify(attrJson, null, 2)), 'utf8');
                         }
                         catch (error)
                         {
@@ -407,6 +408,34 @@ export class CSVimporter
                             return false;
                         }
                         console.log(`${key}: ${jsonObject}`);
+                    }
+                    else if (key === 'name') {
+                        let zhlanguageJson: any;
+                        try {
+                            if (this.env.mapUri) {
+                                zhlanguageJson = await fs.readFileSync(vscode.Uri.joinPath(this.env.mapUri, "zhlanguage.json").fsPath, 'utf8');
+                                zhlanguageJson = JSON.parse(zhlanguageJson);
+                            }
+                            else {
+                                vscode.window.showErrorMessage("mapUri未定义");
+                                return false;
+                            }
+                        }
+                        catch (error) {
+                            vscode.window.showErrorMessage("打开zhlanguage.json失败");
+                            return false;
+                        }
+                        //value = toUnicodeIgnoreASCII(value);
+                        let hashOfName:number = hash(value);
+                        zhlanguageJson[hashOfName] = value;
+                        jsonData[key] = hashOfName;
+                        try {
+                            await fs.writeFileSync(vscode.Uri.joinPath(this.env.mapUri, "zhlanguage.json").fsPath, JSON.stringify(zhlanguageJson, null, 2), 'utf8');
+                        }
+                        catch (error) {
+                            vscode.window.showErrorMessage("保存zhlanguage.json失败");
+                            return false;
+                        }
                     }
                     else if (value in ["True","true","TRUE"]) {
                         value = true;
@@ -451,7 +480,10 @@ export class CSVimporter
                         console.log(`${key}: ${jsonObject}`);
                         jsonData[key] = jsonObject;
                     }
-                    else if ((value.length >= 2 && value[0] === '{' && value[value.length - 1] === '}' )|| (value.length >= 2 && value[0] === '[' && value[value.length - 1] === ']')) { 
+                    else if ((value.length >= 2 && value[0] === '{' && value[value.length - 1] === '}') || (value.length >= 2 && value[0] === '[' && value[value.length - 1] === ']')) { 
+
+                        // 把value中的'转化为"以解析，之所以填CSV表的时候不用Json语法规定的"是因为这会导致CSV表格识别为此格内的字符串填写结束
+                        value= value.replace(/'/g, '"');
                         let jsonObject: any;
                         try {
                             jsonObject = JSON.parse(value);

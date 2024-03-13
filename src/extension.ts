@@ -5,7 +5,8 @@ import { Env } from './env';
 import { GameLauncher } from './launchGame';
 import { CSVimporter } from './CSVimporter';
 import * as utility from './utility';
-import { TemplateGenerator }  from './templateGenerator';
+import { TemplateGenerator } from './templateGenerator';
+import { Y3HelperDataProvider } from './Y3HelperDataProvider';
 import * as https from 'https';
 import * as JSZip from 'jszip';
 import * as fs from 'fs';
@@ -358,9 +359,31 @@ class Helper {
             let templateGenerator = new TemplateGenerator(this.env);
             
             let targetUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri,"./resource/editor_table/"); 
-            templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
+            await templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
                
         });
+    }
+
+    private registerCommandOfOpenFile() {
+        vscode.commands.registerCommand('y3-helper.openFile', async (fileUri: vscode.Uri) => {
+            const document = await vscode.workspace.openTextDocument(fileUri.fsPath);
+            vscode.window.showTextDocument(document);
+        });
+    }
+
+    private registerCommandOfClickY3HelperContainer() {
+        vscode.commands.registerCommand('y3-helper.clickY3-Helper-container', async () => {
+            this.registerY3HelperDataProvider();
+            console.log("y3-helper.clickY3-Helper-container");
+        });
+    }
+
+    private registerY3HelperDataProvider() {
+        
+        vscode.window.registerTreeDataProvider(
+            'editor_table-view',
+            new Y3HelperDataProvider(this.env)
+        );
     }
 
     private checkNewProject() {
@@ -395,6 +418,9 @@ class Helper {
         this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
         this.registerCommandOfGenerateAllTemplateCSV();
 
+        this.registerY3HelperDataProvider();
+        this.registerCommandOfOpenFile();
+        
         this.checkNewProject();
         this.reloadEnvWhenConfigChange();
     }
