@@ -21,16 +21,16 @@
         "viewsContainers": {
             "activitybar": [
                 {
-                    "id": "Y3-Helper-container",
-                    "title": "Y3-Helper",
+                    "id": "Y3-Helper",
+                    "title": "Y3开发助手",
                     "icon": "image/logo.png"
                 }
             ]
         },
         "views": {
-            "Y3-Helper-container": [
+            "Y3-Helper": [
                 {
-                    "id": "editor_table-view",
+                    "id": "y3-Helper.editorTableViewer",
                     "name": "物编数据"
                 }
             ]

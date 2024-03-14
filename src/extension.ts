@@ -368,9 +368,8 @@ class Helper {
     }
 
     private registerY3HelperDataProvider() {
-        
         vscode.window.registerTreeDataProvider(
-            'editor_table-view',
+            'y3-Helper.editorTableViewer',
             new Y3HelperDataProvider(this.env)
         );
     }
