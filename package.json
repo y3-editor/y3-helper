@@ -154,7 +154,8 @@
         "csv-parser": "^3.0.0",
         "fs-extra": "^11.2.0",
         "uuid": "^9.0.1",
-        "winreg": "^1.2.5"
+        "winreg": "^1.2.5",
+        "jszip": "3.10.1"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.3",
