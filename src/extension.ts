@@ -8,7 +8,6 @@ import * as utility from './utility';
 import { TemplateGenerator } from './templateGenerator';
 import { Y3HelperDataProvider } from './Y3HelperDataProvider';
 import * as tools from "./tools";
-import * as fs from 'fs';
 import * as preset from './preset';
 
 class Helper {
@@ -326,6 +325,7 @@ class Helper {
                 vscode.window.showErrorMessage("未找到地图路径！");
                 return false;
             };
+            new preset.UI(this.env).make();
         });
     }
 
