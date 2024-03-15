@@ -147,8 +147,7 @@ class Helper {
                 }
 
                 // 初始化CSV表
-                let csvImporter = new CSVimporter(this.env);
-                await csvImporter.importCSVFromOrderFolder();
+                vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
 
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
