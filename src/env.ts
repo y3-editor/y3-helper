@@ -2,14 +2,13 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
+import * as tools from './tools';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 export class Env {
-    private logger: vscode.LogOutputChannel;
 
-    constructor(logger: vscode.LogOutputChannel) {
-        this.logger = logger;
+    constructor() {
         this.updateTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
     }
 
@@ -251,14 +250,14 @@ export class Env {
             })(),
         ]);
 
-        this.logger.info(`editorUri: ${this.editorUri?.fsPath}`);
-        this.logger.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
-        this.logger.info(`editorVersion: ${this.editorVersion}`);
-        this.logger.info(`mapUri: ${this.mapUri}`);
-        this.logger.info(`projectUri: ${this.projectUri}`);
-        this.logger.info(`scriptUri: ${this.scriptUri?.fsPath}`);
-        this.logger.info(`y3Uri: ${this.y3Uri?.fsPath}`);
-        this.logger.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
+        tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
+        tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
+        tools.log.info(`editorVersion: ${this.editorVersion}`);
+        tools.log.info(`mapUri: ${this.mapUri}`);
+        tools.log.info(`projectUri: ${this.projectUri}`);
+        tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
+        tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
+        tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
     }
 
     public async waitReady() {

@@ -60,6 +60,10 @@
             {
                 "command": "y3-helper.generateAllTemplateCSV",
                 "title": "Y3:生成物编模板（CSV）"
+            },
+            {
+                "command": "y3-helper.downloadPresetUI",
+                "title": "Y3:下载预设资源（UI）"
             }
         ],
         "configuration": {

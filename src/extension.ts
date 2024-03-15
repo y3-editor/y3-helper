@@ -7,28 +7,25 @@ import { CSVimporter } from './CSVimporter';
 import * as utility from './utility';
 import { TemplateGenerator } from './templateGenerator';
 import { Y3HelperDataProvider } from './Y3HelperDataProvider';
-import * as https from 'https';
-import * as JSZip from 'jszip';
+import * as tools from "./tools";
 import * as fs from 'fs';
+import * as preset from './preset';
 
 class Helper {
     private context: vscode.ExtensionContext;
-    private logger: vscode.LogOutputChannel;
     private env: Env;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        this.logger = vscode.window.createOutputChannel("Y3开发助手", { log: true });
-        this.logger.clear();
 
-        this.env = new Env(this.logger);
+        this.env = new Env();
     }
 
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
-                this.env = new Env(this.logger);
-                this.logger.info('配置已更新，已重新加载环境');
+                this.env = new Env();
+                tools.log.info('配置已更新，已重新加载环境');
             }
         });
     }
@@ -47,36 +44,6 @@ class Helper {
 
                 let scriptUri = this.env.scriptUri!;
                 let y3Uri = this.env.y3Uri!;
-                let ui_path = vscode.Uri.joinPath(this.env.projectUri!, 'ui_plugin');
-                await https.get('https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb', (resp) => {
-                    // 收到数据
-                    const chunks: any[] = [];
-                    resp.on('data', (chunk) => {
-                        chunks.push(chunk);
-                    });
-                    // 数据接收完毧
-                    resp.on('end', () => {
-                        // 将所有数据块拼接在一起
-                        const data = Buffer.concat(chunks);
-                        // 加压到目标文件夹
-                        JSZip.loadAsync(data).then((zip) => {
-                            zip.forEach((relativePath, file) => {
-                                if(file.dir){
-                                    fs.mkdirSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, {recursive: true});
-                                }
-                                else{
-                                    file.async('nodebuffer').then((content) => {
-                                        fs.writeFileSync(vscode.Uri.joinPath(ui_path, relativePath).fsPath, content);
-                                    });
-                                }
-                            });
-                            console.log('ZIP 数据已解压缩到文件系统');
-                        });
-                    });
-                }).on("error", (err) => {
-                    console.log("download ui error" + err.message);
-                });
-
 
                 try {
                     let state = await vscode.workspace.fs.stat(y3Uri);
@@ -87,7 +54,7 @@ class Helper {
                                 recursive: true,
                                 useTrash: true,
                             });
-                            this.logger.info(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
+                            tools.log.info(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
                         } catch (error) {
                             vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
                             return;
@@ -352,6 +319,16 @@ class Helper {
         });
     }
 
+    private registerCommandOfDownloadPresetUI() {
+        vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
+            await this.env.waitReady();
+            if (!this.env.mapUri) {
+                vscode.window.showErrorMessage("未找到地图路径！");
+                return false;
+            };
+        });
+    }
+
     private registerCommandOfOpenFile() {
         vscode.commands.registerCommand('y3-helper.openFile', async (fileUri: vscode.Uri) => {
             const document = await vscode.workspace.openTextDocument(fileUri.fsPath);
@@ -404,6 +381,7 @@ class Helper {
         this.registerCommandOfLaunchGameAndAttach();
         this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
         this.registerCommandOfGenerateAllTemplateCSV();
+        this.registerCommandOfDownloadPresetUI();
 
         this.registerY3HelperDataProvider();
         this.registerCommandOfOpenFile();
