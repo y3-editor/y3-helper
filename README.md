@@ -12,6 +12,8 @@
 
 之后使用命令 `Y3:导入物编数据（CSV）` 即可将这些物编写入地图。
 
+> 如果是老地图，请使用命令 `Y3:生成物编模板（CSV）` 来生成模板文件
+
 > 推荐和[Edit csv](https://marketplace.visualstudio.com/items?itemName=janisdd.vscode-edit-csv)插件配合使用，以便在Visual Code内编辑CSV表格，无需打开新的窗口
 
 > 你可以通过 `Y3-Helper.CSVPath` 设置修改这些CSV文件的路径
