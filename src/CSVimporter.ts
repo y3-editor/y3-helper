@@ -516,7 +516,6 @@ export class CSVimporter
             console.error('保存Json文件时出错', err);
             return false;
         }
-        vscode.window.showInformationMessage('此行保存成功');
         console.log('此行保存成功');
         return true;
     }

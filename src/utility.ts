@@ -1,7 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 
-
+/**
+ * 判断一个uri是否为指向一个json文件
+ * @param uri 
+ * @returns 
+ */
+export function isJson(uri:string):boolean {
+    return uri.toLowerCase().endsWith(".json");
+}
 /**
  * 检查路径是否有效
  * @param path 路径
