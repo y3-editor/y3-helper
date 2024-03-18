@@ -10,7 +10,7 @@ export class GameLauncher {
         this.env = env;
     }
 
-    public async launch(): Promise<boolean> {
+    public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
         await this.env.waitReady();
         let projectUri = this.env.projectUri;
         let editorExeUri = this.env.editorExeUri;
@@ -22,6 +22,16 @@ export class GameLauncher {
             vscode.window.showErrorMessage("未找到编辑器！");
             return false;
         }
+        let args = [];
+        args.push('type@editor_game');
+        args.push('subtype@editor_game');
+        args.push('release@true');
+        args.push('editor_map_path@' + projectUri.fsPath);
+        if (luaArgs) {
+            for (let key in luaArgs) {
+                args.push(key + "@" + luaArgs[key].toString());
+            }
+        }
         await runShell(
             "启动游戏",
             editorExeUri.fsPath,
@@ -29,7 +39,7 @@ export class GameLauncher {
                 "--dx11",
                 "--console",
                 "--start=Python",
-                "--python-args=type@editor_game,subtype@editor_game,release@true,editor_map_path@" + projectUri.fsPath,
+                "--python-args=" + args.join(","),
                 "--plugin-config=Plugins-PyQt",
                 "--python-debug=1",
             ],
