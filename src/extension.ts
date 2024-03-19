@@ -6,7 +6,7 @@ import { GameLauncher } from './launchGame';
 import { CSVimporter } from './CSVimporter';
 import * as utility from './utility';
 import { TemplateGenerator } from './templateGenerator';
-import { Y3HelperDataProvider } from './Y3HelperDataProvider';
+import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './Y3HelperEditorTable';
 import * as tools from "./tools";
 import * as preset from './preset';
 
@@ -340,16 +340,36 @@ class Helper {
 
     private registerCommandOfClickY3HelperContainer() {
         vscode.commands.registerCommand('y3-helper.clickY3-Helper-container', async () => {
-            this.registerY3HelperDataProvider();
+            this.registerEditorTableView();
             console.log("y3-helper.clickY3-Helper-container");
         });
     }
 
-    private registerY3HelperDataProvider() {
+    private registerEditorTableView() {
+        const y3HelperDataProvider=new Y3HelperDataProvider(this.env);
         vscode.window.registerTreeDataProvider(
-            'y3-Helper.editorTableViewer',
-            new Y3HelperDataProvider(this.env)
+            'y3-Helper.editorTableView',
+            y3HelperDataProvider
         );
+        vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => {
+            y3HelperDataProvider.refresh();
+        });
+        
+
+        vscode.commands.registerCommand('y3-Helper.editorTableView.refresh', () => y3HelperDataProvider.refresh());
+
+        const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
+            y3HelperDataProvider.getEditorTablePath(),
+            y3HelperDataProvider.getZhlanguageJson(),
+            y3HelperDataProvider.englishPathToChinese
+        );
+        
+        this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));
+
+        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(y3HelperDataProvider.getZhlanguageJson());
+        let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
+        this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel,goEditorTableDocumentSymbolProvider));
+
     }
 
     private checkNewProject() {
@@ -385,7 +405,7 @@ class Helper {
         this.registerCommandOfGenerateAllTemplateCSV();
         this.registerCommandOfDownloadPresetUI();
 
-        this.registerY3HelperDataProvider();
+        this.registerEditorTableView();
         this.registerCommandOfOpenFile();
         
         this.checkNewProject();

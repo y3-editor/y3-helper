@@ -17,21 +17,25 @@
         "workspaceContains:y3/开发计划.md"
     ],
     "main": "./out/extension.js",
+    "capabilities": {
+        "workspaceSymbolProvider": "true",
+        "documentSymbolProvider": "true"
+    },
     "contributes": {
-        "viewsContainers": {
-            "activitybar": [
+        "views": {
+            "explorer": [
                 {
-                    "id": "Y3-Helper",
-                    "title": "Y3开发助手",
-                    "icon": "image/logo.png"
+                    "id": "y3-Helper.editorTableView",
+                    "name": "Y3开发助手：物编数据"
                 }
             ]
         },
-        "views": {
-            "Y3-Helper": [
+        "menus": {
+            "view/title": [
                 {
-                    "id": "y3-Helper.editorTableViewer",
-                    "name": "物编数据"
+                    "command": "y3-Helper.editorTableView.refresh",
+                    "when": "view == y3-Helper.editorTableView",
+                    "group": "navigation"
                 }
             ]
         },
@@ -62,6 +66,12 @@
                 "title": "Y3:生成物编模板（CSV）"
             },
             {
+                "command": "y3-Helper.editorTableView.refresh",
+                "title": "Refresh",
+                "category": "y3-helper",
+                "icon": "$(refresh)"
+            },
+			{
                 "command": "y3-helper.downloadPresetUI",
                 "title": "Y3:下载预设资源（UI）"
             }
