@@ -38,6 +38,7 @@ export class GameLauncher {
             [
                 "--dx11",
                 "--console",
+                "--luaconsole",
                 "--start=Python",
                 "--python-args=" + args.join(","),
                 "--plugin-config=Plugins-PyQt",
