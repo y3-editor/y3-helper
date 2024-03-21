@@ -42,7 +42,7 @@ export class GameLauncher {
                 "--start=Python",
                 "--python-args=" + args.join(","),
                 "--plugin-config=Plugins-PyQt",
-                "--python-debug=1",
+                //"--python-debug=1",
             ],
             vscode.Uri.joinPath(editorExeUri, "..")
         );
