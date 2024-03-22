@@ -30,10 +30,10 @@ export class UI {
         this.textureInfos = [];
     }
 
-    public async make() {
+    public async download(url: string) {
         let downloadBuffer: Buffer;
         try {
-            downloadBuffer = await tools.download('https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb');
+            downloadBuffer = await tools.download(url);
         } catch (error) {
             tools.log.error(error as Error);
             return;

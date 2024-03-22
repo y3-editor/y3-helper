@@ -113,7 +113,10 @@ class Helper {
                 }
 
                 // 初始化CSV表
-                vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
+                await vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
+
+                // 下载预设UI
+                await vscode.commands.executeCommand('y3-helper.downloadPresetUI');
 
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
@@ -316,7 +319,6 @@ class Helper {
             
             let targetUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri,"./resource/editor_table/"); 
             await templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
-               
         });
     }
 
@@ -331,7 +333,7 @@ class Helper {
                 location: vscode.ProgressLocation.Notification,
                 title: '正在下载预设UI...',
             }, async (progress, token) => {
-                await new preset.UI(this.env).make();
+                await new preset.UI(this.env).download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
             });
         });
     }
