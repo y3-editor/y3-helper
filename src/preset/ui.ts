@@ -207,12 +207,24 @@ export class UI {
             let icon = textureInfo.icon;
             if (icon !== undefined) {
                 let iconUri = vscode.Uri.joinPath(this.env.projectUri!, 'editor_table/editoricon', textureInfo.newName.toString() + '.json');
+                // 全词匹配数字，如果数字 === oldName，替换为newName
+                if (textureInfo.oldName !== textureInfo.newName) {
+                    icon = icon.replace(new RegExp(`(?<=\\D)${textureInfo.oldName}(?=\\D)`, 'g'), textureInfo.newName.toString());
+                }
                 pushTask(vscode.workspace.fs.writeFile(iconUri, Buffer.from(icon)));
             }
             let texture = textureInfo.texture;
             if (texture !== undefined) {
                 let textureUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, 'texture');
                 pushTask(vscode.workspace.fs.writeFile(textureUri, texture));
+            }
+        }
+
+        // 收集oldName和newName的对应关系
+        let nameMap: { [key: number]: number } = {};
+        for (let textureInfo of textureInfos) {
+            if (textureInfo.oldName !== textureInfo.newName) {
+                nameMap[textureInfo.oldName] = textureInfo.newName;
             }
         }
 
@@ -226,6 +238,9 @@ export class UI {
             if (fileContent === undefined) {
                 continue;
             }
+            // 全词匹配数字，将oldName替换为newName
+            fileContent = fileContent.replace(/\b\d+\b/g, (match) => nameMap[parseInt(match)]?.toString() ?? match);
+
             let uri = vscode.Uri.joinPath(this.env.mapUri!, 'ui', file.name.slice(basePath.length));
             pushTask(vscode.workspace.fs.writeFile(uri, Buffer.from(fileContent)));
         }
