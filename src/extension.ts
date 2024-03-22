@@ -327,7 +327,12 @@ class Helper {
                 vscode.window.showErrorMessage("未找到地图路径！");
                 return false;
             };
-            new preset.UI(this.env).make();
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: '正在下载预设UI...',
+            }, async (progress, token) => {
+                await new preset.UI(this.env).make();
+            });
         });
     }
 

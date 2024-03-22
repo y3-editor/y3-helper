@@ -42,6 +42,7 @@ export class GameLauncher {
                 "--start=Python",
                 "--python-args=" + args.join(","),
                 "--plugin-config=Plugins-PyQt",
+                "--python-builtin-path=E:/up1-uat/src/Server/server/engine",
                 //"--python-debug=1",
             ],
             vscode.Uri.joinPath(editorExeUri, "..")
