@@ -31,7 +31,7 @@
 ```
 ![搜索某一个物编的数据](image/search_editor_table_json.png)
 
-点击打开保存此物编数据的Json后，按下快捷键ctrl+T，你可以这样在此Json中搜索你要编辑的属性
+点击打开保存此物编数据的Json后，按下快捷键ctrl+shift+O，你可以这样在此Json中搜索你要编辑的属性
 ```
 @ 攻击
 ```
