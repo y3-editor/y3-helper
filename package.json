@@ -85,7 +85,8 @@
                     "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。",
                     "type": "string",
                     "default": "",
-                    "ignoreSync": true
+                    "ignoreSync": true,
+                    "pattern": "^.*[\\\\/]Editor.exe$"
                 },
                 "Y3-Helper.CSVPath": {
                     "title": "CSV物编路径",
