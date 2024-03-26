@@ -34,7 +34,9 @@ jobs:
           npm install -g @vscode/vsce
           git config --global user.email "sumneko@hotmail.com"
           git config --global user.name "最萌小汐（机械飞升）"
-          if [ -n "$(git status --porcelain)" ]; then git commit -a -m "更新package-lock.json"
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -a -m "更新package-lock.json"
+          fi
           vsce package -o "${{ env.VSIX_NAME }}" ${{ github.ref_name }}
           git pull
           git push
