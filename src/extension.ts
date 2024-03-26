@@ -6,7 +6,7 @@ import { GameLauncher } from './launchGame';
 import { CSVimporter } from './CSVimporter';
 import * as utility from './utility';
 import { TemplateGenerator } from './templateGenerator';
-import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './y3HelperEditorTable';
+import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable';
 import * as tools from "./tools";
 import * as preset from './preset';
 
