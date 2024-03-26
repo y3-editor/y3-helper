@@ -14,6 +14,7 @@ interface TextureInfo {
     xml: { [key: string]: any };
     icon?: string;
     texture?: Buffer;
+    textureWhat?: Buffer;
     noUse?: boolean;
 }
 
@@ -75,6 +76,7 @@ export class UI {
                 xml: item,
                 icon: await this.zip!.file(`editor_table/editoricon/${name.toString()}.json`)?.async('string'),
                 texture: await this.zip!.file(`custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/texture`)?.async('nodebuffer'),
+                textureWhat: await this.zip!.file(`custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/${guid}.1`)?.async('nodebuffer'),
             });
         }
     }
@@ -217,6 +219,11 @@ export class UI {
             if (texture !== undefined) {
                 let textureUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, 'texture');
                 pushTask(vscode.workspace.fs.writeFile(textureUri, texture));
+            }
+            let textureWhat = textureInfo.textureWhat;
+            if (textureWhat !== undefined) {
+                let textureWhatUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, `${textureInfo.newGuid}.1`);
+                pushTask(vscode.workspace.fs.writeFile(textureWhatUri, textureWhat));
             }
         }
 
