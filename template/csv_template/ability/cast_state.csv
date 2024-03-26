@@ -1,3 +1,3 @@
 key,uid,name,ability_break_cast_range,ability_bw_point,ability_cast_point,ability_channel_time,ability_prepare_time,can_bs_interrupt,can_cast_interrupt,can_interrupt_others,can_prepare_interrupt,can_ps_interrupt,influenced_by_move
 ID,UID,名称,施法打断范围,施法完成,施法开始,施法出手,施法引导,施法完成可以被打断,施法出手可以被打断,技能可以打断其他技能,施法引导可以被打断,施法开始可以被打断,移动会对技能产生影响
-134265579,134265579,这是一个技能,"("50")",0.5,0.2,0.0,0.0,True,False,True,False,True,True
+134265579,134265579,这是一个技能,"(""50"")",0.5,0.2,0,0,True,False,True,False,True,True

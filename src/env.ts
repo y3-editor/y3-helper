@@ -3,6 +3,8 @@ import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
 import * as tools from './tools';
+import { isPathValid } from './utility';
+import * as fs from 'fs';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
@@ -210,8 +212,82 @@ export class Env {
         destructible: "./resource/editor_table/可破坏物",
         sound: "./resource/editor_table/声音"
     };
-
+    public readonly englishPathToChinese: { [key: string]: string } = {
+        "editorunit": "单位",
+        "soundall": "声音",
+        "abilityall": "技能",
+        "editordecoration": "装饰物",
+        "editordestructible": "可破坏物",
+        "editoritem": "物品",
+        "modifierall": "魔法效果",
+        "projectileall": "投射物",
+        "technologyall": "科技"
+    };
+    public readonly englishToChinese: { [key: string]: string } = {
+        "unit": "单位",
+        "decoration": "装饰物",
+        "item": "物品",
+        "ability": "技能",
+        "modifier": "魔法效果",
+        "projectile": "投射物",
+        "technology": "科技",
+        "destructible": "可破坏物",
+        "sound": "声音"
+    };
+    public readonly chineseToEnglish: { [key: string]: string } = {
+        "单位": "unit",
+        "装饰物": "decoration",
+        "物品": "item",
+        "技能": "ability",
+        "魔法效果": "modifier",
+        "投射物": "projectile",
+        "科技": "technology",
+        "可破坏物": "destructible",
+        "声音": "sound"
+    };
+    private _zhlanguageJson: any = undefined;
     
+    public get zhlanguageJson(): any {
+
+        if (this._zhlanguageJson) {
+            return this._zhlanguageJson;
+        }
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
+            return undefined;
+        }
+        // 载入中文名称
+        let zhlanguagePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../zhlanguage.json");
+        if (isPathValid(zhlanguagePath)) {
+            try {
+                this._zhlanguageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
+            }
+            catch (error) {
+                vscode.window.showErrorMessage("读取和解析" + zhlanguagePath + "时失败，错误为：" + error);
+            }
+        }
+        else {
+            return undefined;
+        }
+        return this._zhlanguageJson;
+    }
+
+    private _editorTablePath: string = "";
+    
+    public get editorTablePath(): string{
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
+            return "";
+        }
+        this._editorTablePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../editor_table");
+
+
+        if (!isPathValid(this._editorTablePath)) {
+            this._editorTablePath = "";
+        }
+        return this._editorTablePath;
+    }
+    
+    
+
     /**
      * 从插件配置中更新物编数据类型对应的CSV文件保存地址
      */

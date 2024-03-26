@@ -1,3 +1,7 @@
+/**
+ * 从CSV表格中导入物编数据
+ */
+
 import * as vscode from 'vscode';
 import csvParser  from 'csv-parser';
 import * as fs from 'fs';

@@ -10,59 +10,28 @@ import { encode } from 'punycode';
 export class Y3HelperDataProvider implements vscode.TreeDataProvider<FileNode> {
   private _onDidChangeTreeData: vscode.EventEmitter<FileNode | undefined> = new vscode.EventEmitter<FileNode | undefined>();
   readonly onDidChangeTreeData: vscode.Event<FileNode | undefined> = this._onDidChangeTreeData.event;
-  public readonly englishPathToChinese: { [key: string]: string } = {
-    "editorunit": "单位",
-    "soundall": "声音",
-    "abilityall": "技能",
-    "editordecoration": "装饰物",
-    "editordestructible": "可破坏物",
-    "editoritem": "物品",
-    "modifierall": "魔法效果",
-    "projectileall": "投射物",
-    "technologyall": "科技"
-  };
+  public readonly englishPathToChinese: { [key: string]: string };
+  private editorTablePath: string = "";
   private zhlanguageJson: any = undefined;
-  public getZhlanguageJson(): any{
-    return this.zhlanguageJson;
-  }
+  
   constructor(private env: Env) {
-
+    this.englishPathToChinese = this.env.englishPathToChinese;
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("当前未打开工作目录");
       return;
     }
 
-    this.editorTablePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../editor_table");
-
-
-    if (!isPathValid(this.editorTablePath)) {
-      this.editorTablePath = "";
-    }
+    this.editorTablePath = this.env.editorTablePath;
 
     // 载入中文名称
-    let zhlanguagePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../zhlanguage.json");
-    if (isPathValid(zhlanguagePath)) {
-      try {
-        this.zhlanguageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
-      }
-      catch (error) {
-        vscode.window.showErrorMessage("读取和解析" + zhlanguagePath + "时失败，错误为：" + error);
-      }
-    }
-    else {
-      return;
-    }
+    this.zhlanguageJson = this.env.zhlanguageJson;
   }
 
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  private editorTablePath: string = "";
-  public getEditorTablePath():string
-  {
-    return this.editorTablePath;  
-  }
+  
   getTreeItem(element: FileNode): vscode.TreeItem {
     return element;
   }

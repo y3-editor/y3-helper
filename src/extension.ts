@@ -6,7 +6,7 @@ import { GameLauncher } from './launchGame';
 import { CSVimporter } from './CSVimporter';
 import * as utility from './utility';
 import { TemplateGenerator } from './templateGenerator';
-import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './Y3HelperEditorTable';
+import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './y3HelperEditorTable';
 import * as tools from "./tools";
 import * as preset from './preset';
 
@@ -274,6 +274,7 @@ class Helper {
                 { label: '投射物', description: 'projectile' },
                 { label: '科技', description: 'technology' },
                 { label: '可破坏物', description: 'destructible' },
+                { label: '声音', description: 'sound' }
             ];
 
             vscode.window.showQuickPick(items, {
@@ -296,6 +297,33 @@ class Helper {
         });
     }
 
+    /**
+     * 注册CSVeditor相关的命令
+     */
+    private registerCommandOfCSVeditor() {
+        vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
+            const items: vscode.QuickPickItem[] = [
+                { label: '单位', description: 'unit' },
+                { label: '装饰物', description: 'decoration' },
+                { label: '物品', description: 'item' },
+                { label: '技能', description: 'ability' },
+                { label: '魔法效果', description: 'modifier' },
+                { label: '投射物', description: 'projectile' },
+                { label: '科技', description: 'technology' },
+                { label: '可破坏物', description: 'destructible' },
+                { label: '声音', description: 'sound' }
+            ];
+            vscode.window.showQuickPick(items, {
+                placeHolder: '选择你要添加的物编数据类型(CSV)'
+            }).then(selection => {
+                if (selection) {
+                    vscode.window.showInformationMessage(`你选择了: ${selection.label}`);
+                }
+                vscode.window.showInputBox();
+            });
+        });
+    }
+
     private registerCommandOfGenerateAllTemplateCSV() {
         vscode.commands.registerCommand('y3-helper.generateAllTemplateCSV', async () => {
             console.log("y3-helper.generateTemplateCSV");
@@ -314,7 +342,7 @@ class Helper {
                 vscode.window.showErrorMessage("未找到script文件夹");
                 return false;
             }
-            // todo: 生成csv模板
+            // 生成csv模板
             let templateGenerator = new TemplateGenerator(this.env);
             
             let targetUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri,"./resource/editor_table/"); 
@@ -366,14 +394,14 @@ class Helper {
         vscode.commands.registerCommand('y3-Helper.editorTableView.refresh', () => y3HelperDataProvider.refresh());
 
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
-            y3HelperDataProvider.getEditorTablePath(),
-            y3HelperDataProvider.getZhlanguageJson(),
-            y3HelperDataProvider.englishPathToChinese
+            this.env.editorTablePath,
+            this.env.zhlanguageJson,
+            this.env.englishPathToChinese
         );
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));
 
-        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(y3HelperDataProvider.getZhlanguageJson());
+        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(this.env.zhlanguageJson);
         let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
         this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel,goEditorTableDocumentSymbolProvider));
 
@@ -417,6 +445,8 @@ class Helper {
         
         this.checkNewProject();
         this.reloadEnvWhenConfigChange();
+
+        this.registerCommandOfCSVeditor();
     }
 }
 

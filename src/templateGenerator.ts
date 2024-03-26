@@ -5,8 +5,12 @@ import * as path from 'path';
 import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII } from './utility';
 export class TemplateGenerator{
     private env: Env;
+    private readonly englishToChinese;
+    private readonly chineseToEnglish;
     public constructor(env: Env) {
         this.env = env;
+        this.chineseToEnglish = this.env.chineseToEnglish;
+        this.englishToChinese = this.env.englishToChinese;
     }
     
     
@@ -41,29 +45,6 @@ export class TemplateGenerator{
         return true;
     }
 
-    
-    private readonly englishToChinese: { [key: string]: string } = {
-        "unit":"单位",
-        "decoration":"装饰物",
-        "item":"物品",
-        "ability":"技能",
-        "modifier":"魔法效果",
-        "projectile":"投射物",
-        "technology":"科技" ,
-        "destructible":"可破坏物" ,
-        "sound":"声音" 
-    };
-    private readonly chineseToEnglish: { [key: string]: string } = {
-        "单位": "unit",
-        "装饰物": "decoration",
-        "物品": "item",
-        "技能": "ability",
-        "魔法效果": "modifier",
-        "投射物": "projectile",
-        "科技": "technology",
-        "可破坏物": "destructible",
-        "声音": "sound"
-    };
     
     /**
      * vsocde插件的发布打包程序不支持中文路径 只能被迫转换一下 完后又改回原名
