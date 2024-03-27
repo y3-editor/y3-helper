@@ -41,6 +41,37 @@ class ViewInExplorerNode extends TreeNode {
     }
 }
 
+class ViewInVSCode extends TreeNode {
+    constructor(uri: vscode.Uri) {
+        super('在VSCode中打开', {
+            command: {
+                command: "vscode.openFolder",
+                title: '在当前VSCode中打开',
+                arguments: [
+                    uri,
+                ]
+            },
+            iconPath: new vscode.ThemeIcon('window'),
+        });
+    }
+}
+
+class ViewInNewVSCode extends TreeNode {
+    constructor(uri: vscode.Uri) {
+        super('在新的VSCode窗口中打开', {
+            command: {
+                command: "vscode.openFolder",
+                title: '在新的VSCode窗口中打开',
+                arguments: [
+                    uri,
+                    true,
+                ]
+            },
+            iconPath: new vscode.ThemeIcon('empty-window'),
+        });
+    }
+}
+
 let nodeReselectMapPath = new TreeNode('重新选择Y3地图路径', {
     command: {
         command: 'y3-helper.reloadEnv',
@@ -76,7 +107,13 @@ let nodeEnv = new TreeNode('当前环境', {
         new TreeNode('Lua脚本', {
             update: (node, env) => {
                 node.tooltip     = env.scriptUri?.fsPath;
-                node.iconPath    = env.scriptUri ? new vscode.ThemeIcon('lua') : new vscode.ThemeIcon('error');
+                node.iconPath    = env.scriptUri ? new vscode.ThemeIcon('book') : new vscode.ThemeIcon('error');
+                node.description = env.scriptUri ? undefined : '未找到Lua脚本';
+                node.childs      = env.scriptUri ? [
+                    new ViewInExplorerNode(env.scriptUri),
+                    new ViewInVSCode(env.scriptUri),
+                    new ViewInNewVSCode(env.scriptUri),
+                ] : undefined;
             },
         })
     ],
