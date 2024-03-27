@@ -28,6 +28,9 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
   }
 
   refresh(): void {
+
+    // 重新读取zhlanguage.json以刷新
+    this.env.refreshZhlanguageJson();
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -127,7 +130,7 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
     
   }
  
-  private searchEditorTableItem(pathStr: string,query:string): vscode.SymbolInformation[] {
+  private searchEditorTableItemsInFolder(pathStr: string,query:string): vscode.SymbolInformation[] {
     let res: vscode.SymbolInformation[] = [];
     const files = fs.readdirSync(pathStr);
     files.forEach(file => {
@@ -194,7 +197,7 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
 
     //只搜索九个文件夹下对应的九类类物编数据，不递归搜索子文件夹
     for (let key in this.englishPathToChinese) {
-      res=res.concat(this.searchEditorTableItem(path.join(this.editorTablePath, key), query));
+      res=res.concat(this.searchEditorTableItemsInFolder(path.join(this.editorTablePath, key), query));
     }
     
     
@@ -231,11 +234,11 @@ export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbo
     if (token.isCancellationRequested) {
       return Promise.resolve(res);
     }
-    res=this.getEditorTableJsonSymbols(document);
+    res=this.getEditorTableJsonDocumentSymbols(document);
 
     return Promise.resolve(res);
   }
-  private getEditorTableJsonSymbols(document: vscode.TextDocument): vscode.SymbolInformation[] {
+  private getEditorTableJsonDocumentSymbols(document: vscode.TextDocument): vscode.SymbolInformation[] {
     let res: vscode.SymbolInformation[] = [];
     const keyToLine: { [key: string]: number } = {};
     let editorTableJsonData:any = JSON.parse(document.getText());

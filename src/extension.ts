@@ -10,6 +10,7 @@ import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocu
 import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
+import { CSVeditor } from './editorTable/CSVeditor';
 import { MainMenu } from './mainMenu';
 
 class Helper {
@@ -44,6 +45,9 @@ class Helper {
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
             await this.reload(true);
+        });
+        vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
+            runShell("执行命令", args[0], args.slice(1));
         });
     }
 
@@ -188,42 +192,6 @@ class Helper {
     }
 
     
-    /**注册从CSV格式文件中导入物体编辑数据的命令(需要用户选定文件夹)
-     * @deprecated
-     */
-    private registerCommandOfImportObjectDataFromCSV()
-    {
-        vscode.commands.registerCommand('y3-helper.importObjectDataFromCSV', async () => {
-            await this.env.waitReady();
-            let projectUri = this.env.projectUri;
-            let editorExeUri = this.env.editorExeUri;
-            if (!projectUri) {
-                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
-                return false;
-            }
-            if (!editorExeUri) {
-                vscode.window.showErrorMessage("未找到编辑器！");
-                return false;
-            }
-            await vscode.window.withProgress({
-                title: '正在导入...',
-                location: vscode.ProgressLocation.Window,
-            }, async (progress) => {
-                let csv_uri=(await utility.askUserTargetDirectory());
-                console.log("csv_uri="+csv_uri?.fsPath);
-                if (!csv_uri || !utility.isPathValid(csv_uri.fsPath))
-                {
-                    vscode.window.showErrorMessage("提供的csv文件路径非法");
-                    return;
-                }
-                // import csv
-                let csvImporter = new CSVimporter(this.env);
-                let maxSearchDepth = vscode.workspace.getConfiguration("csvImpoterConfig").get<string>("max_recursive_search_depth");
-                await csvImporter.recursiveSearchCSVandImport(csv_uri, 10);// 需要改动
-                
-            });
-        });
-    }
 
     /**
      * 根据用户配置的路径 导入全部物编数据
@@ -258,68 +226,12 @@ class Helper {
     }
 
     /**
-     * 注册生成指定类型的CSV文件模板的命令
-     * @deprecated
-     */
-    private registerCommandOfGenerateTemplateCSV() {
-        vscode.commands.registerCommand('y3-helper.generateTemplateCSV', async () => {
-            console.log("y3-helper.generateTemplateCSV");
-            await this.env.waitReady();
-            let projectUri = this.env.projectUri;
-            let editorExeUri = this.env.editorExeUri;
-            if (!projectUri) {
-                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
-                return false;
-            }
-            if (!editorExeUri) {
-                vscode.window.showErrorMessage("未找到编辑器！");
-                return false;
-            }
-            // todo: 生成csv模板
-            let templateGenerator = new TemplateGenerator(this.env);
-            let targetUri=await utility.askUserTargetDirectory();
-            if (!targetUri) {
-                vscode.window.showErrorMessage("指定的路径不存在");
-                return;
-            }
-            
-            const items: vscode.QuickPickItem[] = [
-                { label: '单位', description: 'unit' },
-                { label: '装饰物', description: 'decoration' },
-                { label: '物品', description: 'item' },
-                { label: '技能', description: 'ability' },
-                { label: '魔法效果', description: 'modifier' },
-                { label: '投射物', description: 'projectile' },
-                { label: '科技', description: 'technology' },
-                { label: '可破坏物', description: 'destructible' },
-                { label: '声音', description: 'sound' }
-            ];
-
-            vscode.window.showQuickPick(items, {
-                placeHolder: '选择你要生成的模板类型'
-            }).then(selection => {
-                if (selection) {
-                    vscode.window.showInformationMessage(`你选择了: ${selection.label}`);
-                }
-                let templateGenerator: TemplateGenerator = new TemplateGenerator(this.env);
-                if (selection?.description!==undefined&&targetUri!==undefined) {
-                    templateGenerator.generateTemplateCSVToTargetPath(selection.label, vscode.Uri.joinPath(targetUri, selection.label));
-                }
-                else {
-                    vscode.window.showErrorMessage(`selection?.description===undefined||targetUri===undefined`);
-                    return;
-                }
-                vscode.window.showInformationMessage(`${selection.label}数据模板生成成功`);
-            });
-
-        });
-    }
-
-    /**
      * 注册CSVeditor相关的命令
      */
     private registerCommandOfCSVeditor() {
-        let disposable = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
+
+        // 在CSV表格中添加物编项目的命令
+        let addNewDataInCSVcommand = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
             const editorTableTypes: vscode.QuickPickItem[] = [
                 { label: '单位', description: 'unit' },
                 { label: '装饰物', description: 'decoration' },
@@ -339,8 +251,8 @@ class Helper {
                 }
                 
                 const inputOptions: vscode.InputBoxOptions = {
-                    prompt: '请输入物编数据的名称或UID',
-                    placeHolder: '数字',
+                    prompt: '名称',
+                    placeHolder: '字符串',
                     validateInput: (text: string) => {
                         if (text.length === 0) {
                             return "输入的内容为空";
@@ -348,10 +260,49 @@ class Helper {
                         return null;
                     }
                 };
-                vscode.window.showInputBox(inputOptions);
+                vscode.window.showInputBox(inputOptions).then(value => {
+                    if (value) {
+                        let csvEditor: CSVeditor = new CSVeditor(this.env);
+                        
+                        // todo:分配一个uid并新建到csv中
+
+                    }
+                });
             });
         });
-        this.context.subscriptions.push(disposable);
+        this.context.subscriptions.push(addNewDataInCSVcommand);
+
+        // 把Y3工程项目中已有的物编数据的UID和名称添加到CSV表格以便填写和导入的命令
+        let addUIDandNameToCSVfromProjectCommand = vscode.commands.registerCommand("y3-helper.addUIDandNameToCSVfromProject", async () => {
+            const inputOptions: vscode.InputBoxOptions = {
+                prompt: 'UID或名称',
+                placeHolder: '字符串',
+                validateInput: (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    return null;
+                }
+            };
+            
+            vscode.window.showInputBox(inputOptions).then(value => {
+                if (value) {
+                    let csvEditor: CSVeditor = new CSVeditor(this.env);
+
+                    let pickItems:vscode.QuickPickItem[]=csvEditor.searchAllEditorTableItemInProject(value);
+                    vscode.window.showQuickPick(pickItems, {
+                        placeHolder: '选择你要添加的物编数据的UID和名称'
+                    }).then((selectedItem) => {
+                        if (selectedItem) {
+                            vscode.window.showInformationMessage(`你选择了: ${selectedItem.label}`);
+                            
+                        }
+                    });
+                }
+            });
+            
+        });
+
     }
 
     private registerCommandOfGenerateAllTemplateCSV() {

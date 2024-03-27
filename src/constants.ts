@@ -1,6 +1,9 @@
+// 本项目的常量尽量放到这里
 
-
-export const enum EditorTableType {
+/**
+ * 物编数据种类枚举
+ */
+export enum EditorTableType {
     Unit = "unit",
     Decoration = "decoration",
     Item = "item",
@@ -12,7 +15,9 @@ export const enum EditorTableType {
     Sound = "sound"
 }
 
-
+/**
+ * Y3项目的editor_table文件夹下的各个文件夹名和物编数据种类中文名的对应关系
+ */
 export const englishPathToChinese: Readonly<{ [key: string]: string } >= {
     "editorunit": "单位",
     "soundall": "声音",
@@ -24,6 +29,10 @@ export const englishPathToChinese: Readonly<{ [key: string]: string } >= {
     "projectileall": "投射物",
     "technologyall": "科技"
 };
+
+/**
+ * 物编数据种类对应的中文名
+ */
 export const englishToChinese: Readonly<{ [key: string]: string } >= {
         "unit": "单位",
         "decoration": "装饰物",
@@ -35,6 +44,10 @@ export const englishToChinese: Readonly<{ [key: string]: string } >= {
         "destructible": "可破坏物",
         "sound": "声音"
 };
+
+/**
+ * 物编数据种类对应的英文名
+ */
 export const chineseToEnglish:Readonly< { [key: string]: string } >= {
         "单位": "unit",
         "装饰物": "decoration",
@@ -60,4 +73,25 @@ export const editorTableTypeToFolderName: Readonly<{ [key: string]: string }> = 
     "technology": "technologyall",
     "destructible": "editordestructible",
     "sound":"soundall"
+};
+
+/**
+ * 不同类型的CSV文件导入为Json后会放入不同的文件夹
+ */
+export const csvTypeToPath: Readonly<{ [key: string]: string }> = {
+    "unit": "editorunit",
+    "sound": "soundall",
+    "ability": "abilityall",
+    "model": "editormodel",
+    "decoration": "editordecoration",
+    "destructible": "editordestructible",
+    "effect": "editoreffect",
+    "icon": "editoricon",
+    "item": "editoritem",
+    "physics_object": "editorphysicsobject",
+    "physics_object_logic": "editorphysicsobjectlogic",
+    "modifier": "modifierall",
+    "projectile": "projectileall",
+    "store": "storeall",
+    "technology": "technologyall"
 };

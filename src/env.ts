@@ -241,6 +241,28 @@ export class Env {
         return this._zhlanguageJson;
     }
 
+    public refreshZhlanguageJson():void {
+        
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
+            this._zhlanguageJson = undefined;
+            return;
+        }
+        // 载入中文名称
+        let zhlanguagePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../zhlanguage.json");
+        if (isPathValid(zhlanguagePath)) {
+            try {
+                this._zhlanguageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
+            }
+            catch (error) {
+                this._zhlanguageJson = undefined;
+                vscode.window.showErrorMessage("读取和解析" + zhlanguagePath + "时失败，错误为：" + error);
+            }
+        }
+        else {
+            this._zhlanguageJson = undefined;
+        }
+    }
+
     private _editorTablePath: string = "";
     
     public get editorTablePath(): string{
@@ -323,10 +345,17 @@ export class Env {
         this.status = 'ready';
     }
 
-    public allocateEditorTableObjectUID(editorTableType:EditorTableType): number{
+    /**
+     * 根据
+     * @param editorTableType 
+     * @returns 
+     */
+    public allocateEditorTableItemUID(editorTableType:EditorTableType): number{
         let res: number = 0;
         // todo:分配物编对象数据的UID
 
         return res;
     }
+    
+    
 }

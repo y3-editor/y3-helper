@@ -99,8 +99,8 @@
                 "title": "Y3:修改CSV表格中的物编数据UID和名称"
             },
             {
-                "command": "y3-helper.",
-                "title": "Y3:修改CSV表格中的物编数据UID和名称"
+                "command": "y3-helper.addUIDandNameToCSVfromProject",
+                "title": "Y3:添加项目中已有的物编数据的UID和名称到CSV表格中"
             }
         ],
         "configuration": {

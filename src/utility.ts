@@ -1,3 +1,5 @@
+// 有用的工具函数集合
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 

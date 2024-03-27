@@ -7,18 +7,37 @@ interface TreeNodeOptional {
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
     collapsibleState?: vscode.TreeItemCollapsibleState;
     childs?: TreeNode[];
+    update?: (node: TreeNode, env: Env) => void;
 }
 
 class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
+    update?: (node: TreeNode, env: Env) => void;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
         if (optional) {
             this.command = optional.command;
             this.iconPath = optional.iconPath;
             this.childs = optional.childs;
-            this.collapsibleState = optional.collapsibleState ?? (this.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+            this.update = optional.update;
+            this.collapsibleState = optional.collapsibleState;
         }
+    }
+}
+
+class ViewInExplorerNode extends TreeNode {
+    constructor(uri: vscode.Uri) {
+        super('在windows中浏览', {
+            command: {
+                command: 'y3-helper.shell',
+                title: '在windows中浏览',
+                arguments: [
+                    'explorer',
+                    uri.fsPath,
+                ]
+            },
+            iconPath: new vscode.ThemeIcon('folder-opened'),
+        });
     }
 }
 
@@ -31,12 +50,35 @@ let nodeReselectMapPath = new TreeNode('重新选择Y3地图路径', {
 });
 
 let nodeEnv = new TreeNode('当前环境', {
-    iconPath: new vscode.ThemeIcon('gear'),
+    iconPath: new vscode.ThemeIcon('server-environment'),
     childs: [
         new TreeNode('编辑器', {
-            iconPath: 'image/logo.png',
+            update: (node, env) => {
+                node.tooltip     = env.editorUri?.fsPath;
+                node.iconPath    = env.editorUri ? new vscode.ThemeIcon('settings') : new vscode.ThemeIcon('error');
+                node.description = env.editorUri ? undefined : '未找到编辑器';
+                node.childs      = env.editorUri ? [
+                    new TreeNode('启动编辑器', {
+                        command: {
+                            command: 'y3-helper.shell',
+                            title: '启动编辑器',
+                            arguments: [
+                                'start',
+                                env.editorUri.fsPath,
+                            ]
+                        },
+                        iconPath: new vscode.ThemeIcon('play'),
+                    }),
+                    new ViewInExplorerNode(vscode.Uri.joinPath(env.editorUri, '..')),
+                ] : undefined;
+            },
         }),
-        nodeReselectMapPath,
+        new TreeNode('Lua脚本', {
+            update: (node, env) => {
+                node.tooltip     = env.scriptUri?.fsPath;
+                node.iconPath    = env.scriptUri ? new vscode.ThemeIcon('lua') : new vscode.ThemeIcon('error');
+            },
+        })
     ],
 });
 
@@ -65,6 +107,8 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 
     getTreeItem(node: TreeNode): TreeNode {
+        node.update?.(node, this.env);
+        node.collapsibleState = node.collapsibleState ?? (node.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         return node;
     }
 }

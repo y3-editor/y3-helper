@@ -8,17 +8,18 @@ import * as fs from 'fs';
 
 import { Env } from "../env";
 import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri, hash } from '../utility';
-
+import { csvTypeToPath } from "../constants";
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { log } from 'console';
 
 export class CSVimporter
 {
-    
+    private readonly csvTypeToPath: Readonly<{ [key: string]: string }>;
+    private env: Env;
     public constructor(env: Env) {
         this.env = env;
-        // this.initDefaultFolderToTableType();
+        this.csvTypeToPath = csvTypeToPath;
     }
 
     // 默认情况下的文件夹名与其存放的物编数据类型的对应关系
@@ -86,228 +87,7 @@ export class CSVimporter
         return true;
     }
 
-    /**初始化FolderNameToTableType，下次要启用这个函数的话 得大改这个函数
-     * @deprecated
-     * @returns 
-     */
-    private initDefaultFolderToTableType() {
-        let folderNames: any[] = [];
-        let types: string[] = ["unit", "decoration", "item", "ability", "modifier", "projectile", "technology", "destructible", "sound"];
-        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
-        //console.log(userConfig);
-        if (!csvPathConfig) {
-            vscode.window.showErrorMessage("读取Y3-Helper.CSVPath的properties时出错");
-            return;
-        }
-        console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);//这里需要改
-        folderNames.push(csvPathConfig.unit);
-        folderNames.push(csvPathConfig.decoration);
-        folderNames.push(csvPathConfig.item);
-        folderNames.push(csvPathConfig.ability);
-        folderNames.push(csvPathConfig.modifier);
-        folderNames.push(csvPathConfig.projectile);
-        folderNames.push(csvPathConfig.technology);
-        folderNames.push(csvPathConfig.destructible);
-        folderNames.push(csvPathConfig.CSVPath.sound);
-        
-        for (let i = 0; i < folderNames.length; i++) {
-            let folderName = folderNames[i];
-            //console.log(folderName);
-            if (typeof folderName === "string") {
-                this.defaultFolderNameToTableType[folderName] = types[i];
-            }
-            else {
-                console.log(`未设置csvPathConfig[${i}]，已将设置为默认值`);
-            }
-            
-        }
-        
-    }
-    /**
-     * 不同类型的CSV文件导入为Json后会放入不同的文件夹
-     */
-    private csvTypeToPath: { [key: string]: string } = {
-        "unit": "editorunit",
-        "sound": "soundall",
-        "ability": "abilityall",
-        "model": "editormodel",
-        "decoration": "editordecoration",
-        "destructible": "editordestructible",
-        "effect": "editoreffect",
-        "icon": "editoricon",
-        "item": "editoritem",
-        "physics_object": "editorphysicsobject",
-        "physics_object_logic": "editorphysicsobjectlogic",
-        "modifier": "modifierall",
-        "projectile": "projectileall",
-        "store": "storeall",
-        "technology": "technologyall"
-    };
-
-    private env: Env;
-
     
-
-
-    /**
-     * 递归搜索文件夹，如果这个文件夹里面有config.json，那么根据，config.json指示的CSV文件，在此文件夹下找到该CSV文件并导入物编数据
-     * @deprecated
-     * @param folder 
-     * @param restDepth
-     * @return true 搜索成功 false搜索过程中出错
-     */
-    public async recursiveSearchCSVandImport(folder: vscode.Uri, restDepth: number) :Promise<boolean>{
-        if (restDepth===0) {
-            vscode.window.showInformationMessage("达到最大可允许递归搜索深度(可在package.json修改最大可递归搜索深度maxCSVimporterRecursiveSearchDepth)");
-            return false;
-        }
-        let haveConfig: Boolean = false;
-        try {
-            let state = await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder, 'config.json'));
-
-            // 如果有config.json就按config.json的来
-            if (state.type === vscode.FileType.File) {
-                haveConfig = true;
-                if (!(await this.importCSVbyConfig(folder, vscode.Uri.joinPath(folder, 'config.json')))) {
-                    return false;
-                }
-            }
-           
-        }
-        catch (error){
-            console.info('此文件夹下未找到config.json:' + folder.fsPath);
-        }
-
-        // 如果没有config.json就以默认文件夹名和其存放的物编数据的对应关系来
-        if(!haveConfig){
-            let folderName:string = getFileNameByVscodeUri(folder);
-            console.log(`folderName===${folderName}`);
-            if (folderName && folderName in this.defaultFolderNameToTableType) {
-                if (!(await this.importCSVbyFolderName(folder))) {
-                    return false;
-                }
-            }
-        }
-        // 打开子文件夹继续搜索 
-        let files = await vscode.workspace.fs.readDirectory(folder);
-        for (const file of files) {
-            if (file[1] === vscode.FileType.Directory) {
-                await this.recursiveSearchCSVandImport(vscode.Uri.joinPath(folder, file[0]), restDepth - 1);
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 根据文件夹名确定CSV物编数据类型并导入
-     * @deprecated 
-     * @param folder 
-     * @returns 
-     */
-    private async importCSVbyFolderName(folder: vscode.Uri):Promise<boolean> {
-        let folderName: string = getFileNameByVscodeUri(folder);
-        if (!folderName) {
-            return false;
-        }
-        let tableType = this.defaultFolderNameToTableType[folderName];
-        if (!this.env.editorTableUri) {
-            vscode.window.showErrorMessage("物编数据表路径为空");
-            return false;
-        }
-        let targetTableFolder = this.csvTypeToPath[tableType];
-        let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(this.env.editorTableUri, targetTableFolder);
-        let files = await vscode.workspace.fs.readDirectory(folder);
-        for(const file of files){
-            console.log(file);
-            if (file[0].endsWith(".csv")) {
-                if (!this.importCSVtoTargetJson(vscode.Uri.joinPath(folder,file[0]), targetEditorTablePath, tableType)) {
-                    return false;
-                }
-            }
-            
-        };
-        
-        return true;
-    }
-
-
-    /**
-     * 通过config.json导入物编数据
-     * @deprecated
-     * @param folder 
-     * @param configUri 
-     * @returns 
-     */
-    private async importCSVbyConfig(folder: vscode.Uri, configUri: vscode.Uri): Promise<boolean> {
-        
-        // 读取config.json
-        let configJson: { [key: string]: any } ;
-        try {
-            const config_json_raw = await vscode.workspace.fs.readFile(configUri);
-            const config_json_str = new TextDecoder().decode(config_json_raw);
-            console.log(config_json_str);
-            configJson=JSON.parse(config_json_str);
-            
-
-        }   
-        catch (error)
-        {
-            console.error("读取config.json失败，请检查是否有格式错误" + "\n" +"出错的config.json为："+configUri.fsPath);
-            vscode.window.showErrorMessage("读取config.json失败，请检查是否有格式错误" + "\n" + "出错的config.json为：" + configUri.fsPath);
-            return false;
-        }
-        
-       
-
-        // 遍历config.json指示的csv表格
-        for (const csvFileName in configJson) {
-            if (configJson.hasOwnProperty(csvFileName))
-            {
-                console.log("config_json[csvFileName][\"type\"]=" + configJson[csvFileName]["type"]);
-                if (!this.csvTypeToPath.hasOwnProperty(configJson[csvFileName]["type"])) {
-                    vscode.window.showErrorMessage(csvFileName + "的类型(type)设置错误,请检查其config.json，出错的文件夹为："+folder.fsPath);
-                    return false;
-                }
-                let targetTableFolder = this.csvTypeToPath[configJson[csvFileName]["type"]];
-                console.log(targetTableFolder);
-                
-                if (this.env.editorTableUri === undefined) {
-                    vscode.window.showErrorMessage("物编数据表路径为空");
-                    return false;
-                }
-                let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(this.env.editorTableUri, targetTableFolder);
-                
-                if (!isFileValid(targetEditorTablePath)) {
-                    vscode.window.showErrorMessage("路径为：" + targetEditorTablePath.fsPath + "的物体编辑数据文件夹不存在");
-                    return false;
-                }
-
-                let csvUri: vscode.Uri = vscode.Uri.joinPath(folder, csvFileName);
-                if (!isFileValid(csvUri))
-                {
-                    vscode.window.showErrorMessage("路径为：" + csvUri.fsPath + "的csv文件不存在");
-                    return false;
-                }
-                let tableType = configJson[csvFileName]["type"];
-                try {
-                    // 导入此表格到目标物编数据路径
-                    if (!(await this.importCSVtoTargetJson(csvUri, targetEditorTablePath, tableType))) {
-                        return false;
-                    }
-                }
-                catch (error)
-                {
-                    vscode.window.showErrorMessage(csvUri.fsPath + "导入失败");
-                    return false;
-                }
-            }
-        }
-        
-        
-
-        return true;
-    }
-
     
     private async saveRowToTargetPath(row:any,target_path:vscode.Uri,tableType:string):Promise<boolean>{
         if(!isPathValid(target_path.fsPath)){
@@ -520,7 +300,7 @@ export class CSVimporter
             console.error('保存Json文件时出错', err);
             return false;
         }
-        console.log('此行保存成功');
+        //console.log('此行保存成功');
         return true;
     }
 
@@ -559,7 +339,7 @@ export class CSVimporter
                 i++;
         })
         .on('end', () => {
-            vscode.window.showInformationMessage("全部成功");
+            vscode.window.showInformationMessage("全部导入成功");
 ;           console.log('Parsed CSV data Length:', i);
         })
         .on('error', (error) => {
