@@ -80,6 +80,28 @@ let nodeReselectMapPath = new TreeNode('重新选择Y3地图路径', {
     iconPath: new vscode.ThemeIcon('search'),
 });
 
+let nodeAction = new TreeNode('操作', {
+    iconPath: new vscode.ThemeIcon('beaker'),
+    collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+    childs: [
+        new TreeNode('初始化Y3库'),
+        new TreeNode('启动游戏', {
+            command: {
+                command: 'y3-helper.launchGame',
+                title: '启动游戏',
+            },
+            iconPath: new vscode.ThemeIcon('play'),
+        }),
+        new TreeNode('启动游戏并附加调试器', {
+            command: {
+                command: 'y3-helper.launchGameAndAttach',
+                title: '启动游戏并附加调试器',
+            },
+            iconPath: new vscode.ThemeIcon('run-all'),
+        }),
+    ]
+});
+
 let nodeEnv = new TreeNode('当前环境', {
     iconPath: new vscode.ThemeIcon('server-environment'),
     childs: [
@@ -137,6 +159,7 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
                 ];
             }
             return [
+                nodeAction,
                 nodeEnv,
             ];
         }
