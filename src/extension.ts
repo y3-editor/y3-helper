@@ -3,13 +3,13 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { Env } from './env';
 import { GameLauncher } from './launchGame';
-import { CSVimporter } from './CSVimporter';
+import { CSVimporter } from './editorTable/CSVimporter';
 import * as utility from './utility';
-import { TemplateGenerator } from './templateGenerator';
-import { Y3HelperDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable';
+import { TemplateGenerator } from './editorTable/templateGenerator';
+import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable/editorTable';
 import * as tools from "./tools";
 import * as preset from './preset';
-
+import { englishPathToChinese } from './constants';
 class Helper {
     private context: vscode.ExtensionContext;
     private env: Env;
@@ -301,8 +301,8 @@ class Helper {
      * 注册CSVeditor相关的命令
      */
     private registerCommandOfCSVeditor() {
-        vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
-            const items: vscode.QuickPickItem[] = [
+        let disposable = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
+            const editorTableTypes: vscode.QuickPickItem[] = [
                 { label: '单位', description: 'unit' },
                 { label: '装饰物', description: 'decoration' },
                 { label: '物品', description: 'item' },
@@ -313,15 +313,27 @@ class Helper {
                 { label: '可破坏物', description: 'destructible' },
                 { label: '声音', description: 'sound' }
             ];
-            vscode.window.showQuickPick(items, {
+            vscode.window.showQuickPick(editorTableTypes, {
                 placeHolder: '选择你要添加的物编数据类型(CSV)'
             }).then(selection => {
                 if (selection) {
                     vscode.window.showInformationMessage(`你选择了: ${selection.label}`);
                 }
-                vscode.window.showInputBox();
+                
+                const inputOptions: vscode.InputBoxOptions = {
+                    prompt: '请输入物编数据的名称或UID',
+                    placeHolder: '数字',
+                    validateInput: (text: string) => {
+                        if (text.length === 0) {
+                            return "输入的内容为空";
+                        }
+                        return null;
+                    }
+                };
+                vscode.window.showInputBox(inputOptions);
             });
         });
+        this.context.subscriptions.push(disposable);
     }
 
     private registerCommandOfGenerateAllTemplateCSV() {
@@ -338,14 +350,14 @@ class Helper {
                 vscode.window.showErrorMessage("未找到编辑器！");
                 return false;
             }
-            if (!this.env.scriptUri) {
-                vscode.window.showErrorMessage("未找到script文件夹");
+            if (!this.env.csvTableUri) {
+                vscode.window.showErrorMessage("未找到合适的位置生成CSV");
                 return false;
             }
             // 生成csv模板
             let templateGenerator = new TemplateGenerator(this.env);
             
-            let targetUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri,"./resource/editor_table/"); 
+            let targetUri: vscode.Uri = this.env.csvTableUri;
             await templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
         });
     }
@@ -381,22 +393,22 @@ class Helper {
     }
 
     private registerEditorTableView() {
-        const y3HelperDataProvider=new Y3HelperDataProvider(this.env);
+        const editorTableDataProvider=new EditorTableDataProvider(this.env);
         vscode.window.registerTreeDataProvider(
             'y3-helper.editorTableView',
-            y3HelperDataProvider
+            editorTableDataProvider
         );
         vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => {
-            y3HelperDataProvider.refresh();
+            editorTableDataProvider.refresh();
         });
         
 
-        vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => y3HelperDataProvider.refresh());
+        vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
 
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
             this.env.editorTablePath,
             this.env.zhlanguageJson,
-            this.env.englishPathToChinese
+            englishPathToChinese
         );
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));

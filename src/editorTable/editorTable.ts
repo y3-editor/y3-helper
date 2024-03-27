@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Env } from './env';
-import { isPathValid, isJson, getFileNameByVscodeUri } from './utility';
+import { Env } from '../env';
+import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility';
 import { encode } from 'punycode';
+import { englishPathToChinese } from '../constants';
 
 
-
-export class Y3HelperDataProvider implements vscode.TreeDataProvider<FileNode> {
+export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
   private _onDidChangeTreeData: vscode.EventEmitter<FileNode | undefined> = new vscode.EventEmitter<FileNode | undefined>();
   readonly onDidChangeTreeData: vscode.Event<FileNode | undefined> = this._onDidChangeTreeData.event;
   public readonly englishPathToChinese: { [key: string]: string };
@@ -15,7 +15,7 @@ export class Y3HelperDataProvider implements vscode.TreeDataProvider<FileNode> {
   private zhlanguageJson: any = undefined;
   
   constructor(private env: Env) {
-    this.englishPathToChinese = this.env.englishPathToChinese;
+    this.englishPathToChinese = englishPathToChinese;
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("当前未打开工作目录");
       return;
@@ -79,7 +79,7 @@ export class Y3HelperDataProvider implements vscode.TreeDataProvider<FileNode> {
       }
       else if (stat.isDirectory()) {
         if (label in this.englishPathToChinese) {
-          label = this.englishPathToChinese[label];
+          label = this.englishPathToChinese[label] + '(' + label + ')';
         }
         else {
           return Promise.resolve(fileNodes);
@@ -211,7 +211,7 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
 export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
   private englishKeyToChineseKey: any;
   constructor(private zhlanguageJson: any = undefined ) {
-    let englishKeyToChineseKeyJsonPath = path.join(__dirname, "../config/englishKeyToChineseKey.json");
+    let englishKeyToChineseKeyJsonPath = path.join(__dirname, "../../config/englishKeyToChineseKey.json");
     if (isPathValid(englishKeyToChineseKeyJsonPath)) {
       try {
         this.englishKeyToChineseKey = JSON.parse(fs.readFileSync(englishKeyToChineseKeyJsonPath, 'utf8'));
@@ -219,6 +219,9 @@ export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbo
       catch (error) {
         vscode.window.showErrorMessage("读取和解析" + englishKeyToChineseKeyJsonPath + "时失败，错误为：" + error);
       }
+    }
+    else {
+      vscode.window.showErrorMessage("在以下路径找不到englishKeyToChineseKey.json:\n"+englishKeyToChineseKeyJsonPath);
     }
   }
   public provideDocumentSymbols(

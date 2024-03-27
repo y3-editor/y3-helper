@@ -74,6 +74,18 @@
             {
                 "command": "y3-helper.downloadPresetUI",
                 "title": "Y3:下载预设资源（UI）"
+            },
+            {
+                "command": "y3-helper.addNewDataInCSV",
+                "title": "Y3:在CSV表格中添加新物编数据"
+            },
+            {
+                "command": "y3-helper.modifyUIDandNameInCSV",
+                "title": "Y3:修改CSV表格中的物编数据UID和名称"
+            },
+            {
+                "command": "y3-helper.",
+                "title": "Y3:修改CSV表格中的物编数据UID和名称"
             }
         ],
         "configuration": {

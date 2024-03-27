@@ -1,16 +1,17 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
-import { Env } from './env';
+import { Env } from '../env';
 import * as path from 'path';
-import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII } from './utility';
+import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII } from '../utility';
+import { chineseToEnglish,englishToChinese } from '../constants';
 export class TemplateGenerator{
     private env: Env;
     private readonly englishToChinese;
     private readonly chineseToEnglish;
     public constructor(env: Env) {
         this.env = env;
-        this.chineseToEnglish = this.env.chineseToEnglish;
-        this.englishToChinese = this.env.englishToChinese;
+        this.chineseToEnglish = chineseToEnglish;
+        this.englishToChinese = englishToChinese;
     }
     
     
@@ -22,7 +23,7 @@ export class TemplateGenerator{
      */
     public generateTemplateCSVToTargetPath(templateType: string, targetPath: vscode.Uri): boolean{
         try {
-            fs.copy(path.join(path.join(__dirname, "../template/csv_template"), templateType), targetPath.fsPath,{ overwrite: false });
+            fs.copy(path.join(path.join(__dirname, "../../template/csv_template"), templateType), targetPath.fsPath,{ overwrite: false });
         }
         catch (error) {
             vscode.window.showErrorMessage("模板生成异常:"+error);
@@ -35,7 +36,7 @@ export class TemplateGenerator{
         
         try {
             await this.renameTemplateCSVtoChinese();
-            await fs.copySync(path.join(__dirname, "../template/csv_template"), targetPath.fsPath, { overwrite: false });
+            await fs.copySync(path.join(__dirname, "../../template/csv_template"), targetPath.fsPath, { overwrite: false });
             await this.renameTemplateCSVtoEnglish();
         }
         catch (error) {
@@ -53,8 +54,8 @@ export class TemplateGenerator{
         for (let key in this.englishToChinese) {
             let oldFileName: string = key;
             let newFileName: string = this.englishToChinese[key];
-            oldFileName = path.join(__dirname, "../template/csv_template/" + oldFileName);
-            newFileName = path.join(__dirname, "../template/csv_template/" + newFileName);
+            oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
+            newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
             await fs.renameSync(oldFileName, newFileName);
         }
     }
@@ -63,8 +64,8 @@ export class TemplateGenerator{
         for (let key in this.chineseToEnglish) {
             let oldFileName: string = key;
             let newFileName: string = this.chineseToEnglish[key];
-            oldFileName = path.join(__dirname, "../template/csv_template/" + oldFileName);
-            newFileName = path.join(__dirname, "../template/csv_template/" + newFileName);
+            oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
+            newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
             await fs.renameSync(oldFileName, newFileName);
         }
     }

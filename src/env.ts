@@ -5,13 +5,14 @@ import path from 'path';
 import * as tools from './tools';
 import { isPathValid } from './utility';
 import * as fs from 'fs';
+import { EditorTableType } from './constants';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 export class Env {
 
     constructor() {
-        this.updateTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
+        this.initTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
     }
 
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
@@ -186,9 +187,10 @@ export class Env {
     public y3Uri?: vscode.Uri;
     public projectUri?: vscode.Uri;
     public editorTableUri?: vscode.Uri;// 物编数据
+    public csvTableUri?: vscode.Uri;// CSV表格路径
 
     // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    public defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
+    private readonly defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
         unit: "./resource/editor_table/单位",
         decoration: "./resource/editor_table/装饰物",
         item: "./resource/editor_table/物品",
@@ -201,7 +203,7 @@ export class Env {
     };
 
     // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    public tableTypeToCSVfolderPath: { [key: string]: string } = {
+    public readonly tableTypeToCSVfolderPath: { [key: string]: string } = {
         unit: "./resource/editor_table/单位",
         decoration: "./resource/editor_table/装饰物",
         item: "./resource/editor_table/物品",
@@ -212,39 +214,7 @@ export class Env {
         destructible: "./resource/editor_table/可破坏物",
         sound: "./resource/editor_table/声音"
     };
-    public readonly englishPathToChinese: { [key: string]: string } = {
-        "editorunit": "单位",
-        "soundall": "声音",
-        "abilityall": "技能",
-        "editordecoration": "装饰物",
-        "editordestructible": "可破坏物",
-        "editoritem": "物品",
-        "modifierall": "魔法效果",
-        "projectileall": "投射物",
-        "technologyall": "科技"
-    };
-    public readonly englishToChinese: { [key: string]: string } = {
-        "unit": "单位",
-        "decoration": "装饰物",
-        "item": "物品",
-        "ability": "技能",
-        "modifier": "魔法效果",
-        "projectile": "投射物",
-        "technology": "科技",
-        "destructible": "可破坏物",
-        "sound": "声音"
-    };
-    public readonly chineseToEnglish: { [key: string]: string } = {
-        "单位": "unit",
-        "装饰物": "decoration",
-        "物品": "item",
-        "技能": "ability",
-        "魔法效果": "modifier",
-        "投射物": "projectile",
-        "科技": "technology",
-        "可破坏物": "destructible",
-        "声音": "sound"
-    };
+
     private _zhlanguageJson: any = undefined;
     
     public get zhlanguageJson(): any {
@@ -291,7 +261,7 @@ export class Env {
     /**
      * 从插件配置中更新物编数据类型对应的CSV文件保存地址
      */
-    public updateTableTypeToCSVfolderPath(): void {
+    public initTableTypeToCSVfolderPath(): void {
         let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
         for (const key in this.defaultTableTypeToCSVfolderPath) {
@@ -322,6 +292,7 @@ export class Env {
                     this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
                     this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
                     this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
+                    this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/"); 
                 }
             })(),
         ]);
@@ -351,4 +322,13 @@ export class Env {
         await this.init();
         this.status = 'ready';
     }
+
+    public allocateEditorTableObjectUID(editorTableType:EditorTableType): number{
+        let res: number = 0;
+        // todo:分配物编对象数据的UID
+
+        return res;
+    }
 }
+
+

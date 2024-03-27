@@ -6,8 +6,8 @@ import * as vscode from 'vscode';
 import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
-import { Env } from "./env";
-import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri, hash } from './utility';
+import { Env } from "../env";
+import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri, hash } from '../utility';
 
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
