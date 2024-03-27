@@ -25,7 +25,7 @@
         "views": {
             "explorer": [
                 {
-                    "id": "y3-Helper.editorTableView",
+                    "id": "y3-helper.editorTableView",
                     "name": "Y3开发助手：物编数据"
                 }
             ]
@@ -33,8 +33,8 @@
         "menus": {
             "view/title": [
                 {
-                    "command": "y3-Helper.editorTableView.refresh",
-                    "when": "view == y3-Helper.editorTableView",
+                    "command": "y3-helper.editorTableView.refresh",
+                    "when": "view == y3-helper.editorTableView",
                     "group": "navigation"
                 }
             ]
@@ -66,7 +66,7 @@
                 "title": "Y3:生成物编模板（CSV）"
             },
             {
-                "command": "y3-Helper.editorTableView.refresh",
+                "command": "y3-helper.editorTableView.refresh",
                 "title": "Refresh",
                 "category": "y3-helper",
                 "icon": "$(refresh)"

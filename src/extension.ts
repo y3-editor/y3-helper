@@ -383,7 +383,7 @@ class Helper {
     private registerEditorTableView() {
         const y3HelperDataProvider=new Y3HelperDataProvider(this.env);
         vscode.window.registerTreeDataProvider(
-            'y3-Helper.editorTableView',
+            'y3-helper.editorTableView',
             y3HelperDataProvider
         );
         vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => {
@@ -391,7 +391,7 @@ class Helper {
         });
         
 
-        vscode.commands.registerCommand('y3-Helper.editorTableView.refresh', () => y3HelperDataProvider.refresh());
+        vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => y3HelperDataProvider.refresh());
 
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
             this.env.editorTablePath,
