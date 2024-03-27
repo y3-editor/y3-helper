@@ -69,7 +69,7 @@ export class Env {
         while (true) {
             let selectedFiles = await vscode.window.showOpenDialog({
                 canSelectFiles: true,
-                openLabel: '选择编辑器路径',
+                openLabel: '选择Y3编辑器路径',
                 filters: {
                     '编辑器': ['exe']
                 }
@@ -148,7 +148,7 @@ export class Env {
             canSelectFiles: true,
             canSelectFolders: false, // 竟然不能同时选择文件和文件夹
             canSelectMany: false,
-            openLabel: '选择地图路径',
+            openLabel: '选择Y3地图路径',
             filters: {
                 '地图': ['map', 'project']
             }
@@ -323,6 +323,12 @@ export class Env {
         this.status = 'ready';
     }
 
+    public reload() {
+        if (this.status === 'ready') {
+            this.status = 'not ready';
+        }
+    }
+
     public allocateEditorTableObjectUID(editorTableType:EditorTableType): number{
         let res: number = 0;
         // todo:分配物编对象数据的UID
@@ -330,5 +336,3 @@ export class Env {
         return res;
     }
 }
-
-

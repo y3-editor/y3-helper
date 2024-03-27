@@ -10,22 +10,35 @@ import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocu
 import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
+import { MainMenu } from './mainMenu';
+
 class Helper {
     private context: vscode.ExtensionContext;
     private env: Env;
+    private mainMenu: MainMenu;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
 
         this.env = new Env();
+        this.mainMenu = new MainMenu(this.env);
     }
 
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
                 this.env = new Env();
+                this.mainMenu.reload(this.env);
                 tools.log.info('配置已更新，已重新加载环境');
             }
+        });
+    }
+
+    private registerCommonCommands() {
+        vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
+            this.env.reload();
+            await this.env.waitReady();
+            this.mainMenu.reload(this.env);
         });
     }
 
@@ -37,7 +50,7 @@ class Helper {
             }, async (progress, token) => {
                 await this.env.waitReady();
                 if (!this.env.scriptUri) {
-                    vscode.window.showErrorMessage('未找到地图路径，请先用编辑器创建地图！');
+                    vscode.window.showErrorMessage('未找到Y3地图路径，请先用编辑器创建地图或重新指定！');
                     return;
                 };
 
@@ -457,6 +470,8 @@ class Helper {
         
         this.checkNewProject();
         this.reloadEnvWhenConfigChange();
+
+        this.registerCommonCommands();
 
         this.registerCommandOfCSVeditor();
     }

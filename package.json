@@ -28,6 +28,12 @@
                     "id": "y3-helper.editorTableView",
                     "name": "Y3开发助手：物编数据"
                 }
+            ],
+            "y3-helper": [
+                {
+                    "id": "y3-helper.mainMenu",
+                    "name": "Y3开发助手"
+                }
             ]
         },
         "menus": {
@@ -36,6 +42,15 @@
                     "command": "y3-helper.editorTableView.refresh",
                     "when": "view == y3-helper.editorTableView",
                     "group": "navigation"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "y3-helper",
+                    "title": "Y3开发助手",
+                    "icon": "image/logo.png"
                 }
             ]
         },
