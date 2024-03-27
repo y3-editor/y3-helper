@@ -323,12 +323,6 @@ export class Env {
         this.status = 'ready';
     }
 
-    public reload() {
-        if (this.status === 'ready') {
-            this.status = 'not ready';
-        }
-    }
-
     public allocateEditorTableObjectUID(editorTableType:EditorTableType): number{
         let res: number = 0;
         // todo:分配物编对象数据的UID

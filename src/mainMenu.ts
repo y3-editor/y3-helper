@@ -5,6 +5,7 @@ import * as tools from './tools';
 interface TreeNodeOptional {
     command?: vscode.Command;
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
+    collapsibleState?: vscode.TreeItemCollapsibleState;
     childs?: TreeNode[];
 }
 
@@ -16,6 +17,7 @@ class TreeNode extends vscode.TreeItem {
             this.command = optional.command;
             this.iconPath = optional.iconPath;
             this.childs = optional.childs;
+            this.collapsibleState = optional.collapsibleState ?? (this.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         }
     }
 }

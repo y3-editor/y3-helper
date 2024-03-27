@@ -24,11 +24,18 @@ class Helper {
         this.mainMenu = new MainMenu(this.env);
     }
 
+    private async reload(waitReady = false) {
+        this.env = new Env();
+        if (waitReady) {
+            await this.env.waitReady();
+        }
+        this.mainMenu.reload(this.env);
+    }
+
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
-                this.env = new Env();
-                this.mainMenu.reload(this.env);
+                await this.reload();
                 tools.log.info('配置已更新，已重新加载环境');
             }
         });
@@ -36,9 +43,7 @@ class Helper {
 
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
-            this.env.reload();
-            await this.env.waitReady();
-            this.mainMenu.reload(this.env);
+            await this.reload(true);
         });
     }
 
