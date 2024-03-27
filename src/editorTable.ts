@@ -79,7 +79,7 @@ export class Y3HelperDataProvider implements vscode.TreeDataProvider<FileNode> {
       }
       else if (stat.isDirectory()) {
         if (label in this.englishPathToChinese) {
-          label = this.englishPathToChinese[label] + '(' + label + ')';
+          label = this.englishPathToChinese[label];
         }
         else {
           return Promise.resolve(fileNodes);
