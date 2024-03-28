@@ -3,9 +3,10 @@ import * as vscode from 'vscode';
 import * as tools from './tools';
 
 interface TreeNodeOptional {
-    command?: vscode.Command;
+    command?: typeof vscode.TreeItem.prototype.command;
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
-    collapsibleState?: vscode.TreeItemCollapsibleState;
+    collapsibleState?: typeof vscode.TreeItem.prototype.collapsibleState;
+    description?: typeof vscode.TreeItem.prototype.description;
     childs?: TreeNode[];
     update?: (node: TreeNode, env: Env) => void | Thenable<void>;
 }
@@ -18,6 +19,7 @@ class TreeNode extends vscode.TreeItem {
         if (optional) {
             this.command = optional.command;
             this.iconPath = optional.iconPath;
+            this.description = optional.description;
             this.childs = optional.childs;
             this.update = optional.update;
             this.collapsibleState = optional.collapsibleState;
@@ -122,6 +124,7 @@ let nodeAction = new TreeNode('操作', {
                 title: '启动游戏并附加调试器',
             },
             iconPath: new vscode.ThemeIcon('run-all'),
+            description: 'Shift + F5',
         }),
     ]
 });
