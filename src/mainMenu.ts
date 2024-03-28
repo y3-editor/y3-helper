@@ -134,7 +134,8 @@ let nodeEnv = new TreeNode('环境', {
     iconPath: new vscode.ThemeIcon('server-environment'),
     childs: [
         new TreeNode('编辑器', {
-            update: (node) => {
+            update: async (node) => {
+                await env.editorReady(true);
                 node.tooltip     = env.editorUri?.fsPath;
                 node.iconPath    = env.editorUri ? new vscode.ThemeIcon('settings') : new vscode.ThemeIcon('error');
                 node.description = env.editorUri ? env.editorUri.fsPath : '未找到编辑器';
@@ -155,7 +156,8 @@ let nodeEnv = new TreeNode('环境', {
             },
         }),
         new TreeNode('Lua脚本', {
-            update: (node) => {
+            update: async (node) => {
+                await env.mapReady(true);
                 node.tooltip     = env.scriptUri?.fsPath;
                 node.iconPath    = env.scriptUri ? new vscode.ThemeIcon('book') : new vscode.ThemeIcon('error');
                 node.description = env.scriptUri ? env.scriptUri.fsPath : '未找到Lua脚本';
@@ -172,9 +174,6 @@ let nodeEnv = new TreeNode('环境', {
 class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
     public refresh = new vscode.EventEmitter<TreeNode | undefined>();
     onDidChangeTreeData = this.refresh.event; 
-
-    constructor() {
-    }
 
     async getChildren(node?: TreeNode): Promise<TreeNode[] | undefined> {
         if (!node) {
@@ -211,19 +210,13 @@ class MainMenu {
         });
         this.view.onDidChangeVisibility(async (e) => {
             if (e.visible) {
-                if (this.state !== 'not init') {
-                    return;
-                }
-                this.state = 'initing';
-                this.view.message = '正在初始化...';
-                await env.mapReady();
-                this.state = 'inited';
                 this.refresh();
             }
         });
     }
 
-    private refresh() {
+    private async refresh() {
+        await env.mapReady();
         if (env.scriptUri) {
             this.view.message = undefined;
         } else {
@@ -232,8 +225,8 @@ class MainMenu {
         this.tree.refresh.fire(undefined);
     }
 
-    reload() {
-        this.refresh();
+    async reload() {
+        await this.refresh();
     }
 }
 

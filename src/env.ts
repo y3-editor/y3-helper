@@ -22,7 +22,7 @@ let defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
     sound: "./resource/editor_table/声音"
 };
 
-function reReady(method: Function, context: ClassMethodDecoratorContext) {
+function rePrepare(method: Function, context: ClassMethodDecoratorContext) {
     let running = false;
     return async function (this: any, ...args: any[]) {
         if (running) {
@@ -208,8 +208,7 @@ class EnvPath {
         return editorExeUri;
     }
 
-    public status: 'not ready' | 'initing' | 'ready' = 'not ready';
-    public editorVersion?: EditorVersion;
+    public editorVersion: EditorVersion = 'unknown';
     public editorUri?: vscode.Uri;
     public editorExeUri?: vscode.Uri;
     public mapUri?: vscode.Uri;
@@ -257,12 +256,13 @@ class EnvPath {
         }
     }
 
-    @reReady
-    public async editorReady(askUser = false) {
-        if (this.editorUri) {
+    @rePrepare
+    public async updateEditor(askUser = false) {
+        let editorUri = await this.searchEditorUri(askUser);
+        if (!editorUri) {
             return;
         }
-        this.editorUri = await this.searchEditorUri(askUser);
+        this.editorUri = editorUri;
         this.editorVersion = await this.getEditorVersion();
         this.editorExeUri = this.getEditorExeUri();
         tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
@@ -270,12 +270,20 @@ class EnvPath {
         tools.log.info(`editorVersion: ${this.editorVersion}`);
     }
 
-    @reReady
-    public async mapReady(askUser = false) {
-        if (this.mapUri) {
+    public async editorReady(askUser = false) {
+        if (this.editorUri) {
             return;
         }
-        this.mapUri = await this.searchProjectPath(askUser);
+        await this.updateEditor(askUser);
+    }
+
+    @rePrepare
+    public async updateMap(askUser = false) {
+        let mapUri = await this.searchProjectPath(askUser);
+        if (!mapUri) {
+            return;
+        }
+        this.mapUri = mapUri;
         if (this.mapUri) {
             this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
             this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
@@ -289,6 +297,13 @@ class EnvPath {
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
         tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
         tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
+    }
+
+    public async mapReady(askUser = false) {
+        if (this.mapUri) {
+            return;
+        }
+        await this.updateMap(askUser);
     }
 }
 
