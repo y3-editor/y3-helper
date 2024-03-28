@@ -11,7 +11,7 @@ export class GameLauncher {
     }
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
-        await this.env.waitReady();
+        await this.env.waitReady(true);
         let projectUri = this.env.projectUri;
         let editorExeUri = this.env.editorExeUri;
         if (!projectUri) {

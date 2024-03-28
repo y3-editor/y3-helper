@@ -52,7 +52,7 @@ export class Env {
         return false;
     }
 
-    private async searchEditorUri(): Promise<vscode.Uri | undefined> {
+    private async searchEditorUri(askUser = false): Promise<vscode.Uri | undefined> {
         // 先看看设置里有没有
         let editorPath: string|undefined = vscode.workspace.getConfiguration('Y3-Helper').get('EditorPath');
         if (editorPath && await this.isValidEditorPath(editorPath)) {
@@ -66,7 +66,7 @@ export class Env {
         }
 
         // 如果没有，则询问用户
-        while (true) {
+        while (askUser) {
             let selectedFiles = await vscode.window.showOpenDialog({
                 canSelectFiles: true,
                 openLabel: '选择Y3编辑器路径',
@@ -132,7 +132,7 @@ export class Env {
         return mapFolder;
     }
 
-    private async searchProjectPath(): Promise<vscode.Uri | undefined> {
+    private async searchProjectPath(askUser = false): Promise<vscode.Uri | undefined> {
         // 先直接搜索打开的工作目录
         if (vscode.workspace.workspaceFolders) {
             for (const folder of vscode.workspace.workspaceFolders) {
@@ -141,6 +141,10 @@ export class Env {
                     return mapFolder;
                 }
             }
+        }
+
+        if (!askUser) {
+            return undefined;
         }
 
         // 如果没有，则询问用户
@@ -300,15 +304,15 @@ export class Env {
 
     }
 
-    private async init() {
+    private async init(askUser = false) {
         await Promise.allSettled([
             (async () => {
-                this.editorUri = await this.searchEditorUri();
+                this.editorUri = await this.searchEditorUri(askUser);
                 this.editorVersion = await this.getEditorVersion();
                 this.editorExeUri = this.getEditorExeUri();
             })(),
             (async () => {
-                this.mapUri = await this.searchProjectPath();
+                this.mapUri = await this.searchProjectPath(askUser);
                 if (this.mapUri) {
                     this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
                     this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
@@ -329,9 +333,15 @@ export class Env {
         tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
     }
 
-    public async waitReady() {
+    // 如果找不到路径，是否弹框询问用户？
+    public async waitReady(askUser = false) {
         if (this.status === 'ready') {
-            return;
+            if (!askUser) {
+                return;
+            }
+            if (this.mapUri) {
+                return;
+            }
         }
         if (this.status === 'initing') {
             // 自旋
@@ -341,7 +351,7 @@ export class Env {
             return;
         }
         this.status = 'initing';
-        await this.init();
+        await this.init(askUser);
         this.status = 'ready';
     }
 
