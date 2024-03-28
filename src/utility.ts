@@ -4,12 +4,21 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 /**
- * 判断一个uri是否为指向一个json文件
- * @param uri 
+ * 判断一个路径是否为指向一个json文件
+ * @param path 
  * @returns 
  */
-export function isJson(uri:string):boolean {
-    return uri.toLowerCase().endsWith(".json");
+export function isJson(path:string):boolean {
+    return path.toLowerCase().endsWith(".json");
+}
+
+/**
+ * 判断一个uri是否为指向一个CSV文件
+ * @param path 
+ * @returns 
+ */
+export function isCSV(path: string): boolean {
+    return path.toLowerCase().endsWith(".csv");
 }
 /**
  * 检查路径是否有效

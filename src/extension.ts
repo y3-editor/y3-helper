@@ -244,9 +244,10 @@ class Helper {
      * 注册CSVeditor相关的命令
      */
     private registerCommandOfCSVeditor() {
-
+        
         // 在CSV表格中添加物编项目的命令
         let addNewDataInCSVcommand = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
+            await this.env.waitReady();
             const editorTableTypes: vscode.QuickPickItem[] = [
                 { label: '单位', description: 'unit' },
                 { label: '装饰物', description: 'decoration' },
@@ -277,7 +278,7 @@ class Helper {
                 };
                 vscode.window.showInputBox(inputOptions).then(value => {
                     if (value) {
-                        let csvEditor: CSVeditor = new CSVeditor(this.env);
+                        
                         
                         // todo:分配一个uid并新建到csv中
 
@@ -289,9 +290,10 @@ class Helper {
 
         // 把Y3工程项目中已有的物编数据的UID和名称添加到CSV表格以便填写和导入的命令
         let addUIDandNameToCSVfromProjectCommand = vscode.commands.registerCommand("y3-helper.addUIDandNameToCSVfromProject", async () => {
+            await this.env.waitReady();
             const inputOptions: vscode.InputBoxOptions = {
                 prompt: 'UID或名称',
-                placeHolder: '字符串',
+                placeHolder: 'UID或名称',
                 validateInput: (text: string) => {
                     if (text.length === 0) {
                         return "输入的内容为空";
@@ -302,21 +304,23 @@ class Helper {
             
             vscode.window.showInputBox(inputOptions).then(value => {
                 if (value) {
+                    
                     let csvEditor: CSVeditor = new CSVeditor(this.env);
-
-                    let pickItems:vscode.QuickPickItem[]=csvEditor.searchAllEditorTableItemInProject(value);
+                    let pickItems: vscode.QuickPickItem[] = csvEditor.searchAllEditorTableItemInProject(value);
                     vscode.window.showQuickPick(pickItems, {
                         placeHolder: '选择你要添加的物编数据的UID和名称'
                     }).then((selectedItem) => {
                         if (selectedItem) {
                             vscode.window.showInformationMessage(`你选择了: ${selectedItem.label}`);
                             
+                            csvEditor.addEditorTableItemFromProject(selectedItem);
                         }
                     });
                 }
             });
             
         });
+        this.context.subscriptions.push(addUIDandNameToCSVfromProjectCommand);
 
     }
 

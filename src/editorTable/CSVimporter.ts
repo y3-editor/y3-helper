@@ -7,11 +7,10 @@ import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
 import { Env } from "../env";
-import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII, getFileNameByVscodeUri, hash } from '../utility';
+import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../utility';
 import { csvTypeToPath } from "../constants";
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { log } from 'console';
 
 export class CSVimporter
 {
@@ -21,20 +20,6 @@ export class CSVimporter
         this.env = env;
         this.csvTypeToPath = csvTypeToPath;
     }
-
-    // 默认情况下的文件夹名与其存放的物编数据类型的对应关系
-    private readonly defaultFolderNameToTableType: { [key: string]: string } = {
-        "单位": "unit",
-        "装饰物": "decoration",
-        "物品": "item",
-        "技能":"ability",
-        "魔法效果": "modifier",
-        "投射物": "projectile",
-        "科技": "technology",
-        "可破坏物": "destructible",
-        "声音":"sound"
-    };
-    
 
     /**
      * 从插件配置中指定的文件夹 导入对应类型的物编数据CSV文件
@@ -88,9 +73,16 @@ export class CSVimporter
     }
 
     
-    
-    private async saveRowToTargetPath(row:any,target_path:vscode.Uri,tableType:string):Promise<boolean>{
-        if(!isPathValid(target_path.fsPath)){
+    /**
+     * 导入CSV文件中的一行数据
+     * 一行为一个物编数据项目的部分属性
+     * @param row 行号
+     * @param targetPath 目标路径
+     * @param tableType 物编表类型
+     * @returns 
+     */
+    private async saveRowToTargetPath(row:any,targetPath:vscode.Uri,tableType:string):Promise<boolean>{
+        if(!isPathValid(targetPath.fsPath)){
             vscode.window.showErrorMessage('保存Json的路径非有效路径');
             return false;
         }
@@ -105,8 +97,8 @@ export class CSVimporter
             uid = uid.substring(1);
         }
 
-        let jsonFilePath=target_path.fsPath+'\\'+uid+'.json';
-        if(!isInDirectory(target_path.fsPath,uid+'.json')){
+        let jsonFilePath=targetPath.fsPath+'\\'+uid+'.json';
+        if(!isInDirectory(targetPath.fsPath,uid+'.json')){
             console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
             let templateJson = await fs.readFileSync(path.dirname(__dirname) + "\\template\\json_template\\" + tableType + ".json");
             await fs.writeFileSync(jsonFilePath,templateJson);
@@ -317,7 +309,7 @@ export class CSVimporter
         console.log("开始读取csv文件:" + csvFilePath);
         
         let i=0;// 当前读取行号
-        await fs.createReadStream(csvFilePath)
+        fs.createReadStream(csvFilePath)
         .pipe(csvParser())
             .on('data', async (row) => {
             
@@ -340,12 +332,13 @@ export class CSVimporter
         })
         .on('end', () => {
             vscode.window.showInformationMessage("全部导入成功");
-;           console.log('Parsed CSV data Length:', i);
+            console.log('Parsed CSV data Length:', i);
         })
         .on('error', (error) => {
-            console.error('CSV解析错误 Error parsing CSV', error.message);
-            console.error('Error parsing CSV row number:' + (i-1) + "");
-            let message = 'CSV解析错误 Error parsing CSV:' + csvFilePath + '\n' + '出错的CSV行，其行号为:' + i;
+            console.error('CSV解析错误', error.message);
+            console.error('CSV解析出错的行行号:' + (i-1) + "");
+            let message = 'CSV解析错误:' + csvFilePath + '\n' + '出错的CSV行，其行号为:' + i;
+            vscode.window.showErrorMessage(message);
         });
         return true;
     }

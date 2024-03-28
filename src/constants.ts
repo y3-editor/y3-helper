@@ -33,7 +33,7 @@ export const englishPathToChinese: Readonly<{ [key: string]: string } >= {
 /**
  * 物编数据种类对应的中文名
  */
-export const englishToChinese: Readonly<{ [key: string]: string } >= {
+export const englishTypeNameToChineseTypeName: Readonly<{ [key: string]: string } >= {
         "unit": "单位",
         "decoration": "装饰物",
         "item": "物品",
@@ -48,7 +48,7 @@ export const englishToChinese: Readonly<{ [key: string]: string } >= {
 /**
  * 物编数据种类对应的英文名
  */
-export const chineseToEnglish:Readonly< { [key: string]: string } >= {
+export const chineseTypeNameToEnglishTypeName:Readonly< { [key: string]: string } >= {
         "单位": "unit",
         "装饰物": "decoration",
         "物品": "item",

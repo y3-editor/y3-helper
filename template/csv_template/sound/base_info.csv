@@ -1,6 +1,3 @@
 key,uid,name,trigger,description,fade_in_time,fade_out_time,icon,kv,max_dist,min_dist,priority,sound_id,sound_id_list,speed,suffix,tags,total_time,type,volume
 ID,UID,名称,触发器,描述,淡入时间,淡出时间,图标,玩家自定义,最大距离,最小距离,优先级,2D声音,2D声音,播放速度,编辑器后缀,标签,总时间,类型,音量
-134265385,134265385,40000584,134265385,这是一个声音,0,0,100000,{},1000,0,,104168,"[
-    {""sound_id"": 104168, ""volume"": 100
-    }
-]",1,,(),0.411414514,1,100
+134265385,134265385,40000584,134265385,这是一个声音,0,0,100000,{},1000,0,,104168,"[{""sound_id"": 104168, ""volume"": 100}]",1,,(),0.411414514,1,100

@@ -194,11 +194,12 @@
         "@types/fs-extra": "^11.0.4",
         "@types/uuid": "^9.0.8",
         "csv-parser": "^3.0.0",
+        "fast-csv": "^5.0.1",
+        "fast-xml-parser": "^4.3.5",
         "fs-extra": "^11.2.0",
-        "uuid": "^9.0.1",
-        "winreg": "^1.2.5",
         "jszip": "^3.10.1",
-        "fast-xml-parser": "^4.3.5"
+        "uuid": "^9.0.1",
+        "winreg": "^1.2.5"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.3",

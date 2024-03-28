@@ -2,16 +2,16 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import { Env } from '../env';
 import * as path from 'path';
-import { isInDirectory, isFileValid, isPathValid, removeSpacesAndNewlines, toUnicodeIgnoreASCII } from '../utility';
-import { chineseToEnglish,englishToChinese } from '../constants';
+import { isPathValid } from '../utility';
+import { chineseTypeNameToEnglishTypeName,englishTypeNameToChineseTypeName } from '../constants';
 export class TemplateGenerator{
     private env: Env;
     private readonly englishToChinese;
     private readonly chineseToEnglish;
     public constructor(env: Env) {
         this.env = env;
-        this.chineseToEnglish = chineseToEnglish;
-        this.englishToChinese = englishToChinese;
+        this.chineseToEnglish = chineseTypeNameToEnglishTypeName;
+        this.englishToChinese = englishTypeNameToChineseTypeName;
     }
     
     
@@ -36,7 +36,7 @@ export class TemplateGenerator{
         
         try {
             await this.renameTemplateCSVtoChinese();
-            await fs.copySync(path.join(__dirname, "../../template/csv_template"), targetPath.fsPath, { overwrite: false });
+            fs.copySync(path.join(__dirname, "../../template/csv_template"), targetPath.fsPath, { overwrite: false });
             await this.renameTemplateCSVtoEnglish();
         }
         catch (error) {
@@ -56,7 +56,10 @@ export class TemplateGenerator{
             let newFileName: string = this.englishToChinese[key];
             oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
             newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
-            await fs.renameSync(oldFileName, newFileName);
+            if (isPathValid(newFileName)) {
+                continue;
+            }
+            fs.renameSync(oldFileName, newFileName);
         }
     }
 
@@ -66,7 +69,10 @@ export class TemplateGenerator{
             let newFileName: string = this.chineseToEnglish[key];
             oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
             newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
-            await fs.renameSync(oldFileName, newFileName);
+            if (isPathValid(newFileName)) {
+                continue;
+            }
+            fs.renameSync(oldFileName, newFileName);
         }
     }
 }
