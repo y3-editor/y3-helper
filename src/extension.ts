@@ -30,7 +30,7 @@ class Helper {
 
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
-            env.reload();
+            env.updateMap(true);
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
             runShell("执行命令", args[0], args.slice(1));

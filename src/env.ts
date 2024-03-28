@@ -258,6 +258,17 @@ class EnvPath {
         }
     }
 
+    private _timer?: NodeJS.Timeout;
+    private fireOnDidReload() {
+        if (this._timer) {
+            return;
+        }
+        this._timer = setTimeout(() => {
+            this._timer = undefined;
+            this.reloadEmitter.fire();
+        }, 100);
+    }
+
     @rePrepare
     public async updateEditor(askUser = false) {
         let editorUri = await this.searchEditorUri(askUser);
@@ -270,6 +281,7 @@ class EnvPath {
         tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
         tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
         tools.log.info(`editorVersion: ${this.editorVersion}`);
+        this.fireOnDidReload();
     }
 
     public async editorReady(askUser = false) {
@@ -299,6 +311,7 @@ class EnvPath {
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
         tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
         tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
+        this.fireOnDidReload();
     }
 
     public async mapReady(askUser = false) {
@@ -311,7 +324,7 @@ class EnvPath {
     public reload() {
         this.mapUri = undefined;
         this.editorUri = undefined;
-        this.reloadEmitter.fire();
+        this.fireOnDidReload();
     }
 }
 
