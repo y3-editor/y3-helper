@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
+import util from 'util';
 import * as tools from './tools';
 import { isFileValid, isPathValid, randomInt } from './utility';
 import * as fs from 'fs';
@@ -20,6 +21,23 @@ let defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
     destructible: "./resource/editor_table/可破坏物",
     sound: "./resource/editor_table/声音"
 };
+
+function reReady(method: Function, context: ClassMethodDecoratorContext) {
+    let running = false;
+    return async function (this: any, ...args: any[]) {
+        if (running) {
+            while (running) {
+                await util.promisify(setTimeout)(100);
+            }
+        }
+        running = true;
+        try {
+            await method.apply(this, args);
+        } finally {
+            running = false;
+        }
+    };
+}
 
 class EnvPath {
 
@@ -239,6 +257,7 @@ class EnvPath {
         }
     }
 
+    @reReady
     public async editorReady(askUser = false) {
         if (this.editorUri) {
             return;
@@ -251,6 +270,7 @@ class EnvPath {
         tools.log.info(`editorVersion: ${this.editorVersion}`);
     }
 
+    @reReady
     public async mapReady(askUser = false) {
         if (this.mapUri) {
             return;
