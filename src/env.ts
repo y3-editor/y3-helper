@@ -237,61 +237,39 @@ class EnvPath {
                 console.log("update:"+key + " " + csvPathConfig[key]);
             }
         }
-
     }
 
-    private async init(askUser = false) {
-        await Promise.allSettled([
-            (async () => {
-                this.editorUri = await this.searchEditorUri(askUser);
-                this.editorVersion = await this.getEditorVersion();
-                this.editorExeUri = this.getEditorExeUri();
-            })(),
-            (async () => {
-                this.mapUri = await this.searchProjectPath(askUser);
-                if (this.mapUri) {
-                    this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
-                    this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
-                    this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
-                    this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-                    this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/");
-                    this.initTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
-                }
-            })(),
-        ]);
-
+    public async editorReady(askUser = false) {
+        if (this.editorUri) {
+            return;
+        }
+        this.editorUri = await this.searchEditorUri(askUser);
+        this.editorVersion = await this.getEditorVersion();
+        this.editorExeUri = this.getEditorExeUri();
         tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
         tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
         tools.log.info(`editorVersion: ${this.editorVersion}`);
+    }
+
+    public async mapReady(askUser = false) {
+        if (this.mapUri) {
+            return;
+        }
+        this.mapUri = await this.searchProjectPath(askUser);
+        if (this.mapUri) {
+            this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
+            this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
+            this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
+            this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
+            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/");
+            this.initTableTypeToCSVfolderPath();
+        }
         tools.log.info(`mapUri: ${this.mapUri}`);
         tools.log.info(`projectUri: ${this.projectUri}`);
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
         tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
         tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
     }
-
-    // 如果找不到路径，是否弹框询问用户？
-    public async waitReady(askUser = false) {
-        if (this.status === 'ready') {
-            if (!askUser) {
-                return;
-            }
-            if (this.mapUri) {
-                return;
-            }
-        }
-        if (this.status === 'initing') {
-            // 自旋
-            while (this.status === 'initing') {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            return;
-        }
-        this.status = 'initing';
-        await this.init(askUser);
-        this.status = 'ready';
-    }
-
 }
 
 class Env extends EnvPath {

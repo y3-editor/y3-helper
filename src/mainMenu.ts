@@ -178,7 +178,7 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     async getChildren(node?: TreeNode): Promise<TreeNode[] | undefined> {
         if (!node) {
-            await env.waitReady();
+            await env.mapReady();
             if (!env.scriptUri) {
                 return [
                     nodeReselectMapPath
@@ -216,7 +216,7 @@ class MainMenu {
                 }
                 this.state = 'initing';
                 this.view.message = '正在初始化...';
-                await env.waitReady();
+                await env.mapReady();
                 this.state = 'inited';
                 this.refresh();
             }

@@ -21,7 +21,7 @@ class Helper {
 
     private async reload() {
         //this.env = new Env();
-        await env.waitReady();
+        await env.mapReady();
         mainMenu.init();
     }
 
@@ -54,7 +54,7 @@ class Helper {
                 location: vscode.ProgressLocation.Notification,
                 title: '正在初始化Y3项目...',
             }, async (progress, token) => {
-                await env.waitReady(true);
+                await env.mapReady(true);
                 if (!env.scriptUri) {
                     vscode.window.showErrorMessage('未找到Y3地图路径，请先用编辑器创建地图或重新指定！');
                     return;
@@ -192,7 +192,6 @@ class Helper {
                     return;
                 }
 
-                await env.waitReady(true);
                 await vscode.debug.startDebugging(vscode.workspace.workspaceFolders?.[0], "💡附加");
             });
         });
@@ -205,7 +204,7 @@ class Helper {
      */
     private registerCommandOfImportObjectDataFromAllCSVbyConfig() {
         vscode.commands.registerCommand('y3-helper.importObjectDataFromAllCSV', async () => {
-            await env.waitReady(true);
+            await env.mapReady(true);
             let projectUri = env.projectUri;
             let editorExeUri = env.editorExeUri;
             let scriptUri= env.scriptUri;
@@ -239,7 +238,7 @@ class Helper {
         
         // 在CSV表格中添加物编项目的命令
         let addNewDataInCSVcommand = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
-            await env.waitReady(true);
+            await env.mapReady(true);
             const editorTableTypes: vscode.QuickPickItem[] = [
                 { label: '单位', description: 'unit' },
                 { label: '装饰物', description: 'decoration' },
@@ -291,7 +290,7 @@ class Helper {
 
         // 把Y3工程项目中已有的物编数据的UID和名称添加到CSV表格以便填写和导入的命令
         let addUIDandNameToCSVfromProjectCommand = vscode.commands.registerCommand("y3-helper.addUIDandNameToCSVfromProject", async () => {
-            await env.waitReady(true);
+            await env.mapReady(true);
             const inputOptions: vscode.InputBoxOptions = {
                 prompt: 'UID或名称',
                 placeHolder: 'UID或名称',
@@ -328,7 +327,7 @@ class Helper {
     private registerCommandOfGenerateAllTemplateCSV() {
         vscode.commands.registerCommand('y3-helper.generateAllTemplateCSV', async () => {
             console.log("y3-helper.generateTemplateCSV");
-            await env.waitReady(true);
+            await env.mapReady(true);
             let projectUri = env.projectUri;
             let editorExeUri = env.editorExeUri;
             if (!projectUri) {
@@ -353,7 +352,7 @@ class Helper {
 
     private registerCommandOfDownloadPresetUI() {
         vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
-            await env.waitReady(true);
+            await env.mapReady(true);
             if (!env.mapUri) {
                 vscode.window.showErrorMessage("未找到地图路径！");
                 return false;

@@ -5,11 +5,12 @@ import { runShell } from './runShell';
 export class GameLauncher {
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
-        await env.waitReady(true);
+        await env.editorReady(true);
+        await env.mapReady(true);
         let projectUri = env.projectUri;
         let editorExeUri = env.editorExeUri;
         if (!projectUri) {
-            vscode.window.showErrorMessage("没有打开工作目录！");
+            vscode.window.showErrorMessage("没有指定地图目录！");
             return false;
         }
         if (!editorExeUri) {
