@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
-import { Env } from "../env";
+import { env } from "../env";
 import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../utility';
 import { csvTypeToPath } from "../constants";
 import * as path from 'path';
@@ -15,9 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class CSVimporter
 {
     private readonly csvTypeToPath: Readonly<{ [key: string]: string }>;
-    private env: Env;
-    public constructor(env: Env) {
-        this.env = env;
+    public constructor() {
         this.csvTypeToPath = csvTypeToPath;
     }
 
@@ -26,13 +24,13 @@ export class CSVimporter
      * @returns true or false 成功或失败
      */
     public async importCSVFromOrderFolder():Promise<boolean> {
-        if (!this.env.scriptUri) {
+        if (!env.scriptUri) {
             vscode.window.showErrorMessage("scriptUri不存在，请检查项目是否初始化");
             return false;
         }
-        for (const key in this.env.tableTypeToCSVfolderPath) {
-            let csvRelativeFolderPath = this.env.tableTypeToCSVfolderPath[key];
-            let csvFolderUri: vscode.Uri = vscode.Uri.joinPath(this.env.scriptUri, csvRelativeFolderPath);
+        for (const key in env.tableTypeToCSVfolderPath) {
+            let csvRelativeFolderPath = env.tableTypeToCSVfolderPath[key];
+            let csvFolderUri: vscode.Uri = vscode.Uri.joinPath(env.scriptUri, csvRelativeFolderPath);
             if (!isPathValid(csvFolderUri.fsPath)) {
                 vscode.window.showErrorMessage("未找到CSV表格的路径，请从模板中生成");
                 return false;
@@ -52,12 +50,12 @@ export class CSVimporter
      * @returns 
      */
     private async importAllCSVinFolder(folder: vscode.Uri, tableType:string): Promise<boolean> {
-        if (!this.env.editorTableUri) {
+        if (!env.editorTableUri) {
             vscode.window.showErrorMessage("物编数据表路径为空");
             return false;
         }
         let targetTableFolder = this.csvTypeToPath[tableType];
-        let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(this.env.editorTableUri, targetTableFolder);
+        let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, targetTableFolder);
         let files = await vscode.workspace.fs.readDirectory(folder);
         for (const file of files) {
             console.log(file);
@@ -148,8 +146,8 @@ export class CSVimporter
                         let attrJson: any;
                         // 自定义属性的描述要加到工程文件的attr.json中
                         try {
-                            if (this.env.mapUri) {
-                                attrJson = await fs.readFileSync(vscode.Uri.joinPath(this.env.mapUri, "attr.json").fsPath);
+                            if (env.mapUri) {
+                                attrJson = await fs.readFileSync(vscode.Uri.joinPath(env.mapUri, "attr.json").fsPath);
                                 attrJson = JSON.parse(attrJson);
                             }
                             else {
@@ -176,7 +174,7 @@ export class CSVimporter
                             attrJson['c'].push(customAttrData);
                         }
                         try {
-                            await fs.writeFileSync(vscode.Uri.joinPath(this.env.mapUri, "attr.json").fsPath, toUnicodeIgnoreASCII(JSON.stringify(attrJson, null, 2)), 'utf8');
+                            await fs.writeFileSync(vscode.Uri.joinPath(env.mapUri, "attr.json").fsPath, toUnicodeIgnoreASCII(JSON.stringify(attrJson, null, 2)), 'utf8');
                         }
                         catch (error)
                         {
@@ -188,8 +186,8 @@ export class CSVimporter
                     else if (key === 'name') {
                         let zhlanguageJson: any;
                         try {
-                            if (this.env.mapUri) {
-                                zhlanguageJson = await fs.readFileSync(vscode.Uri.joinPath(this.env.mapUri, "zhlanguage.json").fsPath, 'utf8');
+                            if (env.mapUri) {
+                                zhlanguageJson = await fs.readFileSync(vscode.Uri.joinPath(env.mapUri, "zhlanguage.json").fsPath, 'utf8');
                                 zhlanguageJson = JSON.parse(zhlanguageJson);
                             }
                             else {
@@ -206,7 +204,7 @@ export class CSVimporter
                         zhlanguageJson[hashOfName] = value;
                         jsonData[key] = hashOfName;
                         try {
-                            await fs.writeFileSync(vscode.Uri.joinPath(this.env.mapUri, "zhlanguage.json").fsPath, JSON.stringify(zhlanguageJson, null, 2), 'utf8');
+                            await fs.writeFileSync(vscode.Uri.joinPath(env.mapUri, "zhlanguage.json").fsPath, JSON.stringify(zhlanguageJson, null, 2), 'utf8');
                         }
                         catch (error) {
                             vscode.window.showErrorMessage("保存zhlanguage.json失败");
@@ -343,5 +341,3 @@ export class CSVimporter
         return true;
     }
 } 
-
-

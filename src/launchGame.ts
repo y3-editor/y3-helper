@@ -1,19 +1,13 @@
 import * as vscode from 'vscode';
-import { Env } from './env';
-import * as path from 'path';
+import { env } from './env';
 import { runShell } from './runShell';
 
 export class GameLauncher {
-    private env: Env;
-
-    constructor(env: Env) {
-        this.env = env;
-    }
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
-        await this.env.waitReady(true);
-        let projectUri = this.env.projectUri;
-        let editorExeUri = this.env.editorExeUri;
+        await env.waitReady(true);
+        let projectUri = env.projectUri;
+        let editorExeUri = env.editorExeUri;
         if (!projectUri) {
             vscode.window.showErrorMessage("没有打开工作目录！");
             return false;

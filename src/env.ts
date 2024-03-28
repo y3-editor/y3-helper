@@ -9,7 +9,7 @@ import { EditorTableType } from './constants';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
-export class Env {
+class Env {
 
     constructor() {
         this.initTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
@@ -369,3 +369,5 @@ export class Env {
     
     
 }
+
+export let env = new Env();

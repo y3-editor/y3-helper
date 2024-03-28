@@ -1,4 +1,4 @@
-import { Env } from '../env';
+import { env } from '../env';
 import * as tools from '../tools';
 import JSZip from 'jszip';
 import vscode from 'vscode';
@@ -19,15 +19,13 @@ interface TextureInfo {
 }
 
 export class UI {
-    private env: Env;
     private zip?: JSZip;
     private resourceXml?: { [key: string]: any };
     private resourceXmlUri: vscode.Uri;
     private textureInfos: TextureInfo[];
 
-    constructor(env: Env) {
-        this.env = env;
-        this.resourceXmlUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/resource.repository');
+    constructor() {
+        this.resourceXmlUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/resource.repository');
         this.textureInfos = [];
     }
 
@@ -208,7 +206,7 @@ export class UI {
         for (let textureInfo of textureInfos) {
             let icon = textureInfo.icon;
             if (icon !== undefined) {
-                let iconUri = vscode.Uri.joinPath(this.env.projectUri!, 'editor_table/editoricon', textureInfo.newName.toString() + '.json');
+                let iconUri = vscode.Uri.joinPath(env.projectUri!, 'editor_table/editoricon', textureInfo.newName.toString() + '.json');
                 // 全词匹配数字，如果数字 === oldName，替换为newName
                 if (textureInfo.oldName !== textureInfo.newName) {
                     icon = icon.replace(new RegExp(`(?<=\\D)${textureInfo.oldName}(?=\\D)`, 'g'), textureInfo.newName.toString());
@@ -217,12 +215,12 @@ export class UI {
             }
             let texture = textureInfo.texture;
             if (texture !== undefined) {
-                let textureUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, 'texture');
+                let textureUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, 'texture');
                 pushTask(vscode.workspace.fs.writeFile(textureUri, texture));
             }
             let textureWhat = textureInfo.textureWhat;
             if (textureWhat !== undefined) {
-                let textureWhatUri = vscode.Uri.joinPath(this.env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, `${textureInfo.newGuid}.1`);
+                let textureWhatUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, `${textureInfo.newGuid}.1`);
                 pushTask(vscode.workspace.fs.writeFile(textureWhatUri, textureWhat));
             }
         }
@@ -248,7 +246,7 @@ export class UI {
             // 全词匹配数字，将oldName替换为newName
             fileContent = fileContent.replace(/\b\d+\b/g, (match) => nameMap[parseInt(match)]?.toString() ?? match);
 
-            let uri = vscode.Uri.joinPath(this.env.mapUri!, 'ui', file.name.slice(basePath.length));
+            let uri = vscode.Uri.joinPath(env.mapUri!, 'ui', file.name.slice(basePath.length));
             pushTask(vscode.workspace.fs.writeFile(uri, Buffer.from(fileContent)));
         }
 

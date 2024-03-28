@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
-import { Env } from './env';
+import { env } from './env';
 import { GameLauncher } from './launchGame';
 import { CSVimporter } from './editorTable/CSVimporter';
 import * as utility from './utility';
@@ -15,19 +15,15 @@ import * as mainMenu from './mainMenu';
 
 class Helper {
     private context: vscode.ExtensionContext;
-    private env: Env;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-
-        this.env = new Env();
-        mainMenu.init(this.env);
     }
 
     private async reload() {
-        this.env = new Env();
-        await this.env.waitReady();
-        mainMenu.init(this.env);
+        //this.env = new Env();
+        await env.waitReady();
+        mainMenu.init();
     }
 
     private reloadEnvWhenConfigChange() {
@@ -59,14 +55,14 @@ class Helper {
                 location: vscode.ProgressLocation.Notification,
                 title: '正在初始化Y3项目...',
             }, async (progress, token) => {
-                await this.env.waitReady(true);
-                if (!this.env.scriptUri) {
+                await env.waitReady(true);
+                if (!env.scriptUri) {
                     vscode.window.showErrorMessage('未找到Y3地图路径，请先用编辑器创建地图或重新指定！');
                     return;
                 };
 
-                let scriptUri = this.env.scriptUri!;
-                let y3Uri = this.env.y3Uri!;
+                let scriptUri = env.scriptUri!;
+                let y3Uri = env.y3Uri!;
 
                 try {
                     if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type === vscode.FileType.Directory) {
@@ -118,7 +114,7 @@ class Helper {
                 }
 
                 // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
-                let editorVersion = this.env.editorVersion;
+                let editorVersion = env.editorVersion;
                 if (editorVersion === '1.0') {
                     await runShell("初始化Y3项目", "git", [
                         "checkout",
@@ -153,7 +149,7 @@ class Helper {
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
 
-                mainMenu.init(this.env);
+                mainMenu.init();
             });
             running = false;
         });
@@ -177,7 +173,7 @@ class Helper {
                 title: '正在启动游戏...',
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
-                let gameLauncher = new GameLauncher(this.env);
+                let gameLauncher = new GameLauncher();
                 await gameLauncher.launch();
             });
         });
@@ -189,7 +185,7 @@ class Helper {
                 title: '正在启动游戏...',
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
-                let gameLauncher = new GameLauncher(this.env);
+                let gameLauncher = new GameLauncher();
                 let suc = gameLauncher.launch({
                     "lua_wait_debugger": true,
                 });
@@ -197,7 +193,7 @@ class Helper {
                     return;
                 }
 
-                await this.env.waitReady(true);
+                await env.waitReady(true);
                 await vscode.debug.startDebugging(vscode.workspace.workspaceFolders?.[0], "💡附加");
             });
         });
@@ -210,10 +206,10 @@ class Helper {
      */
     private registerCommandOfImportObjectDataFromAllCSVbyConfig() {
         vscode.commands.registerCommand('y3-helper.importObjectDataFromAllCSV', async () => {
-            await this.env.waitReady(true);
-            let projectUri = this.env.projectUri;
-            let editorExeUri = this.env.editorExeUri;
-            let scriptUri= this.env.scriptUri;
+            await env.waitReady(true);
+            let projectUri = env.projectUri;
+            let editorExeUri = env.editorExeUri;
+            let scriptUri= env.scriptUri;
             if (!projectUri) {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
                 return false;
@@ -230,7 +226,7 @@ class Helper {
                 title: '正在导入...',
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
-                let csvImporter = new CSVimporter(this.env);
+                let csvImporter = new CSVimporter();
                 await csvImporter.importCSVFromOrderFolder();
 
             });
@@ -244,7 +240,7 @@ class Helper {
         
         // 在CSV表格中添加物编项目的命令
         let addNewDataInCSVcommand = vscode.commands.registerCommand('y3-helper.addNewDataInCSV', async () => {
-            await this.env.waitReady(true);
+            await env.waitReady(true);
             const editorTableTypes: vscode.QuickPickItem[] = [
                 { label: '单位', description: 'unit' },
                 { label: '装饰物', description: 'decoration' },
@@ -287,7 +283,7 @@ class Helper {
 
         // 把Y3工程项目中已有的物编数据的UID和名称添加到CSV表格以便填写和导入的命令
         let addUIDandNameToCSVfromProjectCommand = vscode.commands.registerCommand("y3-helper.addUIDandNameToCSVfromProject", async () => {
-            await this.env.waitReady(true);
+            await env.waitReady(true);
             const inputOptions: vscode.InputBoxOptions = {
                 prompt: 'UID或名称',
                 placeHolder: 'UID或名称',
@@ -302,7 +298,7 @@ class Helper {
             vscode.window.showInputBox(inputOptions).then(value => {
                 if (value) {
                     
-                    let csvEditor: CSVeditor = new CSVeditor(this.env);
+                    let csvEditor: CSVeditor = new CSVeditor();
                     let pickItems: vscode.QuickPickItem[] = csvEditor.searchAllEditorTableItemInProject(value);
                     vscode.window.showQuickPick(pickItems, {
                         placeHolder: '选择你要添加的物编数据的UID和名称'
@@ -324,9 +320,9 @@ class Helper {
     private registerCommandOfGenerateAllTemplateCSV() {
         vscode.commands.registerCommand('y3-helper.generateAllTemplateCSV', async () => {
             console.log("y3-helper.generateTemplateCSV");
-            await this.env.waitReady(true);
-            let projectUri = this.env.projectUri;
-            let editorExeUri = this.env.editorExeUri;
+            await env.waitReady(true);
+            let projectUri = env.projectUri;
+            let editorExeUri = env.editorExeUri;
             if (!projectUri) {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
                 return false;
@@ -335,22 +331,22 @@ class Helper {
                 vscode.window.showErrorMessage("未找到编辑器！");
                 return false;
             }
-            if (!this.env.csvTableUri) {
+            if (!env.csvTableUri) {
                 vscode.window.showErrorMessage("未找到合适的位置生成CSV");
                 return false;
             }
             // 生成csv模板
-            let templateGenerator = new TemplateGenerator(this.env);
+            let templateGenerator = new TemplateGenerator();
             
-            let targetUri: vscode.Uri = this.env.csvTableUri;
+            let targetUri: vscode.Uri = env.csvTableUri;
             await templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
         });
     }
 
     private registerCommandOfDownloadPresetUI() {
         vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
-            await this.env.waitReady(true);
-            if (!this.env.mapUri) {
+            await env.waitReady(true);
+            if (!env.mapUri) {
                 vscode.window.showErrorMessage("未找到地图路径！");
                 return false;
             };
@@ -358,7 +354,7 @@ class Helper {
                 location: vscode.ProgressLocation.Notification,
                 title: '正在下载预设UI...',
             }, async (progress, token) => {
-                await new preset.UI(this.env).download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
+                await new preset.UI().download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
             });
         });
     }
@@ -378,7 +374,7 @@ class Helper {
     }
 
     private registerEditorTableView() {
-        const editorTableDataProvider=new EditorTableDataProvider(this.env);
+        const editorTableDataProvider=new EditorTableDataProvider();
         vscode.window.registerTreeDataProvider(
             'y3-helper.editorTableView',
             editorTableDataProvider
@@ -391,14 +387,14 @@ class Helper {
         vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
 
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
-            this.env.editorTablePath,
-            this.env.zhlanguageJson,
+            env.editorTablePath,
+            env.zhlanguageJson,
             englishPathToChinese
         );
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));
 
-        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(this.env.zhlanguageJson);
+        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(env.zhlanguageJson);
         let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
         this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel,goEditorTableDocumentSymbolProvider));
 
@@ -446,6 +442,8 @@ class Helper {
         this.registerCommonCommands();
 
         this.registerCommandOfCSVeditor();
+
+        mainMenu.init();
     }
 }
 

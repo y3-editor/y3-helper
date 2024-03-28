@@ -1,15 +1,13 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
-import { Env } from '../env';
+import { env } from '../env';
 import * as path from 'path';
 import { isPathValid } from '../utility';
 import { chineseTypeNameToEnglishTypeName,englishTypeNameToChineseTypeName } from '../constants';
 export class TemplateGenerator{
-    private env: Env;
     private readonly englishToChinese;
     private readonly chineseToEnglish;
-    public constructor(env: Env) {
-        this.env = env;
+    public constructor() {
         this.chineseToEnglish = chineseTypeNameToEnglishTypeName;
         this.englishToChinese = englishTypeNameToChineseTypeName;
     }

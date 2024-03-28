@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Env } from '../env';
+import { env } from '../env';
 import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility';
 import { encode } from 'punycode';
 import { englishPathToChinese } from '../constants';
@@ -14,23 +14,23 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
   private editorTablePath: string = "";
   private zhlanguageJson: any = undefined;
   
-  constructor(private env: Env) {
+  constructor() {
     this.englishPathToChinese = englishPathToChinese;
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("当前未打开工作目录");
       return;
     }
 
-    this.editorTablePath = this.env.editorTablePath;
+    this.editorTablePath = env.editorTablePath;
 
     // 载入中文名称
-    this.zhlanguageJson = this.env.zhlanguageJson;
+    this.zhlanguageJson = env.zhlanguageJson;
   }
 
   refresh(): void {
 
     // 重新读取zhlanguage.json以刷新
-    this.env.refreshZhlanguageJson();
+    env.refreshZhlanguageJson();
     this._onDidChangeTreeData.fire(undefined);
   }
 

@@ -1,4 +1,4 @@
-import { Env } from "../env";
+import { env } from "../env";
 import * as csv from 'fast-csv';
 import { EditorTableType, editorTableTypeToFolderName, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName } from '../constants';
 import * as vscode from 'vscode';
@@ -9,9 +9,6 @@ import { hash, isJson, getFileNameByVscodeUri, isCSV, isPathValid } from '../uti
  *  物编数据CSV表格的编辑器
  */
 export class CSVeditor {
-    constructor(private env: Env) {
-        
-    }
     
     public modifyUID(oldUID: number, newUID: number) {
         
@@ -21,13 +18,13 @@ export class CSVeditor {
      * 从工程文件添加
      */
     public addEditorTableItemFromProject(editorTableItem: vscode.QuickPickItem) {
-        if (!editorTableItem.description || !this.env.scriptUri) {
+        if (!editorTableItem.description || !env.scriptUri) {
             vscode.window.showErrorMessage("未初始化Y3项目");
             return;
         }
         let englishEditorTableType = chineseTypeNameToEnglishTypeName[editorTableItem.description];
-        let csvRelativePath = this.env.tableTypeToCSVfolderPath[englishEditorTableType];
-        let csvPath = vscode.Uri.joinPath(this.env.scriptUri, csvRelativePath);
+        let csvRelativePath = env.tableTypeToCSVfolderPath[englishEditorTableType];
+        let csvPath = vscode.Uri.joinPath(env.scriptUri, csvRelativePath);
         if (!isPathValid(csvPath.fsPath)) {
             vscode.window.showErrorMessage("未找到CSV文件，请先生成");
             return;
@@ -91,7 +88,7 @@ export class CSVeditor {
         for (let type in EditorTableType) {
             let typeStr = EditorTableType[type as keyof typeof EditorTableType];
             let folderName: string = editorTableTypeToFolderName[typeStr];
-            res = res.concat(this.searchEditorTableItemsInFolder(type,path.join(this.env.editorTablePath, folderName), query));
+            res = res.concat(this.searchEditorTableItemsInFolder(type,path.join(env.editorTablePath, folderName), query));
         }
         return res;
     }
@@ -125,7 +122,7 @@ export class CSVeditor {
                 let name;
                 if (editorTableJson.hasOwnProperty('name')) {
                     let nameKey: any = editorTableJson['name'];
-                    name = this.env.zhlanguageJson[nameKey];
+                    name = env.zhlanguageJson[nameKey];
                 }
                 let uid = editorTableJson['uid'];
                 if (!uid || typeof uid !=='number') {

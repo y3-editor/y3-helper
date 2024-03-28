@@ -1,4 +1,4 @@
-import { Env } from '../env';
+import { env } from '../env';
 import * as vscode from 'vscode';
 
 type Event = {
@@ -13,18 +13,16 @@ type EventArg = {
 };
 
 export class Loader extends vscode.Disposable {
-    private env: Env;
     private uri: vscode.Uri;
     private onUpdate: (customEvent: Loader) => void;
     private data?: Object;
     private _events?: Event[];
 
-    constructor(env: Env, onUpdated: (customEvent: Loader) => void) {
+    constructor(onUpdated: (customEvent: Loader) => void) {
         let watcher: vscode.FileSystemWatcher;
         super(() => watcher?.dispose());
-        this.env = env;
         this.onUpdate = onUpdated;
-        this.uri = vscode.Uri.joinPath(this.env.scriptUri!, '../customevent.json');
+        this.uri = vscode.Uri.joinPath(env.scriptUri!, '../customevent.json');
         watcher = vscode.workspace.createFileSystemWatcher(this.uri.fsPath);
         watcher.onDidCreate(this.update, this);
         watcher.onDidChange(this.update, this);
