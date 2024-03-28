@@ -50,27 +50,27 @@ export class TemplateGenerator{
      */
     private async renameTemplateCSVtoChinese() {
         for (let key in this.englishToChinese) {
-            let oldFileName: string = key;
-            let newFileName: string = this.englishToChinese[key];
-            oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
-            newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
-            if (isPathValid(newFileName)) {
+            let oldFile: string = key;
+            let newFile: string = this.englishToChinese[key];
+            oldFile = path.join(__dirname, "../../template/csv_template/" + oldFile);
+            newFile = path.join(__dirname, "../../template/csv_template/" + newFile);
+            if (isPathValid(newFile)) {
                 continue;
             }
-            fs.renameSync(oldFileName, newFileName);
+            fs.renameSync(oldFile, newFile);
         }
     }
 
     private async renameTemplateCSVtoEnglish() {
         for (let key in this.chineseToEnglish) {
-            let oldFileName: string = key;
-            let newFileName: string = this.chineseToEnglish[key];
-            oldFileName = path.join(__dirname, "../../template/csv_template/" + oldFileName);
-            newFileName = path.join(__dirname, "../../template/csv_template/" + newFileName);
-            if (isPathValid(newFileName)) {
+            let oldFile: string = key;
+            let newFile: string = this.chineseToEnglish[key];
+            oldFile = path.join(__dirname, "../../template/csv_template/" + oldFile);
+            newFile = path.join(__dirname, "../../template/csv_template/" + newFile);
+            if (isPathValid(newFile)) {
                 continue;
             }
-            fs.renameSync(oldFileName, newFileName);
+            fs.renameSync(oldFile, newFile);
         }
     }
 }

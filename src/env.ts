@@ -3,26 +3,17 @@ import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
 import * as tools from './tools';
-import { isPathValid } from './utility';
+import { isFileValid, isPathValid, randomInt } from './utility';
 import * as fs from 'fs';
-import { EditorTableType } from './constants';
-
+import { englishPathToChinese } from './constants';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
-// 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-let defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
-    unit: "./resource/editor_table/单位",
-    decoration: "./resource/editor_table/装饰物",
-    item: "./resource/editor_table/物品",
-    ability: "./resource/editor_table/技能",
-    modifier: "./resource/editor_table/魔法效果",
-    projectile: "./resource/editor_table/投射物",
-    technology: "./resource/editor_table/科技",
-    destructible: "./resource/editor_table/可破坏物",
-    sound: "./resource/editor_table/声音"
-};
+class Env {
 
-class EnvPath {
+    constructor() {
+        this.initTableTypeToCSVfolderPath();// 初始化时从插件配置更新物编数据对应存放文件夹路径的关系
+    }
+
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
         let platform = os.platform();
         if (platform !== 'win32') {
@@ -190,28 +181,6 @@ class EnvPath {
         return editorExeUri;
     }
 
-    // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    public readonly tableTypeToCSVfolderPath: { [key: string]: string } = {};
-
-    /**
-     * 从插件配置中更新物编数据类型对应的CSV文件保存地址
-     */
-    private initTableTypeToCSVfolderPath(): void {
-        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
-        //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
-        for (const key in defaultTableTypeToCSVfolderPath) {
-            this.tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key];
-            console.log(key + " " + this.tableTypeToCSVfolderPath[key]);
-        }
-        
-        for (const key in csvPathConfig) {
-            if (key in defaultTableTypeToCSVfolderPath) {
-                this.tableTypeToCSVfolderPath[key] = csvPathConfig[key];
-                console.log("update:"+key + " " + csvPathConfig[key]);
-            }
-        }
-    }
-
     public status: 'not ready' | 'initing' | 'ready' = 'not ready';
     public editorVersion?: EditorVersion;
     public editorUri?: vscode.Uri;
@@ -223,60 +192,31 @@ class EnvPath {
     public editorTableUri?: vscode.Uri;// 物编数据
     public csvTableUri?: vscode.Uri;// CSV表格路径
 
-    private async init(askUser = false) {
-        await Promise.allSettled([
-            (async () => {
-                this.editorUri = await this.searchEditorUri(askUser);
-                this.editorVersion = await this.getEditorVersion();
-                this.editorExeUri = this.getEditorExeUri();
-            })(),
-            (async () => {
-                this.mapUri = await this.searchProjectPath(askUser);
-                if (this.mapUri) {
-                    this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
-                    this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
-                    this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
-                    this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-                    this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/"); 
-                    this.initTableTypeToCSVfolderPath();
-                }
-            })(),
-        ]);
+    // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
+    private readonly defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
+        unit: "./resource/editor_table/单位",
+        decoration: "./resource/editor_table/装饰物",
+        item: "./resource/editor_table/物品",
+        ability: "./resource/editor_table/技能",
+        modifier: "./resource/editor_table/魔法效果",
+        projectile: "./resource/editor_table/投射物",
+        technology: "./resource/editor_table/科技",
+        destructible: "./resource/editor_table/可破坏物",
+        sound: "./resource/editor_table/声音"
+    };
 
-        tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
-        tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
-        tools.log.info(`editorVersion: ${this.editorVersion}`);
-        tools.log.info(`mapUri: ${this.mapUri}`);
-        tools.log.info(`projectUri: ${this.projectUri}`);
-        tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
-        tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
-        tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
-    }
-
-    // 如果找不到路径，是否弹框询问用户？
-    public async waitReady(askUser = false) {
-        if (this.status === 'ready') {
-            if (!askUser) {
-                return;
-            }
-            if (this.mapUri) {
-                return;
-            }
-        }
-        if (this.status === 'initing') {
-            // 自旋
-            while (this.status === 'initing') {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            return;
-        }
-        this.status = 'initing';
-        await this.init(askUser);
-        this.status = 'ready';
-    }
-}
-
-class Env extends EnvPath {
+    // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
+    public readonly tableTypeToCSVfolderPath: { [key: string]: string } = {
+        unit: "./resource/editor_table/单位",
+        decoration: "./resource/editor_table/装饰物",
+        item: "./resource/editor_table/物品",
+        ability: "./resource/editor_table/技能",
+        modifier: "./resource/editor_table/魔法效果",
+        projectile: "./resource/editor_table/投射物",
+        technology: "./resource/editor_table/科技",
+        destructible: "./resource/editor_table/可破坏物",
+        sound: "./resource/editor_table/声音"
+    };
 
     private _zhlanguageJson: any = undefined;
     
@@ -340,18 +280,80 @@ class Env extends EnvPath {
         }
         return this._editorTablePath;
     }
+    
+    
 
     /**
-     * 根据
-     * @param editorTableType 
-     * @returns 
+     * 从插件配置中更新物编数据类型对应的CSV文件保存地址
      */
-    public allocateEditorTableItemUID(editorTableType:EditorTableType): number{
-        let res: number = 0;
-        // todo:分配物编对象数据的UID
+    private initTableTypeToCSVfolderPath(): void {
+        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
+        //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
+        for (const key in this.defaultTableTypeToCSVfolderPath) {
+            this.tableTypeToCSVfolderPath[key] = this.defaultTableTypeToCSVfolderPath[key];
+            console.log(key + " " + this.tableTypeToCSVfolderPath[key]);
+        }
+        
+        for (const key in csvPathConfig) {
+            if (key in this.defaultTableTypeToCSVfolderPath) {
+                this.tableTypeToCSVfolderPath[key] = csvPathConfig[key];
+                console.log("update:"+key + " " + csvPathConfig[key]);
+            }
+        }
 
-        return res;
     }
+
+    private async init(askUser = false) {
+        await Promise.allSettled([
+            (async () => {
+                this.editorUri = await this.searchEditorUri(askUser);
+                this.editorVersion = await this.getEditorVersion();
+                this.editorExeUri = this.getEditorExeUri();
+            })(),
+            (async () => {
+                this.mapUri = await this.searchProjectPath(askUser);
+                if (this.mapUri) {
+                    this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
+                    this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
+                    this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
+                    this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
+                    this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/"); 
+                }
+            })(),
+        ]);
+
+        tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
+        tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
+        tools.log.info(`editorVersion: ${this.editorVersion}`);
+        tools.log.info(`mapUri: ${this.mapUri}`);
+        tools.log.info(`projectUri: ${this.projectUri}`);
+        tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
+        tools.log.info(`y3Uri: ${this.y3Uri?.fsPath}`);
+        tools.log.info(`editorTableUri: ${this.editorTableUri?.fsPath}`);
+    }
+
+    // 如果找不到路径，是否弹框询问用户？
+    public async waitReady(askUser = false) {
+        if (this.status === 'ready') {
+            if (!askUser) {
+                return;
+            }
+            if (this.mapUri) {
+                return;
+            }
+        }
+        if (this.status === 'initing') {
+            // 自旋
+            while (this.status === 'initing') {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            return;
+        }
+        this.status = 'initing';
+        await this.init(askUser);
+        this.status = 'ready';
+    }
+
 }
 
 export let env = new Env();

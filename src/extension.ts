@@ -4,9 +4,8 @@ import { LuaDocMaker } from './makeLuaDoc';
 import { env } from './env';
 import { GameLauncher } from './launchGame';
 import { CSVimporter } from './editorTable/CSVimporter';
-import * as utility from './utility';
 import { TemplateGenerator } from './editorTable/templateGenerator';
-import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable/editorTable';
+import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable/editorTableProvider';
 import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
@@ -255,7 +254,13 @@ class Helper {
             vscode.window.showQuickPick(editorTableTypes, {
                 placeHolder: '选择你要添加的物编数据类型(CSV)'
             }).then(selection => {
-                if (selection) {
+                
+                if (!selection || !selection.description) {
+                    vscode.window.showInformationMessage('未选择');
+                    return;
+                    
+                }
+                else {
                     vscode.window.showInformationMessage(`你选择了: ${selection.label}`);
                 }
                 
@@ -269,12 +274,15 @@ class Helper {
                         return null;
                     }
                 };
+                
                 vscode.window.showInputBox(inputOptions).then(value => {
                     if (value) {
-                        
-                        
-                        // todo:分配一个uid并新建到csv中
-
+                        let csvEditor: CSVeditor = new CSVeditor();
+                        if (!selection.description) {
+                            vscode.window.showInformationMessage('未选择');
+                            return;
+                        }
+                        csvEditor.addNewUIDandNameInCSVwithoutConflict(selection.description, value);
                     }
                 });
             });

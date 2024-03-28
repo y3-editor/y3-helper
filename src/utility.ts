@@ -43,13 +43,7 @@ export function isFileValid(uri: vscode.Uri | undefined): boolean {
     if (!uri) {
         return false;
     }
-
-    // 检查是否为 file 类型的 Uri，并且其 fsPath 属性不为空
-    if (uri.scheme === 'file' && uri.fsPath) {
-        return true;
-    }
-
-    return false;
+    return isPathValid(uri.fsPath);
 }
 /**
  * 检查文件是否在此文件夹中
@@ -196,8 +190,8 @@ export function hash(s:string,seed:number=0x0): number{
     let c2 = 0x1b873593;
 
 	// body
-    for (let block_start: number = 0; block_start < nblocks * 4;block_start+=4 ){
-        let k1: number = key[block_start + 3] << 24 | key[block_start + 2] << 16 | key[block_start + 1] << 8 | key[block_start + 0];
+    for (let blockStart: number = 0; blockStart < nblocks * 4;blockStart+=4 ){
+        let k1: number = key[blockStart + 3] << 24 | key[blockStart + 2] << 16 | key[blockStart + 1] << 8 | key[blockStart + 0];
 
         k1 = (c1 * k1) & 0xFFFFFFFF;
         k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;
@@ -209,21 +203,21 @@ export function hash(s:string,seed:number=0x0): number{
     }
 		
     // tail
-    let tail_index: number = nblocks * 4;
+    let tailIndex: number = nblocks * 4;
     let k1: number = 0;
-    let tail_size: number = length & 3;
+    let tailSize: number = length & 3;
 
-    if (tail_size >= 3) {
-        k1 ^= key[tail_index + 2] << 16;
+    if (tailSize >= 3) {
+        k1 ^= key[tailIndex + 2] << 16;
     }
-    if (tail_size >= 2) {
-        k1 ^= key[tail_index + 1] << 8;
+    if (tailSize >= 2) {
+        k1 ^= key[tailIndex + 1] << 8;
     }
-    if (tail_size >= 1) {
-        k1 ^= key[tail_index + 0];
+    if (tailSize >= 1) {
+        k1 ^= key[tailIndex + 0];
     }
 
-    if (tail_size > 0) {
+    if (tailSize > 0) {
         k1 = (k1 * c1) & 0xFFFFFFFF;
         k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;  // inlined ROTL32
         k1 = (k1 * c2) & 0xFFFFFFFF;
@@ -231,11 +225,17 @@ export function hash(s:string,seed:number=0x0): number{
     }
 
     // finalization
-    let unsigned_val:number = fmix(h1 ^ length);
-    if ((unsigned_val & 0x80000000) === 0) {
-        return unsigned_val;
+    let unsignedVal:number = fmix(h1 ^ length);
+    if ((unsignedVal & 0x80000000) === 0) {
+        return unsignedVal;
     }
     else {
-        return -((unsigned_val ^ 0xFFFFFFFF) + 1);
+        return -((unsignedVal ^ 0xFFFFFFFF) + 1);
     }
+}
+
+export function randomInt(min: number, max: number):number{
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
