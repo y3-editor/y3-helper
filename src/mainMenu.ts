@@ -213,7 +213,7 @@ class MainMenu {
                 this.refresh();
             }
         });
-        env.onDidReload(() => {
+        env.onDidChange(() => {
             this.refresh();
         });
     }

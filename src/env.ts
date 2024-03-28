@@ -40,8 +40,8 @@ function rePrepare(method: Function, context: ClassMethodDecoratorContext) {
 }
 
 class EnvPath {
-    private reloadEmitter = new vscode.EventEmitter<void>();
-    public onDidReload = this.reloadEmitter.event;
+    private envChangeEmitter = new vscode.EventEmitter<void>();
+    public onDidChange = this.envChangeEmitter.event;
 
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
         let platform = os.platform();
@@ -265,7 +265,7 @@ class EnvPath {
         }
         this._timer = setTimeout(() => {
             this._timer = undefined;
-            this.reloadEmitter.fire();
+            this.envChangeEmitter.fire();
         }, 100);
     }
 
