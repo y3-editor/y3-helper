@@ -201,9 +201,9 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 }
 
-export class MainMenu {
-    private view: vscode.TreeView<TreeNode>;
-    private tree: TreeProvider;
+class MainMenu {
+    readonly view: vscode.TreeView<TreeNode>;
+    readonly tree: TreeProvider;
     private state: 'not init' | 'initing' | 'inited' = 'not init';
 
     constructor (env: Env) {
@@ -237,5 +237,15 @@ export class MainMenu {
 
     reload(env: Env) {
         this.refresh(env);
+    }
+}
+
+export let mainMenu: MainMenu | undefined;
+
+export function init(env: Env) {
+    if (mainMenu) {
+        mainMenu.reload(env);
+    } else {
+        mainMenu = new MainMenu(env);
     }
 }

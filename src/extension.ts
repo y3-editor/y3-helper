@@ -11,24 +11,23 @@ import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
 import { CSVeditor } from './editorTable/CSVeditor';
-import { MainMenu } from './mainMenu';
+import * as mainMenu from './mainMenu';
 
 class Helper {
     private context: vscode.ExtensionContext;
     private env: Env;
-    private mainMenu: MainMenu;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
 
         this.env = new Env();
-        this.mainMenu = new MainMenu(this.env);
+        mainMenu.init(this.env);
     }
 
     private async reload() {
         this.env = new Env();
         await this.env.waitReady();
-        this.mainMenu.reload(this.env);
+        mainMenu.init(this.env);
     }
 
     private reloadEnvWhenConfigChange() {
@@ -154,7 +153,7 @@ class Helper {
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
 
-                this.mainMenu.reload(this.env);
+                mainMenu.init(this.env);
             });
             running = false;
         });
