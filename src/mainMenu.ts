@@ -92,7 +92,7 @@ let nodeReselectMapPath = new TreeNode('重新选择Y3地图路径', {
     iconPath: new vscode.ThemeIcon('search'),
 });
 
-let nodeAction = new TreeNode('操作', {
+let nodeAction = new TreeNode('功能', {
     iconPath: new vscode.ThemeIcon('beaker'),
     collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
     childs: [
@@ -126,10 +126,11 @@ let nodeAction = new TreeNode('操作', {
             iconPath: new vscode.ThemeIcon('run-all'),
             description: 'Shift + F5',
         }),
+        
     ]
 });
 
-let nodeEnv = new TreeNode('当前环境', {
+let nodeEnv = new TreeNode('环境', {
     iconPath: new vscode.ThemeIcon('server-environment'),
     childs: [
         new TreeNode('编辑器', {
