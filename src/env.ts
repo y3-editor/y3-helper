@@ -305,6 +305,11 @@ class EnvPath {
         }
         await this.updateMap(askUser);
     }
+
+    public reload() {
+        this.mapUri = undefined;
+        this.editorUri = undefined;
+    }
 }
 
 class Env extends EnvPath {

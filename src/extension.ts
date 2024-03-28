@@ -20,8 +20,7 @@ class Helper {
     }
 
     private async reload() {
-        //this.env = new Env();
-        await env.mapReady();
+        env.reload();
         mainMenu.init();
     }
 
