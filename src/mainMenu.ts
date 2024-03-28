@@ -7,12 +7,12 @@ interface TreeNodeOptional {
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
     collapsibleState?: vscode.TreeItemCollapsibleState;
     childs?: TreeNode[];
-    update?: (node: TreeNode, env: Env) => void;
+    update?: (node: TreeNode, env: Env) => void | Thenable<void>;
 }
 
 class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
-    update?: (node: TreeNode, env: Env) => void;
+    update?: (node: TreeNode, env: Env) => void | Thenable<void>;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
         if (optional) {
@@ -27,10 +27,10 @@ class TreeNode extends vscode.TreeItem {
 
 class ViewInExplorerNode extends TreeNode {
     constructor(uri: vscode.Uri) {
-        super('在windows中浏览', {
+        super('在Windows中浏览', {
             command: {
                 command: 'y3-helper.shell',
-                title: '在windows中浏览',
+                title: '在Windows中浏览',
                 arguments: [
                     'explorer',
                     uri.fsPath,
@@ -52,6 +52,11 @@ class ViewInVSCode extends TreeNode {
                 ]
             },
             iconPath: new vscode.ThemeIcon('window'),
+            update: (node, env) => {
+                if (uri.toString() === vscode.workspace.workspaceFolders?.[0].uri.toString()) {
+                    node.iconPath = new vscode.ThemeIcon('error');
+                }
+            },
         });
     }
 }
@@ -68,6 +73,11 @@ class ViewInNewVSCode extends TreeNode {
                 ]
             },
             iconPath: new vscode.ThemeIcon('empty-window'),
+            update: (node, env) => {
+                if (uri.toString() === vscode.workspace.workspaceFolders?.[0].uri.toString()) {
+                    node.iconPath = new vscode.ThemeIcon('error');
+                }
+            },
         });
     }
 }
@@ -84,7 +94,21 @@ let nodeAction = new TreeNode('操作', {
     iconPath: new vscode.ThemeIcon('beaker'),
     collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
     childs: [
-        new TreeNode('初始化Y3库'),
+        new TreeNode('初始化Y3库', {
+            command: {
+                command: 'y3-helper.initProject',
+                title: '初始化Y3库',
+            },
+            update: async (node, env) => {
+                node.iconPath = new vscode.ThemeIcon('cloud-download');
+                try {
+                    let stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(env.y3Uri!, '.git'));
+                    if (stat.type === vscode.FileType.Directory) {
+                        node.iconPath = new vscode.ThemeIcon('check');
+                    }
+                } catch {}
+            },
+        }),
         new TreeNode('启动游戏', {
             command: {
                 command: 'y3-helper.launchGame',
@@ -109,7 +133,7 @@ let nodeEnv = new TreeNode('当前环境', {
             update: (node, env) => {
                 node.tooltip     = env.editorUri?.fsPath;
                 node.iconPath    = env.editorUri ? new vscode.ThemeIcon('settings') : new vscode.ThemeIcon('error');
-                node.description = env.editorUri ? undefined : '未找到编辑器';
+                node.description = env.editorUri ? env.editorUri.fsPath : '未找到编辑器';
                 node.childs      = env.editorUri ? [
                     new TreeNode('启动编辑器', {
                         command: {
@@ -130,7 +154,7 @@ let nodeEnv = new TreeNode('当前环境', {
             update: (node, env) => {
                 node.tooltip     = env.scriptUri?.fsPath;
                 node.iconPath    = env.scriptUri ? new vscode.ThemeIcon('book') : new vscode.ThemeIcon('error');
-                node.description = env.scriptUri ? undefined : '未找到Lua脚本';
+                node.description = env.scriptUri ? env.scriptUri.fsPath : '未找到Lua脚本';
                 node.childs      = env.scriptUri ? [
                     new ViewInExplorerNode(env.scriptUri),
                     new ViewInVSCode(env.scriptUri),
@@ -166,8 +190,8 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
         return node.childs;
     }
 
-    getTreeItem(node: TreeNode): TreeNode {
-        node.update?.(node, this.env);
+    async getTreeItem(node: TreeNode): Promise<TreeNode> {
+        await node.update?.(node, this.env);
         node.collapsibleState = node.collapsibleState ?? (node.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         return node;
     }

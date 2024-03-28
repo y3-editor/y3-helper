@@ -52,8 +52,13 @@ class Helper {
     }
 
     private registerCommandOfInitProject() {
+        let running = false;
         vscode.commands.registerCommand('y3-helper.initProject', async () => {
-            vscode.window.withProgress({
+            if (running) {
+                return;
+            }
+            running = true;
+            await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: '正在初始化Y3项目...',
             }, async (progress, token) => {
@@ -67,6 +72,13 @@ class Helper {
                 let y3Uri = this.env.y3Uri!;
 
                 try {
+                    if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type === vscode.FileType.Directory) {
+                        vscode.window.showErrorMessage('此项目已经初始化过了！');
+                        return;
+                    }
+                } catch {}
+
+                try {
                     let state = await vscode.workspace.fs.stat(y3Uri);
                     if (state.type === vscode.FileType.Directory) {
                         // 直接删除这个目录
@@ -75,7 +87,7 @@ class Helper {
                                 recursive: true,
                                 useTrash: true,
                             });
-                            tools.log.info(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
+                            vscode.window.showInformationMessage(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
                         } catch (error) {
                             vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
                             return;
@@ -143,7 +155,10 @@ class Helper {
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
+
+                this.mainMenu.reload(this.env);
             });
+            running = false;
         });
     }
 
