@@ -40,6 +40,8 @@ function rePrepare(method: Function, context: ClassMethodDecoratorContext) {
 }
 
 class EnvPath {
+    private reloadEmitter = new vscode.EventEmitter<void>();
+    public onDidReload = this.reloadEmitter.event;
 
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
         let platform = os.platform();
@@ -309,6 +311,7 @@ class EnvPath {
     public reload() {
         this.mapUri = undefined;
         this.editorUri = undefined;
+        this.reloadEmitter.fire();
     }
 }
 

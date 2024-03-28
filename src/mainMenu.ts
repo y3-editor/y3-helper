@@ -213,6 +213,9 @@ class MainMenu {
                 this.refresh();
             }
         });
+        env.onDidReload(() => {
+            this.refresh();
+        });
     }
 
     private async refresh() {

@@ -19,15 +19,10 @@ class Helper {
         this.context = context;
     }
 
-    private async reload() {
-        env.reload();
-        mainMenu.init();
-    }
-
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
-                await this.reload();
+                env.reload();
                 tools.log.info('配置已更新，已重新加载环境');
             }
         });
@@ -35,7 +30,7 @@ class Helper {
 
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
-            await this.reload();
+            env.reload();
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
             runShell("执行命令", args[0], args.slice(1));
