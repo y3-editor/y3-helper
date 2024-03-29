@@ -1,5 +1,5 @@
  
-import { isFileValid, randomInt, isJson, isCSV, isPathValid } from '../utility/utility';
+import { isFileValid, randomInt, isJson, isCSV, isPathValid } from '../utility';
 import { englishPathToChinese, editorTableTypeToFolderName, EditorTableType, englishTypeNameToChineseTypeName } from '../constants';
 import { env } from "../env";
 import * as csv from 'fast-csv';

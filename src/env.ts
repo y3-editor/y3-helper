@@ -4,7 +4,7 @@ import winreg from 'winreg';
 import path from 'path';
 import util from 'util';
 import * as tools from './tools';
-import { isFileValid, isPathValid, randomInt } from './utility/utility';
+import { isFileValid, isPathValid, randomInt } from './utility';
 import * as fs from 'fs';
 import { defaultTableTypeToCSVfolderPath } from './constants';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
