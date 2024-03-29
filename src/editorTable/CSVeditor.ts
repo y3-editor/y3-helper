@@ -4,16 +4,135 @@ import { EditorTableType, editorTableTypeToFolderName, englishTypeNameToChineseT
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { hash, isJson, getFileNameByVscodeUri, isCSV, isPathValid } from '../utility';
+import { hash, isJson, getFileNameByVscodeUri, isCSV, isPathValid } from '../utility/utility';
 import { allocateNewUIDofEditorTableItem } from './editorTableUtility';
 /**
  *  物编数据CSV表格的编辑器
  */
 export class CSVeditor {
     
+    /**
+     * 通过uid修改物编项目的名称
+     * @param uid 
+     * @param name 
+     */
+    public modifyName(uid: number, newName: string) {
+        if (!env.editorTableUri) {
+            vscode.window.showErrorMessage("未找到项目的物编数据");
+            return;
+        }
+        //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
+        for (let type in EditorTableType) {
+            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
+            let folderName: string = editorTableTypeToFolderName[typeStr];
+            this.modifyNameinFolder(vscode.Uri.joinPath(env.editorTableUri, folderName), uid, newName);
+        }
+    }
+
+    private modifyNameinFolder(csvPath: vscode.Uri, uid: number,newName:string) {
+        const files = fs.readdirSync(csvPath.fsPath);
+        files.forEach(file => {
+            if (!isCSV(file)) {
+                return;
+            }
+            const rows: any[] = [];
+            const filePath = path.join(csvPath.fsPath, file);
+            const fileReadStream = fs.createReadStream(filePath);
+            let haveError: boolean = false;
+            let i = 0;//行号
+            csv.parseStream(fileReadStream, { headers: true })
+                .on(
+                    'data', (row) => {
+                        if (!row.hasOwnProperty('uid')) {
+                            haveError = true;
+                            vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
+                            return;
+                        }
+                        if (row['uid'] === uid) {
+                            row['name'] = newName;
+                        }
+                        rows.push(row);
+
+                        i++;
+                    }
+                )
+                .on('end', () => {
+                    if (!haveError) {
+                        const fileWriteStream = fs.createWriteStream(filePath);
+                        csv.write(rows, { headers: true })
+                            .pipe(fileWriteStream);
+                    }
+                })
+                .on('error', (error) => {
+                    console.error('CSV解析错误', error.message);
+                    console.error('CSV解析出错的行行号:' + (i - 1) + "");
+                    let message = 'CSV解析错误:' + filePath + '\n' + '出错的CSV行，其行号为:' + i;
+                    vscode.window.showErrorMessage(message);
+                });
+        });
+    }
+
+    /**
+     * 修改物编项目的UID
+     * @param oldUID 
+     * @param newUID 
+     */
     public modifyUID(oldUID: number, newUID: number) {
-        
+        if (!env.editorTableUri) {
+            vscode.window.showErrorMessage("未找到项目的物编数据");
+            return;
+        }
+        //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
+        for (let type in EditorTableType) {
+            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
+            let folderName: string = editorTableTypeToFolderName[typeStr];
+            this.modifyUIDinFolder(vscode.Uri.joinPath(env.editorTableUri, folderName), oldUID, newUID);
+        }
     };
+
+    private modifyUIDinFolder(csvPath:vscode.Uri,oldUID: number, newUID: number) {
+        const files = fs.readdirSync(csvPath.fsPath);
+        files.forEach(file => {
+            if (!isCSV(file)) {
+                return;
+            }
+            const rows: any[] = [];
+            const filePath = path.join(csvPath.fsPath, file);
+            const fileReadStream = fs.createReadStream(filePath);
+            let haveError: boolean = false;
+            let i = 0;//行号
+            csv.parseStream(fileReadStream, { headers: true })
+                .on(
+                    'data', (row) => {
+                        if (!row.hasOwnProperty('uid')) {
+                            haveError = true;
+                            vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
+                            return;
+                        }
+                        if (row['uid'] === oldUID) {
+                            row['uid'] = newUID;
+                            row['key'] = newUID;
+                        }
+                        rows.push(row);
+
+                        i++;
+                    }
+                )
+                .on('end', () => {
+                    if (!haveError) {
+                        const fileWriteStream = fs.createWriteStream(filePath);
+                        csv.write(rows, { headers: true })
+                            .pipe(fileWriteStream);
+                    }
+                })
+                .on('error', (error) => {
+                    console.error('CSV解析错误', error.message);
+                    console.error('CSV解析出错的行行号:' + (i - 1) + "");
+                    let message = 'CSV解析错误:' + filePath + '\n' + '出错的CSV行，其行号为:' + i;
+                    vscode.window.showErrorMessage(message);
+                });
+        });
+    }
 
     /**
      * 无冲突地添加新的UID和Name到CSV表格中，不会和项目或CSV中已有的物编数据冲突
@@ -113,80 +232,7 @@ export class CSVeditor {
         vscode.window.showInformationMessage("添加 " + editorTableItem.description + ": " + editorTableItem.label + " 成功");
     }
     
-    public searchAllEditorTableItemInProject(query: string): vscode.QuickPickItem[]{
-        let res: vscode.QuickPickItem[] = [];
-        if (query.length === 0) {
-            return res;
-        }
-        //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-        for (let type in EditorTableType) {
-            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let folderName: string = editorTableTypeToFolderName[typeStr];
-            res = res.concat(this.searchEditorTableItemsInFolder(type,path.join(env.editorTablePath, folderName), query));
-        }
-        return res;
-    }
-
-    /**
-     * 搜索文件夹下的物编数据Json
-     * @param editorTableType 
-     * @param pathStr 
-     * @param query 
-     * @returns 
-     */
-    private searchEditorTableItemsInFolder(editorTableType:string,pathStr: string, query: string): vscode.QuickPickItem[] {
-        let res: vscode.QuickPickItem[] = [];
-        const files = fs.readdirSync(pathStr);
-        editorTableType=editorTableType.toLowerCase();
-        files.forEach(file => {
-            const filePath: string = path.join(pathStr, file);
-            const stat = fs.statSync(filePath);
-
-            if (isJson(filePath)) {
-                let editorTableJsonData: any;
-                let label = file;
-                try {
-                    editorTableJsonData = fs.readFileSync(filePath, 'utf8');
-                }
-                catch (error) {
-                    vscode.window.showErrorMessage("读取" + filePath + "时出错");
-                }
-
-                let editorTableJson: any = undefined;
-                try {
-                    editorTableJson = JSON.parse(editorTableJsonData);
-
-                }
-                catch (error) {
-                    vscode.window.showErrorMessage("读取" + filePath + "时失败，错误为：" + error);
-                }
-                let name;
-                if (editorTableJson.hasOwnProperty('name')) {
-                    let nameKey: any = editorTableJson['name'];
-                    name = env.zhlanguageJson[nameKey];
-                }
-                let uid = editorTableJson['uid'];
-                if (!uid || typeof uid !=='number') {
-                    uid = label.substring(0, label.length - 5);
-                }
-                if (name !== undefined && typeof name === "string") {
-                    label = name + "(" + uid + ")";//转为"这是一个单位(134219828)"的格式
-                }
-
-
-                if (label.includes(query)) {
-                    let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
-                    let quickPickItem: vscode.QuickPickItem = {
-                        label: name,
-                        description: englishTypeNameToChineseTypeName[editorTableType],
-                        detail: uid,
-                    };
-                    res.push(quickPickItem);
-                }
-            }
-        });
-        return res;
-    }
+   
 
 
     

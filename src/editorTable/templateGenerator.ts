@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import { env } from '../env';
 import * as path from 'path';
-import { isPathValid } from '../utility';
+import { isPathValid } from '../utility/utility';
 import { chineseTypeNameToEnglishTypeName,englishTypeNameToChineseTypeName } from '../constants';
 export class TemplateGenerator{
     private readonly englishToChinese;

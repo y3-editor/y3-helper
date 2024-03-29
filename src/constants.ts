@@ -95,3 +95,16 @@ export const csvTypeToPath: Readonly<{ [key: string]: string }> = {
     "store": "storeall",
     "technology": "technologyall"
 };
+
+// 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
+export const defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
+    unit: "./resource/editor_table/单位",
+    decoration: "./resource/editor_table/装饰物",
+    item: "./resource/editor_table/物品",
+    ability: "./resource/editor_table/技能",
+    modifier: "./resource/editor_table/魔法效果",
+    projectile: "./resource/editor_table/投射物",
+    technology: "./resource/editor_table/科技",
+    destructible: "./resource/editor_table/可破坏物",
+    sound: "./resource/editor_table/声音"
+};

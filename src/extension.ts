@@ -10,6 +10,7 @@ import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
 import { CSVeditor } from './editorTable/CSVeditor';
+import { searchAllEditorTableItemInProject } from './editorTable/editorTableUtility';
 import * as mainMenu from './mainMenu';
 
 class Helper {
@@ -300,7 +301,7 @@ class Helper {
                 if (value) {
                     
                     let csvEditor: CSVeditor = new CSVeditor();
-                    let pickItems: vscode.QuickPickItem[] = csvEditor.searchAllEditorTableItemInProject(value);
+                    let pickItems: vscode.QuickPickItem[] = searchAllEditorTableItemInProject(value);
                     vscode.window.showQuickPick(pickItems, {
                         placeHolder: '选择你要添加的物编数据的UID和名称'
                     }).then((selectedItem) => {

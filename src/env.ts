@@ -4,23 +4,12 @@ import winreg from 'winreg';
 import path from 'path';
 import util from 'util';
 import * as tools from './tools';
-import { isFileValid, isPathValid, randomInt } from './utility';
+import { isFileValid, isPathValid, randomInt } from './utility/utility';
 import * as fs from 'fs';
-import { englishPathToChinese } from './constants';
+import { defaultTableTypeToCSVfolderPath } from './constants';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
-// 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-let defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
-    unit: "./resource/editor_table/单位",
-    decoration: "./resource/editor_table/装饰物",
-    item: "./resource/editor_table/物品",
-    ability: "./resource/editor_table/技能",
-    modifier: "./resource/editor_table/魔法效果",
-    projectile: "./resource/editor_table/投射物",
-    technology: "./resource/editor_table/科技",
-    destructible: "./resource/editor_table/可破坏物",
-    sound: "./resource/editor_table/声音"
-};
+
 
 function rePrepare(method: Function, context: ClassMethodDecoratorContext) {
     let running = false;
@@ -222,7 +211,10 @@ class EnvPath {
 
 
     // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    public readonly tableTypeToCSVfolderPath: { [key: string]: string } = {};
+    private readonly _tableTypeToCSVfolderPath: { [key: string]: string } = {};
+    public get tableTypeToCSVfolderPath(): { [key: string]: string }{
+        return this._tableTypeToCSVfolderPath;
+    }
 
     private _editorTablePath: string = "";
     
@@ -246,13 +238,13 @@ class EnvPath {
         let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
         for (const key in defaultTableTypeToCSVfolderPath) {
-            this.tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key];
-            console.log(key + " " + this.tableTypeToCSVfolderPath[key]);
+            this._tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key];
+            console.log(key + " " + this._tableTypeToCSVfolderPath[key]);
         }
         
         for (const key in csvPathConfig) {
             if (key in defaultTableTypeToCSVfolderPath) {
-                this.tableTypeToCSVfolderPath[key] = csvPathConfig[key];
+                this._tableTypeToCSVfolderPath[key] = csvPathConfig[key];
                 console.log("update:"+key + " " + csvPathConfig[key]);
             }
         }

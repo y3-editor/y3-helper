@@ -7,7 +7,7 @@ import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
 import { env } from "../env";
-import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../utility';
+import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../utility/utility';
 import { csvTypeToPath } from "../constants";
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';

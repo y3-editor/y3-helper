@@ -95,10 +95,6 @@
                 "title": "Y3:在CSV表格中添加新物编数据"
             },
             {
-                "command": "y3-helper.modifyUIDandNameInCSV",
-                "title": "Y3:修改CSV表格中的物编数据UID和名称"
-            },
-            {
                 "command": "y3-helper.addUIDandNameToCSVfromProject",
                 "title": "Y3:添加项目中已有的物编数据的UID和名称到CSV表格中"
             }
@@ -188,7 +184,8 @@
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
-        "test": "node ./out/src/test/runTest.js"
+        "test": "node ./out/test/runTest.js",
+        "feasibility_test":"node ./out/test/feasibility.test.js"
     },
     "dependencies": {
         "@types/fs-extra": "^11.0.4",

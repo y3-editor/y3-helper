@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
-import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility';
+import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility/utility';
 import { encode } from 'punycode';
 import { englishPathToChinese } from '../constants';
 
