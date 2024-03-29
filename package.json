@@ -3,7 +3,7 @@
     "displayName": "Y3开发助手",
     "description": "",
     "publisher": "sumneko",
-    "version": "0.2.21",
+    "version": "0.3.0",
     "repository": {
         "url": "https://github.com/y3-editor/y3-helper"
     },
@@ -185,7 +185,7 @@
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
-        "feasibility_test":"node ./out/test/feasibility.test.js"
+        "feasibility_test": "node ./out/test/feasibility.test.js"
     },
     "dependencies": {
         "@types/fs-extra": "^11.0.4",
