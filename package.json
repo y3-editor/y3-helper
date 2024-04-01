@@ -128,47 +128,47 @@
                     "properties": {
                         "unit": {
                             "type": "string",
-                            "default": "./resource/editor_table/单位",
+                            "default": "./y3helper/editor_table/单位",
                             "description": "单位的CSV物编数据的默认存放文件夹名"
                         },
                         "decoration": {
                             "type": "string",
-                            "default": "./resource/editor_table/装饰物",
+                            "default": "./y3helper/editor_table/装饰物",
                             "description": "装饰物的CSV物编数据的默认存放文件夹名"
                         },
                         "item": {
                             "type": "string",
-                            "default": "./resource/editor_table/物品",
+                            "default": "./y3helper/editor_table/物品",
                             "description": "物品的CSV物编数据的默认存放文件夹名"
                         },
                         "ability": {
                             "type": "string",
-                            "default": "./resource/editor_table/技能",
+                            "default": "./y3helper/editor_table/技能",
                             "description": "技能的CSV物编数据的默认存放文件夹名"
                         },
                         "modifier": {
                             "type": "string",
-                            "default": "./resource/editor_table/魔法效果",
+                            "default": "./y3helper/editor_table/魔法效果",
                             "description": "魔法效果的CSV物编数据的默认存放文件夹名"
                         },
                         "projectile": {
                             "type": "string",
-                            "default": "./resource/editor_table/投射物",
+                            "default": "./y3helper/editor_table/投射物",
                             "description": "投射物的CSV物编数据的默认存放文件夹名"
                         },
                         "technology": {
                             "type": "string",
-                            "default": "./resource/editor_table/科技",
+                            "default": "./y3helper/editor_table/科技",
                             "description": "科技的CSV物编数据的默认存放文件夹名"
                         },
                         "destructible": {
                             "type": "string",
-                            "default": "./resource/editor_table/可破坏物",
+                            "default": "./y3helper/editor_table/可破坏物",
                             "description": "可破坏物的CSV物编数据的默认存放文件夹名"
                         },
                         "sound": {
                             "type": "string",
-                            "default": "./resource/editor_table/声音",
+                            "default": "./y3helper/editor_table/声音",
                             "description": "声音的CSV物编数据的默认存放文件夹名"
                         }
                     }

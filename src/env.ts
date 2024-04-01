@@ -295,7 +295,7 @@ class EnvPath {
             this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
             this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
             this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./resource/editor_table/");
+            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3helper/editor_table/");
             this.initTableTypeToCSVfolderPath();
         }
         tools.log.info(`mapUri: ${this.mapUri}`);
