@@ -470,7 +470,17 @@ class Helper {
 
     private registerCommandOfDownloadPresetUI() {
         vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
-            return;
+            // await env.mapReady(true);
+            // if (!env.mapUri) {
+            //     vscode.window.showErrorMessage("未找到地图路径！");
+            //     return false;
+            // };
+            // await vscode.window.withProgress({
+            //     location: vscode.ProgressLocation.Notification,
+            //     title: '正在下载预设UI...',
+            // }, async (progress, token) => {
+            //     await new preset.UI().download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
+            // });
         });
     }
 

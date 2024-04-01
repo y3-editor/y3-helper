@@ -168,7 +168,12 @@ export class UI {
                 ignoreAttributes: false,
             }).parse(xmlContent) ?? {};
         } catch {
-            localXml = {};
+            localXml = {
+                "?xml": {
+                    "@_version": "1.0",
+                    "@_encoding": "utf-8",
+                },
+            };
         }
         let items = this.getXmlItem(localXml, 'Repository.Items.Item');
         items = typeof items === 'object' ? items : [];
