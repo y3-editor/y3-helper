@@ -17,6 +17,8 @@
 > 推荐和[Edit csv](https://marketplace.visualstudio.com/items?itemName=janisdd.vscode-edit-csv)插件配合使用，以便在Visual Code内编辑CSV表格，无需打开新的窗口
 
 > 你可以通过 `Y3-Helper.CSVPath` 设置修改这些CSV文件的路径
+
+> CSV表格中，第一行为表头，第二行为表头的中文翻译，第三行是示例，其照示例填写，第四行之后的才是正文，会被导入项目中。
 >
 ## 批量添加、修改CSV文件中的物编项目UID和名称
 

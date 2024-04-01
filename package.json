@@ -104,7 +104,7 @@
             },
             {
                 "command": "y3-helper.modifyNameInCSV",
-                "title": "Y3:修改CSV表格中的物编项目的的名称"
+                "title": "Y3:修改CSV表格中的物编项目的名称"
             }
         ],
         "configuration": {
@@ -189,6 +189,7 @@
     ],
     "icon": "image/logo.png",
     "scripts": {
+        "compile":"tsc",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",

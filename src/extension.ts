@@ -12,6 +12,7 @@ import { englishPathToChinese } from './constants';
 import { CSVeditor } from './editorTable/CSVeditor';
 import { searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV } from './editorTable/editorTableUtility';
 import * as mainMenu from './mainMenu';
+import * as editorTable from './editorTable';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -287,8 +288,8 @@ class Helper {
         let addUIDandNameToCSVfromProjectCommand = vscode.commands.registerCommand("y3-helper.addUIDandNameToCSVfromProject", async () => {
             await env.mapReady(true);
             const inputOptions: vscode.InputBoxOptions = {
-                prompt: 'UID或名称或类型名',
-                placeHolder: '搜索项目中已有的物编数据项目',
+                prompt: '搜索项目中已有的物编数据项目UID或名称或类型名',
+                placeHolder: 'UID或名称或类型名',
                 validateInput: (text: string) => {
                     if (text.length === 0) {
                         return "输入的内容为空";
@@ -323,8 +324,8 @@ class Helper {
         let modifyNameInCSVCommand = vscode.commands.registerCommand("y3-helper.modifyNameInCSV", async () => {
             await env.mapReady(true);
             const inputOptions: vscode.InputBoxOptions = {
-                prompt: 'UID或名称或类型名',
-                placeHolder: '搜索CSV表格中已有的物编数据项目',
+                prompt: '搜索CSV表格中已有的物编数据项目',
+                placeHolder: 'UID或名称或类型名',
                 validateInput: (text: string) => {
                     if (text.length === 0) {
                         return "输入的内容为空";
@@ -379,8 +380,8 @@ class Helper {
         let modifyUIDInCSVCommand = vscode.commands.registerCommand("y3-helper.modifyUIDinCSV", async () => {
             await env.mapReady(true);
             const inputOptions: vscode.InputBoxOptions = {
-                prompt: 'UID或名称或类型名',
-                placeHolder: '搜索并选择CSV表格中已有的物编数据项目',
+                prompt: '搜索并选择CSV表格中已有的物编数据项目',
+                placeHolder: 'UID或名称或类型名',
                 validateInput: (text: string) => {
                     if (text.length === 0) {
                         return "输入的内容为空";
@@ -470,17 +471,6 @@ class Helper {
     private registerCommandOfDownloadPresetUI() {
         vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
             return;
-            await env.mapReady(true);
-            if (!env.mapUri) {
-                vscode.window.showErrorMessage("未找到地图路径！");
-                return false;
-            };
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: '正在下载预设UI...',
-            }, async (progress, token) => {
-                await new preset.UI().download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
-            });
         });
     }
 

@@ -1,4 +1,7 @@
- 
+ /**
+  * 关于物编表的工具函数集合
+  */
+
 import { isFileValid, randomInt, isJson, isCSV, isPathValid, HashSet, SpinLock } from '../utility';
 import { englishPathToChinese, editorTableTypeToFolderName, EditorTableType, englishTypeNameToChineseTypeName } from '../constants';
 import { env } from "../env";
@@ -6,6 +9,10 @@ import * as csv from 'fast-csv';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { EditorTableItemInfo } from './types';
+
+
+
  /**
  * 通过物编数据项目的(uid)判断其是否存在于项目中
  * @param uid 
@@ -250,4 +257,85 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
         res.push(element);
     }
     return Promise.resolve(res);
+}
+
+/**
+ * 获取项目中的所有物编数据,返回一个HashMap可通过uid查询对应物编数据
+ */
+export function getMapOfEditorTableItemInfoInProject(): {[key:number]: EditorTableItemInfo } {
+    let res: { [key: number]: EditorTableItemInfo } = [];
+    let items: EditorTableItemInfo[] = getAllEditorTableItemInfoInProject();
+    for (let item of items) {
+        res[item.uid] = item;
+    }
+    return res;
+}
+
+/**
+ * 获取项目中的所有物编数据,返回一个数组
+ */
+function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
+    let res: EditorTableItemInfo[] = [];
+    
+    //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
+    Object.values(EditorTableType).forEach(type => {
+        let typeStr:string = type;
+        let folderName: string = editorTableTypeToFolderName[typeStr];
+        res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
+    });
+    
+    return res;
+}
+
+function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pathStr: string) {
+    let res: EditorTableItemInfo[] = [];
+    const files = fs.readdirSync(pathStr);
+    let editorTableTypeStr:string = editorTableType.toLowerCase();
+    files.forEach(file => {
+        const filePath: string = path.join(pathStr, file);
+        const stat = fs.statSync(filePath);
+
+        if (isJson(filePath)) {
+            let editorTableJsonData: any;
+            let label = file;
+            try {
+                editorTableJsonData = fs.readFileSync(filePath, 'utf8');
+            }
+            catch (error) {
+                vscode.window.showErrorMessage("读取" + filePath + "时出错");
+            }
+
+            let editorTableJson: any = undefined;
+            try {
+                editorTableJson = JSON.parse(editorTableJsonData);
+
+            }
+            catch (error) {
+                vscode.window.showErrorMessage("读取" + filePath + "时失败，错误为：" + error);
+            }
+            let name;
+            if (editorTableJson.hasOwnProperty('name')) {
+                let nameKey: any = editorTableJson['name'];
+                name = env.zhlanguageJson[nameKey];
+            }
+            let uid = editorTableJson['uid'];
+            if (!uid || typeof uid !== 'number') {
+                uid = label.substring(0, label.length - 5);
+            }
+            if (name !== undefined && typeof name === "string") {
+                label = name + "(" + uid + ")";//转为"这是一个单位(134219828)"的格式
+            }
+
+            let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
+            let item: EditorTableItemInfo = new EditorTableItemInfo(
+                uid,
+                name,
+                editorTableType,
+                editorTableJsonUri
+            );
+            res.push(item);
+            
+        }
+    });
+    return res;
 }
