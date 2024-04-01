@@ -1,6 +1,6 @@
 # Y3开发助手
 
-## 初始化项目（给新建的地图使用，老地图勿用！）：
+## 初始化项目（给新建的地图使用，老地图勿用！）
 
 1. 按 `F1` 打开命令列表，使用命令 `Y3:初始化开发环境`
 2. 选择地图路径
@@ -17,8 +17,23 @@
 > 推荐和[Edit csv](https://marketplace.visualstudio.com/items?itemName=janisdd.vscode-edit-csv)插件配合使用，以便在Visual Code内编辑CSV表格，无需打开新的窗口
 
 > 你可以通过 `Y3-Helper.CSVPath` 设置修改这些CSV文件的路径
+>
+## 批量添加、修改CSV文件中的物编项目UID和名称
+
+由于每个物编数据项目的属性种类非常多，只能放在多个CSV文件中，当你需要它们的UID或名称时，需要同步修改每一个CSV中的此物编项目的UID和名称，所以这里有批量添加和修改的功能。
+
+![批量添加、修改CSV文件中的物编项目UID和名称](/image/csv_editor.png)
+你可以选择：
+
+```
+Y3:在CSV表格中添加新物编数据
+Y3:添加项目中已有的物编数据的UID和名称到CSV表格中
+Y3:修改CSV表格中的物编项目的UID
+Y3:修改CSV表格中的物编项目的名称
+```
 
 ## 在vscode内查看搜索和编辑Y3项目的物编数据
+
 ![在vscode内查看搜索和编辑Y3项目的物编数据](image/eidtortable.png)
 在初始化项目后，你可以在explorer中的大纲(OUTLINE)和Y3开发助手:物编数据中查看Y3项目的物编数据。
 你可以看到物编数据的Json和其字段名的含义，点击你想要编辑的属性，即可跳转到对应字段。
@@ -26,13 +41,17 @@
 在vscode中快捷键 `ctrl+T` 可以搜索对象。
 
 你需要以名称搜索某一个物编数据可以这样：
+
 ```
 # 这是一个单位
 ```
+
 ![搜索某一个物编的数据](image/search_editor_table_json.png)
 
 点击打开保存此物编数据的Json后，按下快捷键 `ctrl+shift+O`，你可以这样在此Json中搜索你要编辑的属性
+
 ```
 @ 攻击
 ```
+
 ![搜索某一个物编的数据的字段](image/search_editor_table_key_in_json.png)

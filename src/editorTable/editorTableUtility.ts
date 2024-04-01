@@ -1,5 +1,5 @@
  
-import { isFileValid, randomInt, isJson, isCSV, isPathValid } from '../utility';
+import { isFileValid, randomInt, isJson, isCSV, isPathValid, HashSet, SpinLock } from '../utility';
 import { englishPathToChinese, editorTableTypeToFolderName, EditorTableType, englishTypeNameToChineseTypeName } from '../constants';
 import { env } from "../env";
 import * as csv from 'fast-csv';
@@ -109,12 +109,12 @@ export function searchEditorTableItemsInFolder(editorTableType: string, pathStr:
                 label = name + "(" + uid + ")";//转为"这是一个单位(134219828)"的格式
             }
 
-
-            if (label.includes(query)) {
+            let chineseTypeName = englishTypeNameToChineseTypeName[editorTableType];
+            if (label.includes(query)||chineseTypeName.includes(query)) {
                 let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
                 let quickPickItem: vscode.QuickPickItem = {
                     label: name,
-                    description: englishTypeNameToChineseTypeName[editorTableType],
+                    description: chineseTypeName,
                     detail: uid,
                 };
                 res.push(quickPickItem);
@@ -124,14 +124,24 @@ export function searchEditorTableItemsInFolder(editorTableType: string, pathStr:
     return res;
 }
 
-export function searchAllEditorTableItemInCSV(query: string): vscode.QuickPickItem[] {
+
+/**
+ * 搜索CSV表格中的物编项目并返回选项 label存中文名 description存中文类型名 detail存uid
+ * @param query 
+ * @returns 
+ */
+export async function searchAllEditorTableItemInCSV(query: string):Promise< vscode.QuickPickItem[]> {
     let res: vscode.QuickPickItem[] = [];
+    
     if (!env.scriptUri) {
         vscode.window.showErrorMessage("未初始化Y3项目");
         return res;
     }
-    
 
+    /**用HashSet去重 */
+    let resSet = new HashSet<vscode.QuickPickItem>();
+
+    
     // 搜索九类CSV文件
     for (let type in EditorTableType) {
         let typeStr = EditorTableType[type as keyof typeof EditorTableType];
@@ -142,17 +152,32 @@ export function searchAllEditorTableItemInCSV(query: string): vscode.QuickPickIt
             return res;
         }
         const files = fs.readdirSync(csvPath.fsPath);
-        files.forEach(file => {
+
+        
+
+
+        for (let index = 0; index < files.length; index++)
+        {
+            let file: string = files[index];
+
+            
+
             if (!isCSV(file)) {
-                return;
+                continue;
             }
+            
+            /**
+             * 自旋锁 等待当前文件读取完毕
+             */
+            let spinLockForWaitfileReaded = new SpinLock();
+            spinLockForWaitfileReaded.release();
+            spinLockForWaitfileReaded.acquire();
             const filePath = path.join(csvPath.fsPath, file);
             const fileReadStream = fs.createReadStream(filePath);
             let i = 1;//行号,第0行是表头，从第一行开始读
             csv.parseStream(fileReadStream, { headers: true })
                 .on(
                     'data', (row) => {
-                        
                         // 忽略第1，2行
                         if (i <= 2) {
                             i++;
@@ -160,28 +185,69 @@ export function searchAllEditorTableItemInCSV(query: string): vscode.QuickPickIt
                         }
 
                         if (!row.hasOwnProperty('uid')) {
+                            /**
+                             * 出错就释放自旋锁 以免阻塞
+                             */
+                            spinLockForWaitfileReaded.release();
                             vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
                             return;
                         }
                         if (!row.hasOwnProperty('name')) {
+                            /**
+                            * 出错就释放自旋锁 以免阻塞
+                            */
+                            spinLockForWaitfileReaded.release();
                             vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少name字段,文件路径为:' + filePath);
                             return;
                         }
                         let uid: number = row['uid'];
                         let name: string = row['name'];
+                        let ChinesTypeName = englishTypeNameToChineseTypeName[typeStr];
+
+                        // 如果uid匹配或者名称匹配或者类型匹配都纳入结果
+                        if (String(uid).includes(query)||name.includes(query)||ChinesTypeName.includes(query)) {
+                            let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
+                            let quickPickItem: vscode.QuickPickItem = {
+                                label: name,
+                                description: ChinesTypeName,
+                                detail: String(uid),
+                            };
+                            resSet.add(quickPickItem);
+                        }
+
                         i++;
                     }
                 )
                 .on('end', () => {
-
+                    /**
+                     * 读完了就释放自旋锁
+                     */
+                    spinLockForWaitfileReaded.release();
                 })
                 .on('error', (error) => {
+
+                    /**
+                    * 出错就释放自旋锁 以免阻塞
+                    */
+                    spinLockForWaitfileReaded.release();
+
                     console.error('CSV解析错误', error.message);
                     console.error('CSV解析出错的行行号:' + (i - 1) + "");
                     let message = 'CSV解析错误:' + filePath + '\n' + '出错的CSV行，其行号为:' + i;
                     vscode.window.showErrorMessage(message);
                 });
-        });
+            
+            /**
+             * 等待当前文件读取完毕
+             */
+            await spinLockForWaitfileReaded.acquire();
+        }
     }
-    return res;
+
+    
+
+    for (let element of resSet) {
+        res.push(element);
+    }
+    return Promise.resolve(res);
 }

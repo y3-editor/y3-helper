@@ -1,10 +1,11 @@
 import { env } from "../env";
 import * as csv from 'fast-csv';
-import { EditorTableType, editorTableTypeToFolderName, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName } from '../constants';
+import { EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName } from '../constants';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { hash, isJson, getFileNameByVscodeUri, isCSV, isPathValid } from '../utility';
+import { SpinLock } from "../utility";
+import { isCSV, isPathValid } from '../utility';
 import { allocateNewUIDofEditorTableItem } from './editorTableUtility';
 /**
  *  物编数据CSV表格的编辑器
@@ -17,15 +18,15 @@ export class CSVeditor {
      * @param name 
      */
     public modifyName(uid: number, newName: string) {
-        if (!env.editorTableUri) {
+        if (!env.scriptUri) {
             vscode.window.showErrorMessage("未找到项目的物编数据");
             return;
         }
         //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
         for (let type in EditorTableType) {
             let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let folderName: string = editorTableTypeToFolderName[typeStr];
-            this.modifyNameinFolder(vscode.Uri.joinPath(env.editorTableUri, folderName), uid, newName);
+            let folderName: string = env.tableTypeToCSVfolderPath[typeStr];
+            this.modifyNameinFolder(vscode.Uri.joinPath(env.scriptUri, folderName), uid, newName);
         }
     }
 
@@ -48,7 +49,7 @@ export class CSVeditor {
                             vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
                             return;
                         }
-                        if (row['uid'] === uid) {
+                        if (row['uid'] === String(uid)) {
                             row['name'] = newName;
                         }
                         rows.push(row);
@@ -78,15 +79,15 @@ export class CSVeditor {
      * @param newUID 
      */
     public modifyUID(oldUID: number, newUID: number) {
-        if (!env.editorTableUri) {
+        if (!env.scriptUri) {
             vscode.window.showErrorMessage("未找到项目的物编数据");
             return;
         }
         //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
         for (let type in EditorTableType) {
             let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let folderName: string = editorTableTypeToFolderName[typeStr];
-            this.modifyUIDinFolder(vscode.Uri.joinPath(env.editorTableUri, folderName), oldUID, newUID);
+            let folderName: string = env.tableTypeToCSVfolderPath[typeStr];
+            this.modifyUIDinFolder(vscode.Uri.joinPath(env.scriptUri, folderName), oldUID, newUID);
         }
     };
 
@@ -109,7 +110,7 @@ export class CSVeditor {
                             vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
                             return;
                         }
-                        if (row['uid'] === oldUID) {
+                        if (row['uid'] === String(oldUID)) {
                             row['uid'] = newUID;
                             row['key'] = newUID;
                         }
@@ -139,8 +140,8 @@ export class CSVeditor {
      * @param typeStr 物编数据种类
      * @param name 物编项目名称
      */
-    public addNewUIDandNameInCSVwithoutConflict(typeStr:string,name:string) {
-        let uid: number = this.allocateNewUIDofEditorTableItemToCSV();
+    public async addNewUIDandNameInCSVwithoutConflict(typeStr:string,name:string) {
+        let uid: number =await this.allocateNewUIDofEditorTableItemToCSV();
         this.addNewUIDandNameInCSV(typeStr, uid, name);
         let englishTypeStr=englishTypeNameToChineseTypeName[typeStr];
         vscode.window.showInformationMessage("添加 " + englishTypeStr +": "+name+" 成功");
@@ -186,7 +187,7 @@ export class CSVeditor {
                             vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,文件路径为:' + filePath);
                             return;
                         }
-                        if (row['uid'] === uid) {
+                        if (row['uid'] === String(uid)) {
                             haveItem = true;
                         }
                         rows.push(row);
@@ -237,13 +238,13 @@ export class CSVeditor {
 
     
     private uidToFolder: { [key: number]: string } = {};
-    private refreshUIDtoFolder() {
+    private async refreshUIDtoFolder() {
         if (!env.scriptUri) {
             vscode.window.showErrorMessage("未初始化Y3项目");
             return;
         }
         this.uidToFolder = {};
-
+        
         // 搜索九类CSV文件
         for (let type in EditorTableType ) {
             let typeStr = EditorTableType[type as keyof typeof EditorTableType];
@@ -254,13 +255,23 @@ export class CSVeditor {
                 return;
             }
             const files = fs.readdirSync(csvPath.fsPath);
-            files.forEach(file => {
+            files.forEach(async file => {
                 if (!isCSV(file)) {
                     return;
                 }
+
+                /**
+                * 自旋锁 等待当前文件读取完毕
+                */
+                let spinLockForWaitfileReaded = new SpinLock();
+                spinLockForWaitfileReaded.release();
+                spinLockForWaitfileReaded.acquire();
+
                 const filePath = path.join(csvPath.fsPath, file);
                 const fileReadStream = fs.createReadStream(filePath);
                 let i = 0;//行号
+
+
                 csv.parseStream(fileReadStream, { headers: true })
                     .on(
                         'data', (row) => {
@@ -274,32 +285,44 @@ export class CSVeditor {
                         }
                     )
                     .on('end', () => {
-                    
+                        /**
+                        * 读完了就释放自旋锁
+                        */
+                        spinLockForWaitfileReaded.release();
                     })
                     .on('error', (error) => {
+                        /**
+                         * 出错就释放自旋锁 以免阻塞
+                         */
+                        spinLockForWaitfileReaded.release();
                         console.error('CSV解析错误', error.message);
                         console.error('CSV解析出错的行行号:' + (i - 1) + "");
                         let message = 'CSV解析错误:' + filePath + '\n' + '出错的CSV行，其行号为:' + i;
                         vscode.window.showErrorMessage(message);
                     });
+                /**
+                * 等待当前文件读取完毕
+                */
+                await spinLockForWaitfileReaded.acquire();
             });
+            
         }
     }
 
     /**
      * 分配一个在CSV表格和Y3项目中都不冲突的物编数据UID
      */
-    private allocateNewUIDofEditorTableItemToCSV(): number{
+    private async allocateNewUIDofEditorTableItemToCSV(): Promise<number>{
         if (!env.editorTableUri) {
             vscode.window.showInformationMessage("未初始化Y3项目");
             return 0;
         }
-        this.refreshUIDtoFolder();
+        await this.refreshUIDtoFolder();
         let uid = allocateNewUIDofEditorTableItem(env.editorTableUri);
         while (uid in this.uidToFolder) {
             uid = allocateNewUIDofEditorTableItem(env.editorTableUri);
         }
-        return uid;
+        return Promise.resolve(uid);
     }
 
 }
