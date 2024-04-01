@@ -347,6 +347,7 @@ class Helper {
 
     private registerCommandOfDownloadPresetUI() {
         vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
+            return;
             await env.mapReady(true);
             if (!env.mapUri) {
                 vscode.window.showErrorMessage("未找到地图路径！");
