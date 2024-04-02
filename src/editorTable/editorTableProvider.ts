@@ -49,13 +49,14 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     return success;
   }
   refresh(): void {
-
     // 重新读取language.json以刷新
     env.refreshlanguageJson();
     this.languageJson = env.languageJson;
     this._onDidChangeTreeData.fire(undefined);
   }
-
+  getParent(element: FileNode): vscode.ProviderResult<FileNode> {
+    return Promise.resolve(element.parent);
+  }
   
   getTreeItem(element: FileNode): vscode.TreeItem {
     return element;
@@ -107,6 +108,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         }
       
         const fileNode = new FileNode(
+          element,
           label,
           stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
           stat.isDirectory() ? vscode.Uri.file(filePath) : vscode.Uri.file(filePath),
@@ -120,6 +122,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         if (label in this.englishPathToChinese) {
           label = this.englishPathToChinese[label];
           const fileNode = new FileNode(
+            element,
             label,
             stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
             stat.isDirectory() ? vscode.Uri.file(filePath) : vscode.Uri.file(filePath),
@@ -140,6 +143,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
 
 export class FileNode extends vscode.TreeItem {
   constructor(
+    public readonly parent:FileNode|undefined,
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly resourceUri: vscode.Uri,

@@ -531,15 +531,16 @@ class Helper {
      * EditorTableTreeView相关的命令注册
      */
     private registerEditorTableView() {
-        const editorTableDataProvider=new EditorTableDataProvider();
+        const editorTableDataProvider = new EditorTableDataProvider();
+        
         vscode.window.registerTreeDataProvider(
             'y3-helper.editorTableView',
             editorTableDataProvider
         );
+        
         vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => {
             editorTableDataProvider.refresh();
         });
-        
 
         vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
 

@@ -179,7 +179,7 @@
             {
                 "command": "y3-helper.revealInFileExplorer",
                 "title": "Y3:在系统文件浏览器中打开",
-                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
+                "enablement": "view == y3-helper.editorTableView"
             }
         ],
         "configuration": {
