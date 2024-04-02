@@ -56,6 +56,11 @@
                     "group": "navigation"
                 },
                 {
+                    "command": "y3-helper.renameEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "group": "modification"
+                },
+                {
                     "command": "y3-helper.deleteEditorTableItem",
                     "when": "view == y3-helper.editorTableView &&  viewItem == json",
                     "group": "modification"
@@ -125,6 +130,10 @@
             {
                 "command": "y3-helper.deleteEditorTableItem",
                 "title": "Y3:删除物编项目"
+            },
+            {
+                "command": "y3-helper.renameEditorTableItem",
+                "title": "Y3:修改物编项目名称"
             },
             {
                 "command": "y3-helper.copyTableItemUID",

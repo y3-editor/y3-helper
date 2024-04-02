@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
-import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility';
+import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
 import { encode } from 'punycode';
 import { englishPathToChinese } from '../constants';
 import { EditorTableItemInfo } from './types';
@@ -13,7 +13,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
   readonly onDidChangeTreeData: vscode.Event<FileNode | undefined> = this._onDidChangeTreeData.event;
   public readonly englishPathToChinese: { [key: string]: string };
   private editorTablePath: string = "";
-  private zhlanguageJson: any = undefined;
+  private languageJson: any = undefined;
   
   constructor() {
     this.englishPathToChinese = englishPathToChinese;
@@ -25,13 +25,34 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     this.editorTablePath = env.editorTablePath;
 
     // 载入中文名称
-    this.zhlanguageJson = env.zhlanguageJson;
+    this.languageJson = env.languageJson;
   }
-
+  public renameEditorTableItemByFileNode(fileNode: FileNode, newName: string):boolean {
+    if (!fileNode.name) {
+      vscode.window.showErrorMessage("该节点没有名称");
+      return false;
+    }
+    let success = false;
+    try {
+      let newNameHashcode = hash(newName);
+      let editorTableJsonStr = fs.readFileSync(fileNode.resourceUri.fsPath, 'utf8');
+      let editorTableJson = JSON.parse(editorTableJsonStr);
+      editorTableJson['name'] = newNameHashcode;
+      fs.writeFileSync(fileNode.resourceUri.fsPath, toUnicodeIgnoreASCII(JSON.stringify(editorTableJson, null, 2)), 'utf8');
+      env.writeDataInLanguageJson(newNameHashcode, newName);
+      this.refresh();
+      success = true;
+    }
+    catch (error) {
+      vscode.window.showErrorMessage("重命名物编项目时出错，错误为：" + error);
+    }
+    return success;
+  }
   refresh(): void {
 
-    // 重新读取zhlanguage.json以刷新
-    env.refreshZhlanguageJson();
+    // 重新读取language.json以刷新
+    env.refreshlanguageJson();
+    this.languageJson = env.languageJson;
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -75,7 +96,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         let name;
         if (editorTableJson.hasOwnProperty('name')) {
           let nameKey: any = editorTableJson['name'];
-          name = this.zhlanguageJson[nameKey];
+          name = this.languageJson[nameKey];
         }
         if (name !== undefined && typeof name === "string") {
           label = name + "(" + label.substring(0, label.length - 5) + ")";//显示为"这是一个单位(134219828)"的格式

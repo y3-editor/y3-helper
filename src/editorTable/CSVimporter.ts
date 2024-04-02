@@ -98,11 +98,11 @@ export class CSVimporter
         let jsonFilePath=targetPath.fsPath+'\\'+uid+'.json';
         if(!isInDirectory(targetPath.fsPath,uid+'.json')){
             console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
-            let templateJson = await fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
-            await fs.writeFileSync(jsonFilePath,templateJson);
+            let templateJson = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
+            fs.writeFileSync(jsonFilePath,templateJson);
         }
       
-        let jsonFileStr=await fs.readFileSync(jsonFilePath, 'utf8');
+        let jsonFileStr=fs.readFileSync(jsonFilePath, 'utf8');
         let jsonData: { [key: string]: any };
         if (jsonFileStr === '') {
             jsonData = {};
@@ -204,7 +204,7 @@ export class CSVimporter
                         zhlanguageJson[hashOfName] = value;
                         jsonData[key] = hashOfName;
                         try {
-                            await fs.writeFileSync(vscode.Uri.joinPath(env.mapUri, "zhlanguage.json").fsPath, JSON.stringify(zhlanguageJson, null, 2), 'utf8');
+                            fs.writeFileSync(vscode.Uri.joinPath(env.mapUri, "zhlanguage.json").fsPath, JSON.stringify(zhlanguageJson, null, 2), 'utf8');
                         }
                         catch (error) {
                             vscode.window.showErrorMessage("保存zhlanguage.json失败");

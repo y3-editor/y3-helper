@@ -322,51 +322,72 @@ class EnvPath {
 
 class Env extends EnvPath {
 
-    private _zhlanguageJson: any = undefined;
-    
-    public get zhlanguageJson(): any {
+    private _languageJson: any = undefined;
+    private languageJsonRelativePath: string = "../zhlanguage.json";//默认为中文
+    public get languageJson(): any {
 
-        if (this._zhlanguageJson) {
-            return this._zhlanguageJson;
+        if (this._languageJson) {
+            return this._languageJson;
         }
         if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
             return undefined;
         }
-        // 载入中文名称
-        let zhlanguagePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../zhlanguage.json");
-        if (isPathValid(zhlanguagePath)) {
+        // 载入中文名称 (目前只支持中文)
+        let languageJsonPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, this.languageJsonRelativePath);
+        if (isPathValid(languageJsonPath)) {
             try {
-                this._zhlanguageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
+                this._languageJson = JSON.parse(fs.readFileSync(languageJsonPath, 'utf8'));
             }
             catch (error) {
-                vscode.window.showErrorMessage("读取和解析" + zhlanguagePath + "时失败，错误为：" + error);
+                vscode.window.showErrorMessage("读取和解析" + languageJsonPath + "时失败，错误为：" + error);
             }
         }
         else {
             return undefined;
         }
-        return this._zhlanguageJson;
+        return this._languageJson;
     }
 
-    public refreshZhlanguageJson():void {
+    /**
+     * 写入项目中的language.json的值，用于保存中文名等
+     * @param key 
+     * @param val 
+     * @returns 
+     */
+    public writeDataInLanguageJson(key: number, val: any) {
+        this.refreshlanguageJson();
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
+            return undefined;
+        }
+        this._languageJson[key] = val;
+        let languageJsonPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, this.languageJsonRelativePath);
+        try {
+            fs.writeFileSync(languageJsonPath, JSON.stringify(this.languageJson, null, 2), 'utf8');
+        }
+        catch (error) {
+            vscode.window.showErrorMessage("保存zhlanguage.json失败");
+            return false;
+        }
+    }
+    public refreshlanguageJson():void {
         
         if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
-            this._zhlanguageJson = undefined;
+            this._languageJson = undefined;
             return;
         }
         // 载入中文名称
         let zhlanguagePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../zhlanguage.json");
         if (isPathValid(zhlanguagePath)) {
             try {
-                this._zhlanguageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
+                this._languageJson = JSON.parse(fs.readFileSync(zhlanguagePath, 'utf8'));
             }
             catch (error) {
-                this._zhlanguageJson = undefined;
+                this._languageJson = undefined;
                 vscode.window.showErrorMessage("读取和解析" + zhlanguagePath + "时失败，错误为：" + error);
             }
         }
         else {
-            this._zhlanguageJson = undefined;
+            this._languageJson = undefined;
         }
     }
 }

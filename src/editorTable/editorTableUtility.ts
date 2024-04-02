@@ -106,7 +106,7 @@ export function searchEditorTableItemsInFolder(editorTableType: string, pathStr:
             let name;
             if (editorTableJson.hasOwnProperty('name')) {
                 let nameKey: any = editorTableJson['name'];
-                name = env.zhlanguageJson[nameKey];
+                name = env.languageJson[nameKey];
             }
             let uid = editorTableJson['uid'];
             if (!uid || typeof uid !== 'number') {
@@ -330,7 +330,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pat
             let name;
             if (editorTableJson.hasOwnProperty('name')) {
                 let nameKey: any = editorTableJson['name'];
-                name = env.zhlanguageJson[nameKey];
+                name = env.languageJson[nameKey];
             }
             let uid = editorTableJson['uid'];
             if (!uid || typeof uid !== 'number') {

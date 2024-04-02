@@ -16,6 +16,7 @@ import { englishPathToChinese } from './constants';
 import * as mainMenu from './mainMenu';
 import path from 'path';
 import * as fs from 'fs';
+import { hash } from './utility';
 
 
 class Helper {
@@ -521,13 +522,13 @@ class Helper {
 
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
             env.editorTablePath,
-            env.zhlanguageJson,
+            env.languageJson,
             englishPathToChinese
         );
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));
 
-        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(env.zhlanguageJson);
+        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(env.languageJson);
         let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
         this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel, goEditorTableDocumentSymbolProvider));
         
@@ -557,6 +558,27 @@ class Helper {
             if (fileNode.name) {
                 vscode.env.clipboard.writeText(fileNode.name);
             }
+        });
+
+        vscode.commands.registerCommand("y3-helper.renameEditorTableItem", (fileNode: FileNode) => {
+            const inputOptions: vscode.InputBoxOptions = {
+                prompt: '修改后的新名称',
+                value: fileNode.name,
+                placeHolder: '新名称',
+                validateInput: (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    return null;
+                }
+            };
+            vscode.window.showInputBox(inputOptions).then(
+                value => {
+                    if (value) {
+                        editorTableDataProvider.renameEditorTableItemByFileNode(fileNode, value);
+                    }
+                }
+            );
         });
     }
 

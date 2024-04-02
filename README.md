@@ -57,3 +57,8 @@ Y3:修改CSV表格中的物编项目的名称
 ```
 
 ![搜索某一个物编的数据的字段](image/search_editor_table_key_in_json.png)
+
+## 物编数据TreeView的右键菜单
+
+在物编数据视图右键有以下功能：
+![alt text](./image/tree_view_menu.png)
