@@ -41,12 +41,9 @@ class ViewInExplorerNode extends TreeNode {
     constructor(uri: vscode.Uri) {
         super('在Windows中浏览', {
             command: {
-                command: 'y3-helper.shell',
+                command: 'revealFileInOS',
                 title: '在Windows中浏览',
-                arguments: [
-                    'explorer',
-                    uri.fsPath,
-                ]
+                arguments: [ uri ]
             },
             iconPath: new vscode.ThemeIcon('folder-opened'),
         });
@@ -161,7 +158,7 @@ let nodeEnv = new TreeNode('环境', {
                         },
                         iconPath: new vscode.ThemeIcon('play'),
                     }),
-                    new ViewInExplorerNode(vscode.Uri.joinPath(env.editorUri, '..')),
+                    new ViewInExplorerNode(env.editorUri),
                 ] : undefined;
             },
         }),
