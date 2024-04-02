@@ -481,6 +481,12 @@ class Helper {
         });
     }
 
+    private registerCommandOfRevealMainMenu() {
+        vscode.commands.registerCommand('y3-helper.revealMainMenu', () => {
+            mainMenu.reveal();
+        });
+    }
+
     private registerCommandOfOpenFile() {
         vscode.commands.registerCommand('y3-helper.openFile', async (args: vscode.Uri | FileNode) => {
             if (args instanceof vscode.Uri) {
