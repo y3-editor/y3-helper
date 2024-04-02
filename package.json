@@ -149,10 +149,6 @@
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
-                "command": "y3-helper.downloadPresetUI",
-                "title": "Y3:下载预设资源（UI）"
-            },
-            {
                 "command": "y3-helper.addNewDataInCSV",
                 "title": "Y3:添加新物编数据到CSV表格中"
             },
