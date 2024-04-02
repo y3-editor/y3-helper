@@ -498,8 +498,25 @@ class Helper {
                 vscode.window.showTextDocument(document);
             }
             else {
-                vscode.window.showErrorMessage("y3-helper.openFile命令传入的参数类型错误");
+
+                // 如果参数为其他的，就让用户自己选
+                const openDialogOptions: vscode.OpenDialogOptions = {
+                    canSelectFiles: true,
+                    canSelectFolders: false,
+                    canSelectMany: false,
+                    openLabel: '选择你要打开的文件'
+                };
+
+                // 展示选择文件窗口
+                vscode.window.showOpenDialog(openDialogOptions).then(async fileUri => {
+                    if (fileUri && fileUri[0]) {
+                        vscode.window.showInformationMessage('打开: ' + fileUri[0].fsPath);
+                        const document = await vscode.workspace.openTextDocument(fileUri[0].fsPath);
+                        vscode.window.showTextDocument(document);
+                    }
+                });
             }
+            
         });
     }
 

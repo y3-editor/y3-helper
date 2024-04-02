@@ -125,23 +125,28 @@
             },
             {
                 "command": "y3-helper.addNewEditorTableItem",
-                "title": "Y3:新建物编项目"
+                "title": "Y3:新建物编项目",
+                "enablement": "view == y3-helper.editorTableView"
             },
             {
                 "command": "y3-helper.deleteEditorTableItem",
-                "title": "Y3:删除物编项目"
+                "title": "Y3:删除物编项目",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
                 "command": "y3-helper.renameEditorTableItem",
-                "title": "Y3:修改物编项目名称"
+                "title": "Y3:修改物编项目名称",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
                 "command": "y3-helper.copyTableItemUID",
-                "title": "Y3:复制物编项目UID"
+                "title": "Y3:复制物编项目UID",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
                 "command": "y3-helper.copyTableItemName",
-                "title": "Y3:复制物编项目的名称"
+                "title": "Y3:复制物编项目的名称",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
                 "command": "y3-helper.downloadPresetUI",
@@ -173,7 +178,8 @@
             },
             {
                 "command": "y3-helper.revealInFileExplorer",
-                "title": "Y3:在系统文件浏览器中打开"
+                "title": "Y3:在系统文件浏览器中打开",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             }
         ],
         "configuration": {
