@@ -632,6 +632,7 @@ class Helper {
         this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
         this.registerCommandOfGenerateAllTemplateCSV();
         this.registerCommandOfDownloadPresetUI();
+        this.registerCommandOfRevealMainMenu();
 
         this.registerEditorTableView();
         this.registerCommandOfOpenFile();

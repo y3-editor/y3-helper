@@ -164,6 +164,10 @@
                 "title": "Y3:修改CSV表格中的物编项目的名称"
             },
             {
+                "command": "y3-helper.revealMainMenu",
+                "title": "Y3:打开主菜单"
+            },
+            {
                 "command": "y3-helper.openFile",
                 "title": "Y3:打开文件"
             },

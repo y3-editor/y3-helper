@@ -13,6 +13,7 @@ interface TreeNodeOptional {
 
 class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
+    parent?: TreeNode;
     update?: (node: TreeNode) => void | Thenable<void>;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -23,6 +24,15 @@ class TreeNode extends vscode.TreeItem {
             this.childs = optional.childs;
             this.update = optional.update;
             this.collapsibleState = optional.collapsibleState;
+        }
+        this.updateChilds();
+    }
+
+    updateChilds() {
+        if (this.childs) {
+            for (let child of this.childs) {
+                child.parent = this;
+            }
         }
     }
 }
@@ -193,8 +203,13 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     async getTreeItem(node: TreeNode): Promise<TreeNode> {
         await node.update?.(node);
+        node.updateChilds();
         node.collapsibleState = node.collapsibleState ?? (node.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         return node;
+    }
+
+    getParent(node: TreeNode): TreeNode | undefined {
+        return node.parent;
     }
 }
 
@@ -240,4 +255,11 @@ export function init() {
     } else {
         mainMenu = new MainMenu();
     }
+}
+
+export function reveal() {
+    if (!mainMenu) {
+        return;
+    }
+    mainMenu.view.reveal(nodeAction, { focus: true, select: false, expand: true });
 }
