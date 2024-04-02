@@ -3,17 +3,19 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { env } from './env';
 import { GameLauncher } from './launchGame';
+import { TemplateGenerator } from './editorTable/templateGenerator';
+import * as tools from "./tools";
+import * as preset from './preset';
+import { englishPathToChinese } from './constants';
+import * as mainMenu from './mainMenu';
+import * as fs from 'fs';
+import { chineseTypeNameToEnglishTypeName } from './constants';
 import {
     CSVimporter, EditorTableDataProvider, GoEditorTableSymbolProvider,
     GoEditorTableDocumentSymbolProvider, FileNode,
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
-import { TemplateGenerator } from './editorTable/templateGenerator';
-import * as tools from "./tools";
-import { englishPathToChinese } from './constants';
-import * as mainMenu from './mainMenu';
-import * as fs from 'fs';
 
 
 
@@ -549,6 +551,32 @@ class Helper {
             }
         });
 
+        vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (fileNode: FileNode) => {
+            await env.mapReady(true);
+            const inputOptions: vscode.InputBoxOptions = {
+                prompt: '名称',
+                value: fileNode.name,
+                placeHolder: '名称',
+                validateInput: (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    return null;
+                }
+            };
+            vscode.window.showInputBox(inputOptions).then(
+                value => {
+                    if (value) {
+                        if (editorTableDataProvider.createNewTableItemByFileNode(fileNode,value)) {
+                            vscode.window.showInformationMessage("成功创建"+fileNode.label+":" + value);
+                        }
+                    }
+                }
+            );
+            
+            
+        });
+
         vscode.commands.registerCommand("y3-helper.renameEditorTableItem", (fileNode: FileNode) => {
             const inputOptions: vscode.InputBoxOptions = {
                 prompt: '修改后的新名称',
@@ -610,9 +638,8 @@ class Helper {
             });
             
         }
-
-        
     }
+
     public start() {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();

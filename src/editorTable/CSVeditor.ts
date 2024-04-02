@@ -4,8 +4,7 @@ import { EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEngl
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { SpinLock } from "../utility";
-import { isCSV, isPathValid } from '../utility';
+import { SpinLock, isCSV, isPathValid } from "../utility";
 import { allocateNewUIDofEditorTableItem } from './editorTableUtility';
 /**
  *  物编数据CSV表格的编辑器

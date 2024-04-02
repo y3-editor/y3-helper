@@ -3,9 +3,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
 import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
-import { encode } from 'punycode';
-import { englishPathToChinese } from '../constants';
-import { EditorTableItemInfo } from './types';
+import { englishPathToChinese, chineseTypeNameToEnglishTypeName } from '../constants';
+import { addNewEditorTableItemInProject } from './editorTableUtility';
+
 
 
 export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
@@ -27,6 +27,27 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     // 载入中文名称
     this.languageJson = env.languageJson;
   }
+  
+
+  /**
+   * 为选择的节点添加新的物编数据(节点只能为九类物编数据文件夹)
+   * @returns true or false 成功或失败
+   */
+  public createNewTableItemByFileNode(fileNode: FileNode,name:string) :boolean{
+    let editorTableType: string = chineseTypeNameToEnglishTypeName[fileNode.label];
+    if (!editorTableType) {
+      return false;
+    }
+    if (addNewEditorTableItemInProject(editorTableType, name)) {
+      this.refresh();
+      return true;
+    }
+    return false;
+  }
+  /**
+   * 重命名Y3项目中的物编项目
+   * @returns true or false 成功或失败
+   */
   public renameEditorTableItemByFileNode(fileNode: FileNode, newName: string):boolean {
     if (!fileNode.name) {
       vscode.window.showErrorMessage("该节点没有名称");

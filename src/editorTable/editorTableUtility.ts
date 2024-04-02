@@ -2,14 +2,23 @@
   * 关于物编表的工具函数集合
   */
 
-import { isFileValid, randomInt, isJson, isCSV, isPathValid, HashSet, SpinLock } from '../utility';
-import { englishPathToChinese, editorTableTypeToFolderName, EditorTableType, englishTypeNameToChineseTypeName } from '../constants';
-import { env } from "../env";
+
 import * as csv from 'fast-csv';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { env } from "../env";
+import { csvTypeToPath } from '../constants';
 import { EditorTableItemInfo } from './types';
+
+import {
+    isFileValid, randomInt, isJson, isCSV, isPathValid,
+    HashSet, SpinLock, hash, toUnicodeIgnoreASCII
+} from '../utility';
+import {
+    englishPathToChinese, editorTableTypeToFolderName,
+    EditorTableType, englishTypeNameToChineseTypeName
+} from '../constants';
 
 
 
@@ -352,4 +361,27 @@ function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pat
         }
     });
     return res;
+}
+
+export function addNewEditorTableItemInProject(editorTableType: string,name:string):boolean {
+    if (!env.editorTableUri) {
+        return false;
+    }
+    let uid: number = allocateNewUIDofEditorTableItem(env.editorTableUri);
+    let nameHashCode = hash(name);
+    let targetPath:vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, csvTypeToPath[editorTableType],String(uid)+'.json');
+    // todo:addNewEditorTableItemInProject
+    try {
+        let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
+        let templateJson = JSON.parse(templateJsonStr);
+        templateJson['name'] = nameHashCode;
+        templateJson['uid'] = uid;
+        env.writeDataInLanguageJson(nameHashCode, name);
+        fs.writeFileSync(targetPath.fsPath, toUnicodeIgnoreASCII(JSON.stringify(templateJson, null, 2)), 'utf8');
+    }
+    catch (error) {
+        vscode.window.showErrorMessage("新建物编项目时出错，错误为：" + error);
+        return false;
+    }
+    return true;
 }
