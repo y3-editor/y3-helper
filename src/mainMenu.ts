@@ -201,7 +201,6 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
 class MainMenu {
     readonly view: vscode.TreeView<TreeNode>;
     readonly tree: TreeProvider;
-    private state: 'not init' | 'initing' | 'inited' = 'not init';
 
     constructor () {
         this.tree = new TreeProvider();
