@@ -11,7 +11,6 @@ import {
 } from './editorTable';
 import { TemplateGenerator } from './editorTable/templateGenerator';
 import * as tools from "./tools";
-import * as preset from './preset';
 import { englishPathToChinese } from './constants';
 import * as mainMenu from './mainMenu';
 import * as fs from 'fs';
@@ -490,13 +489,6 @@ class Helper {
         vscode.commands.registerCommand('y3-helper.openFile', async (args:FileNode) => {
             const document = await vscode.workspace.openTextDocument(args.resourceUri.fsPath);
             vscode.window.showTextDocument(document);
-        });
-    }
-
-    private registerCommandOfClickY3HelperContainer() {
-        vscode.commands.registerCommand('y3-helper.clickY3-Helper-container', async () => {
-            this.registerEditorTableView();
-            console.log("y3-helper.clickY3-Helper-container");
         });
     }
 
