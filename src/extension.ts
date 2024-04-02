@@ -14,9 +14,8 @@ import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
 import * as mainMenu from './mainMenu';
-import path from 'path';
 import * as fs from 'fs';
-import { hash } from './utility';
+
 
 
 class Helper {
@@ -488,35 +487,9 @@ class Helper {
     }
 
     private registerCommandOfOpenFile() {
-        vscode.commands.registerCommand('y3-helper.openFile', async (args: vscode.Uri | FileNode) => {
-            if (args instanceof vscode.Uri) {
-                const document = await vscode.workspace.openTextDocument(args.fsPath);
-                vscode.window.showTextDocument(document);
-            }
-            else if (args instanceof FileNode) {
-                const document = await vscode.workspace.openTextDocument(args.resourceUri.fsPath);
-                vscode.window.showTextDocument(document);
-            }
-            else {
-
-                // 如果参数为其他的，就让用户自己选
-                const openDialogOptions: vscode.OpenDialogOptions = {
-                    canSelectFiles: true,
-                    canSelectFolders: false,
-                    canSelectMany: false,
-                    openLabel: '选择你要打开的文件'
-                };
-
-                // 展示选择文件窗口
-                vscode.window.showOpenDialog(openDialogOptions).then(async fileUri => {
-                    if (fileUri && fileUri[0]) {
-                        vscode.window.showInformationMessage('打开: ' + fileUri[0].fsPath);
-                        const document = await vscode.workspace.openTextDocument(fileUri[0].fsPath);
-                        vscode.window.showTextDocument(document);
-                    }
-                });
-            }
-            
+        vscode.commands.registerCommand('y3-helper.openFile', async (args:FileNode) => {
+            const document = await vscode.workspace.openTextDocument(args.resourceUri.fsPath);
+            vscode.window.showTextDocument(document);
         });
     }
 

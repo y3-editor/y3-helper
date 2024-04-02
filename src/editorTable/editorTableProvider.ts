@@ -155,7 +155,7 @@ export class FileNode extends vscode.TreeItem {
     this.resourceUri = resourceUri;
     this.isDirectory = isDirectory;
     this.command = isDirectory ? undefined : {
-      command: 'y3-helper.openFile',
+      command: 'vscode.open',
       title: '打开文件',
       arguments: [resourceUri]
     };

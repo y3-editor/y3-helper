@@ -130,12 +130,12 @@
             },
             {
                 "command": "y3-helper.deleteEditorTableItem",
-                "title": "Y3:删除物编项目",
+                "title": "Y3:删除物编项目(删除后不可恢复)",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
                 "command": "y3-helper.renameEditorTableItem",
-                "title": "Y3:修改物编项目名称",
+                "title": "Y3:修改物编项目的名称",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
@@ -174,7 +174,8 @@
             },
             {
                 "command": "y3-helper.openFile",
-                "title": "Y3:打开文件"
+                "title": "Y3:打开文件",
+                "enablement": "view == y3-helper.editorTableView"
             },
             {
                 "command": "y3-helper.revealInFileExplorer",
