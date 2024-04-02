@@ -98,7 +98,7 @@ export class CSVimporter
         let jsonFilePath=targetPath.fsPath+'\\'+uid+'.json';
         if(!isInDirectory(targetPath.fsPath,uid+'.json')){
             console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
-            let templateJson = await fs.readFileSync(path.dirname(__dirname) + "\\template\\json_template\\" + tableType + ".json");
+            let templateJson = await fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
             await fs.writeFileSync(jsonFilePath,templateJson);
         }
       
@@ -282,7 +282,7 @@ export class CSVimporter
         
         try {
             // 将更新后的数据写回文件
-            await fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
+            fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
         }
         catch (err)
         {

@@ -43,6 +43,38 @@
                     "when": "view == y3-helper.editorTableView",
                     "group": "navigation"
                 }
+            ],
+            "view/item/context": [
+                {
+                    "command": "y3-helper.openFile",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.revealInFileExplorer",
+                    "when": "view == y3-helper.editorTableView",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.deleteEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "group": "modification"
+                },
+                {
+                    "command": "y3-helper.addNewEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == directory",
+                    "group": "modification"
+                },
+                {
+                    "command": "y3-helper.copyTableItemUID",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyTableItemName",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                }
             ]
         },
         "viewsContainers": {
@@ -87,12 +119,28 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "y3-helper.addNewEditorTableItem",
+                "title": "Y3:新建物编项目"
+            },
+            {
+                "command": "y3-helper.deleteEditorTableItem",
+                "title": "Y3:删除物编项目"
+            },
+            {
+                "command": "y3-helper.copyTableItemUID",
+                "title": "Y3:复制物编项目UID"
+            },
+            {
+                "command": "y3-helper.copyTableItemName",
+                "title": "Y3:复制物编项目的名称"
+            },
+            {
                 "command": "y3-helper.downloadPresetUI",
                 "title": "Y3:下载预设资源（UI）"
             },
             {
                 "command": "y3-helper.addNewDataInCSV",
-                "title": "Y3:在CSV表格中添加新物编数据"
+                "title": "Y3:添加新物编数据到CSV表格中"
             },
             {
                 "command": "y3-helper.addUIDandNameToCSVfromProject",
@@ -105,6 +153,14 @@
             {
                 "command": "y3-helper.modifyNameInCSV",
                 "title": "Y3:修改CSV表格中的物编项目的名称"
+            },
+            {
+                "command": "y3-helper.openFile",
+                "title": "Y3:打开文件"
+            },
+            {
+                "command": "y3-helper.revealInFileExplorer",
+                "title": "Y3:在系统文件浏览器中打开"
             }
         ],
         "configuration": {

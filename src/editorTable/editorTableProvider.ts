@@ -5,6 +5,7 @@ import { env } from '../env';
 import { isPathValid, isJson, getFileNameByVscodeUri } from '../utility';
 import { encode } from 'punycode';
 import { englishPathToChinese } from '../constants';
+import { EditorTableItemInfo } from './types';
 
 
 export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
@@ -79,34 +80,51 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         if (name !== undefined && typeof name === "string") {
           label = name + "(" + label.substring(0, label.length - 5) + ")";//显示为"这是一个单位(134219828)"的格式
         }
+        let uid = editorTableJson['uid'];
+        if (isNaN(uid)) {
+          return;
+        }
+      
+        const fileNode = new FileNode(
+          label,
+          stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+          stat.isDirectory() ? vscode.Uri.file(filePath) : vscode.Uri.file(filePath),
+          stat.isDirectory(),
+          uid,
+          name
+        );
+        fileNodes.push(fileNode);
       }
       else if (stat.isDirectory()) {
         if (label in this.englishPathToChinese) {
           label = this.englishPathToChinese[label];
+          const fileNode = new FileNode(
+            label,
+            stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+            stat.isDirectory() ? vscode.Uri.file(filePath) : vscode.Uri.file(filePath),
+            stat.isDirectory()
+          );
+          fileNodes.push(fileNode);
         }
         else {
-          return Promise.resolve(fileNodes);
+          return;
         }
       }
-      const fileNode = new FileNode(
-        label,
-        stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
-        stat.isDirectory() ? vscode.Uri.file(filePath) : vscode.Uri.file(filePath),
-        stat.isDirectory()
-      );
-      fileNodes.push(fileNode);
+      
     });
 
     return Promise.resolve(fileNodes);
   }
 }
 
-class FileNode extends vscode.TreeItem {
+export class FileNode extends vscode.TreeItem {
   constructor(
-    public label: string,
+    public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly resourceUri: vscode.Uri,
-    public readonly isDirectory: boolean
+    public readonly isDirectory: boolean,
+    public readonly uid?: number,// 物编项目的uid
+    public readonly name?:string // 物编项目的名称
   ) {
     super(label, collapsibleState);
     this.resourceUri = resourceUri;
@@ -116,6 +134,15 @@ class FileNode extends vscode.TreeItem {
       title: '打开文件',
       arguments: [resourceUri]
     };
+    if (this.isDirectory) {
+      this.contextValue = 'directory';
+    }
+    else if (isJson(resourceUri.fsPath)) {
+      this.contextValue = 'json';
+    }
+    else {
+      this.contextValue = 'otherTypes';
+    }
   }
 }
 

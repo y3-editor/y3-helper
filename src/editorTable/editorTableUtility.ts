@@ -259,14 +259,28 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
     return Promise.resolve(res);
 }
 
+let editorTableItemMap: Map<number, EditorTableItemInfo> = new Map<number,EditorTableItemInfo>();
+
+/**
+ * 获取项目中的所有物编数据,返回一个HashMap可通过uid查询对应物编数据
+ * @returns 
+ */
+export function getEditorTableItemMap(): Map<number, EditorTableItemInfo>
+{
+    return editorTableItemMap;
+}
+
+export function updateEditorTableItemMap(){
+    editorTableItemMap = getMapOfEditorTableItemInfoInProject();
+}
 /**
  * 获取项目中的所有物编数据,返回一个HashMap可通过uid查询对应物编数据
  */
-export function getMapOfEditorTableItemInfoInProject(): {[key:number]: EditorTableItemInfo } {
-    let res: { [key: number]: EditorTableItemInfo } = [];
+function getMapOfEditorTableItemInfoInProject(): Map<number, EditorTableItemInfo> {
+    let res: Map<number, EditorTableItemInfo> = new Map<number, EditorTableItemInfo>();
     let items: EditorTableItemInfo[] = getAllEditorTableItemInfoInProject();
     for (let item of items) {
-        res[item.uid] = item;
+        res.set(item.uid, item);
     }
     return res;
 }

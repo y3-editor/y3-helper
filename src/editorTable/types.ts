@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { EditorTableType } from '../constants';
 import { isFileValid, isJson} from '../utility';
 import * as fs from 'fs';
+import { toUnicodeIgnoreASCII } from '../utility';
 
 
 /**
@@ -45,5 +46,21 @@ export class EditorTableItemInfo{
             vscode.window.showErrorMessage("读取" + filePath + "时失败，错误为：" + error);
         }
         return editorTableJson;
+    }
+    /**
+     * 根据jsonUri 写入物编数据Json
+     * @param jsonObject 
+     * @returns 
+     */
+    public setJson(jsonObject:any):boolean {
+        try {
+            fs.writeFileSync(this.jsonUri.fsPath, toUnicodeIgnoreASCII(JSON.stringify(jsonObject, null, 2)), 'utf8');
+            return true;
+        }
+        catch (err) {
+            vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');
+            console.error('保存Json文件时出错', err);
+            return false;
+        }
     }
 }

@@ -3,16 +3,20 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { env } from './env';
 import { GameLauncher } from './launchGame';
-import { CSVimporter } from './editorTable/CSVimporter';
+import {
+    CSVimporter, EditorTableDataProvider, GoEditorTableSymbolProvider,
+    GoEditorTableDocumentSymbolProvider, FileNode,
+    searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
+    updateEditorTableItemMap, CSVeditor
+} from './editorTable';
 import { TemplateGenerator } from './editorTable/templateGenerator';
-import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider } from './editorTable/editorTableProvider';
 import * as tools from "./tools";
 import * as preset from './preset';
 import { englishPathToChinese } from './constants';
-import { CSVeditor } from './editorTable/CSVeditor';
-import { searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV } from './editorTable/editorTableUtility';
 import * as mainMenu from './mainMenu';
-import * as editorTable from './editorTable';
+import path from 'path';
+import * as fs from 'fs';
+
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -208,10 +212,7 @@ class Helper {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
                 return false;
             }
-            if (!editorExeUri) {
-                vscode.window.showErrorMessage("未找到编辑器！");
-                return false;
-            }
+            
             if (!scriptUri) {
                 vscode.window.showErrorMessage("scriptUri不存在");
                 return false;
@@ -447,13 +448,8 @@ class Helper {
             console.log("y3-helper.generateTemplateCSV");
             await env.mapReady(true);
             let projectUri = env.projectUri;
-            let editorExeUri = env.editorExeUri;
             if (!projectUri) {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
-                return false;
-            }
-            if (!editorExeUri) {
-                vscode.window.showErrorMessage("未找到编辑器！");
                 return false;
             }
             if (!env.csvTableUri) {
@@ -485,9 +481,18 @@ class Helper {
     }
 
     private registerCommandOfOpenFile() {
-        vscode.commands.registerCommand('y3-helper.openFile', async (fileUri: vscode.Uri) => {
-            const document = await vscode.workspace.openTextDocument(fileUri.fsPath);
-            vscode.window.showTextDocument(document);
+        vscode.commands.registerCommand('y3-helper.openFile', async (args: vscode.Uri | FileNode) => {
+            if (args instanceof vscode.Uri) {
+                const document = await vscode.workspace.openTextDocument(args.fsPath);
+                vscode.window.showTextDocument(document);
+            }
+            else if (args instanceof FileNode) {
+                const document = await vscode.workspace.openTextDocument(args.resourceUri.fsPath);
+                vscode.window.showTextDocument(document);
+            }
+            else {
+                vscode.window.showErrorMessage("y3-helper.openFile命令传入的参数类型错误");
+            }
         });
     }
 
@@ -498,6 +503,9 @@ class Helper {
         });
     }
 
+    /**
+     * EditorTableTreeView相关的命令注册
+     */
     private registerEditorTableView() {
         const editorTableDataProvider=new EditorTableDataProvider();
         vscode.window.registerTreeDataProvider(
@@ -521,8 +529,35 @@ class Helper {
 
         const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(env.zhlanguageJson);
         let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
-        this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel,goEditorTableDocumentSymbolProvider));
+        this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel, goEditorTableDocumentSymbolProvider));
+        
 
+        // 右键菜单的命令注册
+        vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
+            try {
+                vscode.workspace.fs.delete(fileNode.resourceUri);
+            }
+            catch (error) {
+                vscode.window.showErrorMessage("删除失败，错误为" + error);
+            }
+            editorTableDataProvider.refresh();
+        });
+        vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
+            // vscode自带的从系统文件浏览器中打开某一文件的命令
+            vscode.commands.executeCommand('revealFileInOS', fileNode.resourceUri);
+        });
+
+        vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
+            if (fileNode.uid) {
+                vscode.env.clipboard.writeText(String(fileNode.uid));
+            }
+            
+        });
+        vscode.commands.registerCommand("y3-helper.copyTableItemName", (fileNode: FileNode) => {
+            if (fileNode.name) {
+                vscode.env.clipboard.writeText(fileNode.name);
+            }
+        });
     }
 
     private checkNewProject() {
@@ -549,6 +584,24 @@ class Helper {
         };
     }
 
+    /**
+     * 初始化对物编数据文件的监视器
+     */
+    private initEditorTableWatcher()
+    {
+        
+        // 创建物编数据文件系统监视器
+        if (env.editorTablePath.length > 0) {
+            let folderPath = env.editorTablePath;
+            // 创建文件夹监视器
+            const watcher = fs.watch(folderPath, { recursive: true }, (eventType, filename) => {
+                updateEditorTableItemMap();
+            });
+            
+        }
+
+        
+    }
     public start() {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
@@ -567,8 +620,10 @@ class Helper {
         this.registerCommonCommands();
 
         this.registerCommandOfCSVeditor();
-
+        
         mainMenu.init();
+
+        this.initEditorTableWatcher();
     }
 }
 
