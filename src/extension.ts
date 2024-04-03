@@ -140,10 +140,10 @@ class Helper {
                 }
 
                 // 初始化CSV表
-                await vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
+                //await vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
 
                 // 下载预设UI
-                await vscode.commands.executeCommand('y3-helper.downloadPresetUI');
+                //await vscode.commands.executeCommand('y3-helper.downloadPresetUI');
 
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
