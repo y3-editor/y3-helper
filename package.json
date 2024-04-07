@@ -279,9 +279,6 @@
         "feasibility_test": "ts-node ./src/test/feasibility.test.ts"
     },
     "dependencies": {
-        "@types/exceljs": "^1.3.0",
-        "@types/fs-extra": "^11.0.4",
-        "@types/uuid": "^9.0.8",
         "csv-parser": "^3.0.0",
         "exceljs": "^4.4.0",
         "fast-csv": "^5.0.1",
@@ -299,10 +296,11 @@
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",
         "@vscode/test-electron": "^2.3.6",
+        "@types/exceljs": "^1.3.0",
+        "@types/fs-extra": "^11.0.4",
+        "@types/uuid": "^9.0.8",
         "eslint": "^8.57.0",
         "glob": "^10.3.10",
-        "mocha": "^10.2.0",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.4.3"
+        "mocha": "^10.2.0"
     }
 }
