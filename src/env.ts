@@ -210,8 +210,17 @@ class EnvPath {
     public csvTableUri?: vscode.Uri;// CSV表格路径
 
 
+    public get excelTablePath() {
+        let relativePath: string | undefined = vscode.workspace.getConfiguration('Y3-Helper').get<string>('editorTablceDataExcelFolder');
+        if (relativePath && this.scriptUri) {
+            return vscode.Uri.joinPath(this.scriptUri,relativePath);
+        }
+        return undefined;
+    }
+
+
     // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    private readonly _tableTypeToCSVfolderPath: { [key: string]: string } = {};
+    private _tableTypeToCSVfolderPath: { [key: string]: string } = {};
     public get tableTypeToCSVfolderPath(): { [key: string]: string }{
         return this._tableTypeToCSVfolderPath;
     }
@@ -295,7 +304,7 @@ class EnvPath {
             this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
             this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
             this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3helper/editor_table/");
+            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3helper/editor_table/csv/");
             this.initTableTypeToCSVfolderPath();
         }
         tools.log.info(`mapUri: ${this.mapUri}`);
@@ -317,6 +326,7 @@ class EnvPath {
         this.mapUri = undefined;
         this.editorUri = undefined;
         this.fireOnDidReload();
+        this.initTableTypeToCSVfolderPath();//重新载入要导入的CSV表格的相对路径
     }
 }
 

@@ -1,5 +1,9 @@
 
+import path, { dirname } from 'path';
 import { HashSet } from '../utility/hashSet';
+import { exec } from 'child_process';
+
+
 const jsonStr: string = "[1,2,3,4,5]";
 let jsonObject = JSON.parse(jsonStr);
 console.log(jsonObject);
@@ -15,6 +19,7 @@ function compareByProperty(prop: keyof MyObjectType) {
     };
 }
 
+// 测试HashSet
 let set = new HashSet<MyObjectType>();
 
 let obj1: MyObjectType = { id: 1, name: "Object 1" };
@@ -31,3 +36,29 @@ console.log(set.size);
 for(let value of set){
     console.log(value); 
 };
+
+// 测试运行时动态载入importRules.ts——导表规则
+const importRulesModulePath = "file://" + (path.join(__dirname, "../../template/excel/importRules.js").replace(/\\/g, "/"));
+
+console.log(importRulesModulePath);
+let importRulesModule: any;
+
+
+function testImportRules() {
+    exec(`tsc ${path.join(__dirname, "../../template/excel/importRules.ts") }`,async (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`stderr: ${stderr}`);
+            return;
+        }
+        console.log(`stdout: ${stdout}`);
+        importRulesModule = await import(importRulesModulePath);
+        console.log(importRulesModule.importRules);
+       
+    });
+}
+
+testImportRules();

@@ -1,11 +1,11 @@
-import { env } from "../env";
+import { env } from "../../env";
 import * as csv from 'fast-csv';
-import { EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName } from '../constants';
+import { EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName } from '../../constants';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { SpinLock, isCSV, isPathValid } from "../utility";
-import { allocateNewUIDofEditorTableItem } from './editorTableUtility';
+import { SpinLock, isCSV, isPathValid } from "../../utility";
+import { allocateNewUIDofEditorTableItem } from '../editorTableUtility';
 /**
  *  物编数据CSV表格的编辑器
  */

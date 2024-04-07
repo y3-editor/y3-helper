@@ -6,9 +6,9 @@ import * as vscode from 'vscode';
 import csvParser  from 'csv-parser';
 import * as fs from 'fs';
 
-import { env } from "../env";
-import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../utility';
-import { csvTypeToPath } from "../constants";
+import { env } from "../../env";
+import { isInDirectory, isPathValid,  toUnicodeIgnoreASCII,  hash } from '../../utility';
+import { csvTypeToPath } from "../../constants";
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -98,7 +98,7 @@ export class CSVimporter
         let jsonFilePath=targetPath.fsPath+'\\'+uid+'.json';
         if(!isInDirectory(targetPath.fsPath,uid+'.json')){
             console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
-            let templateJson = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
+            let templateJson = fs.readFileSync(path.join(__dirname, "../../../template/json_template/" + tableType + ".json"));
             fs.writeFileSync(jsonFilePath,templateJson);
         }
       

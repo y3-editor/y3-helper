@@ -444,9 +444,14 @@ class Helper {
 
     }
 
-    private registerCommandOfGenerateAllTemplateCSV() {
+    private registerCommandOfGenerateTemplates() {
+
+        let templateGenerator = new TemplateGenerator();
+
+
+
+        // 生成CSV
         vscode.commands.registerCommand('y3-helper.generateAllTemplateCSV', async () => {
-            console.log("y3-helper.generateTemplateCSV");
             await env.mapReady(true);
             let projectUri = env.projectUri;
             if (!projectUri) {
@@ -457,11 +462,31 @@ class Helper {
                 vscode.window.showErrorMessage("未找到合适的位置生成CSV");
                 return false;
             }
-            // 生成csv模板
-            let templateGenerator = new TemplateGenerator();
-            
             let targetUri: vscode.Uri = env.csvTableUri;
             await templateGenerator.generateAllTemplateCSVtoTargetPath(targetUri);
+        });
+
+
+        // 生成Excel
+        vscode.commands.registerCommand('y3-helper.generateExcelTemplate', async () => {
+            await env.mapReady(true);
+            let projectUri = env.projectUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+            if (!env.csvTableUri) {
+                vscode.window.showErrorMessage("未找到合适的位置生成物编数据Excel表模板");
+                return false;
+            }
+            let targetUri: vscode.Uri|undefined = env.excelTablePath;
+            if (targetUri) {
+                // 把模板template/excel文件夹生成到模板文件夹的父级路径下
+                await templateGenerator.generateExcelTemplate(targetUri);
+            }
+            else {
+                vscode.window.showErrorMessage("找不到正确的路径生成物编数据Excel表模板，请检查插件配置Y3-Helper.editorTablceDataExcelFolder");
+            }
         });
     }
 
@@ -646,7 +671,7 @@ class Helper {
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
         this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
-        this.registerCommandOfGenerateAllTemplateCSV();
+        this.registerCommandOfGenerateTemplates();
         this.registerCommandOfDownloadPresetUI();
         this.registerCommandOfRevealMainMenu();
 

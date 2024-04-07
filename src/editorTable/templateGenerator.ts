@@ -4,7 +4,7 @@ import { env } from '../env';
 import * as path from 'path';
 import { isPathValid } from '../utility';
 import { chineseTypeNameToEnglishTypeName,englishTypeNameToChineseTypeName } from '../constants';
-export class TemplateGenerator{
+export class TemplateGenerator {
     private readonly englishToChinese;
     private readonly chineseToEnglish;
     public constructor() {
@@ -19,22 +19,21 @@ export class TemplateGenerator{
      * @param targetPath 目标路径
      * @returns true or false 生成成功或失败
      */
-    public generateTemplateCSVToTargetPath(templateType: string, targetPath: vscode.Uri): boolean{
+    public async generateTemplateCSVToTargetPath(templateType: string, targetPath: vscode.Uri): Promise<boolean> {
         try {
-            fs.copy(path.join(path.join(__dirname, "../../template/csv_template"), templateType), targetPath.fsPath,{ overwrite: false });
+            fs.copySync(path.join(__dirname, "../../template/csv", templateType), targetPath.fsPath, { overwrite: false });
         }
         catch (error) {
-            vscode.window.showErrorMessage("模板生成异常:"+error);
+            vscode.window.showErrorMessage("模板生成异常:" + error);
             return false;
         }
         return true;
     }
 
-    public async generateAllTemplateCSVtoTargetPath(targetPath: vscode.Uri): Promise<boolean>{
-        
+    public async generateAllTemplateCSVtoTargetPath(targetPath: vscode.Uri): Promise<boolean> {
         try {
             await this.renameTemplateCSVtoChinese();
-            fs.copySync(path.join(__dirname, "../../template/csv_template"), targetPath.fsPath, { overwrite: false });
+            fs.copySync(path.join(__dirname, "../../template/csv"), targetPath.fsPath, { overwrite: false });
             await this.renameTemplateCSVtoEnglish();
         }
         catch (error) {
@@ -52,8 +51,23 @@ export class TemplateGenerator{
         for (let key in this.englishToChinese) {
             let oldFile: string = key;
             let newFile: string = this.englishToChinese[key];
-            oldFile = path.join(__dirname, "../../template/csv_template/" + oldFile);
-            newFile = path.join(__dirname, "../../template/csv_template/" + newFile);
+            oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
+            newFile = path.join(__dirname, "../../template/csv/" + newFile);
+            if (isPathValid(newFile)) {
+                continue;
+            }
+            fs.renameSync(oldFile, newFile);
+        }
+    }
+    /**
+     * vsocde插件的发布打包程序不支持中文路径 只能被迫转换成英文名
+     */
+    private async renameTemplateCSVtoEnglish() {
+        for (let key in this.chineseToEnglish) {
+            let oldFile: string = key;
+            let newFile: string = this.chineseToEnglish[key];
+            oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
+            newFile = path.join(__dirname, "../../template/csv/" + newFile);
             if (isPathValid(newFile)) {
                 continue;
             }
@@ -61,16 +75,17 @@ export class TemplateGenerator{
         }
     }
 
-    private async renameTemplateCSVtoEnglish() {
-        for (let key in this.chineseToEnglish) {
-            let oldFile: string = key;
-            let newFile: string = this.chineseToEnglish[key];
-            oldFile = path.join(__dirname, "../../template/csv_template/" + oldFile);
-            newFile = path.join(__dirname, "../../template/csv_template/" + newFile);
-            if (isPathValid(newFile)) {
-                continue;
-            }
-            fs.renameSync(oldFile, newFile);
+    /**
+     * 生成excel模板
+     */
+    public async generateExcelTemplate(targetPath: vscode.Uri):Promise<boolean> {
+        try {
+            fs.copySync(path.join(__dirname, "../../template/excel"), targetPath.fsPath, { overwrite: false });
         }
+        catch (error) {
+            vscode.window.showErrorMessage("ExcelTemplate生成异常:" + error);
+            return false;
+        }
+        return true;
     }
 }

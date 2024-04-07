@@ -118,6 +118,10 @@
                 "title": "Y3:生成物编模板（CSV）"
             },
             {
+                "command": "y3-helper.generateExcelTemplate",
+                "title": "Y3:生成物编模板（Excel）"
+            },
+            {
                 "command": "y3-helper.editorTableView.refresh",
                 "title": "Refresh",
                 "category": "y3-helper",
@@ -191,6 +195,12 @@
                     "ignoreSync": true,
                     "pattern": "(^.*[\\\\/]Editor.exe$)|(^$)"
                 },
+                "Y3-Helper.editorTablceDataExcelFolder": {
+                    "title": "存放物编数据的Excel表格所在的文件夹的相对路径",
+                    "description": "注意：Execl表中的物编数据会按此相对路径下的importRules.ts代码所实现的导入规则来导入，生成Excel物编数据模板时也会生成到此文件夹下",
+                    "type": "string",
+                    "default": "./y3helper/editor_table/excel/"
+                },
                 "Y3-Helper.CSVPath": {
                     "title": "CSV物编路径",
                     "description": "",
@@ -200,47 +210,47 @@
                     "properties": {
                         "unit": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/单位",
+                            "default": "./y3helper/editor_table/csv/单位",
                             "description": "单位的CSV物编数据的默认存放文件夹名"
                         },
                         "decoration": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/装饰物",
+                            "default": "./y3helper/editor_table/csv/装饰物",
                             "description": "装饰物的CSV物编数据的默认存放文件夹名"
                         },
                         "item": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/物品",
+                            "default": "./y3helper/editor_table/csv/物品",
                             "description": "物品的CSV物编数据的默认存放文件夹名"
                         },
                         "ability": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/技能",
+                            "default": "./y3helper/editor_table/csv/技能",
                             "description": "技能的CSV物编数据的默认存放文件夹名"
                         },
                         "modifier": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/魔法效果",
+                            "default": "./y3helper/editor_table/csv/魔法效果",
                             "description": "魔法效果的CSV物编数据的默认存放文件夹名"
                         },
                         "projectile": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/投射物",
+                            "default": "./y3helper/editor_table/csv/投射物",
                             "description": "投射物的CSV物编数据的默认存放文件夹名"
                         },
                         "technology": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/科技",
+                            "default": "./y3helper/editor_table/csv/科技",
                             "description": "科技的CSV物编数据的默认存放文件夹名"
                         },
                         "destructible": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/可破坏物",
+                            "default": "./y3helper/editor_table/csv/可破坏物",
                             "description": "可破坏物的CSV物编数据的默认存放文件夹名"
                         },
                         "sound": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/声音",
+                            "default": "./y3helper/editor_table/csv/声音",
                             "description": "声音的CSV物编数据的默认存放文件夹名"
                         }
                     }
@@ -266,12 +276,14 @@
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
-        "feasibility_test": "node ./out/test/feasibility.test.js"
+        "feasibility_test": "ts-node ./src/test/feasibility.test.ts"
     },
     "dependencies": {
+        "@types/exceljs": "^1.3.0",
         "@types/fs-extra": "^11.0.4",
         "@types/uuid": "^9.0.8",
         "csv-parser": "^3.0.0",
+        "exceljs": "^4.4.0",
         "fast-csv": "^5.0.1",
         "fast-xml-parser": "^4.3.5",
         "fs-extra": "^11.2.0",
@@ -291,6 +303,6 @@
         "glob": "^10.3.10",
         "mocha": "^10.2.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.2.2"
+        "typescript": "^5.4.3"
     }
 }
