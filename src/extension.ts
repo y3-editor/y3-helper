@@ -552,7 +552,8 @@ class Helper {
         // 右键菜单的命令注册
         vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
             try {
-                vscode.workspace.fs.delete(fileNode.resourceUri);
+                vscode.workspace.fs.delete(fileNode.resourceUri, { useTrash: true });
+                vscode.window.showInformationMessage("删除成功（可从回收站恢复）");
             }
             catch (error) {
                 vscode.window.showErrorMessage("删除失败，错误为" + error);

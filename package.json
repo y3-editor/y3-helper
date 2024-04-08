@@ -134,7 +134,7 @@
             },
             {
                 "command": "y3-helper.deleteEditorTableItem",
-                "title": "Y3:删除物编项目(删除后不可恢复)",
+                "title": "Y3:删除物编项目",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
             },
             {
