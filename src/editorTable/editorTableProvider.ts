@@ -142,6 +142,8 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       else if (stat.isDirectory()) {
         if (label in this.englishPathToChinese) {
           label = this.englishPathToChinese[label];
+          const files = fs.readdirSync(filePath);// 检查此目录下有多少个物编文件
+          label += '(' + files.length + ')';//显示为 单位(10) 括号内的数字为有多少个物编项目
           const fileNode = new FileNode(
             element,
             label,

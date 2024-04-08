@@ -1,3 +1,9 @@
+
+/**
+ * 请继承ImportRule导入规则类，以实现自定义的导入规则并把它push放入importRules数组
+ * 本插件会在运行时按顺序执行importRules数组中的每一个导入规则
+ * 注意请勿随意改动importRules数组或ImportRule抽象类，否则可能导致插件运行失败
+ */
 export abstract class ImportRule {
 
     /**
@@ -9,7 +15,7 @@ export abstract class ImportRule {
     /**
      * 要导入的表格的相对于当前vscode工作区的路径
      */
-    public abstract inputRelativePath: string;
+    public abstract excelRelativePath: string;
 
     /**
      * 所属的工作表名
@@ -27,5 +33,5 @@ export abstract class ImportRule {
      * @param row 表格中的一行
      * @returns 此行被解析得到的Json对象 本插件会把它的属性覆盖到物编项目的Json 物编项目Json中的
      */
-    public abstract rowImport(row:any): any; 
+    public abstract rowImport(row: any): any;
 }

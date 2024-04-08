@@ -234,8 +234,24 @@ export function hash(s:string,seed:number=0x0): number{
     }
 }
 
+/**
+ * 生成[min,max]区间内的随机数(左右闭区间)
+ * @param min 
+ * @param max 
+ * @returns 
+ */
 export function randomInt(min: number, max: number):number{
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+/**
+ * 将vscode.Uri 转化为file:// 开头的uri字符串 以便TypeScript的import语法运行时导入一个js文件 
+ * @param uri 
+ * @returns 转换后的结果
+ */
+export function toFilePath(uri: vscode.Uri):string {
+    return "file://" + uri.fsPath.replace(/\\/g, "/");
 }

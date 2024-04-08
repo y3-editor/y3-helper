@@ -16,6 +16,7 @@ import {
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
+import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
 
 
 
@@ -201,10 +202,10 @@ class Helper {
     
 
     /**
-     * 根据用户配置的路径 导入全部物编数据
+     * 根据用户配置的路径 导入全部物编数据(CSV)
      */
-    private registerCommandOfImportObjectDataFromAllCSVbyConfig() {
-        vscode.commands.registerCommand('y3-helper.importObjectDataFromAllCSV', async () => {
+    private registerCommandOfImportEditorTableDataFromCSV() {
+        vscode.commands.registerCommand('y3-helper.importEditorTableDataFromCSV', async () => {
             await env.mapReady(true);
             let projectUri = env.projectUri;
             let editorExeUri = env.editorExeUri;
@@ -224,6 +225,35 @@ class Helper {
             }, async (progress) => {
                 let csvImporter = new CSVimporter();
                 await csvImporter.importCSVFromOrderFolder();
+
+            });
+        });
+    }
+
+    /**
+    * 根据用户配置的路径 和导入规则 导入全部物编数据(Excel)
+    */
+    private registerCommandOfImportEditorTableDataFromExcel() {
+        vscode.commands.registerCommand('y3-helper.importEditorTableDataFromExcel', async () => {
+            await env.mapReady(true);
+            let projectUri = env.projectUri;
+            let editorExeUri = env.editorExeUri;
+            let scriptUri = env.scriptUri;
+            if (!projectUri) {
+                vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
+                return false;
+            }
+
+            if (!scriptUri) {
+                vscode.window.showErrorMessage("scriptUri不存在");
+                return false;
+            }
+            await vscode.window.withProgress({
+                title: '正在导入...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let excelImporter = new EXCELimporter();
+                await excelImporter.excelImport();
 
             });
         });
@@ -475,11 +505,11 @@ class Helper {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
                 return false;
             }
-            if (!env.csvTableUri) {
+            if (!env.excelTablePath) {
                 vscode.window.showErrorMessage("未找到合适的位置生成物编数据Excel表模板");
                 return false;
             }
-            let targetUri: vscode.Uri|undefined = env.excelTablePath;
+            let targetUri: vscode.Uri= env.excelTablePath;
             if (targetUri) {
                 // 把模板template/excel文件夹生成到模板文件夹的父级路径下
                 await templateGenerator.generateExcelTemplate(targetUri);
@@ -671,7 +701,10 @@ class Helper {
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
-        this.registerCommandOfImportObjectDataFromAllCSVbyConfig();
+
+        this.registerCommandOfImportEditorTableDataFromCSV();
+        this.registerCommandOfImportEditorTableDataFromExcel();
+
         this.registerCommandOfGenerateTemplates();
         this.registerCommandOfDownloadPresetUI();
         this.registerCommandOfRevealMainMenu();

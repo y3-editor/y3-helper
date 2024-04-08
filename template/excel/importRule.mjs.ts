@@ -1,18 +1,9 @@
-/**
- * importRules.ts用于自定义导入Excel表格的逻辑
- * 可参考给出的样例修改出自定义的导表规则
- */
-
 
 /**
- * 
- */
-export const importRules: ImportRule[] = [];
-
-/**
- * 请继承ImportRule导入规则类，以实现自定义的导入规则并把它push放入importRules数组
+ * 请勿改动此文件！ 请勿改动此文件！ 请勿改动此文件！
+ * 自定义导表规则请在importRules.mjs中继承ImportRule导入规则类，以实现自定义的导入规则并把它push放入importRules数组
  * 本插件会在运行时按顺序执行importRules数组中的每一个导入规则
- * 注意请勿随意改动importRules数组或ImportRule抽象类，否则可能导致插件运行失败
+ * 注意请勿随意改动ImportRule抽象类，否则可能导致插件运行失败
  */
 export abstract class ImportRule {
 
@@ -25,7 +16,7 @@ export abstract class ImportRule {
     /**
      * 要导入的表格的相对于当前vscode工作区的路径
      */
-    public abstract inputRelativePath: string;
+    public abstract excelRelativePath: string;
 
     /**
      * 所属的工作表名
@@ -45,4 +36,3 @@ export abstract class ImportRule {
      */
     public abstract rowImport(row: any): any;
 }
-

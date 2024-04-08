@@ -3,7 +3,9 @@ import * as fs from 'fs-extra';
 import { env } from '../env';
 import * as path from 'path';
 import { isPathValid } from '../utility';
-import { chineseTypeNameToEnglishTypeName,englishTypeNameToChineseTypeName } from '../constants';
+import { chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
+
+
 export class TemplateGenerator {
     private readonly englishToChinese;
     private readonly chineseToEnglish;
@@ -11,7 +13,6 @@ export class TemplateGenerator {
         this.chineseToEnglish = chineseTypeNameToEnglishTypeName;
         this.englishToChinese = englishTypeNameToChineseTypeName;
     }
-    
     
     /**
      * 选择类型，生成CSV文件模板  如果模板已存在 则不会覆盖

@@ -38,27 +38,16 @@ for(let value of set){
 };
 
 // 测试运行时动态载入importRules.ts——导表规则
-const importRulesModulePath = "file://" + (path.join(__dirname, "../../template/excel/importRules.js").replace(/\\/g, "/"));
+const importRulesModulePath = "file://" + (path.join(__dirname, "../../importRules/importRules.mjs").replace(/\\/g, "/"));
 
 console.log(importRulesModulePath);
 let importRulesModule: any;
 
 
-function testImportRules() {
-    exec(`tsc ${path.join(__dirname, "../../template/excel/importRules.ts") }`,async (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error: ${error.message}`);
-            return;
-        }
-        if (stderr) {
-            console.error(`stderr: ${stderr}`);
-            return;
-        }
-        console.log(`stdout: ${stdout}`);
-        importRulesModule = await import(importRulesModulePath);
-        console.log(importRulesModule.importRules);
-       
-    });
+async function testImportRules() {
+    
+    importRulesModule = await import(importRulesModulePath);
+    console.log(importRulesModule.importRules);
 }
 
 testImportRules();

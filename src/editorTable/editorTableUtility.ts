@@ -385,3 +385,8 @@ export function addNewEditorTableItemInProject(editorTableType: string,name:stri
     }
     return true;
 }
+
+
+export async function saveEditorTableItemData(editorTableType: string, overwrite:boolean,data: any){
+    
+}

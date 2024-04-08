@@ -208,13 +208,16 @@ class EnvPath {
     public projectUri?: vscode.Uri;
     public editorTableUri?: vscode.Uri;// 物编数据
     public csvTableUri?: vscode.Uri;// CSV表格路径
+    public readonly extensionImportRulesUri: vscode.Uri=vscode.Uri.file(__dirname+'../../importRules');
 
 
     public get excelTablePath() {
         let relativePath: string | undefined = vscode.workspace.getConfiguration('Y3-Helper').get<string>('editorTablceDataExcelFolder');
         if (relativePath && this.scriptUri) {
-            return vscode.Uri.joinPath(this.scriptUri,relativePath);
+            let res: vscode.Uri = vscode.Uri.joinPath(this.scriptUri, relativePath);
+            return res;
         }
+        vscode.window.showErrorMessage("指定的editorTablceDataExcelFolder不存在，请检查插件设置");
         return undefined;
     }
 
@@ -248,13 +251,13 @@ class EnvPath {
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
         for (const key in defaultTableTypeToCSVfolderPath) {
             this._tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key];
-            console.log(key + " " + this._tableTypeToCSVfolderPath[key]);
+            // console.log(key + " " + this._tableTypeToCSVfolderPath[key]);
         }
         
         for (const key in csvPathConfig) {
             if (key in defaultTableTypeToCSVfolderPath) {
                 this._tableTypeToCSVfolderPath[key] = csvPathConfig[key];
-                console.log("update:"+key + " " + csvPathConfig[key]);
+                // console.log("update:"+key + " " + csvPathConfig[key]);
             }
         }
     }
