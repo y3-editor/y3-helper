@@ -218,12 +218,12 @@ export class UI {
             }
             let texture = textureInfo.texture;
             if (texture !== undefined) {
-                let textureUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.guid}}`, 'texture');
+                let textureUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.guid.slice(0, 2), `{${textureInfo.guid}}`, 'texture');
                 pushTask(vscode.workspace.fs.writeFile(textureUri, texture));
             }
             let textureWhat = textureInfo.textureWhat;
             if (textureWhat !== undefined) {
-                let textureWhatUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.guid}}`, `${textureInfo.guid}.1`);
+                let textureWhatUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.guid.slice(0, 2), `{${textureInfo.guid}}`, `${textureInfo.guid}.1`);
                 pushTask(vscode.workspace.fs.writeFile(textureWhatUri, textureWhat));
             }
         }
