@@ -3,14 +3,12 @@ import * as tools from '../tools';
 import JSZip from 'jszip';
 import vscode from 'vscode';
 import xml from 'fast-xml-parser';
-import * as uuid from 'uuid';
 import * as util from 'util';
 
 interface TextureInfo {
     oldName: number;
     newName: number;
-    oldGuid: string;
-    newGuid: string;
+    guid: string;
     xml: { [key: string]: any };
     icon?: string;
     texture?: Buffer;
@@ -69,8 +67,7 @@ export class UI {
             this.textureInfos.push({
                 oldName: name,
                 newName: name,
-                oldGuid: guid,
-                newGuid: guid,
+                guid: guid,
                 xml: item,
                 icon: await this.zip!.file(`editor_table/editoricon/${name.toString()}.json`)?.async('string'),
                 texture: await this.zip!.file(`custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/texture`)?.async('nodebuffer'),
@@ -118,14 +115,15 @@ export class UI {
                 }
                 continue;
             }
+            if (usedGuids.has(texture.guid)) {
+                texture.noUse = true;
+                continue;
+            }
             while (usedNames.has(texture.newName)) {
                 texture.newName++;
             }
             usedNames.add(texture.newName);
-            while (usedGuids.has(texture.newGuid)) {
-                texture.newGuid = uuid.v4();
-            }
-            usedGuids.add(texture.newGuid);
+            usedGuids.add(texture.guid);
         }
     }
 
@@ -183,7 +181,7 @@ export class UI {
         for (let texture of textureInfos) {
             let xml = { ...texture.xml };
             xml.Name = texture.newName;
-            xml.GUID = texture.newGuid;
+            xml.GUID = texture.guid;
             items.push(xml);
         }
         let newXmlContent = new xml.XMLBuilder({
@@ -220,12 +218,12 @@ export class UI {
             }
             let texture = textureInfo.texture;
             if (texture !== undefined) {
-                let textureUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, 'texture');
+                let textureUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.guid}}`, 'texture');
                 pushTask(vscode.workspace.fs.writeFile(textureUri, texture));
             }
             let textureWhat = textureInfo.textureWhat;
             if (textureWhat !== undefined) {
-                let textureWhatUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.newGuid}}`, `${textureInfo.newGuid}.1`);
+                let textureWhatUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/Texture', textureInfo.newGuid.slice(0, 2), `{${textureInfo.guid}}`, `${textureInfo.guid}.1`);
                 pushTask(vscode.workspace.fs.writeFile(textureWhatUri, textureWhat));
             }
         }
