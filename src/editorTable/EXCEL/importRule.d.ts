@@ -1,8 +1,9 @@
 
 /**
- * 请继承ImportRule导入规则类，以实现自定义的导入规则并把它push放入importRules数组
+ * 用户请勿改动此文件！ 用户请勿改动此文件！ 用户请勿改动此文件！
+ * 自定义导表规则请在importRules.mjs中继承ImportRule导入规则类，以实现自定义的导入规则并把它push放入importRules数组
  * 本插件会在运行时按顺序执行importRules数组中的每一个导入规则
- * 注意请勿随意改动importRules数组或ImportRule抽象类，否则可能导致插件运行失败
+ * 注意请勿随意改动ImportRule抽象类，否则可能导致导入失败
  */
 export abstract class ImportRule {
 
@@ -23,7 +24,7 @@ export abstract class ImportRule {
     public abstract sheet: string;
 
     /**
-     * 属性与Json字段的对应关系
+     * 属性与Json字段的对应关系 如果是多层嵌套结构 请用'.'分割，如{"aaa":{"bbb":1}} 写为 aaa.bbb=1 
      */
     public abstract attrDef: { [key: string]: string };
 

@@ -60,5 +60,7 @@ Y3:修改CSV表格中的物编项目的名称
 
 ## 物编数据TreeView的右键菜单
 
-在物编数据视图右键有以下功能：
-![alt text](./image/tree_view_menu.png)
+在物编数据视图右键打开菜单有以下功能：
+
+![子项的右键菜单](./image/tree_view_menu1.png)
+![类别文件夹的右键菜单](./image/tree_view_menu2.png)

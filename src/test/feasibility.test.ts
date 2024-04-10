@@ -37,7 +37,7 @@ for(let value of set){
     console.log(value); 
 };
 
-// 测试运行时动态载入importRules.ts——导表规则
+// 测试运行时动态载入importRules.ts————导表规则
 const importRulesModulePath = "file://" + (path.join(__dirname, "../../importRules/importRules.mjs").replace(/\\/g, "/"));
 
 console.log(importRulesModulePath);

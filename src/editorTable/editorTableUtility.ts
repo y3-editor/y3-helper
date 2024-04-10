@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { env } from "../env";
 import { csvTypeToPath } from '../constants';
 import { EditorTableItemInfo } from './types';
-
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
     HashSet, SpinLock, hash, toUnicodeIgnoreASCII
@@ -384,9 +383,4 @@ export function addNewEditorTableItemInProject(editorTableType: string,name:stri
         return false;
     }
     return true;
-}
-
-
-export async function saveEditorTableItemData(editorTableType: string, overwrite:boolean,data: any){
-    
 }

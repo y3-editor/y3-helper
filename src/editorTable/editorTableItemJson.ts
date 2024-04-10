@@ -5,26 +5,27 @@ import { env } from "../env";
 import { isInDirectory, isPathValid, toUnicodeIgnoreASCII, hash } from '../utility';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+
+
 /**
-    * 导入CSV文件中的一行数据
-    * 一行为一个物编数据项目的部分属性
-    * @param row 行号
-    * @param targetPath 目标路径
-    * @param tableType 物编表类型
-    * @returns 
-    */
-export async function saveEditorTableItemJson(row: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+* 导入一个物编项目的属性，原来的json文件中没有的字段会被添加，已有的字段如果data里面有那么会覆盖，data里面没有的字段保持原状
+* @param data 行号
+* @param targetPath 目标路径
+* @param tableType 物编表类型
+* @returns 
+*/
+export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
     if (!isPathValid(targetPath.fsPath)) {
         vscode.window.showErrorMessage('保存Json的路径非有效路径');
         return false;
     }
 
-    if (!row.hasOwnProperty('uid')) {
+    if (!data.hasOwnProperty('uid')) {
         vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,出错的表类型为:' + tableType);
         return false;
     }
 
-    let uid = String(row['uid']);
+    let uid = String(data['uid']);
     if (uid[0] === '\'') {
         uid = uid.substring(1);
     }
@@ -32,7 +33,7 @@ export async function saveEditorTableItemJson(row: any, targetPath: vscode.Uri, 
     let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
         console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
-        let templateJson = fs.readFileSync(path.join(__dirname, "../../../template/json_template/" + tableType + ".json"));
+        let templateJson = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
         fs.writeFileSync(jsonFilePath, templateJson);
     }
 
@@ -54,9 +55,9 @@ export async function saveEditorTableItemJson(row: any, targetPath: vscode.Uri, 
 
     console.log("read_json：" + jsonFilePath);
     // 打印此行数据
-    for (const key in row) {
-        if (row.hasOwnProperty(key)) {
-            let value = row[key];
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            let value = data[key];
             // 添加或更新键值对
 
 

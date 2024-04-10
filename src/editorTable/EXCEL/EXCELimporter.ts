@@ -1,11 +1,12 @@
+import * as fs from 'fs-extra';
+import * as vscode from 'vscode';
+import * as exceljs from 'exceljs';
+
 import { env } from '../../env';
 import { ImportRule } from './importRule';
-import { chineseTypeNameToEnglishTypeName, csvTypeToPath } from '../../constants';
 import { toFilePath } from '../../utility';
 import { saveEditorTableItemJson } from '../editorTableItemJson';
-import * as vscode from 'vscode';
-import * as fs from 'fs-extra';
-import * as exceljs from 'exceljs';
+import { chineseTypeNameToEnglishTypeName, csvTypeToPath } from '../../constants';
 export class EXCELimporter{
     private excelTablePath: vscode.Uri | undefined = undefined;
     private ImportRulesModule: any=undefined;
@@ -74,7 +75,14 @@ export class EXCELimporter{
             for (let i = 2; i <= worksheet.rowCount; i++) {
                 const row:{ [key:string]:any } = {};
                 worksheet.getRow(i).eachCell({ includeEmpty: true }, function (cell, colNumber) {
-                    row[headers[colNumber - 1]] = cell.value;
+                    let k = headers[colNumber - 1];
+                    if (k) {
+                        row[k] = cell.value;
+                    }
+                    else {
+                        vscode.window.showErrorMessage("表头字段：" + headers[colNumber - 1] + "未指定其对应的Json字段");
+                        return false;
+                    }
                 });
                 let editorTableJsonObject = importRule.rowImport(row);
                 let targetTableFolder = csvTypeToPath[editorTableType];

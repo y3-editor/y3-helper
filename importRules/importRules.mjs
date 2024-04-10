@@ -24,17 +24,20 @@ class UnitImportRule extends ImportRule {
     /**
      * 属性与Json字段的对应关系
      */
-    attrDef;
+    attrDef = { 'UID':'uid','名称':'name'};
 
     /**
-     * 请重写此方法以实现自定义转换规则
+     * 请重写此方法以实现自定义转换规则 
      * 返回值的对象需要包含'uid'字段，以确定物编项目的uid，以便本插件导入
      * @param row 表格中的一行
      * @returns 此行被解析得到的Json对象 本插件会把它的属性覆盖到物编项目的Json 物编项目Json中的
      */
     rowImport(row) {
-        let res={};
-        res['uid'] = row['uid'];
+        let res = {};
+        for (let k in this.attrDef) {
+            res[this.attrDef[k]] = row[k];
+        }
+        return res;
     }
 }
 

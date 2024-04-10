@@ -1,22 +1,23 @@
-import * as vscode from 'vscode';
-import { runShell } from './runShell';
-import { LuaDocMaker } from './makeLuaDoc';
-import { env } from './env';
-import { GameLauncher } from './launchGame';
-import { TemplateGenerator } from './editorTable/templateGenerator';
+import * as fs from 'fs';
 import * as tools from "./tools";
 import * as preset from './preset';
-import { englishPathToChinese } from './constants';
+import * as vscode from 'vscode';
 import * as mainMenu from './mainMenu';
-import * as fs from 'fs';
-import { chineseTypeNameToEnglishTypeName } from './constants';
+
+import { env } from './env';
+import { runShell } from './runShell';
+import { LuaDocMaker } from './makeLuaDoc';
+import { GameLauncher } from './launchGame';
+import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
+import { TemplateGenerator } from './editorTable/templateGenerator';
+import { englishPathToChinese } from './constants';
 import {
     CSVimporter, EditorTableDataProvider, GoEditorTableSymbolProvider,
     GoEditorTableDocumentSymbolProvider, FileNode,
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
-import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
+
 
 
 
@@ -234,8 +235,16 @@ class Helper {
     * 根据用户配置的路径 和导入规则 导入全部物编数据(Excel)
     */
     private registerCommandOfImportEditorTableDataFromExcel() {
+        try {
+            vscode.workspace.getConfiguration("js/ts.implicitProjectConfig").update("checkJs", true);
+            vscode.window.showInformationMessage("已经打开对js/ts的强制类型检查");
+        }
+        catch {
+            vscode.window.showErrorMessage("无法打开js/ts的强制类型检查");
+        }
         vscode.commands.registerCommand('y3-helper.importEditorTableDataFromExcel', async () => {
             await env.mapReady(true);
+            
             let projectUri = env.projectUri;
             let editorExeUri = env.editorExeUri;
             let scriptUri = env.scriptUri;
