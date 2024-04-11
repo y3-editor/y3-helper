@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as tools from "./tools";
-import * as preset from './preset';
 import * as vscode from 'vscode';
 import * as mainMenu from './mainMenu';
 
@@ -523,23 +522,6 @@ class Helper {
         });
     }
 
-    private registerCommandOfInstallDemoResource() {
-        let resourceUri = vscode.Uri.joinPath(this.context.extensionUri, 'resources');
-        vscode.commands.registerCommand('y3-helper.installDemoResource', async () => {
-            await env.mapReady(true);
-            if (!env.mapUri) {
-                vscode.window.showErrorMessage("未找到地图路径！");
-                return false;
-            };
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: '正在安装实例资源...',
-            }, async (progress, token) => {
-                await new preset.UI(vscode.Uri.joinPath(resourceUri, '界面资源')).install();
-            });
-        });
-    }
-
     private registerCommandOfRevealMainMenu() {
         vscode.commands.registerCommand('y3-helper.revealMainMenu', () => {
             mainMenu.reveal();
@@ -710,7 +692,6 @@ class Helper {
         this.registerCommandOfImportEditorTableDataFromExcel();
 
         this.registerCommandOfGenerateTemplates();
-        this.registerCommandOfInstallDemoResource();
         this.registerCommandOfRevealMainMenu();
 
         this.registerEditorTableView();
