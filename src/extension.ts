@@ -141,12 +141,6 @@ class Helper {
                     } catch {}
                 }
 
-                // 初始化CSV表
-                //await vscode.commands.executeCommand('y3-helper.generateAllTemplateCSV');
-
-                // 下载预设UI
-                //await vscode.commands.executeCommand('y3-helper.downloadPresetUI');
-
                 // 打开项目
                 this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
@@ -529,19 +523,20 @@ class Helper {
         });
     }
 
-    private registerCommandOfDownloadPresetUI() {
-        vscode.commands.registerCommand('y3-helper.downloadPresetUI', async () => {
-            // await env.mapReady(true);
-            // if (!env.mapUri) {
-            //     vscode.window.showErrorMessage("未找到地图路径！");
-            //     return false;
-            // };
-            // await vscode.window.withProgress({
-            //     location: vscode.ProgressLocation.Notification,
-            //     title: '正在下载预设UI...',
-            // }, async (progress, token) => {
-            //     await new preset.UI().download("https://up5.nosdn.127.net/editor/zip/edc461b312fc308779be9273a2cee6bb");
-            // });
+    private registerCommandOfInstallDemoResource() {
+        let resourceUri = vscode.Uri.joinPath(this.context.extensionUri, 'resources');
+        vscode.commands.registerCommand('y3-helper.installDemoResource', async () => {
+            await env.mapReady(true);
+            if (!env.mapUri) {
+                vscode.window.showErrorMessage("未找到地图路径！");
+                return false;
+            };
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: '正在安装实例资源...',
+            }, async (progress, token) => {
+                await new preset.UI(vscode.Uri.joinPath(resourceUri, '界面资源')).install();
+            });
         });
     }
 
@@ -715,7 +710,7 @@ class Helper {
         this.registerCommandOfImportEditorTableDataFromExcel();
 
         this.registerCommandOfGenerateTemplates();
-        this.registerCommandOfDownloadPresetUI();
+        this.registerCommandOfInstallDemoResource();
         this.registerCommandOfRevealMainMenu();
 
         this.registerEditorTableView();

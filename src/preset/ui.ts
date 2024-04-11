@@ -1,6 +1,5 @@
 import { env } from '../env';
 import * as tools from '../tools';
-import JSZip from 'jszip';
 import vscode from 'vscode';
 import xml from 'fast-xml-parser';
 import * as util from 'util';
@@ -17,35 +16,26 @@ interface TextureInfo {
 }
 
 export class UI {
-    private zip?: JSZip;
+    private resourceUri: vscode.Uri;
     private resourceXml?: { [key: string]: any };
     private resourceXmlUri: vscode.Uri;
     private textureInfos: TextureInfo[];
 
-    constructor() {
+    constructor(resourceUri: vscode.Uri) {
+        this.resourceUri = resourceUri;
         this.resourceXmlUri = vscode.Uri.joinPath(env.projectUri!, 'custom/CustomImportRepo.local/resource.repository');
         this.textureInfos = [];
     }
 
-    public async download(url: string) {
-        let downloadBuffer: Buffer;
-        try {
-            downloadBuffer = await tools.download(url);
-        } catch (error) {
-            tools.log.error(error as Error);
-            return;
-        }
-
-        this.zip = await new JSZip().loadAsync(downloadBuffer);
-
-        let xmlBuffer = await this.zip.file("custom/CustomImportRepo.local/resource.repository")?.async('nodebuffer');
-        if (!xmlBuffer) {
-            tools.log.error("下载的文件中没有resource.repository！");
+    public async install() {
+        let repository = await tools.readFile(this.resourceUri, "custom/CustomImportRepo.local/resource.repository");
+        if (!repository) {
+            tools.log.error("未找到resource.repository！");
             return;
         }
         this.resourceXml = new xml.XMLParser({
             ignoreAttributes: false,
-        }).parse(xmlBuffer);
+        }).parse(repository.buffer);
 
         if (!this.resourceXml) {
             tools.log.error("resource.repository解析失败！");
@@ -69,9 +59,9 @@ export class UI {
                 newName: name,
                 guid: guid,
                 xml: item,
-                icon: await this.zip!.file(`editor_table/editoricon/${name.toString()}.json`)?.async('string'),
-                texture: await this.zip!.file(`custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/texture`)?.async('nodebuffer'),
-                textureWhat: await this.zip!.file(`custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/${guid}.1`)?.async('nodebuffer'),
+                icon: (await tools.readFile(this.resourceUri, `editor_table/editoricon/${name.toString()}.json`))?.string,
+                texture: (await tools.readFile(this.resourceUri, `custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/texture`))?.buffer,
+                textureWhat: (await tools.readFile(this.resourceUri, `custom/CustomImportRepo.local/Texture/${guid.slice(0, 2)}/{${guid}}/${guid}.1`))?.buffer,
             });
         }
     }
@@ -238,18 +228,19 @@ export class UI {
 
         // 导入UI定义
         let basePath = 'maps/EntryMap/ui/';
-        for (let file of this.zip!.filter(path => path.startsWith(basePath))) {
-            if (file.dir) {
+        for (let [name, fileType] of await tools.dir(this.resourceUri, basePath) ?? []) {
+            if (fileType === vscode.FileType.Directory) {
                 continue;
             }
-            let fileContent = await file.async('string');
-            if (fileContent === undefined) {
+            let file = await tools.readFile(this.resourceUri, `${basePath}/${name}`);
+            if (!file) {
                 continue;
             }
+            let fileContent = file.string;
             // 全词匹配数字，将oldName替换为newName
             fileContent = fileContent.replace(/\b\d+\b/g, (match) => nameMap[parseInt(match)]?.toString() ?? match);
 
-            let uri = vscode.Uri.joinPath(env.mapUri!, 'ui', file.name.slice(basePath.length));
+            let uri = vscode.Uri.joinPath(env.mapUri!, 'ui', name);
             pushTask(vscode.workspace.fs.writeFile(uri, Buffer.from(fileContent)));
         }
 

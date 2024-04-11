@@ -177,6 +177,10 @@
                 "title": "Y3:打开主菜单"
             },
             {
+                "command": "y3-helper.installDemoResource",
+                "title": "Y3:安装示例资源"
+            },
+            {
                 "command": "y3-helper.openFile",
                 "title": "Y3:打开文件",
                 "enablement": "view == y3-helper.editorTableView"
