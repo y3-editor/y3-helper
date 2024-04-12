@@ -142,6 +142,13 @@ let mainNode = new TreeNode('主菜单', {
                     iconPath: new vscode.ThemeIcon('run-all'),
                     description: 'Shift + F5',
                 }),
+                new TreeNode('查看物编数据', {
+                    command: {
+                        command: 'y3-helper.editorTableView.reveal',
+                        title: '查看物编数据',
+                    },
+                    iconPath: new vscode.ThemeIcon('symbol-function'),
+                }),
                 new TreeNode('查看日志', {
                     iconPath: new vscode.ThemeIcon('output'),
                     show: () => {
@@ -307,5 +314,6 @@ export function reveal() {
     if (!mainMenu) {
         return;
     }
-    mainMenu.view.reveal(mainNode.childs![0], { focus: true, select: false, expand: true });
+    // 虽然签名说要传入FileNode，但是实际上传入undefined就可以展开根节点
+    mainMenu.view.reveal(undefined!, { focus: true, select: false, expand: true });
 }

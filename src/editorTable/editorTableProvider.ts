@@ -14,7 +14,6 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
   public readonly englishPathToChinese: { [key: string]: string };
   private editorTablePath: string = "";
   private languageJson: any = undefined;
-  private firstNode?: FileNode;
   
   constructor() {
     this.englishPathToChinese = englishPathToChinese;

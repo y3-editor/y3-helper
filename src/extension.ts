@@ -544,13 +544,18 @@ class Helper {
     private registerEditorTableView() {
         const editorTableDataProvider = new EditorTableDataProvider();
         
-        vscode.window.registerTreeDataProvider(
-            'y3-helper.editorTableView',
-            editorTableDataProvider
-        );
+        let treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
+            treeDataProvider: editorTableDataProvider,
+            showCollapseAll: true,
+        });
         
         vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => {
             editorTableDataProvider.refresh();
+        });
+
+        vscode.commands.registerCommand('y3-helper.editorTableView.reveal', () => {
+            // 虽然签名说要传入FileNode，但是实际上传入undefined就可以展开根节点
+            treeView.reveal(undefined!, { focus: true, select: false, expand: true });
         });
 
         vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
