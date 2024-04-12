@@ -38,7 +38,10 @@ class Helper {
 
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
-            env.updateMap(true);
+            await env.updateMap(true);
+            if (!vscode.workspace.workspaceFolders?.some((folder) => folder.uri.fsPath === env.scriptUri!.fsPath)) {
+                vscode.commands.executeCommand('vscode.openFolder', env.scriptUri);
+            }
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
             runShell("执行命令", args[0], args.slice(1));
