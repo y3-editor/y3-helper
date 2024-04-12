@@ -14,6 +14,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
   public readonly englishPathToChinese: { [key: string]: string };
   private editorTablePath: string = "";
   private languageJson: any = undefined;
+  private firstNode?: FileNode;
   
   constructor() {
     this.englishPathToChinese = englishPathToChinese;
@@ -48,7 +49,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
    * 重命名Y3项目中的物编项目
    * @returns true or false 成功或失败
    */
-  public renameEditorTableItemByFileNode(fileNode: FileNode, newName: string):boolean {
+  public async renameEditorTableItemByFileNode(fileNode: FileNode, newName: string):Promise<boolean> {
     if (!fileNode.name) {
       vscode.window.showErrorMessage("该节点没有名称");
       return false;
@@ -56,10 +57,10 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     let success = false;
     try {
       let newNameHashcode = hash(newName);
-      let editorTableJsonStr = fs.readFileSync(fileNode.resourceUri.fsPath, 'utf8');
+      let editorTableJsonStr = await fs.promises.readFile(fileNode.resourceUri.fsPath, 'utf8');
       let editorTableJson = JSON.parse(editorTableJsonStr);
       editorTableJson['name'] = newNameHashcode;
-      fs.writeFileSync(fileNode.resourceUri.fsPath, toUnicodeIgnoreASCII(JSON.stringify(editorTableJson, null, 2)), 'utf8');
+      await fs.promises.writeFile(fileNode.resourceUri.fsPath, toUnicodeIgnoreASCII(JSON.stringify(editorTableJson, null, 2)), 'utf8');
       env.writeDataInLanguageJson(newNameHashcode, newName);
       this.refresh();
       success = true;
@@ -83,25 +84,25 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     return element;
   }
 
-  getChildren(element?: FileNode): Thenable<FileNode[]> {
+  async getChildren(element?: FileNode): Promise<FileNode[]> {
     if (!this.editorTablePath || this.editorTablePath === "") {
       vscode.window.showInformationMessage("未找到物编数据,请检查是否初始化开发环境");
-      return Promise.resolve([]);
+      return [];
     }
 
-    const files = fs.readdirSync(element ? element.resourceUri.fsPath : this.editorTablePath);
+    const files = await fs.promises.readdir(element ? element.resourceUri.fsPath : this.editorTablePath);
     const fileNodes: FileNode[] = [];
 
-    files.forEach(file => {
+    for (const file of files) {
       const filePath = path.join(element ? element.resourceUri.fsPath : this.editorTablePath, file);
-      const stat = fs.statSync(filePath);
+      const stat = await fs.promises.stat(filePath);
 
       // 如果这个是物编数据的Json文件 那么它的label就需要加上其名称
       let label: string = file;
       if (isJson(filePath)) {
         let editorTableJsonData: any;
         try {
-          editorTableJsonData = fs.readFileSync(filePath, 'utf8');
+          editorTableJsonData = await fs.promises.readFile(filePath, 'utf8');
         }
         catch (error) {
           vscode.window.showErrorMessage("读取" + filePath + "时出错");
@@ -125,7 +126,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         }
         let uid = editorTableJson['uid'];
         if (isNaN(uid)) {
-          return;
+          continue;
         }
       
         const fileNode = new FileNode(
@@ -142,7 +143,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       else if (stat.isDirectory()) {
         if (label in this.englishPathToChinese) {
           label = this.englishPathToChinese[label];
-          const files = fs.readdirSync(filePath);// 检查此目录下有多少个物编文件
+          const files = await fs.promises.readdir(filePath);// 检查此目录下有多少个物编文件
           label += '(' + files.length + ')';//显示为 单位(10) 括号内的数字为有多少个物编项目
           const fileNode = new FileNode(
             element,
@@ -154,11 +155,11 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
           fileNodes.push(fileNode);
         }
         else {
-          return;
+          continue;
         }
       }
       
-    });
+    };
 
     return Promise.resolve(fileNodes);
   }
@@ -205,18 +206,17 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
     
   }
  
-  private searchEditorTableItemsInFolder(pathStr: string,query:string): vscode.SymbolInformation[] {
+  private async searchEditorTableItemsInFolder(pathStr: string,query:string): Promise<vscode.SymbolInformation[]> {
     let res: vscode.SymbolInformation[] = [];
-    const files = fs.readdirSync(pathStr);
-    files.forEach(file => {
+    const files = await fs.promises.readdir(pathStr);
+    for (const file of files) {
       const filePath: string = path.join(pathStr, file);
-      const stat = fs.statSync(filePath);
       
       if (isJson(filePath)) {
         let editorTableJsonData: any;
         let label = file;
         try {
-          editorTableJsonData = fs.readFileSync(filePath, 'utf8');
+          editorTableJsonData = await fs.promises.readFile(filePath, 'utf8');
         }
         catch (error) {
           vscode.window.showErrorMessage("读取" + filePath + "时出错");
@@ -256,15 +256,15 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
           res.push(symbolInformation);
         }
       }
-    });
+    };
       
 
     return res;
     
   }
-  public  provideWorkspaceSymbols(
+  public async provideWorkspaceSymbols(
     query: string, token: vscode.CancellationToken):
-    Thenable<vscode.SymbolInformation[]> {
+    Promise<vscode.SymbolInformation[]> {
     let res: vscode.SymbolInformation[] = [];
     if (token.isCancellationRequested||query.length===0) {
       return Promise.resolve(res);
@@ -272,7 +272,7 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
 
     //只搜索九个文件夹下对应的九类类物编数据，不递归搜索子文件夹
     for (let key in this.englishPathToChinese) {
-      res=res.concat(this.searchEditorTableItemsInFolder(path.join(this.editorTablePath, key), query));
+      res=res.concat(await this.searchEditorTableItemsInFolder(path.join(this.editorTablePath, key), query));
     }
     
     
