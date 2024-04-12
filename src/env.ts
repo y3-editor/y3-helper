@@ -4,7 +4,7 @@ import winreg from 'winreg';
 import path from 'path';
 import util from 'util';
 import * as tools from './tools';
-import { isFileValid, isPathValid, randomInt } from './utility';
+import { isFileValid, isPathValid, randomInt, toUnicodeIgnoreASCII, hash } from './utility';
 import * as fs from 'fs';
 import { defaultTableTypeToCSVfolderPath } from './constants';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
@@ -364,23 +364,25 @@ class Env extends EnvPath {
     /**
      * 写入项目中的language.json的值，用于保存中文名等
      * @param key 
-     * @param val 
+     * @param s 
      * @returns 
      */
-    public writeDataInLanguageJson(key: number, val: any) {
+    public writeDataInLanguageJson(s: string) :number|undefined{
         this.refreshlanguageJson();
         if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
             return undefined;
         }
-        this._languageJson[key] = val;
+        let key:number= hash(s);
+        this._languageJson[key] = s;
         let languageJsonPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, this.languageJsonRelativePath);
         try {
-            fs.writeFileSync(languageJsonPath, JSON.stringify(this.languageJson, null, 2), 'utf8');
+            fs.writeFileSync(languageJsonPath, JSON.stringify(this._languageJson, null, 2), 'utf8');
         }
         catch (error) {
             vscode.window.showErrorMessage("保存zhlanguage.json失败");
-            return false;
+            return undefined;
         }
+        return key;
     }
     public refreshlanguageJson():void {
         

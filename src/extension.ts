@@ -233,10 +233,10 @@ class Helper {
     private registerCommandOfImportEditorTableDataFromExcel() {
         try {
             vscode.workspace.getConfiguration("js/ts.implicitProjectConfig").update("checkJs", true);
-            vscode.window.showInformationMessage("已经打开对js/ts的强制类型检查");
+            vscode.window.showInformationMessage("已经打开当前工作区对js/ts的强制类型检查");
         }
         catch {
-            vscode.window.showErrorMessage("无法打开js/ts的强制类型检查");
+            vscode.window.showErrorMessage("无法打开当前工作区对js/ts的强制类型检查");
         }
         vscode.commands.registerCommand('y3-helper.importEditorTableDataFromExcel', async () => {
             await env.mapReady(true);
@@ -576,13 +576,12 @@ class Helper {
         // 右键菜单的命令注册
         vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
             try {
-                vscode.workspace.fs.delete(fileNode.resourceUri, { useTrash: true });
-                vscode.window.showInformationMessage("删除成功（可从回收站恢复）");
+                vscode.workspace.fs.delete(fileNode.resourceUri);
             }
             catch (error) {
                 vscode.window.showErrorMessage("删除失败，错误为" + error);
             }
-            editorTableDataProvider.refresh();
+            //editorTableDataProvider.refresh();
         });
         vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
             // vscode自带的从系统文件浏览器中打开某一文件的命令

@@ -2,19 +2,76 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 import { env } from "../env";
-import { isInDirectory, isPathValid, toUnicodeIgnoreASCII, hash } from '../utility';
+import { isInDirectory, isPathValid, toUnicodeIgnoreASCII, hash, mergeObject } from '../utility';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+function writeJsonTemplate(tableType: string, jsonFilePath: string) {
+    let templateJson = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
+    fs.writeFileSync(jsonFilePath, templateJson);
+}
+
+export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+
+    if (!data.hasOwnProperty('uid')) {
+        vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,出错的表类型为:' + tableType);
+        return false;
+    }
+
+    let uid = data['uid'];
+
+    if ('name' in data) {
+        let k = env.writeDataInLanguageJson(String(data['name']));
+        data['name'] = k;
+    }
+
+    let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
+    if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
+        console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
+        writeJsonTemplate(tableType, jsonFilePath);
+    }
+
+    let jsonFileStr = fs.readFileSync(jsonFilePath, 'utf8');
+    let jsonData: { [key: string]: any };
+    if (jsonFileStr === '') {
+        jsonData = {};
+    }
+    else {
+        // 解析JSON数据
+        try {
+            jsonData = JSON.parse(jsonFileStr);
+        }
+        catch (error) {
+            vscode.window.showErrorMessage("Json解析出错，请检查是否符合Json语法，出错的值为：" + jsonFileStr);
+            return false;
+        }
+    }
+
+    jsonData = mergeObject(jsonData, data);
+    console.log(jsonData);
+    try {
+        // 将更新后的数据写回文件
+        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
+    }
+    catch (err) {
+        vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');
+        console.error('保存Json文件时出错', err);
+        return false;
+    }
+    return true;
+}
+
+
 
 /**
+* 保存CSV表格中的一行数据  到物编
 * 导入一个物编项目的属性，原来的json文件中没有的字段会被添加，已有的字段如果data里面有那么会覆盖，data里面没有的字段保持原状
 * @param data 行号
 * @param targetPath 目标路径
 * @param tableType 物编表类型
 * @returns 
 */
-export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
     if (!isPathValid(targetPath.fsPath)) {
         vscode.window.showErrorMessage('保存Json的路径非有效路径');
         return false;

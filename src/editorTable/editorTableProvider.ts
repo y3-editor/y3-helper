@@ -58,9 +58,12 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       let newNameHashcode = hash(newName);
       let editorTableJsonStr = await fs.promises.readFile(fileNode.resourceUri.fsPath, 'utf8');
       let editorTableJson = JSON.parse(editorTableJsonStr);
-      editorTableJson['name'] = newNameHashcode;
+      let k = env.writeDataInLanguageJson(newName);
+      if (!k) {
+        return false;
+      }
+      editorTableJson['name'] = k;
       await fs.promises.writeFile(fileNode.resourceUri.fsPath, toUnicodeIgnoreASCII(JSON.stringify(editorTableJson, null, 2)), 'utf8');
-      env.writeDataInLanguageJson(newNameHashcode, newName);
       this.refresh();
       success = true;
     }

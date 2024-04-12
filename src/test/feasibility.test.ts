@@ -1,7 +1,7 @@
 
 import path, { dirname } from 'path';
 import { HashSet } from '../utility/hashSet';
-import { exec } from 'child_process';
+
 
 
 const jsonStr: string = "[1,2,3,4,5]";
@@ -51,3 +51,74 @@ async function testImportRules() {
 }
 
 testImportRules();
+
+/**
+ * 将一个对象的字段依据分隔符嵌套构造
+ * 如{"aaa.bbb":1} separator=='.' 转化为{"aaa":{"bbb":1}} 
+ * @param object 
+ * @param separator 
+ * @returns 
+ */
+export function toNestedObject(object: any, separator: string): any {
+    if (!object) {
+        return;
+    }
+    let res: any = {};
+    for (let key in object) {
+        let keyArr: string[] = key.split(separator);
+
+        let p = res;
+        for (let i = 0; i < keyArr.length - 1; i++) {
+            if (!(keyArr[i] in p)) {
+                p[keyArr[i]] = {};
+            }
+            p = p[keyArr[i]];
+        }
+        p[keyArr[keyArr.length - 1]] = object[key];
+    }
+    return res;
+}
+let object1 = { "aaa.bbb": 1 };
+console.log(toNestedObject(object1, '.'));
+let object2 = { "aaa.bbb.ccc": 1 };
+console.log(toNestedObject(object2, '.'));
+let object3 = { "aaa.bbb.ccc": 1, "aaa.bbb.ddd": 2 };
+console.log(toNestedObject(object3, '.'));
+let object4:any = { "aaa.bbb.ccc": 1, "aaa.bbb.ddd.eee": 2, "aaa.bbb.ddd.fff": 3 };
+object4 = toNestedObject(object4, '.');
+console.log(object4);
+console.log(object4['aaa']['bbb']); 
+
+
+/**
+ * 递归合并两个对象
+ * extra中有base中没有的字段会被添加
+ * base中有extra没有的字段会被保留 
+ * base中有extra中也有的字段会被extra覆盖
+ * @param base 
+ * @param extra 
+ * @returns 
+ */
+export function mergeObject(base: any, extra: any): any {
+    let res: any = base;
+    if (!extra) {
+        return res;
+    }
+    for (let key in extra) {
+        if ((key in res) === false) {
+            res[key] = {};
+        }
+        if (extra[key] instanceof Object) {
+            res[key] = mergeObject(res[key], extra[key]);
+        }
+        else {
+            res[key] = extra[key];
+        }
+    }
+    return res;
+}
+
+console.log("mergeObject函数 对象合并测试");
+let object5 = { "aaa": { "bbb": 1 },"ddd":0 };
+let object6 = { "aaa": { "ccc": 2 },"ddd":"3" };
+console.log(mergeObject(object5, object6));

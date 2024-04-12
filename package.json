@@ -284,7 +284,7 @@
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
-        "feasibility_test": "ts-node ./src/test/feasibility.test.ts"
+        "feasibility_test": "node ./out/test/feasibility.test.js"
     },
     "dependencies": {
         "csv-parser": "^3.0.0",
@@ -297,16 +297,16 @@
         "winreg": "^1.2.5"
     },
     "devDependencies": {
+        "@types/exceljs": "^1.3.0",
+        "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.3",
         "@types/node": "^18.19.18",
+        "@types/uuid": "^9.0.8",
         "@types/vscode": "^1.83.0",
         "@types/winreg": "^1.2.34",
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",
         "@vscode/test-electron": "^2.3.6",
-        "@types/exceljs": "^1.3.0",
-        "@types/fs-extra": "^11.0.4",
-        "@types/uuid": "^9.0.8",
         "eslint": "^8.57.0",
         "glob": "^10.3.10",
         "mocha": "^10.2.0"

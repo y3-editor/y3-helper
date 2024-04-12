@@ -4,8 +4,8 @@ import * as exceljs from 'exceljs';
 
 import { env } from '../../env';
 import { ImportRule } from './importRule';
-import { toFilePath } from '../../utility';
 import { saveEditorTableItemJson } from '../editorTableItemJson';
+import { toFilePath, toNestedObject } from '../../utility';
 import { chineseTypeNameToEnglishTypeName, csvTypeToPath } from '../../constants';
 export class EXCELimporter{
     private excelTablePath: vscode.Uri | undefined = undefined;
@@ -61,7 +61,7 @@ export class EXCELimporter{
         const worksheet = workbook.getWorksheet(importRule.sheet); // 选择要读取的工作表
         if (worksheet) {
             
-            const headers:string[] = [];
+            const headers:string[] = [''];//把下标0占位 方便从1开始数数
             worksheet.getRow(1).eachCell({ includeEmpty: true }, function (cell) {
                 if (cell.value) {
                     headers.push(cell.value.toLocaleString());
@@ -70,24 +70,39 @@ export class EXCELimporter{
                     headers.push(cell.col);
                 }
             });
+            
+            const types: string[] = [''];//把下标0占位 方便从1开始数数
+            worksheet.getRow(2).eachCell({ includeEmpty: true }, function (cell) {
+                if (cell.value) {
+                    types.push(cell.value.toLocaleString());
+                }
+                else {
+                    types.push(cell.col);
+                }
+            });
+
 
             // 遍历每行数据
-            for (let i = 2; i <= worksheet.rowCount; i++) {
+            for (let i = 3; i <= worksheet.rowCount; i++) {
                 const row:{ [key:string]:any } = {};
                 worksheet.getRow(i).eachCell({ includeEmpty: true }, function (cell, colNumber) {
-                    let k = headers[colNumber - 1];
+                    let k = headers[colNumber];
+                    if (typeof cell.value !== types[colNumber]) {
+                        vscode.window.showErrorMessage("变量类型出错" + "行："+i+"字段：" + headers[colNumber] +"工作表：" + importRule.sheet + "路径：" + excelPath);
+                    }
                     if (k) {
                         row[k] = cell.value;
                     }
                     else {
-                        vscode.window.showErrorMessage("表头字段：" + headers[colNumber - 1] + "未指定其对应的Json字段");
+                        vscode.window.showErrorMessage("表头字段：" + headers[colNumber] + "未指定其对应的Json字段");
                         return false;
                     }
                 });
-                let editorTableJsonObject = importRule.rowImport(row);
+                let editorTableJsonObject: any = importRule.rowImport(row);
+                editorTableJsonObject = toNestedObject(editorTableJsonObject, '.');// 依据'.'分割子数据项目，嵌套构造
                 let targetTableFolder = csvTypeToPath[editorTableType];
                 let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, targetTableFolder);
-                if (!saveEditorTableItemJson(editorTableJsonObject, targetEditorTablePath, editorTableType)) {
+                if (!await saveEditorTableItemJson(editorTableJsonObject, targetEditorTablePath, editorTableType)) {
                     return false;
                 }
             }

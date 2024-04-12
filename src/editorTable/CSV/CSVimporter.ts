@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import { env } from "../../env";
 import { isPathValid } from '../../utility';
 import { csvTypeToPath } from "../../constants";
-import { saveEditorTableItemJson } from '../editorTableItemJson';
+import { saveRowOfCSV } from '../editorTableItemJson';
 
 
 export class CSVimporter
@@ -93,7 +93,7 @@ export class CSVimporter
                     
 
                     // 如果此行保存失败就停止
-                    if (!(await saveEditorTableItemJson(row, targetJson, tableType))) {
+                    if (!(await saveRowOfCSV(row, targetJson, tableType))) {
                         console.log("保存失败的行：" + i + "路径：" + csv_uri.path);
                         return false;
                     }

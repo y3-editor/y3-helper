@@ -24,7 +24,7 @@ class UnitImportRule extends ImportRule {
     /**
      * 属性与Json字段的对应关系
      */
-    attrDef = { 'UID':'uid','名称':'name'};
+    attrDef = { 'UID':'uid','名称':'name','菲涅尔颜色':'fresnel_color','简易普攻.攻击点':'simple_common_atk.ability_bw_point'};
 
     /**
      * 请重写此方法以实现自定义转换规则 
@@ -35,7 +35,10 @@ class UnitImportRule extends ImportRule {
     rowImport(row) {
         let res = {};
         for (let k in this.attrDef) {
-            res[this.attrDef[k]] = row[k];
+            let attr = this.attrDef[k];
+            if (row[k] !== undefined) {
+                res[attr] = row[k];
+            }
         }
         return res;
     }

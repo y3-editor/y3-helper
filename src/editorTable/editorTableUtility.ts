@@ -18,6 +18,7 @@ import {
     englishPathToChinese, editorTableTypeToFolderName,
     EditorTableType, englishTypeNameToChineseTypeName
 } from '../constants';
+import { error } from 'console';
 
 
 
@@ -368,14 +369,17 @@ export function addNewEditorTableItemInProject(editorTableType: string,name:stri
     }
     let uid: number = allocateNewUIDofEditorTableItem(env.editorTableUri);
     let nameHashCode = hash(name);
-    let targetPath:vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, csvTypeToPath[editorTableType],String(uid)+'.json');
-    // todo:addNewEditorTableItemInProject
+    let targetPath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, csvTypeToPath[editorTableType], String(uid) + '.json');
+    
     try {
         let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
         let templateJson = JSON.parse(templateJsonStr);
+        let nameHashCode = env.writeDataInLanguageJson(name);
+        if (!nameHashCode) {
+            throw new Error("writeDataInLanguageJson失败");
+        }
         templateJson['name'] = nameHashCode;
         templateJson['uid'] = uid;
-        env.writeDataInLanguageJson(nameHashCode, name);
         fs.writeFileSync(targetPath.fsPath, toUnicodeIgnoreASCII(JSON.stringify(templateJson, null, 2)), 'utf8');
     }
     catch (error) {
