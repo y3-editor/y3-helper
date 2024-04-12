@@ -9,11 +9,13 @@ interface TreeNodeOptional {
     description?: typeof vscode.TreeItem.prototype.description;
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
+    hide?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
 }
 
 class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
     parent?: TreeNode;
+    hide?: TreeNodeOptional["hide"];
     update?: (node: TreeNode) => void | Thenable<void>;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -23,6 +25,7 @@ class TreeNode extends vscode.TreeItem {
             this.description = optional.description;
             this.childs = optional.childs;
             this.update = optional.update;
+            this.hide = optional.hide;
             this.collapsibleState = optional.collapsibleState;
         }
         this.updateChilds();
@@ -133,7 +136,22 @@ let nodeAction = new TreeNode('功能', {
             iconPath: new vscode.ThemeIcon('run-all'),
             description: 'Shift + F5',
         }),
-        
+        new TreeNode('查看日志', {
+            iconPath: new vscode.ThemeIcon('output'),
+            hide: () => {
+                return env.scriptUri === undefined;
+            },
+            update: async (node) => {
+                if (env.scriptUri === undefined) {
+                    return;
+                }
+                node.command = {
+                    command: 'vscode.open',
+                    title: '查看日志',
+                    arguments: [vscode.Uri.joinPath(env.scriptUri!, 'log/lua_player01.log')]
+                };
+            },
+        }),
     ]
 });
 
@@ -195,7 +213,21 @@ class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
                 nodeEnv,
             ];
         }
-        return node.childs;
+
+        let childs = node.childs?.filter(async (child) => {
+            if (child.hide === true) {
+                return false;
+            }
+            if (child.hide instanceof Function) {
+                return await child.hide(child);
+            }
+            return true;
+        });
+
+        if (childs?.length === 0) {
+            return undefined;
+        }
+        return childs;
     }
 
     async getTreeItem(node: TreeNode): Promise<TreeNode> {
