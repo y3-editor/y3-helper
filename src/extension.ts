@@ -231,13 +231,14 @@ class Helper {
     * 根据用户配置的路径 和导入规则 导入全部物编数据(Excel)
     */
     private registerCommandOfImportEditorTableDataFromExcel() {
-        try {
-            vscode.workspace.getConfiguration("js/ts.implicitProjectConfig").update("checkJs", true);
-            vscode.window.showInformationMessage("已经打开当前工作区对js/ts的强制类型检查");
-        }
-        catch {
-            vscode.window.showErrorMessage("无法打开当前工作区对js/ts的强制类型检查");
-        }
+        // TODO：不要默认修改用户的配置，确认用户要使用物编导入功能再改
+        //try {
+        //    vscode.workspace.getConfiguration("js/ts.implicitProjectConfig").update("checkJs", true);
+        //    vscode.window.showInformationMessage("已经打开当前工作区对js/ts的强制类型检查");
+        //}
+        //catch {
+        //    vscode.window.showErrorMessage("无法打开当前工作区对js/ts的强制类型检查");
+        //}
         vscode.commands.registerCommand('y3-helper.importEditorTableDataFromExcel', async () => {
             await env.mapReady(true);
             
