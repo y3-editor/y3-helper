@@ -286,8 +286,7 @@
         ]
     },
     "extensionDependencies": [
-        "sumneko.lua",
-        "actboy168.lua-debug"
+        "sumneko.lua"
     ],
     "icon": "image/logo.png",
     "scripts": {
