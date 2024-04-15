@@ -104,11 +104,3 @@ export function init() {
         mainMenu = new MainMenu();
     }
 }
-
-export function reveal() {
-    if (!mainMenu) {
-        return;
-    }
-    // 虽然签名说要传入FileNode，但是实际上传入undefined就可以展开根节点
-    mainMenu.view.reveal(undefined!, { focus: true, select: false, expand: true });
-}

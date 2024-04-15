@@ -191,16 +191,6 @@
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.revealMainMenu",
-                "title": "打开主菜单",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.editorTableView.reveal",
-                "title": "打开物编数据",
-                "category": "Y3开发助手"
-            },
-            {
                 "command": "y3-helper.openFile",
                 "title": "打开文件",
                 "enablement": "view == y3-helper.editorTableView",

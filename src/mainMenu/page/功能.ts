@@ -50,7 +50,7 @@ export let 功能 = new TreeNode('功能', {
         }),
         new TreeNode('查看物编数据', {
             command: {
-                command: 'y3-helper.editorTableView.reveal',
+                command: 'y3-helper.editorTableView.focus',
                 title: '查看物编数据',
             },
             iconPath: new vscode.ThemeIcon('symbol-function'),
