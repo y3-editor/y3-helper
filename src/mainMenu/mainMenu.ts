@@ -1,8 +1,8 @@
 import { env } from '../env';
 import * as vscode from 'vscode';
 import { TreeNode } from './treeNode';
-import { 功能 } from './page/功能';
-import { 环境 } from './page/环境';
+import { 功能 } from './pages/功能';
+import { 环境 } from './pages/环境';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
