@@ -94,101 +94,123 @@
         "commands": [
             {
                 "command": "y3-helper.initProject",
-                "title": "Y3:初始化开发环境",
-                "icon": "image/logo.png"
+                "title": "初始化开发环境",
+                "icon": "image/logo.png",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.makeLuaDoc",
-                "title": "Y3:生成接口文档"
+                "title": "生成接口文档",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.launchGame",
-                "title": "Y3:启动游戏"
+                "title": "启动游戏",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.launchGameAndAttach",
-                "title": "Y3:启动游戏并附加调试"
+                "title": "启动游戏并附加调试",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.importEditorTableDataFromCSV",
-                "title": "Y3:导入物编数据（CSV）"
+                "title": "导入物编数据（CSV）",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.importEditorTableDataFromExcel",
-                "title": "Y3:导入物编数据（Excel）"
+                "title": "导入物编数据（Excel）",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.generateAllTemplateCSV",
-                "title": "Y3:生成物编模板（CSV）"
+                "title": "生成物编模板（CSV）",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.generateExcelTemplate",
-                "title": "Y3:生成物编模板（Excel）"
+                "title": "生成物编模板（Excel）",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.editorTableView.refresh",
-                "title": "Refresh",
-                "category": "y3-helper",
+                "title": "刷新物编数据",
+                "shortTitle": "刷新",
+                "category": "Y3开发助手",
                 "icon": "$(refresh)"
             },
             {
                 "command": "y3-helper.addNewEditorTableItem",
-                "title": "Y3:新建物编项目",
-                "enablement": "view == y3-helper.editorTableView"
+                "title": "新建物编项目",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.deleteEditorTableItem",
-                "title": "Y3:删除物编项目",
-                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
+                "title": "删除物编项目",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.renameEditorTableItem",
-                "title": "Y3:修改物编项目的名称",
-                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
+                "title": "修改物编项目的名称",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.copyTableItemUID",
-                "title": "Y3:复制物编项目UID",
-                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
+                "title": "复制物编项目UID",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.copyTableItemName",
-                "title": "Y3:复制物编项目的名称",
-                "enablement": "view == y3-helper.editorTableView &&  viewItem == json"
+                "title": "复制物编项目的名称",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.addNewDataInCSV",
-                "title": "Y3:添加新物编数据到CSV表格中"
+                "title": "添加新物编数据到CSV表格中",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.addUIDandNameToCSVfromProject",
-                "title": "Y3:添加项目中已有的物编数据的UID和名称到CSV表格中"
+                "title": "添加项目中已有的物编数据的UID和名称到CSV表格中",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.modifyUIDinCSV",
-                "title": "Y3:修改CSV表格中的物编项目的UID"
+                "title": "修改CSV表格中的物编项目的UID",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.modifyNameInCSV",
-                "title": "Y3:修改CSV表格中的物编项目的名称"
+                "title": "修改CSV表格中的物编项目的名称",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.revealMainMenu",
-                "title": "Y3:打开主菜单"
+                "title": "打开主菜单",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.editorTableView.reveal",
-                "title": "Y3:打开物编数据"
+                "title": "打开物编数据",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.openFile",
-                "title": "Y3:打开文件",
-                "enablement": "view == y3-helper.editorTableView"
+                "title": "打开文件",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "Y3开发助手"
             },
             {
                 "command": "y3-helper.revealInFileExplorer",
-                "title": "Y3:在系统文件浏览器中打开",
-                "enablement": "view == y3-helper.editorTableView"
+                "title": "在系统文件浏览器中打开",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {
