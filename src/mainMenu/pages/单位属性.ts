@@ -1,4 +1,3 @@
-import { env } from "../../env";
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
@@ -14,6 +13,7 @@ export class 单位属性 extends TreeNode {
             update: async (node) => {
                 node.childs = (await define.单位属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
+                    contextValue: '单位属性',
                 }));
             },
         });
@@ -23,3 +23,17 @@ export class 单位属性 extends TreeNode {
         });
     }
 };
+
+vscode.commands.registerCommand('y3-helper.copyUnitAttrName', (node: TreeNode) => {
+    if (typeof node.label !== 'string') {
+        return;
+    }
+    vscode.env.clipboard.writeText(node.label);
+});
+
+vscode.commands.registerCommand('y3-helper.copyUnitAttrKey', (node: TreeNode) => {
+    if (typeof node.description !== 'string') {
+        return;
+    }
+    vscode.env.clipboard.writeText(node.description);
+});
