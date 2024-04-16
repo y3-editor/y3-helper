@@ -28,6 +28,30 @@ export async function readFile(uri: vscode.Uri, relativePath?: string) {
     } catch {}
 }
 
+export async function writeFile(uri: vscode.Uri, relativePath: string | undefined, data: string) {
+    if (relativePath) {
+        uri = vscode.Uri.joinPath(uri, relativePath);
+    }
+    try {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(data));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export async function removeFile(uri: vscode.Uri, relativePath?: string) {
+    if (relativePath) {
+        uri = vscode.Uri.joinPath(uri, relativePath);
+    }
+    try {
+        await vscode.workspace.fs.delete(uri);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export async function dir(uri: vscode.Uri, relativePath?: string) {
     if (relativePath) {
         uri = vscode.Uri.joinPath(uri, relativePath);

@@ -9,7 +9,7 @@ type Attr = {
     key: string,
 };
 
-export class 单位属性 {
+export class UnitAttrs {
     constructor() {
         env.onDidChange(() => {
             this.update();

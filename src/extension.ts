@@ -16,7 +16,7 @@ import {
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
-import * as customDefine from './customDefine';
+import * as metaBuilder from './metaBuilder';
 
 
 
@@ -700,10 +700,13 @@ class Helper {
         this.registerCommonCommands();
 
         this.registerCommandOfCSVeditor();
-        
+
         mainMenu.init();
+        metaBuilder.init();
 
         this.initEditorTableWatcher();
+
+        env.reload();
     }
 }
 
