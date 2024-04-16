@@ -18,11 +18,28 @@ export class 单位属性 {
     }
 
     private readonly _onDidChange = new vscode.EventEmitter<void>();
+    private _fileWatcher?: vscode.FileSystemWatcher;
 
     public onDidChange = this._onDidChange.event;
 
     private update() {
         this._attrsCache = undefined;
+        this._fileWatcher?.dispose();
+        if (env.mapUri) {
+            this._fileWatcher = vscode.workspace.createFileSystemWatcher(
+                new vscode.RelativePattern(env.mapUri, filePath)
+            );
+            this._fileWatcher.onDidChange(() => {
+                this.update();
+            });
+            this._fileWatcher.onDidCreate(() => {
+                this.update();
+            });
+            this._fileWatcher.onDidDelete(() => {
+                this.update();
+            });
+        }
+
         this._onDidChange.fire();
     }
 
