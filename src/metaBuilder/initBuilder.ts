@@ -18,7 +18,9 @@ class InitBuilder extends BaseBuilder {
             . filter((builder) => builder.exists)
             . map((builder) => {
                 // 将正斜杠和反斜杠替换为点号
-                let name = builder.path.replace(/[\\/]/g, '.');
+                let name = builder.path
+                    .replace(/\.lua$/, '')
+                    .replace(/[\\/]/g, '.');
                 return `require '${name}'`;
             });
         if (codes.length === 0) {
