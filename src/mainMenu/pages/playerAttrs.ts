@@ -1,13 +1,15 @@
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
+import { env } from "../../env";
 
 export class 玩家属性 extends TreeNode {
     constructor() {
         super('玩家属性', {
             iconPath: new vscode.ThemeIcon('organization'),
             show: async () => {
-                return (await define.玩家属性.getAttrs()).length > 0;
+                await env.mapReady();
+                return env.projectUri !== undefined;
             },
 
             update: async (node) => {

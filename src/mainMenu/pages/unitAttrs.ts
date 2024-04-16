@@ -1,13 +1,15 @@
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
+import { env } from "../../env";
 
 export class 单位属性 extends TreeNode {
     constructor() {
         super('单位属性', {
             iconPath: new vscode.ThemeIcon('account'),
             show: async () => {
-                return (await define.单位属性.getAttrs()).length > 0;
+                await env.mapReady();
+                return env.projectUri !== undefined;
             },
 
             update: async (node) => {
