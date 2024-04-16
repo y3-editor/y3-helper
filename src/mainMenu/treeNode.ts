@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+let refreshCallback: (node: TreeNode) => void;
+
 export interface TreeNodeOptional {
     command?: typeof vscode.TreeItem.prototype.command;
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
@@ -14,7 +16,7 @@ export class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
     parent?: TreeNode;
     show?: TreeNodeOptional["show"] = true;
-    update?: (node: TreeNode) => void | Thenable<void>;
+    update?: TreeNodeOptional["update"];
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
         if (optional) {
@@ -35,6 +37,10 @@ export class TreeNode extends vscode.TreeItem {
                 child.parent = this;
             }
         }
+    }
+
+    refresh() {
+        refreshCallback?.(this);
     }
 }
 
@@ -90,4 +96,8 @@ export class ViewInNewVSCode extends TreeNode {
             },
         });
     }
+}
+
+export function onRefresh(callback: typeof refreshCallback) {
+    refreshCallback = callback;
 }

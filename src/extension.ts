@@ -16,6 +16,7 @@ import {
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV,
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
+import * as customDefine from './customDefine';
 
 
 

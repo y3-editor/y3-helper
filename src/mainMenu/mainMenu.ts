@@ -1,13 +1,15 @@
 import { env } from '../env';
 import * as vscode from 'vscode';
-import { TreeNode } from './treeNode';
+import { TreeNode, onRefresh } from './treeNode';
 import { 功能 } from './pages/功能';
 import { 环境 } from './pages/环境';
+import { 单位属性 } from './pages/单位属性';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
-        功能,
-        环境,
+        new 功能,
+        new 单位属性,
+        new 环境,
         new TreeNode('重新选择Y3地图路径', {
             command: {
                 command: 'y3-helper.reloadEnv',
@@ -77,6 +79,9 @@ class MainMenu {
         });
         env.onDidChange(() => {
             this.refresh();
+        });
+        onRefresh((node) => {
+            this.tree.refresh.fire(node);
         });
     }
 

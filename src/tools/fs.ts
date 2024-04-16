@@ -4,7 +4,7 @@ class File {
     private _data = new Uint8Array();
 
     write(data: Uint8Array) {
-        this._data.set(data, this._data.length);
+        this._data = data;
         return this;
     }
 
