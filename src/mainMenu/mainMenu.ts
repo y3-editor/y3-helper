@@ -1,9 +1,9 @@
 import { env } from '../env';
 import * as vscode from 'vscode';
 import { TreeNode, onRefresh } from './treeNode';
-import { 功能 } from './pages/功能';
-import { 环境 } from './pages/环境';
-import { 单位属性 } from './pages/单位属性';
+import { 功能 } from './pages/features';
+import { 环境 } from './pages/environments';
+import { 单位属性 } from './pages/unitAttrs';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
