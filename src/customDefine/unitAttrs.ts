@@ -1,6 +1,7 @@
+import { RelativePattern } from "vscode";
 import { env } from "../env";
-import * as vscode from 'vscode';
 import * as tools from '../tools';
+import { BaseDefine } from "./baseDefine";
 
 const filePath = 'attr.json';
 
@@ -9,43 +10,21 @@ type Attr = {
     key: string,
 };
 
-export class UnitAttrs {
+export class UnitAttrs extends BaseDefine {
     constructor() {
-        env.onDidChange(() => {
-            this.update();
-        });
-        this.update();
+        super();
     }
 
-    private readonly _onDidChange = new vscode.EventEmitter<void>();
-    private _fileWatcher?: vscode.FileSystemWatcher;
+    private _attrsCache?: Attr[];
 
-    public onDidChange = this._onDidChange.event;
-
-    private update() {
-        this._attrsCache = undefined;
-        this._fileWatcher?.dispose();
-        if (env.mapUri) {
-            this._fileWatcher = vscode.workspace.createFileSystemWatcher(
-                new vscode.RelativePattern(env.mapUri, filePath)
-            );
-            this._fileWatcher.onDidChange(() => {
-                this.update();
-            });
-            this._fileWatcher.onDidCreate(() => {
-                this.update();
-            });
-            this._fileWatcher.onDidDelete(() => {
-                this.update();
-            });
+    get watchPattern() {
+        if (!env.mapUri) {
+            return;
         }
-
-        this._onDidChange.fire();
+        return new RelativePattern(env.mapUri, filePath);
     }
 
-    private _attrsCache: Attr[] | undefined;
-
-    private async loadAttrs() : Promise<Attr[]> {
+    private async loadAttrs() {
         let attrs: Attr[] = [];
         try {
             if (!env.mapUri) {
@@ -74,7 +53,7 @@ export class UnitAttrs {
         }
     }
 
-    public async getAttrs(): Promise<Attr[]> {
+    public async getAttrs() {
         if (!this._attrsCache) {
             this._attrsCache = await this.loadAttrs();
         }
