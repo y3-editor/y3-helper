@@ -14,7 +14,7 @@ export abstract class BaseDefine {
 
     public onDidChange = this._onDidChange.event;
 
-    protected abstract watchPattern?: vscode.RelativePattern | undefined;
+    protected abstract watchPattern?: vscode.RelativePattern;
 
     private update() {
         this._fileWatcher?.dispose();

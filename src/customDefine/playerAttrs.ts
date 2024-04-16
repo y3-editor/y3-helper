@@ -13,6 +13,10 @@ type Attr = {
 export class PlayerAttrs extends BaseDefine {
     constructor() {
         super();
+
+        this.onDidChange(() => {
+            this._attrsCache = undefined;
+        });
     }
 
     private _attrsCache?: Attr[];
