@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { resolveTxt } from 'dns';
 
 /**
  * 判断一个路径是否为指向一个json文件
@@ -309,4 +310,45 @@ export function mergeObject(base: any, extra: any): any {
         }
     }
     return res;
+}
+
+/**
+ * 尝试保存Json并返回是否能保存成功
+ * @param jsonData 
+ * @param jsonFilePath 
+ * @returns 
+ */
+export function tryWriteJson(jsonData: any, jsonFilePath: string): boolean {
+    try {
+        // 将更新后的数据写回文件
+        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
+    }
+    catch (err) {
+        vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');
+        console.error('保存Json文件时出错', err);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * 尝试读取Json，如果读取失败则返回null
+ * @param jsonFilePath 
+ * @returns 
+ */
+export function tryReadJson(jsonFilePath: string): { [key: string]: any } | null {
+    if (jsonFilePath === '') {
+        return null;
+    }
+    let jsonData: { [key: string]: any } = {};
+    // 尝试解析JSON数据
+    try {
+        let jsonFileStr = fs.readFileSync(jsonFilePath, 'utf8');
+        jsonData = JSON.parse(jsonFileStr);
+        return jsonData;
+    }
+    catch (error) {
+        vscode.window.showErrorMessage("Json解析出错，路径" + jsonFilePath +"错误为：" + error);
+        return null;
+    }
 }

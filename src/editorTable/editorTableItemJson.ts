@@ -6,11 +6,23 @@ import { isInDirectory, isPathValid, toUnicodeIgnoreASCII, hash, mergeObject } f
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * 从模板中新建物编项目数据Json
+ * @param tableType 
+ * @param jsonFilePath 
+ */
 function writeJsonTemplate(tableType: string, jsonFilePath: string) {
     let templateJson = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + tableType + ".json"));
     fs.writeFileSync(jsonFilePath, templateJson);
 }
 
+/**
+ * 保存物编项目Json数据
+ * @param data 
+ * @param targetPath 
+ * @param tableType 
+ * @returns true or false 成功或失败
+ */
 export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
 
     if (!data.hasOwnProperty('uid')) {
@@ -62,16 +74,14 @@ export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri,
 }
 
 
-
 /**
-* 保存CSV表格中的一行数据  到物编
-* 导入一个物编项目的属性，原来的json文件中没有的字段会被添加，已有的字段如果data里面有那么会覆盖，data里面没有的字段保持原状
-* @param data 行号
-* @param targetPath 目标路径
-* @param tableType 物编表类型
-* @returns 
-*/
-export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+ * 检查参数是否有效
+ * @param data 
+ * @param targetPath 
+ * @param tableType 
+ * @returns 
+ */
+function checkParameter(data: any, targetPath: vscode.Uri, tableType: string):boolean {
     if (!isPathValid(targetPath.fsPath)) {
         vscode.window.showErrorMessage('保存Json的路径非有效路径');
         return false;
@@ -81,12 +91,31 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
         vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,出错的表类型为:' + tableType);
         return false;
     }
+    return true;
+}
 
+
+/**
+* 保存CSV表格中的一行数据  到物编
+* 导入一个物编项目的属性，原来的json文件中没有的字段会被添加，已有的字段如果data里面有那么会覆盖，data里面没有的字段保持原状
+* 
+* todo:
+* 由于开发时才发现物编数据格式要求复杂 要处理的特殊case实在是太多 不得不增加大量if else 后续此函数需要拆解重构
+* @param data 行号
+* @param targetPath 目标路径
+* @param tableType 物编表类型
+* @returns 
+*/
+export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+    if (checkParameter(data, targetPath, tableType) === false) {
+        return false;
+    }
+
+    //获取uid
     let uid = String(data['uid']);
     if (uid[0] === '\'') {
         uid = uid.substring(1);
     }
-
     let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
         console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
@@ -103,6 +132,7 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
         // 解析JSON数据
         try {
             jsonData = JSON.parse(jsonFileStr);
+            return true;
         }
         catch (error) {
             vscode.window.showErrorMessage("Json解析出错，请检查是否符合Json语法，出错的值为：" + jsonFileStr);
@@ -111,13 +141,12 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
     }
 
     console.log("read_json：" + jsonFilePath);
-    // 打印此行数据
+    
+    // 遍历所有属性
     for (const key in data) {
         if (data.hasOwnProperty(key)) {
             let value = data[key];
-            // 添加或更新键值对
-
-
+            
             if (value && value !== undefined) {
 
                 let valueNumber = parseFloat(value);
@@ -270,6 +299,10 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
     }
     console.log("-----------------------");
 
+    return tryWriteJson(jsonData, jsonFilePath);
+}
+
+function tryWriteJson(jsonData: any, jsonFilePath:string):boolean {
     try {
         // 将更新后的数据写回文件
         fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
@@ -279,6 +312,5 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
         console.error('保存Json文件时出错', err);
         return false;
     }
-    //console.log('此行保存成功');
     return true;
 }
