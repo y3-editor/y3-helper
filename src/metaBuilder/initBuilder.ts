@@ -1,6 +1,7 @@
 import { UnitAttrs } from './unitAttrs';
 import { BaseBuilder } from './baseBuilder';
 import { env } from '../env';
+import { PlayerAttrs } from './playerAttrs';
 
 let path = 'y3-helper/meta';
 
@@ -34,9 +35,15 @@ export function init() {
     let initBuilder = new InitBuilder(path + '/init.lua');
 
     let unitAttrs = new UnitAttrs(path + '/unitAttrs.lua');
+    let playerAttrs = new PlayerAttrs(path + '/playerAttrs.lua');
 
     initBuilder.addFile(unitAttrs);
+    initBuilder.addFile(playerAttrs);
+
     unitAttrs.onDidChange(() => {
+        initBuilder.update();
+    });
+    playerAttrs.onDidChange(() => {
         initBuilder.update();
     });
 }
