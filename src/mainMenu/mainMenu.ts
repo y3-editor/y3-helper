@@ -4,11 +4,13 @@ import { TreeNode, onRefresh } from './treeNode';
 import { 功能 } from './pages/features';
 import { 环境 } from './pages/environments';
 import { 单位属性 } from './pages/unitAttrs';
+import { 玩家属性 } from './pages/playerAttrs';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
         new 功能,
         new 单位属性,
+        new 玩家属性,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {
             command: {

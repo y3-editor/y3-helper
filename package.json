@@ -89,6 +89,16 @@
                     "command": "y3-helper.copyUnitAttrName",
                     "when": "viewItem == 单位属性",
                     "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyPlayerAttrKey",
+                    "when": "viewItem == 玩家属性",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyPlayerAttrName",
+                    "when": "viewItem == 玩家属性",
+                    "group": "copy"
                 }
             ]
         },
@@ -222,6 +232,18 @@
                 "command": "y3-helper.copyUnitAttrName",
                 "title": "复制名称",
                 "enablement": "viewItem == 单位属性",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyPlayerAttrKey",
+                "title": "复制key",
+                "enablement": "viewItem == 玩家属性",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyPlayerAttrName",
+                "title": "复制名称",
+                "enablement": "viewItem == 玩家属性",
                 "category": "Y3开发助手"
             }
         ],
