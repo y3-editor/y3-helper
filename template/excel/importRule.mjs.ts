@@ -24,9 +24,16 @@ export abstract class ImportRule {
     public abstract sheet: string;
 
     /**
-     * 属性与Json字段的对应关系 如果是多层嵌套结构 请用'.'分割，如{"aaa":{"bbb":1}} 写为 aaa.bbb=1 
+     * 属性与Json字段的对应关系 如果是多层嵌套结构 请用'.'分割，如{"aaa":{"bbb":1}} 写为 aaa.bbb=1  
+     * 推荐使用本插件的物编数据视图去查看物编数据Json的格式，以便填写对应字段
      */
     public abstract attrDef: { [key: string]: string };
+
+
+    /**
+     * 自定义属性 请把您自定义的属性名称放到这个列表中
+     */
+    public abstract custormAttr: string[];
 
     /**
      * 请重写此方法以实现自定义转换规则

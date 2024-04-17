@@ -28,6 +28,12 @@ export abstract class ImportRule {
      */
     public abstract attrDef: { [key: string]: string };
 
+
+    /**
+     * 自定义属性 请把您自定义的属性名称放到这个Set中
+     */
+    public abstract custormAttr: {};
+
     /**
      * 请重写此方法以实现自定义转换规则
      * 返回值的对象需要包含'uid'字段，以确定物编项目的uid，以便本插件导入

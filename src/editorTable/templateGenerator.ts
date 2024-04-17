@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
-import { env } from '../env';
 import * as path from 'path';
 import { isPathValid } from '../utility';
 import { chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';

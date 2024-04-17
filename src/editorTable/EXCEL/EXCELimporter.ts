@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as exceljs from 'exceljs';
 
 import { env } from '../../env';
+import { castToType } from './castType';
 import { ImportRule } from './importRule';
 import { saveEditorTableItemJson } from '../editorTableItemJson';
 import { toFilePath, toNestedObject } from '../../utility';
@@ -61,6 +62,7 @@ export class EXCELimporter{
         const worksheet = workbook.getWorksheet(importRule.sheet); // 选择要读取的工作表
         if (worksheet) {
             
+            // 载入表头
             const headers:string[] = [''];//把下标0占位 方便从1开始数数
             worksheet.getRow(1).eachCell({ includeEmpty: true }, function (cell) {
                 if (cell.value) {
@@ -71,6 +73,7 @@ export class EXCELimporter{
                 }
             });
             
+            // 载入类型标注
             const types: string[] = [''];//把下标0占位 方便从1开始数数
             worksheet.getRow(2).eachCell({ includeEmpty: true }, function (cell) {
                 if (cell.value) {
@@ -82,16 +85,25 @@ export class EXCELimporter{
             });
 
 
-            // 遍历每行数据
+            // 遍历每行数据 第一行是表头字段名 第二行是类型名 第三行及以后才是正式内容
             for (let i = 3; i <= worksheet.rowCount; i++) {
                 const row:{ [key:string]:any } = {};
-                worksheet.getRow(i).eachCell({ includeEmpty: true }, function (cell, colNumber) {
+                worksheet.getRow(i).eachCell({ includeEmpty: false }, function (cell, colNumber) {
                     let k = headers[colNumber];
-                    if (typeof cell.value !== types[colNumber]) {
-                        vscode.window.showErrorMessage("变量类型出错" + "行："+i+"字段：" + headers[colNumber] +"工作表：" + importRule.sheet + "路径：" + excelPath);
+                    
+                    let value = cell.value;
+                   
+                    if (typeof value === 'object') {
+                        value = cell.text;
                     }
+
+                    value = castToType(value, types[colNumber]);
+                    if (value === undefined) {
+                        vscode.window.showErrorMessage("变量类型出错，" + "行：" + i + "，字段：" + headers[colNumber] + "，工作表：" + importRule.sheet + "，路径：" + excelPath);
+                    }
+                    
                     if (k) {
-                        row[k] = cell.value;
+                        row[k] = value;
                     }
                     else {
                         vscode.window.showErrorMessage("表头字段：" + headers[colNumber] + "未指定其对应的Json字段");

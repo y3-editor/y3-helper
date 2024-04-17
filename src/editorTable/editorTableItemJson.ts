@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-
-import { env } from "../env";
-import { isInDirectory, isPathValid, toUnicodeIgnoreASCII, hash, mergeObject } from '../utility';
 import * as path from 'path';
+import { env } from "../env";
 import { v4 as uuidv4 } from 'uuid';
+import {
+    isInDirectory, isPathValid, toUnicodeIgnoreASCII,
+    hash, mergeObject, tryWriteJson, tryReadJson
+} from '../utility';
+
 
 /**
  * 从模板中新建物编项目数据Json
@@ -31,9 +34,8 @@ export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri,
     }
 
     let uid = data['uid'];
-
     if ('name' in data) {
-        let k = env.writeDataInLanguageJson(String(data['name']));
+        let k = env.writeDataInLanguageJson(data['name']);
         data['name'] = k;
     }
 
@@ -60,17 +62,8 @@ export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri,
     }
 
     jsonData = mergeObject(jsonData, data);
-    console.log(jsonData);
-    try {
-        // 将更新后的数据写回文件
-        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
-    }
-    catch (err) {
-        vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');
-        console.error('保存Json文件时出错', err);
-        return false;
-    }
-    return true;
+    // 尝试保存并返回是否能保存成功
+    return tryWriteJson(jsonData, jsonFilePath);
 }
 
 
@@ -93,6 +86,7 @@ function checkParameter(data: any, targetPath: vscode.Uri, tableType: string):bo
     }
     return true;
 }
+
 
 
 /**
@@ -123,21 +117,9 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
         fs.writeFileSync(jsonFilePath, templateJson);
     }
 
-    let jsonFileStr = fs.readFileSync(jsonFilePath, 'utf8');
-    let jsonData: { [key: string]: any };
-    if (jsonFileStr === '') {
-        jsonData = {};
-    }
-    else {
-        // 解析JSON数据
-        try {
-            jsonData = JSON.parse(jsonFileStr);
-            return true;
-        }
-        catch (error) {
-            vscode.window.showErrorMessage("Json解析出错，请检查是否符合Json语法，出错的值为：" + jsonFileStr);
-            return false;
-        }
+    let jsonData: { [key: string]: any }|null=tryReadJson(jsonFilePath);
+    if (!jsonData) {
+        return false;
     }
 
     console.log("read_json：" + jsonFilePath);
@@ -167,7 +149,7 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
                     // 自定义属性的描述要加到工程文件的attr.json中
                     try {
                         if (env.mapUri) {
-                            attrJson = await fs.readFileSync(vscode.Uri.joinPath(env.mapUri, "attr.json").fsPath);
+                            attrJson = fs.readFileSync(vscode.Uri.joinPath(env.mapUri, "attr.json").fsPath);
                             attrJson = JSON.parse(attrJson);
                         }
                         else {
@@ -293,24 +275,11 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
                     jsonData[key] = value;
                 }
             }
-
-
         }
     }
     console.log("-----------------------");
 
+    // 尝试保存并返回是否能保存成功
     return tryWriteJson(jsonData, jsonFilePath);
 }
 
-function tryWriteJson(jsonData: any, jsonFilePath:string):boolean {
-    try {
-        // 将更新后的数据写回文件
-        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
-    }
-    catch (err) {
-        vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');
-        console.error('保存Json文件时出错', err);
-        return false;
-    }
-    return true;
-}

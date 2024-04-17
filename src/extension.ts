@@ -24,6 +24,8 @@ import * as metaBuilder from './metaBuilder';
 class Helper {
     private context: vscode.ExtensionContext;
 
+    private editorTableDataProvider?: EditorTableDataProvider;
+
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
     }
@@ -232,14 +234,6 @@ class Helper {
     * 根据用户配置的路径 和导入规则 导入全部物编数据(Excel)
     */
     private registerCommandOfImportEditorTableDataFromExcel() {
-        // TODO：不要默认修改用户的配置，确认用户要使用物编导入功能再改
-        //try {
-        //    vscode.workspace.getConfiguration("js/ts.implicitProjectConfig").update("checkJs", true);
-        //    vscode.window.showInformationMessage("已经打开当前工作区对js/ts的强制类型检查");
-        //}
-        //catch {
-        //    vscode.window.showErrorMessage("无法打开当前工作区对js/ts的强制类型检查");
-        //}
         vscode.commands.registerCommand('y3-helper.importEditorTableDataFromExcel', async () => {
             await env.mapReady(true);
             
@@ -261,7 +255,7 @@ class Helper {
             }, async (progress) => {
                 let excelImporter = new EXCELimporter();
                 await excelImporter.excelImport();
-
+                this.editorTableDataProvider?.refresh();
             });
         });
     }
@@ -539,6 +533,7 @@ class Helper {
      */
     private registerEditorTableView() {
         const editorTableDataProvider = new EditorTableDataProvider();
+        this.editorTableDataProvider = editorTableDataProvider;
         
         let treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
             treeDataProvider: editorTableDataProvider,
@@ -686,12 +681,13 @@ class Helper {
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
 
+        this.registerEditorTableView();
         this.registerCommandOfImportEditorTableDataFromCSV();
         this.registerCommandOfImportEditorTableDataFromExcel();
 
         this.registerCommandOfGenerateTemplates();
 
-        this.registerEditorTableView();
+        
         this.registerCommandOfOpenFile();
         
         this.checkNewProject();

@@ -157,7 +157,6 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
     /**用HashSet去重 */
     let resSet = new HashSet<vscode.QuickPickItem>();
 
-    
     // 搜索九类CSV文件
     for (let type in EditorTableType) {
         let typeStr = EditorTableType[type as keyof typeof EditorTableType];
@@ -168,9 +167,6 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
             return res;
         }
         const files = fs.readdirSync(csvPath.fsPath);
-
-        
-
 
         for (let index = 0; index < files.length; index++)
         {
@@ -368,7 +364,6 @@ export function addNewEditorTableItemInProject(editorTableType: string,name:stri
         return false;
     }
     let uid: number = allocateNewUIDofEditorTableItem(env.editorTableUri);
-    let nameHashCode = hash(name);
     let targetPath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, csvTypeToPath[editorTableType], String(uid) + '.json');
     
     try {

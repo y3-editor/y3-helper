@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
-import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
-import { englishPathToChinese, chineseTypeNameToEnglishTypeName } from '../constants';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
-
+import { englishPathToChinese, chineseTypeNameToEnglishTypeName } from '../constants';
+import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
 
 
 export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
@@ -377,23 +376,4 @@ export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbo
     
     return res;
   }
-}
-
-
-/**
- * @param editorTableJsonName 物编数据Json的文件名
- * @param editorTableJson 物编数据的Json对象
- * @param zhlanguageJson 
- */
-function getChineseName(editorTableJsonName:string,editorTableJson: any, zhlanguageJson: any):string {
-  let name;
-  let res: string=editorTableJsonName;
-  if (editorTableJson.hasOwnProperty('name')) {
-    let nameKey: any = editorTableJson['name'];
-    name = zhlanguageJson[nameKey];
-  }
-  if (name !== undefined && typeof name === "string") {
-    res = name + "(" + editorTableJsonName.substring(0, editorTableJsonName.length - 5) + ")";//显示为"这是一个单位(134219828)"的格式
-  }
-  return res;
 }
