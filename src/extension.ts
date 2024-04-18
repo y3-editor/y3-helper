@@ -148,8 +148,10 @@ class Helper {
                 }
 
                 // 打开项目
-                this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
+                await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
+
+                this.checkNewProject();
 
                 mainMenu.init();
             });
