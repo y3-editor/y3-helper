@@ -14,7 +14,7 @@ let mainNode = new TreeNode('主菜单', {
         new 环境,
         new TreeNode('重新选择Y3地图路径', {
             command: {
-                command: 'y3-helper.reloadEnv',
+                command: 'y3-helper.selectAnotherMap',
                 title: '重新选择Y3地图路径',
             },
             iconPath: new vscode.ThemeIcon('search'),

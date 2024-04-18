@@ -149,43 +149,43 @@ class EnvPath {
         return mapFolder;
     }
 
-    private async searchProjectPath(askUser = false): Promise<vscode.Uri | undefined> {
+    private async searchProjectPath(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
         // 先直接搜索打开的工作目录
-        if (vscode.workspace.workspaceFolders) {
-            for (const folder of vscode.workspace.workspaceFolders) {
-                let mapFolder = await this.searchMapFolderBySelectedUri(folder.uri);
-                if (mapFolder) {
-                    return mapFolder;
+        if (search) {
+            if (vscode.workspace.workspaceFolders) {
+                for (const folder of vscode.workspace.workspaceFolders) {
+                    let mapFolder = await this.searchMapFolderBySelectedUri(folder.uri);
+                    if (mapFolder) {
+                        return mapFolder;
+                    }
                 }
             }
         }
 
-        if (!askUser) {
-            return undefined;
-        }
-
-        // 如果没有，则询问用户
-        let selectedFolders = await vscode.window.showOpenDialog({
-            canSelectFiles: true,
-            canSelectFolders: false, // 竟然不能同时选择文件和文件夹
-            canSelectMany: false,
-            openLabel: '选择Y3地图路径',
-            filters: {
-                '地图': ['map', 'project']
+        if (askUser) {
+            // 如果没有，则询问用户
+            let selectedFolders = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false, // 竟然不能同时选择文件和文件夹
+                canSelectMany: false,
+                openLabel: '选择Y3地图路径',
+                filters: {
+                    '地图': ['map', 'project']
+                }
+            });
+    
+            let selectedFolder = selectedFolders?.[0];
+            if (!selectedFolder) {
+                return undefined;
             }
-        });
-
-        let selectedFolder = selectedFolders?.[0];
-        if (!selectedFolder) {
-            return undefined;
-        }
-
-        if ((await vscode.workspace.fs.stat(selectedFolder)).type === vscode.FileType.File) {
-            selectedFolder = vscode.Uri.joinPath(selectedFolder, '..');
-        };
-        let mapFolder = await this.searchMapFolderBySelectedUri(selectedFolder);
-        if (mapFolder) {
-            return mapFolder;
+    
+            if ((await vscode.workspace.fs.stat(selectedFolder)).type === vscode.FileType.File) {
+                selectedFolder = vscode.Uri.joinPath(selectedFolder, '..');
+            };
+            let mapFolder = await this.searchMapFolderBySelectedUri(selectedFolder);
+            if (mapFolder) {
+                return mapFolder;
+            }
         }
 
         return undefined;
@@ -296,8 +296,8 @@ class EnvPath {
     }
 
     @rePrepare
-    public async updateMap(askUser = false) {
-        let mapUri = await this.searchProjectPath(askUser);
+    public async updateMap(search: boolean, askUser: boolean) {
+        let mapUri = await this.searchProjectPath(search, askUser);
         if (!mapUri) {
             return;
         }
@@ -322,7 +322,7 @@ class EnvPath {
         if (this.mapUri) {
             return;
         }
-        await this.updateMap(askUser);
+        await this.updateMap(true, askUser);
     }
 
     public reload() {

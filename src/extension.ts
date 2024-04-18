@@ -40,8 +40,9 @@ class Helper {
     }
 
     private registerCommonCommands() {
-        vscode.commands.registerCommand('y3-helper.reloadEnv', async () => {
-            await env.updateMap(true);
+        vscode.commands.registerCommand('y3-helper.selectAnotherMap', async () => {
+            env.reload();
+            await env.updateMap(false, true);
             if (!vscode.workspace.workspaceFolders?.some((folder) => folder.uri.fsPath === env.scriptUri?.fsPath)) {
                 vscode.commands.executeCommand('vscode.openFolder', env.scriptUri);
             }
