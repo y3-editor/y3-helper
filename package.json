@@ -263,7 +263,7 @@
                     "title": "存放物编数据的Excel表格所在的文件夹的相对路径",
                     "description": "注意：Execl表中的物编数据会按此相对路径下的importRules.mjs代码所实现的导入规则来导入，生成Excel物编数据模板时也会生成到此文件夹下",
                     "type": "string",
-                    "default": "./y3helper/editor_table/excel/"
+                    "default": "./y3-helper/editor_table/excel/"
                 },
                 "Y3-Helper.CSVPath": {
                     "title": "CSV物编路径",
@@ -274,47 +274,47 @@
                     "properties": {
                         "unit": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/单位",
+                            "default": "./y3-helper/editor_table/csv/单位",
                             "description": "单位的CSV物编数据的默认存放文件夹名"
                         },
                         "decoration": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/装饰物",
+                            "default": "./y3-helper/editor_table/csv/装饰物",
                             "description": "装饰物的CSV物编数据的默认存放文件夹名"
                         },
                         "item": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/物品",
+                            "default": "./y3-helper/editor_table/csv/物品",
                             "description": "物品的CSV物编数据的默认存放文件夹名"
                         },
                         "ability": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/技能",
+                            "default": "./y3-helper/editor_table/csv/技能",
                             "description": "技能的CSV物编数据的默认存放文件夹名"
                         },
                         "modifier": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/魔法效果",
+                            "default": "./y3-helper/editor_table/csv/魔法效果",
                             "description": "魔法效果的CSV物编数据的默认存放文件夹名"
                         },
                         "projectile": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/投射物",
+                            "default": "./y3-helper/editor_table/csv/投射物",
                             "description": "投射物的CSV物编数据的默认存放文件夹名"
                         },
                         "technology": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/科技",
+                            "default": "./y3-helper/editor_table/csv/科技",
                             "description": "科技的CSV物编数据的默认存放文件夹名"
                         },
                         "destructible": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/可破坏物",
+                            "default": "./y3-helper/editor_table/csv/可破坏物",
                             "description": "可破坏物的CSV物编数据的默认存放文件夹名"
                         },
                         "sound": {
                             "type": "string",
-                            "default": "./y3helper/editor_table/csv/声音",
+                            "default": "./y3-helper/editor_table/csv/声音",
                             "description": "声音的CSV物编数据的默认存放文件夹名"
                         }
                     }

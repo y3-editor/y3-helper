@@ -98,13 +98,13 @@ export const csvTypeToPath: Readonly<{ [key: string]: string }> = {
 
 // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
 export const defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
-    unit: "./y3helper/editor_table/csv/单位",
-    decoration: "./y3helper/editor_table/csv/装饰物",
-    item: "./y3helper/editor_table/csv/物品",
-    ability: "./y3helper/editor_table/csv/技能",
-    modifier: "./y3helper/editor_table/csv/魔法效果",
-    projectile: "./y3helper/editor_table/csv/投射物",
-    technology: "./y3helper/editor_table/csv/科技",
-    destructible: "./y3helper/editor_table/csv/可破坏物",
-    sound: "./y3helper/editor_table/csv/声音"
+    unit: "./y3-helper/editor_table/csv/单位",
+    decoration: "./y3-helper/editor_table/csv/装饰物",
+    item: "./y3-helper/editor_table/csv/物品",
+    ability: "./y3-helper/editor_table/csv/技能",
+    modifier: "./y3-helper/editor_table/csv/魔法效果",
+    projectile: "./y3-helper/editor_table/csv/投射物",
+    technology: "./y3-helper/editor_table/csv/科技",
+    destructible: "./y3-helper/editor_table/csv/可破坏物",
+    sound: "./y3-helper/editor_table/csv/声音"
 };
