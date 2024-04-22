@@ -42,13 +42,15 @@ export class UnitAttrs extends BaseDefine {
             if (typeof json !== 'object') {
                 return attrs;
             }
+            let mark: Set<string> = new Set();
             // 自定义单位属性
             if (Array.isArray(json.c)) {
                 for (let item of json.c) {
                     let name = decodeURI(item.items?.[1]?.desc);
                     let key  = item.items?.[1]?.key;
-                    if (name && key) {
+                    if (name && key && !mark.has(key)) {
                         attrs.push({name, key});
+                        mark.add(key);
                     }
                 }
             }
@@ -57,8 +59,9 @@ export class UnitAttrs extends BaseDefine {
                 for (let item of json.p) {
                     let name = decodeURI(item.items?.[1]?.d);
                     let key  = item.items?.[1]?.k;
-                    if (name && key) {
+                    if (name && key && !mark.has(key)) {
                         attrs.push({name, key});
+                        mark.add(key);
                     }
                 }
             }
