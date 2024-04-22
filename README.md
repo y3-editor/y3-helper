@@ -34,7 +34,7 @@
 
 ## 修改并导入物编(CSV)
 
-使用命令`Y3开发助手:生成物编模板（CSV）`生成物编数据模板后，你的项目中会生成 `y3-helper/editor_table` 文件夹，你可以修改这些CSV文件来生成物编。
+使用命令`Y3开发助手:生成物编模板（CSV）`生成物编数据模板后，你的项目中会生成 `y3-helper/editor_table/csv` 文件夹，你可以在这些CSV表格中添加新数据以导入。
 
 之后使用命令 `Y3开发助手:导入物编数据（CSV）` 即可将这些物编写入地图。
 
@@ -62,7 +62,7 @@ Y3开发助手:修改CSV表格中的物编项目的名称
 
 ## 可自定义导入规则的Excel表物编数据导入
 
-按下F1，使用命令`Y3开发助手:生成物编数据（Excel）`，会在`y3-helper/editor_table` 下生成Excel物编数据模板和配套导入规则importRules.mjs,
+按下F1，使用命令`Y3开发助手:生成物编数据（Excel）`，会在`y3-helper/editor_table/excel` 下生成Excel物编数据模板和配套导入规则importRules.mjs,
 用户可通过编写importRules.mjs实现可自定义规则的物编数据导入方式。
 
 `importRule.mjs.ts`中定义了导入规则ImportRule的父类，请继承此父类以实现自定义的导入规则。每个ImportRule对象的属性，记录了需要被导入的Excel表的相对路径和工作表名。在调用命令`Y3开发助手:导入物编数据（Excel）`后，`importRule.mjs`会被复制到本插件的`importRules`目录下，并在运行时作为模块热载入，然后本插件会从头到尾遍历`importRules`数组的元素，从每个ImportRule对象中获取要导入的表，然后一行一行得把读到的数据给用户自定义的rowImport方法，把经过用户自定义的处理方式处理后的结果返回，并导入到Y3项目的物编数据中。
@@ -77,5 +77,6 @@ Y3开发助手:修改CSV表格中的物编项目的名称
 2. `git clone` 或其他方式下载本插件项目源码
 3. 使用vscode打开项目文件夹
 4. 在命令行、终端cd到项目目录下使用`npm install`命令，安装相关依赖
-5. 使用`tsc`命令，将本项目的TS代码编译为js
-6. 点击vscode的上方菜单栏`run`，在其中选择运行方式，启动本插件
+5. 使用`npm install -g typescript`以支持tsc
+6. 使用`tsc`命令，将本项目的TS代码编译为js
+7. 点击vscode的上方菜单栏`run`，在其中选择运行方式，启动本插件

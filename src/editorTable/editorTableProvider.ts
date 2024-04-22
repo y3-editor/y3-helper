@@ -320,7 +320,7 @@ export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbo
     let editorTableJsonData:any = JSON.parse(document.getText());
     for (let i = 0; i < document.lineCount; i++){
       let line = document.lineAt(i).text;
-      const matches = line.match(/"\s*([^"]+)"\s*(?=:)/g);// 正则表达式匹配双引号内，且后继一个:的字符串，视为Json的键
+      const matches = line.match(/"\s*([^"]+)"\s*(?=:)/g);// 正则表达式匹配双引号内，且后缀为':'的字符串，视为Json的键
       if (matches) {
         matches.forEach(match => {
           match = match.substring(1, match.length - 1);

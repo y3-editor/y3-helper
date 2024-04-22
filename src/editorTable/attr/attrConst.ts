@@ -1,5 +1,6 @@
 /**
- * 物编数据项目中的自定义属性的枚举
+ * 物编数据项目中的自定义属性的枚举 
+ * 如果要支持自定义属性的导入可能会用到此文件
  */
 enum KV_VALUE_TYPE {
     STRING = 0,
@@ -191,6 +192,10 @@ export const EDITOR_KV_TYPE_TO_GAME: Readonly<{ [key: string]:number }> = {
     PhysicsEntity: KV_VALUE_TYPE.PHYSICS_ENTITY
 };
 
+
+/**
+ * 物编项目中的kv字段下的默认item模板
+ */
 export const kvDefaultItem:Readonly<{}> = {
     "": {
         "annotation": "",
