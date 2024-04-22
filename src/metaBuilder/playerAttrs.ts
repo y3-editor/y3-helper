@@ -2,8 +2,7 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
 const template =
-`---@diagnostic disable-next-line: duplicate-doc-alias
----@enum(key) y3.Const.PlayerAttr
+`---@enum(key, partial) y3.Const.PlayerAttr
 local PlayerAttr = {
 %{ATTR_ENUMS}
 }
