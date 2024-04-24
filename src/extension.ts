@@ -57,7 +57,7 @@ class Helper {
         let server: NetworkServer | undefined;
         vscode.commands.registerCommand('y3-helper.networkServer', async () => {
             server?.dispose();
-            server = new NetworkServer('127.0.0.1', 25895);
+            server = new NetworkServer(25895, 25896);
         });
     }
 
