@@ -245,6 +245,11 @@
                 "title": "复制名称",
                 "enablement": "viewItem == 玩家属性",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.networkServer",
+                "title": "启动网络服务器（用于测试`network`库）",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {

@@ -10,6 +10,7 @@ import { GameLauncher } from './launchGame';
 import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
 import { TemplateGenerator } from './editorTable/templateGenerator';
 import { englishPathToChinese } from './constants';
+import { NetworkServer } from './networkServer';
 import {
     CSVimporter, EditorTableDataProvider, GoEditorTableSymbolProvider,
     GoEditorTableDocumentSymbolProvider, FileNode,
@@ -49,6 +50,14 @@ class Helper {
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
             runShell("执行命令", args[0], args.slice(1));
+        });
+    }
+
+    private registerCommandOfNetworkServer() {
+        let server: NetworkServer | undefined;
+        vscode.commands.registerCommand('y3-helper.networkServer', async () => {
+            server?.dispose();
+            server = new NetworkServer('127.0.0.1', 25895);
         });
     }
 
@@ -696,6 +705,7 @@ class Helper {
         this.checkNewProject();
         this.reloadEnvWhenConfigChange();
 
+        this.registerCommandOfNetworkServer();
         this.registerCommonCommands();
 
         this.registerCommandOfCSVeditor();
