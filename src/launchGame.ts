@@ -22,6 +22,7 @@ export class GameLauncher {
         args.push('subtype@editor_game');
         args.push('release@true');
         args.push('editor_map_path@' + projectUri.fsPath);
+        args.push('lua_dummy@sp ce');
         if (luaArgs) {
             for (let key in luaArgs) {
                 args.push(key + "@" + luaArgs[key].toString());
