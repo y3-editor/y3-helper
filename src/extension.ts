@@ -699,10 +699,8 @@ class Helper {
 
         this.registerCommandOfGenerateTemplates();
 
-        
         this.registerCommandOfOpenFile();
         
-        this.checkNewProject();
         this.reloadEnvWhenConfigChange();
 
         this.registerCommandOfNetworkServer();
@@ -710,12 +708,14 @@ class Helper {
 
         this.registerCommandOfCSVeditor();
 
-        mainMenu.init();
-        metaBuilder.init();
-
-        this.initEditorTableWatcher();
-
-        env.reload();
+        setTimeout(() => {
+            env.reload();
+            this.checkNewProject();
+            mainMenu.init();
+            metaBuilder.init();
+    
+            this.initEditorTableWatcher();
+        }, 100);
     }
 }
 
