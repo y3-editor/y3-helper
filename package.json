@@ -99,6 +99,16 @@
                     "command": "y3-helper.copyPlayerAttrName",
                     "when": "viewItem == 玩家属性",
                     "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyEventID",
+                    "when": "viewItem == 自定义事件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyEventName",
+                    "when": "viewItem == 自定义事件",
+                    "group": "copy"
                 }
             ]
         },
@@ -244,6 +254,18 @@
                 "command": "y3-helper.copyPlayerAttrName",
                 "title": "复制名称",
                 "enablement": "viewItem == 玩家属性",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyEventID",
+                "title": "复制ID",
+                "enablement": "viewItem == 自定义事件",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyEventName",
+                "title": "复制名称",
+                "enablement": "viewItem == 自定义事件",
                 "category": "Y3开发助手"
             },
             {

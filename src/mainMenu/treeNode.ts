@@ -11,6 +11,7 @@ export interface TreeNodeOptional {
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
     show?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
+    data?: any;
 }
 
 export class TreeNode extends vscode.TreeItem {
@@ -18,6 +19,7 @@ export class TreeNode extends vscode.TreeItem {
     parent?: TreeNode;
     show?: TreeNodeOptional["show"] = true;
     update?: TreeNodeOptional["update"];
+    data?: any;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
         if (optional) {
@@ -29,6 +31,7 @@ export class TreeNode extends vscode.TreeItem {
             this.update = optional.update;
             this.show = optional.show ?? true;
             this.collapsibleState = optional.collapsibleState;
+            this.data = optional.data;
         }
         this.updateChilds();
     }

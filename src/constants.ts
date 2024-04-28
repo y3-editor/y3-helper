@@ -108,3 +108,22 @@ export const defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }
     destructible: "./y3-helper/editor_table/csv/可破坏物",
     sound: "./y3-helper/editor_table/csv/声音"
 };
+
+export const typeID: { [key: number]: [string, string]} = {
+    100000: ["number", "实数"],
+    100001: ["boolean", "布尔"],
+    100002: ["integer", "整数"],
+    100003: ["string", "字符串"],
+    100004: ["Point", "点"],
+    100006: ["Unit", "单位"],
+    100010: ["UnitKey", "单位类型"],
+    100011: ["table", "表"],
+    100014: ["Ability", "技能"],
+    100025: ["Player", "玩家"],
+    100026: ["UnitGroup", "单位组"],
+    100027: ["PlayerGroup", "玩家组"],
+    100031: ["Item", "物品"],
+    100032: ["ItemKey", "物品类型"],
+    100039: ["AbilityKey", "技能类型"],
+    100263: ["Mover", "运动器"],
+};
