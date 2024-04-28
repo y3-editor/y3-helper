@@ -16,9 +16,12 @@ export class 自定义事件 extends TreeNode {
                 node.childs = (await define.自定义事件.getEvents()).map(event => {
                     let args = event.args.map(arg => arg.name);
                     return new TreeNode(event.name, {
+                        iconPath: new vscode.ThemeIcon('symbol-event'),
                         description: `${event.id.toString()}(${args.join(',')})`,
-                        contextValue: '自定义事件',
                         data: event.id,
+                        childs: event.args.map(arg => new TreeNode(arg.name, {
+                            description: `${arg.desc}(${arg.luaType})`,
+                        })),
                     });
                 });
             },
