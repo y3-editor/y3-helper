@@ -2,6 +2,7 @@ import { UnitAttrs } from './unitAttrs';
 import { BaseBuilder } from './baseBuilder';
 import { env } from '../env';
 import { PlayerAttrs } from './playerAttrs';
+import { CustomEvents } from './customEvents';
 
 let path = 'y3-helper/meta';
 
@@ -36,14 +37,19 @@ export function init() {
 
     let unitAttrs = new UnitAttrs(path + '/unitAttrs.lua');
     let playerAttrs = new PlayerAttrs(path + '/playerAttrs.lua');
+    let customEvents = new CustomEvents(path + '/customEvents.lua');
 
     initBuilder.addFile(unitAttrs);
     initBuilder.addFile(playerAttrs);
+    initBuilder.addFile(customEvents);
 
     unitAttrs.onDidChange(() => {
         initBuilder.update();
     });
     playerAttrs.onDidChange(() => {
+        initBuilder.update();
+    });
+    customEvents.onDidChange(() => {
         initBuilder.update();
     });
 }
