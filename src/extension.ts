@@ -18,9 +18,7 @@ import {
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
 import * as metaBuilder from './metaBuilder';
-
-
-
+import * as debug from './debug';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -206,7 +204,7 @@ class Helper {
                     return;
                 }
 
-                await vscode.debug.startDebugging(vscode.workspace.workspaceFolders?.[0], "💡附加");
+                await debug.attach();
             });
         });
     }
@@ -713,7 +711,8 @@ class Helper {
             this.checkNewProject();
             mainMenu.init();
             metaBuilder.init();
-    
+            debug.init(this.context);
+
             this.initEditorTableWatcher();
         }, 100);
     }

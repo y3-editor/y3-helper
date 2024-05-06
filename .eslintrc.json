@@ -25,6 +25,7 @@
     "ignorePatterns": [
         "out",
         "dist",
+        "3rd",
         "**/*.d.ts"
     ]
 }
