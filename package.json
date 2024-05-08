@@ -286,6 +286,16 @@
                     "ignoreSync": true,
                     "pattern": "(^.*[\\\\/]Editor.exe$)|(^$)"
                 },
+                "Y3-Helper.DebuggerVersion": {
+                    "title": "调试器版本",
+                    "description": "5月9号编辑器更新后改用新版。版本对不上的话会崩溃。",
+                    "type": "string",
+                    "enum": [
+                        "old",
+                        "new"
+                    ],
+                    "default": "old"
+                },
                 "Y3-Helper.editorTablceDataExcelFolder": {
                     "title": "存放物编数据的Excel表格所在的文件夹的相对路径",
                     "description": "注意：Execl表中的物编数据会按此相对路径下的importRules.mjs代码所实现的导入规则来导入，生成Excel物编数据模板时也会生成到此文件夹下",
