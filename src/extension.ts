@@ -209,7 +209,11 @@ class Helper {
         });
     }
 
-    
+    private registerCommandOfAttach() {
+        vscode.commands.registerCommand('y3-helper.attach', async () => {
+            await debug.attach();
+        });
+    }
 
     /**
      * 根据用户配置的路径 导入全部物编数据(CSV)
@@ -690,6 +694,7 @@ class Helper {
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
+        this.registerCommandOfAttach();
 
         this.registerEditorTableView();
         this.registerCommandOfImportEditorTableDataFromCSV();

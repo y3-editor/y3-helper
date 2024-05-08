@@ -47,8 +47,15 @@ export class 功能 extends TreeNode {
                         command: 'y3-helper.launchGameAndAttach',
                         title: '启动游戏并附加调试器',
                     },
-                    iconPath: new vscode.ThemeIcon('run-all'),
+                    iconPath: new vscode.ThemeIcon('debug-alt'),
                     description: 'Shift + F5',
+                }),
+                new TreeNode('附加调试器', {
+                    command: {
+                        command: 'y3-helper.attach',
+                        title: '附加调试器',
+                    },
+                    iconPath: new vscode.ThemeIcon('run-all'),
                 }),
                 new TreeNode('查看物编数据', {
                     command: {
