@@ -1,12 +1,20 @@
 import * as vscode from 'vscode';
 import { env } from './env';
+import * as tools from './tools';
 
-const relativePath = '3rd/debugger-old/js/extension.js';
+const debuggerPath = '3rd/debugger-old';
 
-let debug = require('../' + relativePath);
+let debug = require('../' + debuggerPath + '/js/extension.js');
+
+function update_debugger_path(context: vscode.ExtensionContext) {
+    if (!env.scriptUri) {
+        return;
+    }
+    tools.writeFile(env.scriptUri, 'log/debugger_path', context.extensionUri.fsPath);
+}
 
 export function init(context: vscode.ExtensionContext) {
-    const extensionUri = vscode.Uri.joinPath(context.extensionUri, relativePath);
+    const extensionUri = vscode.Uri.joinPath(context.extensionUri, debuggerPath);
     let debuggerContext: vscode.ExtensionContext = {
         subscriptions:                  context.subscriptions,
         workspaceState:                 context.workspaceState,
@@ -28,6 +36,11 @@ export function init(context: vscode.ExtensionContext) {
         extension:                      context.extension,
     };
     debug.activate(debuggerContext);
+
+    update_debugger_path(debuggerContext);
+    env.onDidChange(() => {
+        update_debugger_path(debuggerContext);
+    });
 }
 
 export async function attach() {
