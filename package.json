@@ -288,13 +288,13 @@
                 },
                 "Y3-Helper.DebuggerVersion": {
                     "title": "调试器版本",
-                    "description": "5月9号编辑器更新后改用新版。版本对不上的话会崩溃。",
+                    "description": "5月9号编辑器更新后需要使用新版调试器。版本对不上的话会崩溃。",
                     "type": "string",
                     "enum": [
                         "old",
                         "new"
                     ],
-                    "default": "old"
+                    "default": "new"
                 },
                 "Y3-Helper.editorTablceDataExcelFolder": {
                     "title": "存放物编数据的Excel表格所在的文件夹的相对路径",
