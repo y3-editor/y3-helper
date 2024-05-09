@@ -42,7 +42,7 @@ exports.initial = {
         }
         return [
             {
-                type: 'lua',
+                type: 'y3lua',
                 request: 'launch',
                 name: 'Debug',
                 program: program
@@ -57,20 +57,20 @@ exports.dynamic = {
         let program = createDefaultProgram(folder);
         if (program) {
             configurations.push({
-                type: 'lua',
+                type: 'y3lua',
                 request: 'launch',
                 name: 'Debug Current File',
                 program: program
             });
         }
         configurations.push({
-            type: 'lua',
+            type: 'y3lua',
             request: 'attach',
             name: 'Attach TCP',
             address: "127.0.0.1:4278"
         });
         configurations.push({
-            type: 'lua',
+            type: 'y3lua',
             request: 'attach',
             name: 'Attach Process',
             processId: "${command:pickProcess}"
@@ -212,7 +212,7 @@ function resolveConfig(folder, config) {
     const platname = platformName(config)
     const settings = vscode.workspace.getConfiguration("lua.debug.settings");
     mergeConfigurations(config, platname)
-    config.type = 'lua';
+    config.type = 'y3lua';
     if (config.request != 'attach') {
         config.request = 'launch';
     }
