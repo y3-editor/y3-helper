@@ -2,17 +2,9 @@ import * as vscode from 'vscode';
 import { env } from './env';
 import * as tools from './tools';
 
-const debuggerPathOld = '3rd/debugger-old';
-const debuggerPathNew = '3rd/debugger-new';
+const debuggerPath = '3rd/debugger';
 
 export function init(context: vscode.ExtensionContext) {
-    let debuggerPath: string;
-    if (vscode.workspace.getConfiguration('Y3-Helper').get('DebuggerVersion') === 'new') {
-        debuggerPath = debuggerPathNew;
-    } else {
-        debuggerPath = debuggerPathOld;
-    }
-
     const extensionUri = vscode.Uri.joinPath(context.extensionUri, debuggerPath);
     let debuggerContext: vscode.ExtensionContext = {
         subscriptions:                  context.subscriptions,
@@ -48,12 +40,6 @@ export function init(context: vscode.ExtensionContext) {
     update_debugger_path();
     env.onDidChange(() => {
         update_debugger_path();
-    });
-
-    vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('Y3-Helper.DebuggerVersion')) {
-            vscode.window.showInformationMessage('修改此设置需要重启VSCode生效！');
-        }
     });
 }
 
