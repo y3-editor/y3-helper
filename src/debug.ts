@@ -51,5 +51,6 @@ export async function attach() {
         "address": "127.0.0.1:12399",
         "outputCapture": [],
         "stopOnEntry": false,
+        "sourceCoding": "utf8",
     });
 }
