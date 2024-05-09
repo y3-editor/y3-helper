@@ -192,7 +192,7 @@ function m.listen(protocol, address, port)
     selector:event_add(fd, SELECT_READ, function ()
         local new_fd, err = fd:accept()
         if new_fd == nil then
-            fd:close()
+            s:close()
             on_event(s, "error", err)
             return
         elseif new_fd == false then
@@ -270,6 +270,10 @@ local tasks = {}
 
 function m.async(func)
     tasks[#tasks+1] = func
+end
+
+function m.add_fd(fd, event, func)
+    selector:event_add(fd, event, func)
 end
 
 function m.update(timeout)

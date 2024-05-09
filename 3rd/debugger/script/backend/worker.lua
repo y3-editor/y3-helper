@@ -718,10 +718,10 @@ local function getExceptionType(errcode, skip)
             if info.what ~= 'C' then
                 return "runtime"
             end
-            if rdebug.eqaul(info.func, GlobalFunction "assert") then
+            if rdebug.equal(info.func, GlobalFunction "assert") then
                 return "assert"
             end
-            if rdebug.eqaul(info.func, GlobalFunction "error") then
+            if rdebug.equal(info.func, GlobalFunction "error") then
                 return "error"
             end
         end
@@ -751,10 +751,10 @@ local function getExceptionCaught(errcode, skip)
         if level >= 100 then
             return 'native'
         end
-        if rdebug.eqaul(info.func, pcall) then
+        if rdebug.equal(info.func, pcall) then
             return 'lua'
         end
-        if rdebug.eqaul(info.func, xpcall) then
+        if rdebug.equal(info.func, xpcall) then
             return 'lua'
         end
         level = level + 1
