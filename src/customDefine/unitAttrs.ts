@@ -46,7 +46,7 @@ export class UnitAttrs extends BaseDefine {
             // 自定义单位属性
             if (Array.isArray(json.c)) {
                 for (let item of json.c) {
-                    let name = decodeURI(item.items?.[1]?.desc);
+                    let name = item.items?.[1]?.desc;
                     let key  = item.items?.[1]?.key;
                     if (name && key && !mark.has(key)) {
                         attrs.push({name, key});
@@ -57,7 +57,7 @@ export class UnitAttrs extends BaseDefine {
             // 复合属性
             if (Array.isArray(json.p)) {
                 for (let item of json.p) {
-                    let name = decodeURI(item.items?.[1]?.d);
+                    let name = item.items?.[1]?.d;
                     let key  = item.items?.[1]?.k;
                     if (name && key && !mark.has(key)) {
                         attrs.push({name, key});

@@ -55,7 +55,7 @@ export class Events extends BaseDefine {
             if (Array.isArray(json.group_info)) {
                 for (let item of json.group_info) {
                     let id = item.items?.[0];
-                    let name = decodeURI(item.items?.[1]);
+                    let name = item.items?.[1];
                     if (id && name) {
                         events.push({name, id: id, args: []});
                     }
@@ -67,7 +67,7 @@ export class Events extends BaseDefine {
                     continue;
                 }
                 for (let item of conf) {
-                    let name = decodeURI(item[0]);
+                    let name = item[0];
                     let type = item[1];
                     if (name && type) {
                         event.args.push({

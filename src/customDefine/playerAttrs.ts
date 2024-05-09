@@ -46,7 +46,7 @@ export class PlayerAttrs extends BaseDefine {
                 return attrs;
             }
             for (let item of json.role_res_types) {
-                let name = decodeURI(item.items?.[1]?.name);
+                let name = item.items?.[1]?.name;
                 let key  = item.items?.[1]?.key;
                 if (name && key) {
                     attrs.push({name, key});
