@@ -707,7 +707,7 @@ local ERREVENT_ERRMEM <const> = 0x04
 local ERREVENT_ERRERR <const> = 0x05
 local ERREVENT_PANIC <const> = 0x10
 
-local function GlobalFunction(func, name)
+local function GlobalFunction(name)
     return rdebug.fieldv(rdebug._G, name)
 end
 
