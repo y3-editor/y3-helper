@@ -41,6 +41,31 @@ export function init(context: vscode.ExtensionContext) {
     env.onDidChange(() => {
         update_debugger_path();
     });
+
+    let launch = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+    launch.text = '✨启动';
+    launch.tooltip = '启动游戏并附加调试器';
+    launch.command = 'y3-helper.launchGameAndAttach';
+
+    let attach = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+    attach.text = '💡附加';
+    attach.tooltip = '附加调试器';
+    attach.command = 'y3-helper.attach';
+
+    function update_items() {
+        if (vscode.workspace.getConfiguration('Y3-Helper').get('ShowStatusBarItem')) {
+            launch.show();
+            attach.show();
+        } else {
+            launch.hide();
+            attach.hide();
+        }
+    }
+
+    update_items();
+    vscode.workspace.onDidChangeConfiguration(() => {
+        update_items();
+    });
 }
 
 export async function attach() {
