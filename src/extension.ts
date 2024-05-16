@@ -19,6 +19,7 @@ import {
 } from './editorTable';
 import * as metaBuilder from './metaBuilder';
 import * as debug from './debug';
+import { EditorLauncher } from './launchEditor';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -205,6 +206,18 @@ class Helper {
                 }
 
                 await debug.attach();
+            });
+        });
+    }
+
+    private registerCommandOfLaunchEditor() {
+        vscode.commands.registerCommand('y3-helper.launchEditor', async () => {
+            await vscode.window.withProgress({
+                title: '正在启动编辑器...',
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let editorLauncher = new EditorLauncher();
+                await editorLauncher.launch();
             });
         });
     }
@@ -695,6 +708,7 @@ class Helper {
         this.registerCommandOfLaunchGame();
         this.registerCommandOfLaunchGameAndAttach();
         this.registerCommandOfAttach();
+        this.registerCommandOfLaunchEditor();
 
         this.registerEditorTableView();
         this.registerCommandOfImportEditorTableDataFromCSV();

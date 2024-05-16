@@ -57,6 +57,13 @@ export class 功能 extends TreeNode {
                     },
                     iconPath: new vscode.ThemeIcon('run-all'),
                 }),
+                new TreeNode('在编辑器中打开', {
+                    command: {
+                        command: 'y3-helper.launchEditor',
+                        title: '在编辑器中打开',
+                    },
+                    iconPath: new vscode.ThemeIcon('mortar-board'),
+                }),
                 new TreeNode('查看物编数据', {
                     command: {
                         command: 'y3-helper.editorTableView.focus',

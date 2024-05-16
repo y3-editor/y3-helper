@@ -144,6 +144,11 @@
                 "category": "Y3开发助手"
             },
             {
+                "command": "y3-helper.launchEditor",
+                "title": "在编辑器中打开",
+                "category": "Y3开发助手"
+            },
+            {
                 "command": "y3-helper.importEditorTableDataFromCSV",
                 "title": "导入物编数据（CSV）",
                 "category": "Y3开发助手"
