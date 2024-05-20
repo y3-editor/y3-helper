@@ -13,7 +13,7 @@ let mainNode = new TreeNode('主菜单', {
         new 功能,
         new 单位属性,
         new 玩家属性,
-        //new 界面,
+        new 界面,
         new 自定义事件,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {

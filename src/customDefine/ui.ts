@@ -22,7 +22,9 @@ export class UI extends BaseDefine {
         });
     }
 
-    private _uiCache?: Node[];
+    private _uiCache?: {
+        预设: Node[];
+    };
 
     get watchPattern() {
         if (!env.mapUri) {
@@ -57,7 +59,9 @@ export class UI extends BaseDefine {
     }
 
     private async loadUI() {
-        let nodes: Node[] = [];
+        let nodes = {
+            预设: [] as Node[],
+        };
         try {
             if (!env.mapUri) {
                 return nodes;
@@ -68,12 +72,15 @@ export class UI extends BaseDefine {
                 if (fileType !== vscode.FileType.File) {
                     continue;
                 };
+                if (fileName === 'SceneUI.json') {
+                    continue;
+                };
                 if (!fileName.endsWith('.json')) {
                     continue;
                 };
                 let node = await this.loadUIFile(vscode.Uri.joinPath(dir, fileName));
                 if (node) {
-                    nodes.push(node);
+                    nodes.预设.push(node);
                 }
             }
         } finally {
