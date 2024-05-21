@@ -7,7 +7,7 @@ local PlayerAttr = {
 %{ATTR_ENUMS}
 }
 
-y3.util.tableMerge(y3.const.PlayerAttr, PlayerAttr)
+y3.util.tableMerge(y3.const.PlayerAttr or {}, PlayerAttr)
 `;
 
 export class PlayerAttrs extends BaseBuilder {
