@@ -27,6 +27,7 @@ class UINode extends TreeNode {
         super(ui.name, {
             update: async (node) => {
                 node.iconPath = icons.get(ui.type);
+                node.tooltip = ui.uid;
                 node.childs = ui.childs.length > 0
                     ? ui.childs.map(ui => new UINode(ui))
                     : undefined;
@@ -61,7 +62,24 @@ export class 界面 extends TreeNode {
                             .画板
                             .map(ui => new UINode(ui));
                     }
-                })
+                }),
+                new TreeNode('元件', {
+                    iconPath: new vscode.ThemeIcon('extensions'),
+
+                    show: async () => {
+                        return env.mapUri !== undefined;
+                    },
+
+                    update: async (node) => {
+                        if (env.mapUri === undefined) {
+                            return;
+                        }
+
+                        node.childs = (await define.界面.getUI())
+                            .元件
+                            .map(ui => new UINode(ui));
+                    }
+                }),
             ],
         });
     }
