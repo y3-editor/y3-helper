@@ -23,13 +23,14 @@ icons.set(27, new vscode.ThemeIcon('settings-gear')); // Chat_Box
 icons.set(38, new vscode.ThemeIcon('sparkle')); // Sequence_Animation
 
 class UINode extends TreeNode {
-    constructor(ui: Node) {
+    constructor(ui: Node, type: string) {
         super(ui.name, {
+            iconPath: icons.get(ui.type),
+            contextValue: type,
             update: async (node) => {
-                node.iconPath = icons.get(ui.type);
                 node.tooltip = ui.uid;
                 node.childs = ui.childs.length > 0
-                    ? ui.childs.map(ui => new UINode(ui))
+                    ? ui.childs.map(ui => new UINode(ui, type))
                     : undefined;
             }
         });
@@ -60,7 +61,7 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define.界面.getUIPackage())
                             .画板
-                            .map(ui => new UINode(ui));
+                            .map(ui => new UINode(ui, '画板'));
                     }
                 }),
                 new TreeNode('场景UI', {
@@ -77,7 +78,7 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define.界面.getUIPackage())
                             .场景UI
-                            .map(ui => new UINode(ui));
+                            .map(ui => new UINode(ui, '场景UI'));
                     }
                 }),
                 new TreeNode('元件', {
@@ -94,10 +95,38 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define.界面.getUIPackage())
                             .元件
-                            .map(ui => new UINode(ui));
+                            .map(ui => new UINode(ui, '元件'));
                     }
                 }),
             ],
         });
     }
 };
+
+vscode.commands.registerCommand('y3-helper.copyUIName', (node: TreeNode) => {
+    if (typeof node.label !== 'string') {
+        return;
+    }
+    vscode.env.clipboard.writeText(node.label);
+});
+
+vscode.commands.registerCommand('y3-helper.copyUIPath', (node: TreeNode) => {
+    let paths: string[] = [];
+    // 递归父节点将所有的label拼接起来
+    let curNode = node;
+    while (curNode.contextValue === '画板') {
+        paths.unshift(curNode.label as string);
+        if (curNode.parent === undefined) {
+            break;
+        }
+        curNode = curNode.parent;
+    }
+    vscode.env.clipboard.writeText(paths.join('.'));
+});
+
+vscode.commands.registerCommand('y3-helper.copyUIUID', (node: TreeNode) => {
+    if (typeof node.tooltip !== 'string') {
+        return;
+    }
+    vscode.env.clipboard.writeText(node.tooltip);
+});

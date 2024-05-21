@@ -109,6 +109,21 @@
                     "command": "y3-helper.copyEventName",
                     "when": "viewItem == 自定义事件",
                     "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIName",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIPath",
+                    "when": "viewItem == 画板",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIUID",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                    "group": "copy"
                 }
             ]
         },
@@ -271,6 +286,24 @@
                 "command": "y3-helper.copyEventName",
                 "title": "复制名称",
                 "enablement": "viewItem == 自定义事件",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyUIName",
+                "title": "复制名称",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyUIPath",
+                "title": "复制路径",
+                "enablement": "viewItem == 画板",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyUIUID",
+                "title": "复制ID",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
                 "category": "Y3开发助手"
             },
             {
