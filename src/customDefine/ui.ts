@@ -13,6 +13,12 @@ type Node = {
     childs: Node[],
 };
 
+type UIPackage = {
+    画板: Node[],
+    场景UI: Node[],
+    元件: Node[],
+};
+
 export class UI extends BaseDefine {
     constructor() {
         super();
@@ -22,9 +28,7 @@ export class UI extends BaseDefine {
         });
     }
 
-    private _uiCache?: {
-        预设: Node[];
-    };
+    private _uiCache?: UIPackage;
 
     get watchPattern() {
         if (!env.mapUri) {
@@ -42,6 +46,9 @@ export class UI extends BaseDefine {
         if (typeof json !== 'object') {
             return;
         }
+        if (json['name'] === undefined) {
+            return;
+        }
 
         function makeNode(object: any): Node | undefined {
             if (typeof object !== 'object') {
@@ -51,7 +58,7 @@ export class UI extends BaseDefine {
                 name: object['name'],
                 uid: object['uid'],
                 type: object['type'],
-                childs: object['children'].map(makeNode),
+                childs: object['children']?.map(makeNode) ?? [],
             };
         }
 
@@ -59,8 +66,10 @@ export class UI extends BaseDefine {
     }
 
     private async loadUI() {
-        let nodes = {
-            预设: [] as Node[],
+        let nodes: UIPackage = {
+            画板: [],
+            场景UI: [],
+            元件: [],
         };
         try {
             if (!env.mapUri) {
@@ -75,12 +84,15 @@ export class UI extends BaseDefine {
                 if (fileName === 'SceneUI.json') {
                     continue;
                 };
+                if (fileName === 'ui_config.json') {
+                    continue;
+                };
                 if (!fileName.endsWith('.json')) {
                     continue;
                 };
                 let node = await this.loadUIFile(vscode.Uri.joinPath(dir, fileName));
                 if (node) {
-                    nodes.预设.push(node);
+                    nodes.画板.push(node);
                 }
             }
         } finally {

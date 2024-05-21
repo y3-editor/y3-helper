@@ -7,5 +7,5 @@ export const define = {
     单位属性: new UnitAttrs,
     玩家属性: new PlayerAttrs,
     自定义事件: new Events,
-    画板: new UI,
+    界面: new UI,
 };

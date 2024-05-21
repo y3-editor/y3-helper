@@ -14,9 +14,13 @@ let icons: Map<number, vscode.ThemeIcon> = new Map();
 icons.set(1, new vscode.ThemeIcon('inspect')); // Button
 icons.set(3, new vscode.ThemeIcon('text-size')); // TextLabel
 icons.set(4, new vscode.ThemeIcon('graph-line')); // Image
+icons.set(5, new vscode.ThemeIcon('pulse')); // Progress
 icons.set(7, new vscode.ThemeIcon('symbol-number')); // Layout
 icons.set(10, new vscode.ThemeIcon('list-unordered')); // ScrollView
+icons.set(18, new vscode.ThemeIcon('compass-active')); // Buff_List
+icons.set(18, new vscode.ThemeIcon('compass')); // Buff_Item
 icons.set(27, new vscode.ThemeIcon('settings-gear')); // Chat_Box
+icons.set(38, new vscode.ThemeIcon('sparkle')); // Sequence_Animation
 
 class UINode extends TreeNode {
     constructor(ui: Node) {
@@ -41,7 +45,7 @@ export class 界面 extends TreeNode {
             },
 
             childs: [
-                new TreeNode('预设', {
+                new TreeNode('画板', {
                     iconPath: new vscode.ThemeIcon('layout-statusbar'),
 
                     show: async () => {
@@ -53,8 +57,8 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.画板.getUI())
-                            .预设
+                        node.childs = (await define.界面.getUI())
+                            .画板
                             .map(ui => new UINode(ui));
                     }
                 })
