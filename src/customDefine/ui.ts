@@ -51,7 +51,7 @@ export class UI extends BaseDefine {
         };
     }
 
-    private async loadUIFile(fileUri: vscode.Uri): Promise<Node|undefined> {
+    private async loadUI(fileUri: vscode.Uri): Promise<Node|undefined> {
         let jsonText = (await tools.readFile(fileUri))?.string;
         if (!jsonText) {
             return;
@@ -71,27 +71,24 @@ export class UI extends BaseDefine {
         }
     }
 
-    private async loadPrefeb(fileUri: vscode.Uri) {
-        let nodes: Node[] = [];
-
+    private async loadSceneUI(fileUri: vscode.Uri) {
         let jsonText = (await tools.readFile(fileUri))?.string;
         if (!jsonText) {
-            return nodes;
+            return undefined;
         }
         try {
             let json = JSON.parse(jsonText);
             if (typeof json !== 'object') {
-                return nodes;
+                return undefined;
+            }
+            
+            if (!Array.isArray(json['children'])) {
+                return undefined;
             }
 
-            let prefab_data = json['prefab_data'];
-            if (!prefab_data || typeof prefab_data !== 'object') {
-                return nodes;
-            }
-
-            for (const key in prefab_data) {
-                let prefeb = prefab_data[key];
-                let node = this.makeNode(prefeb['data']);
+            let nodes: Node[] = [];
+            for (const child of json['children']) {
+                let node = this.makeNode(child);
                 if (node) {
                     nodes.push(node);
                 }
@@ -102,7 +99,38 @@ export class UI extends BaseDefine {
         }
     }
 
-    private async loadUI() {
+    private async loadPrefeb(fileUri: vscode.Uri) {
+        let jsonText = (await tools.readFile(fileUri))?.string;
+        if (!jsonText) {
+            return undefined;
+        }
+        try {
+            let json = JSON.parse(jsonText);
+            if (typeof json !== 'object') {
+                return undefined;
+            }
+
+            let prefab_data = json['prefab_data'];
+            if (!prefab_data || typeof prefab_data !== 'object') {
+                return undefined;
+            }
+
+            let nodes: Node[] = [];
+            for (const key in prefab_data) {
+                let prefeb = prefab_data[key];
+                let node = this.makeNode(prefeb['data']);
+                if (node) {
+                    node.name = prefeb['name'];
+                    nodes.push(node);
+                }
+            }
+            return nodes;
+        } catch(e) {
+            tools.log.error(e as Error);
+        }
+    }
+
+    private async loadUIPackage() {
         let uiPackage: UIPackage = {
             画板: [],
             场景UI: [],
@@ -124,6 +152,10 @@ export class UI extends BaseDefine {
                 let uri = vscode.Uri.joinPath(dir, fileName);
                 switch (fileName) {
                     case 'SceneUI.json': {
+                        let nodes = await this.loadSceneUI(uri);
+                        if (nodes) {
+                            uiPackage.场景UI = nodes;
+                        }
                         continue;
                     }
                     case 'ui_config.json': {
@@ -134,7 +166,7 @@ export class UI extends BaseDefine {
                         continue;
                     }
                     default: {
-                        let node = await this.loadUIFile(uri);
+                        let node = await this.loadUI(uri);
                         if (node) {
                             uiPackage.画板.push(node);
                         }
@@ -146,9 +178,9 @@ export class UI extends BaseDefine {
         }
     }
 
-    public async getUI() {
+    public async getUIPackage() {
         if (!this._uiCache) {
-            this._uiCache = await this.loadUI();
+            this._uiCache = await this.loadUIPackage();
         }
         return this._uiCache;
     }

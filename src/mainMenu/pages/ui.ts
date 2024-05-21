@@ -58,8 +58,25 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.界面.getUI())
+                        node.childs = (await define.界面.getUIPackage())
                             .画板
+                            .map(ui => new UINode(ui));
+                    }
+                }),
+                new TreeNode('场景UI', {
+                    iconPath: new vscode.ThemeIcon('smiley'),
+
+                    show: async () => {
+                        return env.mapUri !== undefined;
+                    },
+
+                    update: async (node) => {
+                        if (env.mapUri === undefined) {
+                            return;
+                        }
+
+                        node.childs = (await define.界面.getUIPackage())
+                            .场景UI
                             .map(ui => new UINode(ui));
                     }
                 }),
@@ -75,7 +92,7 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.界面.getUI())
+                        node.childs = (await define.界面.getUIPackage())
                             .元件
                             .map(ui => new UINode(ui));
                     }
