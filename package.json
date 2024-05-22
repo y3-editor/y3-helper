@@ -14,7 +14,8 @@
         "Other"
     ],
     "activationEvents": [
-        "workspaceContains:y3/开发计划.md"
+        "workspaceContains:y3/开发计划.md",
+        "onDebugResolve:y3lua"
     ],
     "main": "./out/extension.js",
     "capabilities": {

@@ -90,7 +90,7 @@ local function init_standard()
 end
 
 ev.on('initializing', function(config)
-    showIntegerAsHex = config.configuration.variables.showIntegerAsHex
+    showIntegerAsHex = false --config.configuration.variables.showIntegerAsHex
     LUAVERSION = luaver.LUAVERSION
     isjit = luaver.isjit
     arrayBase = isjit and 0 or 1
