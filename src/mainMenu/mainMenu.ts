@@ -1,6 +1,6 @@
 import { env } from '../env';
 import * as vscode from 'vscode';
-import { TreeNode, onRefresh } from './treeNode';
+import { TreeNode, onRefresh } from '../treeNode';
 import { 功能 } from './pages/features';
 import { 环境 } from './pages/environments';
 import { 单位属性 } from './pages/unitAttrs';

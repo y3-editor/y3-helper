@@ -23,8 +23,23 @@ export function registerMethod(method: string, handler: Handler) {
 
 export class Client extends vscode.Disposable {
     constructor() {
-        super(() => {});
+        super(() => {
+            this.console.dispose();
+        });
+        const writeEmitter = new vscode.EventEmitter<string>();
+        this.console = vscode.window.createTerminal({
+            name: 'Y3助手控制台',
+            pty: {
+                onDidWrite: writeEmitter.event,
+                open: () => {
+                    writeEmitter.fire('\x1b[31mHello world\x1b[0m');
+                },
+                close: () => {}
+            },
+        });
     }
+
+    private console: vscode.Terminal;
 
     async recv(obj: Request) {
         let method = obj.method;
