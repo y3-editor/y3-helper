@@ -1,21 +1,20 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
 
-type Handler = (obj: { [key: string]: any }) => Promise<any>;
-type Request = {
+type Handler = (client: Client, params: { [key: string]: any }) => Promise<any>;
+interface Request {
     method: string,
     id: number,
     params: { [key: string]: any },
 };
 
-type Result = {
+interface Result {
     id: number,
     result?: any,
     error?: string,
 };
 
 let methods: Map<string, Handler> = new Map();
-
 
 export function registerMethod(method: string, handler: Handler) {
     methods.set(method, handler);
@@ -26,18 +25,25 @@ export class Client extends vscode.Disposable {
         super(() => {
             this.console.dispose();
         });
-        const writeEmitter = new vscode.EventEmitter<string>();
+        this.writeEmitter;
         this.console = vscode.window.createTerminal({
             name: 'Y3助手控制台',
             pty: {
-                onDidWrite: writeEmitter.event,
-                open: () => {
-                    writeEmitter.fire('\x1b[31mHello world\x1b[0m');
-                },
+                onDidWrite: this.writeEmitter.event,
+                open: () => {},
                 close: () => {}
             },
         });
+        this.console.show();
     }
+
+    private writeEmitter = new vscode.EventEmitter<string>();
+
+    print(msg: string) {
+        //把单独的 \n 替换为 \r\n，但要排除已有的 \r\n
+        msg = msg.replace(/(?<!\r)\n/g, '\r\n');
+        this.writeEmitter.fire(msg + '\r\n');
+    };
 
     private console: vscode.Terminal;
 
@@ -47,7 +53,7 @@ export class Client extends vscode.Disposable {
         if (handler) {
             let id = obj.id;
             try {
-                let result = await handler(obj);
+                let result = await handler(this, obj.params);
                 this.send({ id, result });
             } catch (e) {
                 if (e instanceof Error) {
@@ -55,6 +61,8 @@ export class Client extends vscode.Disposable {
                     this.send({ id, error: e.message });
                 }
             }
+        } else {
+            this.send({ id: obj.id, error: `未找到方法"${method}"` });
         }
     }
 
@@ -68,3 +76,12 @@ export class Client extends vscode.Disposable {
         this._sender = sender;
     }
 }
+
+interface PrintParams {
+    message: string;
+}
+
+registerMethod('print', async (client, params) => {
+    let p = params as PrintParams;
+    client.print(p.message);
+});
