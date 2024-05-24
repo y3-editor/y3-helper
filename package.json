@@ -315,6 +315,11 @@
                 "command": "y3-helper.networkServer",
                 "title": "启动网络服务器（用于测试`network`库）",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.testTerminal",
+                "title": "测试游戏控制台",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {
