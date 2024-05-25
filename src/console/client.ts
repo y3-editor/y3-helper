@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
+import * as iconv from "iconv-lite";
+import * as os from "os";
 
 type Handler = (client: Client, params: { [key: string]: any }) => Promise<any>;
 interface Request {
@@ -163,13 +165,15 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     private handleCommonInput(data: string) {
         data = data.replace(/[^\x20-\x7E\u4E00-\u9FA5]/g, ' ');
+        let newData = this.inputedData.slice(0, this.curOffset) + data + this.inputedData.slice(this.curOffset);
         this.curOffset += data.length;
-        this.refreshLine(this.inputedData.slice(0, this.curOffset) + data + this.inputedData.slice(this.curOffset));
+        this.refreshLine(newData);
     }
 
     private moveCursor(offset: number) {
+        let ansiOffset = iconv.encode(this.inputedData.slice(0, offset), 'gbk').length;
         let row = this.headPos[0];
-        let col = this.headPos[1] + offset;
+        let col = this.headPos[1] + ansiOffset;
         this.write(`\x1B[${row};${col}H`);
     }
 
