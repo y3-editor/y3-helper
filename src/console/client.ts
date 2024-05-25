@@ -1,25 +1,31 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
 import * as iconv from "iconv-lite";
-import * as os from "os";
 
-type Handler = (client: Client, params: { [key: string]: any }) => Promise<any>;
+type RequestHandler = (client: Client, params: any) => Promise<any>;
+type ResponseHandler = (result: Response) => void;
+
 interface Request {
     method: string,
     id: number,
-    params: { [key: string]: any },
+    params: any,
 };
 
-interface Result {
+interface Response {
     id: number,
     result?: any,
     error?: string,
 };
 
-let methods: Map<string, Handler> = new Map();
+let methods: Map<string, RequestHandler> = new Map();
+let requests: Map<string, ResponseHandler> = new Map();
 
-export function registerMethod(method: string, handler: Handler) {
+export function registerMethod(method: string, handler: RequestHandler) {
     methods.set(method, handler);
+}
+
+export function registerRequest(method: string, handler: ResponseHandler) {
+    requests.set(method, handler);
 }
 
 const CSI = {
@@ -56,7 +62,7 @@ const CSI = {
 };
 
 class Pseudoterminal implements vscode.Pseudoterminal {
-    constructor() {
+    constructor(private applyHandler: (data: string) => void) {
         this.onDidWrite = this.writeEmitter.event;
     }
 
@@ -115,10 +121,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     private applyInput(data: string) {
         this.saveHistory(data);
-        this.applyInputWithoutHistory(data);
-    }
-
-    private applyInputWithoutHistory(data: string) {
+        this.applyHandler(data);
     }
 
     private inputedData: string = '';
@@ -169,6 +172,9 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     handleInput(data: string): void {
+        if (this.disableInputed) {
+            return;
+        }
         if (data === '\r') { // 回车键
             this.applyInput(this.inputedData);
             this.write('\r\n');
@@ -298,6 +304,18 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     write(data: string) {
         this.writeEmitter.fire(data);
     };
+
+    private disableInputed: boolean = false;
+
+    disableInput() {
+        this.disableInputed = true;
+        this.write(CSI.CURSOR_HIDE);
+    }
+
+    enableInput() {
+        this.disableInputed = false;
+        this.write(CSI.CURSOR_SHOW);
+    }
 }
 
 export class Client extends vscode.Disposable {
@@ -305,7 +323,11 @@ export class Client extends vscode.Disposable {
         super(() => {
             this.terminal.dispose();
         });
-        this.pseudoterminal = new Pseudoterminal();
+        this.pseudoterminal = new Pseudoterminal(async (data) => {
+            this.terminalDisableInput();
+            await this.request('command', { data: data });
+            this.terminalEnableInput();
+        });
         this.terminal = vscode.window.createTerminal({
            name: 'Y3助手控制台',
            pty: this.pseudoterminal,
@@ -317,42 +339,81 @@ export class Client extends vscode.Disposable {
 
     private terminal: vscode.Terminal;
 
-    write(data: string) {
+    terminalWrite(data: string) {
         this.pseudoterminal.write(data);
     }
 
-    print(msg: string) {
+    terminalPrint(msg: string) {
         //把单独的 \n 或 \r 替换为 \r\n，但要排除已有的 \r\n
         msg = msg.replace(/(?<!\r)\n/g, '\r\n');
-        this.write(msg + '\r\n');
+        this.terminalWrite(msg + '\r\n');
     }
 
-    async recv(obj: Request) {
-        let method = obj.method;
-        let handler = methods.get(method);
-        if (handler) {
-            let id = obj.id;
-            try {
-                let result = await handler(this, obj.params);
-                this.send({ id, result });
-            } catch (e) {
-                if (e instanceof Error) {
-                    tools.log.error(e);
-                    this.send({ id, error: e.message });
+    terminalDisableInput() {
+        this.pseudoterminal.disableInput();
+    }
+
+    terminalEnableInput() {
+        this.pseudoterminal.enableInput();
+    }
+
+    async recv(obj: Request | Response) {
+        if ('method' in obj) {
+            let method = obj.method;
+            let handler = methods.get(method);
+            if (handler) {
+                let id = obj.id;
+                try {
+                    let result = await handler(this, obj.params);
+                    this.send({ id, result });
+                } catch (e) {
+                    if (e instanceof Error) {
+                        tools.log.error(e);
+                        this.send({ id, error: e.message });
+                    }
                 }
+            } else {
+                this.send({ id: obj.id, error: `未找到方法"${method}"` });
             }
         } else {
-            this.send({ id: obj.id, error: `未找到方法"${method}"` });
+            let id = obj.id;
+            let handler = this.requestMap.get(id);
+            if (handler) {
+                this.requestMap.delete(id);
+                handler(obj);
+            }
         }
     }
 
-    private _sender: (obj: Result) => void = (obj) => {};
+    private requestID = 0;
+    private requestMap: Map<number, ResponseHandler> = new Map();
+    async request(method: string, params: any) {
+        let requestID = this.requestID;
+        this.requestID++;
+        this.send({
+            method,
+            id: requestID,
+            params,
+        });
+        let result = await new Promise<Response>((resolve) => {
+            this.requestMap.set(requestID, (result) => {
+                resolve(result);
+            });
+        });
+        if (result.error) {
+            tools.log.error(result.error);
+            return;
+        }
+        return result.result;
+    }
 
-    private send(obj: Result) {
+    private _sender: (obj: Response | Request) => void = (obj) => {};
+
+    private send(obj: Response | Request) {
         this._sender(obj);
     }
 
-    onSend(sender: (obj: Result) => void) {
+    onSend(sender: (obj: Response | Request) => void) {
         this._sender = sender;
     }
 }
@@ -361,9 +422,8 @@ interface PrintParams {
     message: string;
 }
 
-registerMethod('print', async (client, params) => {
-    let p = params as PrintParams;
-    client.print(p.message);
+registerMethod('print', async (client, params: PrintParams) => {
+    client.terminalPrint(params.message);
 });
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
