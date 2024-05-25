@@ -70,40 +70,117 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     close() {};
 
+    private historyStack: string[] = [];
+    private historyIndex: number = 0;
+    private inputedBeforeHitEnter: string = '';
+
+    private saveHistory(data: string) {
+        let last = this.historyStack[this.historyStack.length - 1];
+        if (last === data) {
+            return;
+        }
+        this.historyStack.push(data);
+        if (this.historyStack.length > 100) {
+            this.historyStack.shift();
+        }
+    }
+
+    private lookLastHistory() {
+        if (this.historyStack.length === 0) {
+            return;
+        }
+        // 第一次按上箭头，要先临时保存当前的输入
+        if (this.historyIndex === 0) {
+            this.inputedBeforeHitEnter = this.inputedData;
+        }
+        if (this.historyIndex < this.historyStack.length) {
+            this.historyIndex++;
+            let data = this.historyStack[this.historyStack.length - this.historyIndex];
+            this.refreshLineWithoutUndo(data, data.length);
+        }
+    }
+
+    private lookNextHistory() {
+        if (this.historyIndex > 0) {
+            this.historyIndex--;
+            let data = this.historyStack[this.historyStack.length - this.historyIndex];
+            if (data) {
+                this.refreshLineWithoutUndo(data, data.length);
+            } else {
+                // 最后一次按下箭头，要恢复到原来的输入
+                this.refreshLineWithoutUndo(this.inputedBeforeHitEnter, this.inputedBeforeHitEnter.length);
+            }
+        }
+    }
+
     private applyInput(data: string) {
+        this.saveHistory(data);
+        this.applyInputWithoutHistory(data);
+    }
+
+    private applyInputWithoutHistory(data: string) {
     }
 
     private inputedData: string = '';
     private curOffset: number = 0;
     private headPos = [0, 0];
 
-    private refreshLine(data: string) {
+    private undoStack: [string, number][] = [];
+    private undoIndex: number = 0;
+
+    private saveUndoStack() {
+        this.undoStack[this.undoIndex] = [this.inputedData, this.curOffset];
+        this.undoIndex++;
+        this.undoStack.splice(this.undoIndex);
+        if (this.undoStack.length > 100) {
+            this.undoStack.shift();
+            this.undoIndex--;
+        }
+    }
+
+    private refreshLine(data: string, offset: number) {
+        this.refreshLineWithoutUndo(data, offset);
+        this.saveUndoStack();
+    }
+
+    private refreshLineWithoutUndo(data: string, offset: number) {
         this.moveCursor(0);
         this.write(CSI.CLEAR_LINE);
-        this.inputedData = data;
         this.write(data);
-        this.moveCursor(this.curOffset);
+        this.inputedData = data;
+        this.curOffset = offset;
+        this.moveCursor(offset);
+    }
+    
+    private undo() {
+        if (this.undoIndex > 1) {
+            this.undoIndex--;
+            let [data, offset] = this.undoStack[this.undoIndex - 1];
+            this.refreshLineWithoutUndo(data, offset);
+        }
+    }
+
+    private redo() {
+        if (this.undoIndex < this.undoStack.length) {
+            this.undoIndex++;
+            let [data, offset] = this.undoStack[this.undoIndex - 1];
+            this.refreshLineWithoutUndo(data, offset);
+        }
     }
 
     handleInput(data: string): void {
         if (data === '\r') { // 回车键
             this.applyInput(this.inputedData);
-            this.inputedData = '';
-            this.curOffset = 0;
             this.write('\r\n');
             this.newStart();
             return;
         } else if (data === '\x7F') { // 删除前一个文字
             if (this.curOffset > 0) {
-                this.refreshLine(this.inputedData.slice(0, this.curOffset - 1) + this.inputedData.slice(this.curOffset));
-                this.curOffset -= 1;
-                this.moveCursor(this.curOffset);
+                this.refreshLine(this.inputedData.slice(0, this.curOffset - 1) + this.inputedData.slice(this.curOffset), this.curOffset - 1);
             }
             return;
         } else if (data === '\x1B') { // ESC键
-            this.refreshLine('');
-            this.curOffset = 0;
-            this.moveCursor(this.curOffset);
+            this.refreshLine('', 0);
             return;
         } else if (data === '\x03') { // Ctrl+C
             vscode.env.clipboard.writeText(this.inputedData);
@@ -112,6 +189,17 @@ class Pseudoterminal implements vscode.Pseudoterminal {
             vscode.env.clipboard.readText().then((text) => {
                 this.handleCommonInput(text);
             });
+            return;
+            
+        } else if (data === '\x18') { // Ctrl+X
+            vscode.env.clipboard.writeText(this.inputedData);
+            this.refreshLine('', 0);
+            return;
+        } else if (data === '\x1A') { // Ctrl+Z
+            this.undo();
+            return;
+        } else if (data === '\x19') { // Ctrl+Y
+            this.redo();
             return;
         }
 
@@ -130,18 +218,14 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         switch (func) {
             case '~': // 一些特殊键
                 if (args[0] === 3) { // 删除键
-                    this.refreshLine(this.inputedData.slice(0, this.curOffset) + this.inputedData.slice(this.curOffset + 1));
-                } else if (args[0] === 1) { // Home键
-                    this.curOffset = 0;
-                    this.moveCursor(this.curOffset);
-                } else if (args[0] === 4) { // End键
-                    this.curOffset = this.inputedData.length;
-                    this.moveCursor(this.curOffset);
+                    this.refreshLine(this.inputedData.slice(0, this.curOffset) + this.inputedData.slice(this.curOffset + 1), this.curOffset);
                 }
                 break;
             case 'A': // 上箭头
+                this.lookLastHistory();
                 break;
             case 'B': // 下箭头
+                this.lookNextHistory();
                 break;
             case 'C': // 右箭头
                 if (this.curOffset < this.inputedData.length) {
@@ -155,6 +239,14 @@ class Pseudoterminal implements vscode.Pseudoterminal {
                     this.moveCursor(this.curOffset);
                 }
                 break;
+            case 'F': // End 键
+                this.curOffset = this.inputedData.length;
+                this.moveCursor(this.curOffset);
+                break;
+            case 'H': // Home 键
+                this.curOffset = 0;
+                this.moveCursor(this.curOffset);
+                break;
             case 'R': // 光标位置回应
                 this.responseCursorPos(args[0], args[1]);
                 break;
@@ -164,10 +256,14 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     private handleCommonInput(data: string) {
+        // 如果是单个的不可见字符，直接忽略
+        if (data.length === 1 && data.charCodeAt(0) < 32) {
+            return;
+        }
         data = data.replace(/[^\x20-\x7E\u4E00-\u9FA5]/g, ' ');
         let newData = this.inputedData.slice(0, this.curOffset) + data + this.inputedData.slice(this.curOffset);
-        this.curOffset += data.length;
-        this.refreshLine(newData);
+        this.refreshLine(newData, this.curOffset + data.length);
+        this.historyIndex = 0;
     }
 
     private moveCursor(offset: number) {
@@ -179,8 +275,13 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     private newStart() {
         this.write(`${CSI.GREEN}>${CSI.RESET_COLOR}`);
+        this.undoStack.splice(0);
+        this.undoIndex = 0;
+        this.historyIndex = 0;
+        this.inputedBeforeHitEnter = '';
         this.requestCursorPos((row, col) => {
             this.headPos = [row, col];
+            this.refreshLine('', 0);
         });
     }
 
