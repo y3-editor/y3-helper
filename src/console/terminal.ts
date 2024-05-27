@@ -35,7 +35,7 @@ const CSI = {
 };
 
 class Pseudoterminal implements vscode.Pseudoterminal {
-    constructor(private applyHandler: (data: string) => void) {
+    constructor(private applyHandler: (data: string) => Promise<void>) {
         this.onDidWrite = this.writeEmitter.event;
     }
 
@@ -64,7 +64,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         }
     }
 
-    private lookLastHistory() {
+    private async lookLastHistory() {
         if (this.historyStack.length === 0) {
             return;
         }
@@ -75,19 +75,19 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         if (this.historyIndex < this.historyStack.length) {
             this.historyIndex++;
             let data = this.historyStack[this.historyStack.length - this.historyIndex];
-            this.refreshLineWithoutUndo(data, data.length);
+            await this.refreshLineWithoutUndo(data, data.length);
         }
     }
 
-    private lookNextHistory() {
+    private async lookNextHistory() {
         if (this.historyIndex > 0) {
             this.historyIndex--;
             let data = this.historyStack[this.historyStack.length - this.historyIndex];
             if (data) {
-                this.refreshLineWithoutUndo(data, data.length);
+                await this.refreshLineWithoutUndo(data, data.length);
             } else {
                 // 最后一次按下箭头，要恢复到原来的输入
-                this.refreshLineWithoutUndo(this.inputedBeforeHitEnter, this.inputedBeforeHitEnter.length);
+                await this.refreshLineWithoutUndo(this.inputedBeforeHitEnter, this.inputedBeforeHitEnter.length);
             }
         }
     }
@@ -109,33 +109,35 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         }
     }
 
-    private refreshLine(data: string, offset: number) {
-        this.refreshLineWithoutUndo(data, offset);
+    private async refreshLine(data: string, offset: number) {
         this.saveUndoStack();
+        await this.refreshLineWithoutUndo(data, offset);
     }
 
-    private refreshLineWithoutUndo(data: string, offset: number) {
-        this.moveCursor(0);
-        this.write(CSI.CLEAR_LINE);
-        this.write(data);
-        this.inputedData = data;
-        this.curOffset = offset;
-        this.moveCursor(offset);
+    private async refreshLineWithoutUndo(data: string, offset: number) {
+        await this.queue(async () => {
+            this.moveCursor(0);
+            this.write(CSI.CLEAR_LINE);
+            this.write(data);
+            this.inputedData = data;
+            this.curOffset = offset;
+            this.moveCursor(offset);
+        });
     }
     
-    private undo() {
+    private async undo() {
         if (this.undoIndex > 1) {
             this.undoIndex--;
             let [data, offset] = this.undoStack[this.undoIndex - 1];
-            this.refreshLineWithoutUndo(data, offset);
+            await this.refreshLineWithoutUndo(data, offset);
         }
     }
 
-    private redo() {
+    private async redo() {
         if (this.undoIndex < this.undoStack.length) {
             this.undoIndex++;
             let [data, offset] = this.undoStack[this.undoIndex - 1];
-            this.refreshLineWithoutUndo(data, offset);
+            await this.refreshLineWithoutUndo(data, offset);
         }
     }
 
@@ -195,9 +197,8 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     private async applyInput(data: string) {
         this.saveHistory(data);
         this.write('\r\n');
+        await this.applyHandler(data);
         await this.newStart();
-
-        this.applyHandler(data);
     }
 
     private handleControl(data: string) {
@@ -272,7 +273,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         this.inputedBeforeHitEnter = '';
         let [row, col] = await this.requestCursorPos();
         this.headPos = [row, col];
-        this.refreshLine('', 0);
+        await this.refreshLine('', 0);
     }
 
     private cursorRequests: ((row: number, col: number) => void)[] = [];
@@ -293,7 +294,36 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         this.writeEmitter.fire(data);
     };
 
+    private resolveQueue: (() => void)[] = [];
+
+    private async queue<T>(callback: () => Promise<T>): Promise<T> {
+        await new Promise<void>(async (resolve) => {
+            this.resolveQueue.push(resolve);
+            if (this.resolveQueue.length === 1) {
+                resolve();
+            }
+        });
+
+        try {
+            let result = await callback();
+
+            return result;
+        } catch (e) {
+            throw e;
+        } finally {
+            this.resolveQueue.shift();
+            let next = this.resolveQueue[0];
+            next?.();
+        }
+    }
+
     async print(msg: string) {
+        await this.queue(async () => {
+            await this.rawPrint(msg);
+        });
+    }
+
+    private async rawPrint(msg: string) {
         // 清除当前行
         let row = this.headPos[0];
         let col = 0;
@@ -314,12 +344,15 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     disableInput() {
         this.disableInputed = true;
+
         this.write(CSI.CURSOR_HIDE);
     }
 
-    enableInput() {
+    async enableInput() {
         this.disableInputed = false;
         this.write(CSI.CURSOR_SHOW);
+
+        await this.refreshLineWithoutUndo(this.inputedData, this.curOffset);
     }
 }
 
@@ -342,8 +375,8 @@ export class Terminal extends vscode.Disposable {
         this.terminal.show();
     }
 
-    print(msg: string) {
-        this.pseudoterminal.print(msg);
+    async print(msg: string) {
+        await this.pseudoterminal.print(msg);
     }
 
     disableInput() {
