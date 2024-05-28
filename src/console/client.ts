@@ -19,6 +19,7 @@ interface Response {
 
 let methods: Map<string, RequestHandler> = new Map();
 let requests: Map<string, ResponseHandler> = new Map();
+let clients: Client[] = [];
 
 export function registerMethod(method: string, handler: RequestHandler) {
     methods.set(method, handler);
@@ -32,6 +33,8 @@ export class Client extends vscode.Disposable {
     constructor(private onSend: (obj: Response | Request) => void) {
         super(() => {
             this.terminal.dispose();
+            this.button.dispose();
+            clients.splice(clients.indexOf(this), 1);
         });
         this.terminal = new Terminal(async (data) => {
             // 如果提交的数据只有空格，就忽略掉
@@ -40,9 +43,16 @@ export class Client extends vscode.Disposable {
             }
             await this.request('command', { data: data });
         });
+        this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        this.button.text = '🍉重载Lua';
+        this.button.tooltip = '省的你输入 `.rd`';
+        this.button.command = 'y3-helper.reloadLua';
+        this.button.show();
+        clients.push(this);
     }
 
     private terminal: Terminal;
+    private button: vscode.StatusBarItem;
 
     print(msg: string) {
         this.terminal.print(msg);
@@ -127,4 +137,10 @@ vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
         terminal.print('发送了：\n' + JSON.stringify(obj));
         terminal.print('发送了：\n' + JSON.stringify(obj));
     });
+});
+
+vscode.commands.registerCommand('y3-helper.reloadLua', async () => {
+    for (let client of clients) {
+        client.request('command', { data: '.rd' });
+    }
 });
