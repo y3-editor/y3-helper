@@ -37,19 +37,36 @@ const CSI = {
 class Pseudoterminal implements vscode.Pseudoterminal {
     constructor(private applyHandler: (data: string) => Promise<void>) {
         this.onDidWrite = this.writeEmitter.event;
+
+        this.queue(async () => {
+            await this.waitOpen();
+        });
     }
 
     private writeEmitter = new vscode.EventEmitter<string>();
 
     onDidWrite: vscode.Event<string>;
 
-    open() {
-        this.queue(async () => {
-            await this.newStart();
-        });
+    private opened = false;
+    async open() {
+        await this.newStart();
+        this.opened = true;
     };
 
-    close() {};
+    close() {
+        this.opened = false;
+    };
+
+    private async waitOpen() {
+        await new Promise<void>((resolve) => {
+            let timer = setInterval(() => {
+                if (this.opened) {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
 
     private historyStack: string[] = [];
     private historyIndex: number = 0;
