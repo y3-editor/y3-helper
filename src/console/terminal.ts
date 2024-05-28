@@ -44,7 +44,9 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     onDidWrite: vscode.Event<string>;
 
     open() {
-        this.newStart();
+        this.queue(async () => {
+            await this.newStart();
+        });
     };
 
     close() {};
