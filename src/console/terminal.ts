@@ -115,14 +115,13 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     private async refreshLineWithoutUndo(data: string, offset: number) {
-        await this.queue(async () => {
-            this.moveCursor(0);
-            this.write(CSI.CLEAR_LINE);
-            this.write(data);
-            this.inputedData = data;
-            this.curOffset = offset;
-            this.moveCursor(offset);
-        });
+        this.moveCursor(0);
+        this.write(CSI.CLEAR_LINE);
+        this.write(data);
+        this.inputedData = data;
+        this.curOffset = offset;
+        this.moveCursor(offset);
+        await new Promise((resolve) => setTimeout(resolve, 1));
     }
     
     private async undo() {
@@ -197,8 +196,8 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     private async applyInput(data: string) {
         this.saveHistory(data);
         this.write('\r\n');
-        await this.applyHandler(data);
         await this.newStart();
+        await this.applyHandler(data);
     }
 
     private handleControl(data: string) {
@@ -248,8 +247,8 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
     
     private handleCommonInput(data: string) {
-        // 如果是单个的不可见字符，直接忽略
-        if (data.length === 1 && data.charCodeAt(0) < 32) {
+        // 如果第一个字符是不可见字符，则直接忽略
+        if (data.charCodeAt(0) < 32) {
             return;
         }
         data = data.replace(/[^\x20-\x7E\u4E00-\u9FA5]/g, ' ');
@@ -300,7 +299,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         await new Promise<void>(async (resolve) => {
             this.resolveQueue.push(resolve);
             if (this.resolveQueue.length === 1) {
-                resolve();
+                setTimeout(() => resolve());
             }
         });
 

@@ -117,10 +117,9 @@ registerMethod('print', async (client, params: PrintParams) => {
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
     let terminal = new Terminal(async (obj) => {
-        //await new Promise((resolve) => {
+        // await new Promise((resolve) => {
         //    setTimeout(resolve, 2000);
-        //});
-        terminal.print('发送了：\n' + JSON.stringify(obj));
+        // });
         terminal.print('发送了：\n' + JSON.stringify(obj));
         terminal.print('发送了：\n' + JSON.stringify(obj));
     });
