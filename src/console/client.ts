@@ -34,6 +34,10 @@ export class Client extends vscode.Disposable {
             this.terminal.dispose();
         });
         this.terminal = new Terminal(async (data) => {
+            // 如果提交的数据只有空格，就忽略掉
+            if (data.trim() === '') {
+                return;
+            }
             await this.request('command', { data: data });
         });
     }
