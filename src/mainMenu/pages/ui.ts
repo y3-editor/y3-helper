@@ -30,7 +30,7 @@ class UINode extends TreeNode {
             update: async (node) => {
                 node.tooltip = ui.uid;
                 node.childs = ui.childs.length > 0
-                    ? ui.childs.map(ui => new UINode(ui, type))
+                    ? ui.childs.map(ui => new UINode(ui, '画板'))
                     : undefined;
             }
         });
