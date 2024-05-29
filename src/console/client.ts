@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
 import { Terminal } from "./terminal";
+import { Viewer } from "./viewer";
 
 type RequestHandler = (client: Client, params: any) => Promise<any>;
 type ResponseHandler = (result: Response) => void;
@@ -34,6 +35,7 @@ export class Client extends vscode.Disposable {
         super(() => {
             this.terminal.dispose();
             this.button.dispose();
+            this.viewer.dispose();
             clients.splice(clients.indexOf(this), 1);
         });
         this.terminal = new Terminal(async (data) => {
@@ -43,13 +45,18 @@ export class Client extends vscode.Disposable {
             }
             await this.request('command', { data: data });
         });
+
         this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.button.text = '🍉重载Lua';
         this.button.tooltip = '省的你输入 `.rd`';
         this.button.command = 'y3-helper.reloadLua';
         this.button.show();
         clients.push(this);
+
+        this.viewer = new Viewer();
     }
+
+    private viewer: Viewer;
 
     private terminal: Terminal;
     private button: vscode.StatusBarItem;
