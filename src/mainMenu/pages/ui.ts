@@ -100,6 +100,10 @@ export class 界面 extends TreeNode {
                 }),
             ],
         });
+
+        define.界面.onDidChange(() => {
+            this.refresh();
+        });
     }
 };
 
