@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
 import { Terminal } from "./terminal";
-import { Viewer } from "./viewer";
+import { TreeViewManager } from "./treeView";
 
 type RequestHandler = (client: Client, params: any) => Promise<any>;
 type ResponseHandler = (result: Response) => void;
@@ -35,7 +35,7 @@ export class Client extends vscode.Disposable {
         super(() => {
             this.terminal.dispose();
             this.button.dispose();
-            this.viewer.dispose();
+            this.treeViewManager.dispose();
             clients.splice(clients.indexOf(this), 1);
         });
         this.terminal = new Terminal(async (data) => {
@@ -52,11 +52,9 @@ export class Client extends vscode.Disposable {
         this.button.command = 'y3-helper.reloadLua';
         this.button.show();
         clients.push(this);
-
-        this.viewer = new Viewer();
     }
 
-    private viewer: Viewer;
+    readonly treeViewManager = new TreeViewManager(this);
 
     private terminal: Terminal;
     private button: vscode.StatusBarItem;
