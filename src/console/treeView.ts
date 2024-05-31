@@ -49,6 +49,9 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         if (typeof data.desc === 'string') {
             item.description = data.desc;
         }
+        if (typeof data.tip === 'string') {
+            item.tooltip = data.tip;
+        }
         if (typeof data.icon === 'string') {
             item.iconPath = new vscode.ThemeIcon(data.icon);
         }
@@ -132,9 +135,10 @@ export class TreeView extends vscode.Disposable {
 
 interface getTreeNodeResponse {
     name: string;
-    desc: string;
-    icon: string;
-    hasChilds: boolean;
+    desc?: string;
+    tip?: string;
+    icon?: string;
+    hasChilds?: boolean;
 }
 
 export class TreeViewManager extends vscode.Disposable {
