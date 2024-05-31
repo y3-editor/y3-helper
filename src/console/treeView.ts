@@ -175,6 +175,15 @@ export class TreeViewManager extends vscode.Disposable {
         return treeView;
     }
 
+    async removeTreeView(id: number) {
+        let treeView = this.treeViews.get(id);
+        if (!treeView) {
+            return;
+        }
+        this.treeViews.delete(id);
+        treeView.dispose();
+    }
+
     refreshTreeNode(id: number) {
         let treeView = this.findTreeViewByNodeID(id);
         if (!treeView) {

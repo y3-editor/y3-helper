@@ -33,6 +33,14 @@ function registerAllMethods() {
         await client.treeViewManager.createTreeView(params.id, params.name, params.root);
     });
 
+    interface RemoveTreeViewParams {
+        id: number;
+    }
+
+    registerMethod('removeTreeView', async (client, params: RemoveTreeViewParams) => {
+        client.treeViewManager.removeTreeView(params.id);
+    });
+
     interface refreshTreeNodeParams {
         id: number;
     }
