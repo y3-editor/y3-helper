@@ -126,14 +126,6 @@ export class Client extends vscode.Disposable {
     }
 }
 
-interface PrintParams {
-    message: string;
-}
-
-registerMethod('print', async (client, params: PrintParams) => {
-    client.print(params.message);
-});
-
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
     let terminal = new Terminal(async (obj) => {
         // await new Promise((resolve) => {
