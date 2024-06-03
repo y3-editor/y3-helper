@@ -6,7 +6,7 @@ class TreeItem extends vscode.TreeItem {
 
     constructor(readonly uid: number, name: string) {
         super(name);
-        this.id = uid.toString();
+        this.id = `${name}(${uid})`;
     }
 }
 
@@ -21,7 +21,7 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
 
     async getTreeItem(id: number): Promise<TreeItem> {
         let data = await this.treeView.manager.requestGetTreeNode(id);
-        let item = this.createItem(id, data);
+        let item = this.getItem(id) ?? this.createItem(id, data);
         return item;
     }
 
@@ -39,6 +39,10 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         let childs = await this.treeView.manager.requestGetChildTreeNodes(id);
         item.childs = childs;
         return childs;
+    }
+
+    private getItem(id: number) {
+        return this.itemMap.get(id);
     }
 
     private createItem(id: number, data: getTreeNodeResponse) {
