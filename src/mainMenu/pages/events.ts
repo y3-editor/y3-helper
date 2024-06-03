@@ -1,4 +1,4 @@
-import { TreeNode } from "../treeNode";
+import { TreeNode } from "../../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";

@@ -644,16 +644,16 @@ function request.customRequestShowIntegerAsHex(req)
     }
 end
 
---function print(...)
---    local n = select('#', ...)
---    local t = {}
---    for i = 1, n do
---        t[i] = tostring(select(i, ...))
---    end
---    event.output {
---        category = 'stdout',
---        output = table.concat(t, '\t')..'\n',
---    }
---end
+function print(...)
+   local n = select('#', ...)
+   local t = {}
+   for i = 1, n do
+       t[i] = tostring(select(i, ...))
+   end
+   event.output {
+       category = 'stdout',
+       output = table.concat(t, '\t')..'\n',
+   }
+end
 
 return request

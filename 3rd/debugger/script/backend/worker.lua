@@ -92,17 +92,17 @@ ev.on('memory', function(memoryReference, offset, count)
     }
 end)
 
---function print(...)
---    local n = select('#', ...)
---    local t = {}
---    for i = 1, n do
---        t[i] = tostring(select(i, ...))
---    end
---    ev.emit('output', {
---        category = 'stderr',
---        output = table.concat(t, '\t')..'\n',
---    })
---end
+function print(...)
+   local n = select('#', ...)
+   local t = {}
+   for i = 1, n do
+       t[i] = tostring(select(i, ...))
+   end
+   ev.emit('output', {
+       category = 'stderr',
+       output = table.concat(t, '\t')..'\n',
+   })
+end
 
 local function cleanFrame()
     variables.clean()

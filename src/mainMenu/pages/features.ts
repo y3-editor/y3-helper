@@ -1,5 +1,5 @@
 import { env } from "../../env";
-import { TreeNode } from "../treeNode";
+import { TreeNode } from "../../treeNode";
 import * as vscode from 'vscode';
 
 export class 功能 extends TreeNode {

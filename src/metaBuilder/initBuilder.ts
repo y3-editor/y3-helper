@@ -5,7 +5,7 @@ import { PlayerAttrs } from './playerAttrs';
 import { CustomEvents } from './customEvents';
 import { EditorTablesBuilder } from "./editorTables";
 import { define } from '../customDefine';
-
+import { UI } from './ui';
 
 let path = 'y3-helper/meta';
 
@@ -46,9 +46,7 @@ export function init() {
     let editoritem = new EditorTablesBuilder(path + '/itemTypes.lua', 'itemType', define.物品类型);
     let modifierall = new EditorTablesBuilder(path + '/buffTypes.lua', 'buffType', define.魔法效果);
     let projectileall = new EditorTablesBuilder(path + '/projectileTypes.lua', 'projectileType', define.投射物);
-
-
-
+    let ui = new UI(path + '/ui.lua');
 
     initBuilder.addFile(unitAttrs);
     initBuilder.addFile(playerAttrs);
@@ -58,6 +56,7 @@ export function init() {
     initBuilder.addFile(editoritem);
     initBuilder.addFile(modifierall);
     initBuilder.addFile(projectileall);
+    initBuilder.addFile(ui);
 
     unitAttrs.onDidChange(() => {
         initBuilder.update();
@@ -66,6 +65,9 @@ export function init() {
         initBuilder.update();
     });
     customEvents.onDidChange(() => {
+        initBuilder.update();
+    });
+    ui.onDidChange(() => {
         initBuilder.update();
     });
 }

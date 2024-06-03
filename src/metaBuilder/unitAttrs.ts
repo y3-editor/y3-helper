@@ -7,7 +7,7 @@ local UnitAttr = {
 %{ATTR_ENUMS}
 }
 
-y3.util.tableMerge(y3.const.UnitAttr, UnitAttr)
+y3.util.tableMerge(y3.const.UnitAttr or {}, UnitAttr)
 `;
 
 export class UnitAttrs extends BaseBuilder {

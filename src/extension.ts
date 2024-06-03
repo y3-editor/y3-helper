@@ -11,6 +11,7 @@ import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
 import { TemplateGenerator } from './editorTable/templateGenerator';
 import { englishPathToChinese } from './constants';
 import { NetworkServer } from './networkServer';
+import * as console from './console';
 import {
     CSVimporter, EditorTableDataProvider, GoEditorTableSymbolProvider,
     GoEditorTableDocumentSymbolProvider, FileNode,
@@ -731,6 +732,7 @@ class Helper {
             mainMenu.init();
             metaBuilder.init();
             debug.init(this.context);
+            console.init();
 
             this.initEditorTableWatcher();
         }, 100);

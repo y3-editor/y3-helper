@@ -3,7 +3,7 @@
     "displayName": "Y3开发助手",
     "description": "",
     "publisher": "sumneko",
-    "version": "1.3.0",
+    "version": "1.7.0",
     "repository": {
         "url": "https://github.com/y3-editor/y3-helper"
     },
@@ -14,7 +14,8 @@
         "Other"
     ],
     "activationEvents": [
-        "workspaceContains:y3/开发计划.md"
+        "workspaceContains:y3/开发计划.md",
+        "onDebugResolve:y3lua"
     ],
     "main": "./out/extension.js",
     "capabilities": {
@@ -33,6 +34,10 @@
                 {
                     "id": "y3-helper.mainMenu",
                     "name": "Y3开发助手"
+                },
+                {
+                    "id": "y3-helper.client",
+                    "name": "客户端"
                 }
             ]
         },
@@ -108,6 +113,21 @@
                 {
                     "command": "y3-helper.copyEventName",
                     "when": "viewItem == 自定义事件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIName",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIPath",
+                    "when": "viewItem == 画板",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIUID",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
                     "group": "copy"
                 }
             ]
@@ -274,8 +294,31 @@
                 "category": "Y3开发助手"
             },
             {
+                "command": "y3-helper.copyUIName",
+                "title": "复制名称",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyUIPath",
+                "title": "复制路径",
+                "enablement": "viewItem == 画板",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyUIUID",
+                "title": "复制ID",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                "category": "Y3开发助手"
+            },
+            {
                 "command": "y3-helper.networkServer",
                 "title": "启动网络服务器（用于测试`network`库）",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.testTerminal",
+                "title": "测试游戏控制台",
                 "category": "Y3开发助手"
             }
         ],
@@ -399,6 +442,7 @@
         "fast-csv": "^5.0.1",
         "fast-xml-parser": "^4.3.5",
         "fs-extra": "^11.2.0",
+        "iconv-lite": "^0.6.3",
         "jszip": "^3.10.1",
         "uuid": "^9.0.1",
         "winreg": "^1.2.5"

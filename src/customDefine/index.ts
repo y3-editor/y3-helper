@@ -2,6 +2,7 @@ import { PlayerAttrs } from "./playerAttrs";
 import { UnitAttrs } from "./unitAttrs";
 import { EditorTables } from "./editorTables";
 import { Events } from "./event";
+import { UI } from "./ui";
 
 export const define = {
     单位属性: new UnitAttrs,
@@ -12,4 +13,5 @@ export const define = {
     物品类型: new EditorTables("editoritem"),
     魔法效果: new EditorTables("modifierall"),
     投射物: new EditorTables("projectileall"),
+    界面: new UI,
 };
