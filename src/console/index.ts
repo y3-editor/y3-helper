@@ -3,7 +3,6 @@ import { randomInt } from '../utility';
 import * as tools from '../tools';
 import { ConsoleServer } from './server';
 import { registerMethod } from './client';
-import * as vscode from 'vscode';
 
 function setPort(port: number) {
     if (!env.scriptUri) {
