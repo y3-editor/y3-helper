@@ -21,8 +21,12 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
 
     async getTreeItem(id: number): Promise<TreeItem> {
         let data = await this.manager.requestGetTreeNode(id);
-        if (this.getItem(id)) {
-            return this.getItem(id)!;
+        let item = this.getItem(id);
+        if (item) {
+            if (data) {
+                this.updateItem(item, data);
+            }
+            return item;
         }
         if (!data) {
             return new TreeItem(id, 'Loading...');
@@ -53,10 +57,7 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         return this.itemMap.get(id);
     }
 
-    createItem(id: number, data: getTreeNodeResponse) {
-        this.removeItem(id);
-        let item = new TreeItem(id, data.name);
-        this.itemMap.set(id, item);
+    updateItem(item: TreeItem, data: getTreeNodeResponse) {
         if (typeof data.desc === 'string') {
             item.description = data.desc;
         }
@@ -67,12 +68,19 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
             item.iconPath = new vscode.ThemeIcon(data.icon);
         }
         if (data.hasChilds) {
-            if (this.manager.treeViews.find(view => view.root === id)) {
+            if (this.manager.treeViews.find(view => view.root === item.uid)) {
                 item.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
             } else {
                 item.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
             }
         }
+    }
+
+    createItem(id: number, data: getTreeNodeResponse) {
+        this.removeItem(id);
+        let item = new TreeItem(id, data.name);
+        this.itemMap.set(id, item);
+        this.updateItem(item, data);
         return item;
     }
 
@@ -90,9 +98,6 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
     }
 
     refresh(id: number | undefined) {
-        if (id) {
-            this.removeItem(id);
-        }
         this.onDidChange.fire(id);
     }
 }
