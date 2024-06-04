@@ -51,11 +51,11 @@ export function init() {
     initBuilder.addFile(unitAttrs);
     initBuilder.addFile(playerAttrs);
     initBuilder.addFile(customEvents);
-    initBuilder.addFile(editorunit);
-    initBuilder.addFile(abilityall);
-    initBuilder.addFile(editoritem);
-    initBuilder.addFile(modifierall);
-    initBuilder.addFile(projectileall);
+    //initBuilder.addFile(editorunit);
+    //initBuilder.addFile(abilityall);
+    //initBuilder.addFile(editoritem);
+    //initBuilder.addFile(modifierall);
+    //initBuilder.addFile(projectileall);
     initBuilder.addFile(ui);
 
     unitAttrs.onDidChange(() => {
