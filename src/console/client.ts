@@ -4,7 +4,7 @@ import { Terminal } from "./terminal";
 import { TreeViewManager } from "./treeView";
 
 type RequestHandler = (client: Client, params: any) => Promise<any>;
-type ResponseHandler = (result: Response) => void;
+type ResponseHandler = (result: any) => void;
 
 interface Request {
     method: string,
@@ -111,11 +111,14 @@ export class Client extends vscode.Disposable {
                 }
             }
         } else {
+            if (obj.error) {
+                tools.log.error(obj.error);
+            }
             let id = obj.id;
             let handler = this.requestMap.get(id);
             if (handler) {
                 this.requestMap.delete(id);
-                handler(obj);
+                handler(obj.result);
             }
         }
     }
@@ -130,16 +133,12 @@ export class Client extends vscode.Disposable {
             id: requestID,
             params,
         });
-        let result = await new Promise<Response>((resolve) => {
+        let result = await new Promise<any>((resolve) => {
             this.requestMap.set(requestID, (result) => {
                 resolve(result);
             });
         });
-        if (result.error) {
-            tools.log.error(result.error);
-            return;
-        }
-        return result.result;
+        return result;
     }
 
     notify(method: string, params: any) {
