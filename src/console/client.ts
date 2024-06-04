@@ -48,7 +48,7 @@ export class Client extends vscode.Disposable {
             if (data.trim() === '') {
                 return;
             }
-            await this.request('command', { data: data });
+            this.notify('command', { data: data });
         });
 
         this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
@@ -165,6 +165,6 @@ vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
 
 vscode.commands.registerCommand('y3-helper.reloadLua', async () => {
     for (let client of clients) {
-        client.request('command', { data: '.rd' });
+        client.notify('command', { data: '.rd' });
     }
 });

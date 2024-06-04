@@ -74,6 +74,13 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
                 item.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
             }
         }
+        if (data.canClick) {
+            item.command = {
+                command: 'y3-helper.custom.treeViewClick',
+                title: '',
+                arguments: [this.manager.id, item.uid],
+            };
+        }
     }
 
     createItem(id: number, data: getTreeNodeResponse) {
@@ -110,7 +117,7 @@ export class TreeView {
         readonly name: string,
         readonly root: number,
     ) {
-        vscode.commands.executeCommand('y3-helper.client.focus');
+        vscode.commands.executeCommand('y3-helper.custom.focus');
     }
 }
 
@@ -120,17 +127,24 @@ interface getTreeNodeResponse {
     tip?: string;
     icon?: string;
     hasChilds?: boolean;
+    canClick?: boolean;
 }
 
 export class TreeViewManager extends vscode.Disposable {
+    static nextID = 0;
+    static allManagers = new Map<number, TreeViewManager>();
+
+    readonly id = TreeViewManager.nextID++;
     constructor(private client: Client) {
         super(() => {
             this.view.dispose();
+            TreeViewManager.allManagers.delete(this.id);
         });
 
+        TreeViewManager.allManagers.set(this.id, this);
         this.treeDataProvider = new TreeDataProvider(this);
 
-        this.view = vscode.window.createTreeView('y3-helper.client', {
+        this.view = vscode.window.createTreeView('y3-helper.custom', {
             treeDataProvider: this.treeDataProvider,
             showCollapseAll: true,
         });
@@ -149,7 +163,7 @@ export class TreeViewManager extends vscode.Disposable {
     }
 
     private view: vscode.TreeView<number>;
-    private treeDataProvider: TreeDataProvider;
+    readonly treeDataProvider: TreeDataProvider;
 
     readonly treeViews = new Array<TreeView>();
 
@@ -185,6 +199,18 @@ export class TreeViewManager extends vscode.Disposable {
     }
 
     notifyChangeTreeNodeVisible(ids: number[], visible: boolean) {
-        this.client.request('changeTreeNodeVisible', { ids, visible });
+        this.client.notify('changeTreeNodeVisible', { ids, visible });
+    }
+
+    notifyClickTreeNode(id: number) {
+        this.client.notify('clickTreeNode', { id });
     }
 }
+
+vscode.commands.registerCommand('y3-helper.custom.treeViewClick', async (managerID, itemUID) => {
+    let manager = TreeViewManager.allManagers.get(managerID);
+    if (!manager) {
+        return;
+    }
+    manager.notifyClickTreeNode(itemUID);
+});

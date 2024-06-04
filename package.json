@@ -36,8 +36,8 @@
                     "name": "Y3开发助手"
                 },
                 {
-                    "id": "y3-helper.client",
-                    "name": "客户端"
+                    "id": "y3-helper.custom",
+                    "name": "自定义"
                 }
             ]
         },
