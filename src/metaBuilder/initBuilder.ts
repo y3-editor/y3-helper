@@ -41,11 +41,11 @@ export function init() {
     let unitAttrs = new UnitAttrs(path + '/unitAttrs.lua');
     let playerAttrs = new PlayerAttrs(path + '/playerAttrs.lua');
     let customEvents = new CustomEvents(path + '/customEvents.lua');
-    let editorunit = new EditorTablesBuilder(path + '/editorunit.lua', 'unitTypes', define.单位类型);
-    let abilityall = new EditorTablesBuilder(path + '/abilityTypes.lua', 'abilityType', define.技能类型);
-    let editoritem = new EditorTablesBuilder(path + '/itemTypes.lua', 'itemType', define.物品类型);
-    let modifierall = new EditorTablesBuilder(path + '/buffTypes.lua', 'buffType', define.魔法效果);
-    let projectileall = new EditorTablesBuilder(path + '/projectileTypes.lua', 'projectileType', define.投射物);
+    //let editorunit = new EditorTablesBuilder(path + '/editorunit.lua', 'unitTypes', define.单位类型);
+    //let abilityall = new EditorTablesBuilder(path + '/abilityTypes.lua', 'abilityType', define.技能类型);
+    //let editoritem = new EditorTablesBuilder(path + '/itemTypes.lua', 'itemType', define.物品类型);
+    //let modifierall = new EditorTablesBuilder(path + '/buffTypes.lua', 'buffType', define.魔法效果);
+    //let projectileall = new EditorTablesBuilder(path + '/projectileTypes.lua', 'projectileType', define.投射物);
     let ui = new UI(path + '/ui.lua');
 
     initBuilder.addFile(unitAttrs);
