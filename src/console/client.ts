@@ -25,7 +25,6 @@ interface Response {
 
 let methods: Map<string, RequestHandler> = new Map();
 let requests: Map<string, ResponseHandler> = new Map();
-let clients: Client[] = [];
 
 export function registerMethod(method: string, handler: RequestHandler) {
     methods.set(method, handler);
@@ -36,12 +35,14 @@ export function registerRequest(method: string, handler: ResponseHandler) {
 }
 
 export class Client extends vscode.Disposable {
+    static allClients: Client[] = [];
     constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
+            this.closeAllRequests();
             this.terminal.dispose();
             this.button.dispose();
             this.treeViewManager.dispose();
-            clients.splice(clients.indexOf(this), 1);
+            Client.allClients.splice(Client.allClients.indexOf(this), 1);
         });
         this.terminal = new Terminal(async (data) => {
             // 如果提交的数据只有空格，就忽略掉
@@ -56,7 +57,7 @@ export class Client extends vscode.Disposable {
         this.button.tooltip = '省的你输入 `.rd`';
         this.button.command = 'y3-helper.reloadLua';
         this.button.show();
-        clients.push(this);
+        Client.allClients.push(this);
     }
 
     readonly treeViewManager = new TreeViewManager(this);
@@ -125,7 +126,19 @@ export class Client extends vscode.Disposable {
 
     private requestID = 0;
     private requestMap: Map<number, ResponseHandler> = new Map();
+    private closed = false;
+
+    private closeAllRequests() {
+        this.closed = true;
+        for (let handler of this.requestMap.values()) {
+            handler(undefined);
+        }
+    }
+    
     async request(method: string, params: any) {
+        if (this.closed) {
+            return undefined;
+        }
         let requestID = this.requestID;
         this.requestID++;
         this.send({
@@ -164,7 +177,7 @@ vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
 });
 
 vscode.commands.registerCommand('y3-helper.reloadLua', async () => {
-    for (let client of clients) {
+    for (let client of Client.allClients) {
         client.notify('command', { data: '.rd' });
     }
 });
