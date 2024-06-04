@@ -149,12 +149,14 @@ export class TreeViewManager extends vscode.Disposable {
             showCollapseAll: true,
         });
         this.view.onDidExpandElement(e => {
+            this.notifyChangeTreeNodeExpanded(e.element, true);
             let item = this.treeDataProvider.itemMap.get(e.element);
             if (item && item.childs) {
                 this.notifyChangeTreeNodeVisible(item.childs, true);
             }
         });
         this.view.onDidCollapseElement(e => {
+            this.notifyChangeTreeNodeExpanded(e.element, false);
             let item = this.treeDataProvider.itemMap.get(e.element);
             if (item && item.childs) {
                 this.notifyChangeTreeNodeVisible(item.childs, false);
@@ -204,6 +206,10 @@ export class TreeViewManager extends vscode.Disposable {
 
     notifyClickTreeNode(id: number) {
         this.client.notify('clickTreeNode', { id });
+    }
+
+    notifyChangeTreeNodeExpanded(id: number, expanded: boolean) {
+        this.client.notify('changeTreeNodeExpanded', { id, expanded });
     }
 }
 
