@@ -12,6 +12,11 @@ interface Request {
     params: any,
 };
 
+interface Notify {
+    method: string,
+    params: any,
+}
+
 interface Response {
     id: number,
     result?: any,
@@ -31,7 +36,7 @@ export function registerRequest(method: string, handler: ResponseHandler) {
 }
 
 export class Client extends vscode.Disposable {
-    constructor(private onSend: (obj: Response | Request) => void) {
+    constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
             this.terminal.dispose();
             this.button.dispose();
@@ -71,23 +76,39 @@ export class Client extends vscode.Disposable {
         this.terminal.enableInput();
     }
 
-    async recv(obj: Request | Response) {
+    async recv(obj: Request | Notify | Response) {
         if ('method' in obj) {
             let method = obj.method;
             let handler = methods.get(method);
             if (handler) {
-                let id = obj.id;
-                try {
-                    let result = await handler(this, obj.params);
-                    this.send({ id, result });
-                } catch (e) {
-                    if (e instanceof Error) {
-                        tools.log.error(e);
-                        this.send({ id, error: e.message });
+                if ('id' in obj) {
+                    // request
+                    let id = obj.id;
+                    try {
+                        let result = await handler(this, obj.params);
+                        this.send({ id, result });
+                    } catch (e) {
+                        if (e instanceof Error) {
+                            tools.log.error(e);
+                            this.send({ id, error: e.message });
+                        } else {
+                            this.send({ id, error: e!.toString() });
+                        }
+                    }
+                } else {
+                    // notify
+                    try {
+                        handler(this, obj.params);
+                    } catch (e) {
+                        if (e instanceof Error) {
+                            tools.log.error(e);
+                        }
                     }
                 }
             } else {
-                this.send({ id: obj.id, error: `未找到方法"${method}"` });
+                if ('id' in obj) {
+                    this.send({ id: obj.id, error: `未找到方法"${method}"` });
+                }
             }
         } else {
             let id = obj.id;
@@ -121,7 +142,14 @@ export class Client extends vscode.Disposable {
         return result.result;
     }
 
-    private send(obj: Response | Request) {
+    notify(method: string, params: any) {
+        this.send({
+            method,
+            params,
+        });
+    }
+
+    private send(obj: Response | Request | Notify) {
         this.onSend(obj);
     }
 }
