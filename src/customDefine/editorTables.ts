@@ -39,7 +39,6 @@ export class EditorTables extends BaseDefine {
             for (const file of files) {
                 if (file[1] === vscode.FileType.File) {
                     let jsonFile = await tools.readFile(env.editorTableUri, this.filePath + "/" + file[0]);
-                    console.log(env.editorTableUri, file[0])
                     if (!jsonFile) {
                         break
                     }
