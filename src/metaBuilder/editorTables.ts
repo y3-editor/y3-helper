@@ -14,16 +14,16 @@ y3.util.tableMerge(y3.const.%{NAME}, %{NAME})
 export class EditorTablesBuilder extends BaseBuilder {
     constructor(path: string, name: string, define: EditorTables) {
         super(path);
-        this.template = template.replaceAll('%{NAME}', name)
-        this.define = define
+        this.template = template.replaceAll('%{NAME}', name);
+        this.define = define;
         this.update();
-        define.onDidChange(() => {
+        this.define.onDidChange(() => {
             this.update();
         });
     }
 
-    private template: string
-    private define: EditorTables
+    private template: string;
+    private define: EditorTables;
 
     async make() {
         let attrs = await this.define.getAttrs();
