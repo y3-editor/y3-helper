@@ -81,10 +81,40 @@ export async function attach() {
     return suc;
 }
 
-export async function stop() {
-    await vscode.debug.stopDebugging();
-}
+export async function prepareForRestart(needDebugger?: boolean) {
+    if (needDebugger === undefined) {
+        needDebugger = vscode.debug.activeDebugSession !== undefined;
+    }
+    if (!needDebugger) {
+        return;
+    }
 
-export async function getSession() {
-    return vscode.debug.activeDebugSession;
+    let session = vscode.debug.activeDebugSession;
+    if (session) {
+        let trg = vscode.debug.onDidTerminateDebugSession((e) => {
+            if (e === session) {
+                trg.dispose();
+                attach();
+            }
+        });
+    } else {
+        // 等待2秒，避免直接附加到当前的游戏中
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await attach();
+        // 但还是有一定几率会附加到当前的游戏中，
+        // 因此发现很快又断开后，再次附加
+        session = vscode.debug.activeDebugSession;
+        if (!session) {
+            return;
+        }
+        let trg = vscode.debug.onDidTerminateDebugSession((e) => {
+            if (e === session) {
+                trg.dispose();
+                attach();
+            }
+        });
+        setTimeout(() => {
+            trg.dispose();
+        }, 5000);
+    }
 }

@@ -50,58 +50,6 @@ function registerAllMethods() {
         client.treeViewManager.refreshTreeNode(params.id);
     });
 
-    interface startDebuggerParams {
-        delay?: number;
-    }
-
-    registerMethod('startDebugger', async (client, params: startDebuggerParams) => {
-        if (await debug.getSession()) {
-            return {
-                suc: false,
-                err: '调试器已经启动',
-            };
-        }
-        if (params.delay) {
-            await new Promise(resolve => setTimeout(resolve, params.delay! * 1000));
-        }
-        try {
-            let suc = await debug.attach();
-            if (suc) {
-                return {
-                    suc: true,
-                };
-            } else {
-                return {
-                    suc: false,
-                    err: '启动调试器失败',
-                };
-            }
-        } catch(e) {
-            return {
-                suc: false,
-                err: (e instanceof Error) ? e.message : e!.toString(),
-            };
-        }
-    });
-
-    registerMethod('stopDebugger', async (client) => {
-        try {
-            await debug.stop();
-            return {
-                suc: true,
-            };
-        } catch(e) {
-            return {
-                suc: false,
-                err: (e instanceof Error) ? e.message : e!.toString(),
-            };
-        }
-    });
-
-    registerMethod('hasDebugger', async (client) => {
-        return debug.getSession() !== undefined;
-    });
-
     interface CommandParams {
         command: string;
         args?: any[];
@@ -110,6 +58,14 @@ function registerAllMethods() {
     registerMethod('command', async (client, params: CommandParams) => {
         let res = await vscode.commands.executeCommand(params.command, ...(params.args || []));
         return res;
+    });
+
+    interface PrepareForRestartParams {
+        debugger?: boolean;
+    }
+
+    registerMethod('prepareForRestart', async (client, params: PrepareForRestartParams) => {
+        debug.prepareForRestart(params.debugger);
     });
 }
 
