@@ -69,6 +69,10 @@ export function init(context: vscode.ExtensionContext) {
 }
 
 export async function attach() {
+    let session = vscode.debug.activeDebugSession;
+    if (session?.type === 'y3lua') {
+        vscode.debug.stopDebugging(session);
+    }
     let suc = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
         "type": "y3lua",
         "request": "attach",
