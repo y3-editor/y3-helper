@@ -12,6 +12,7 @@ local stdio = require 'luadebug.stdio'
 local thread = require 'bee.thread'
 local fs = require 'backend.worker.filesystem'
 local log = require 'common.log'
+local channel = require "bee.channel"
 
 local initialized = false
 local suspend = false
@@ -35,13 +36,12 @@ local CMD = {}
 local WorkerIdent = tostring(thread.id)
 local WorkerChannel = ('DbgWorker(%s)'):format(WorkerIdent)
 
-thread.newchannel(WorkerChannel)
-local masterThread = thread.channel 'DbgMaster'
-local workerThread = thread.channel(WorkerChannel)
+local masterThread = channel.query 'DbgMaster'
+local workerThread = channel.create(WorkerChannel)
 
 local function workerThreadUpdate(timeout)
     while true do
-        local ok, msg = workerThread:pop(timeout)
+        local ok, msg = workerThread:pop()
         if not ok then
             break
         end
@@ -54,6 +54,10 @@ local function workerThreadUpdate(timeout)
         if not ok then
             log.error("ERROR:"..err)
         end
+    end
+    if timeout then
+        --TODO
+        thread.sleep(timeout)
     end
 end
 
@@ -92,17 +96,17 @@ ev.on('memory', function(memoryReference, offset, count)
     }
 end)
 
-function print(...)
-   local n = select('#', ...)
-   local t = {}
-   for i = 1, n do
-       t[i] = tostring(select(i, ...))
-   end
-   ev.emit('output', {
-       category = 'stderr',
-       output = table.concat(t, '\t')..'\n',
-   })
-end
+--function print(...)
+--    local n = select('#', ...)
+--    local t = {}
+--    for i = 1, n do
+--        t[i] = tostring(select(i, ...))
+--    end
+--    ev.emit('output', {
+--        category = 'stderr',
+--        output = table.concat(t, '\t')..'\n',
+--    })
+--end
 
 local function cleanFrame()
     variables.clean()
