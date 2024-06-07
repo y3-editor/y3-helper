@@ -3,6 +3,7 @@ import { randomInt } from '../utility';
 import * as tools from '../tools';
 import { ConsoleServer } from './server';
 import { registerMethod } from './client';
+import * as debug from '../debug';
 
 function setPort(port: number) {
     if (!env.scriptUri) {
@@ -46,6 +47,41 @@ function registerAllMethods() {
 
     registerMethod('refreshTreeNode', async (client, params: refreshTreeNodeParams) => {
         client.treeViewManager.refreshTreeNode(params.id);
+    });
+
+    registerMethod('startDebuggerAttach', async (client) => {
+        try {
+            let suc = await debug.attach();
+            if (suc) {
+                return {
+                    suc: true,
+                };
+            } else {
+                return {
+                    suc: false,
+                    err: '启动调试器失败',
+                };
+            }
+        } catch(e) {
+            return {
+                suc: false,
+                err: (e instanceof Error) ? e.message : e!.toString(),
+            };
+        }
+    });
+
+    registerMethod('stopDebugger', async (client) => {
+        try {
+            await debug.stop();
+            return {
+                suc: true,
+            };
+        } catch(e) {
+            return {
+                suc: false,
+                err: (e instanceof Error) ? e.message : e!.toString(),
+            };
+        }
     });
 }
 

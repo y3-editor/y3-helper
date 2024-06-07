@@ -69,7 +69,7 @@ export function init(context: vscode.ExtensionContext) {
 }
 
 export async function attach() {
-    await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
+    let suc = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
         "type": "y3lua",
         "request": "attach",
         "name": "💡附加",
@@ -78,4 +78,9 @@ export async function attach() {
         "stopOnEntry": false,
         "sourceCoding": "utf8",
     });
+    return suc;
+}
+
+export async function stop() {
+    await vscode.debug.stopDebugging();
 }
