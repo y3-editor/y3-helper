@@ -84,3 +84,7 @@ export async function attach() {
 export async function stop() {
     await vscode.debug.stopDebugging();
 }
+
+export async function getSession() {
+    return vscode.debug.activeDebugSession;
+}

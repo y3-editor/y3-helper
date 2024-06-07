@@ -4,6 +4,7 @@ import * as tools from '../tools';
 import { ConsoleServer } from './server';
 import { registerMethod } from './client';
 import * as debug from '../debug';
+import * as vscode from 'vscode';
 
 function setPort(port: number) {
     if (!env.scriptUri) {
@@ -49,7 +50,20 @@ function registerAllMethods() {
         client.treeViewManager.refreshTreeNode(params.id);
     });
 
-    registerMethod('startDebuggerAttach', async (client) => {
+    interface startDebuggerParams {
+        delay?: number;
+    }
+
+    registerMethod('startDebugger', async (client, params: startDebuggerParams) => {
+        if (await debug.getSession()) {
+            return {
+                suc: false,
+                err: '调试器已经启动',
+            };
+        }
+        if (params.delay) {
+            await new Promise(resolve => setTimeout(resolve, params.delay! * 1000));
+        }
         try {
             let suc = await debug.attach();
             if (suc) {
@@ -82,6 +96,20 @@ function registerAllMethods() {
                 err: (e instanceof Error) ? e.message : e!.toString(),
             };
         }
+    });
+
+    registerMethod('hasDebugger', async (client) => {
+        return debug.getSession() !== undefined;
+    });
+
+    interface CommandParams {
+        command: string;
+        args?: any[];
+    }
+
+    registerMethod('command', async (client, params: CommandParams) => {
+        let res = await vscode.commands.executeCommand(params.command, ...(params.args || []));
+        return res;
     });
 }
 
