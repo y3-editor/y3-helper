@@ -168,6 +168,7 @@ export class TreeViewManager extends vscode.Disposable {
     readonly treeDataProvider: TreeDataProvider;
 
     readonly treeViews = new Array<TreeView>();
+    readonly treeOrder = new Map<string, number>();
 
     // 从客户端中获取节点信息
     async requestGetTreeNode(id: number): Promise<getTreeNodeResponse|undefined> {
@@ -182,6 +183,13 @@ export class TreeViewManager extends vscode.Disposable {
     async createTreeView(id: number, name: string, root: number) {
         let treeView = new TreeView(this, id, name, root);
         this.treeViews.push(treeView);
+        if (this.treeOrder.has(name)) {
+            this.treeViews.sort((a, b) => {
+                return this.treeOrder.get(a.name)! - this.treeOrder.get(b.name)!;
+            });
+        } else {
+            this.treeOrder.set(name, this.treeOrder.size);
+        }
         this.treeDataProvider.refresh(undefined);
         return treeView;
     }
