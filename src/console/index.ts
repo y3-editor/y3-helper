@@ -5,6 +5,7 @@ import { ConsoleServer } from './server';
 import { registerMethod } from './client';
 import * as debug from '../debug';
 import * as vscode from 'vscode';
+import * as terminal from './terminal';
 
 function setPort(port: number) {
     if (!env.scriptUri) {
@@ -21,7 +22,25 @@ function registerAllMethods() {
     }
 
     registerMethod('print', async (client, params: PrintParams) => {
-        client.print(params.message);
+        let level = params.message.match(/^\[\s*(.*?)\]/)?.[1]?.toLowerCase();
+        switch (level) {
+            case 'fatal':
+            case 'error':
+                client.print(terminal.COLOR.RED + params.message);
+                break;
+            case 'warn':
+                client.print(terminal.COLOR.YELLOW + params.message);
+                break;
+            case 'info':
+                client.print(terminal.COLOR.CYAN + params.message);
+                break;
+            case 'debug':
+                client.print(terminal.COLOR.GREEN + params.message);
+                break;
+            default:
+                client.print(params.message);
+                break;
+        }
     });
 
     interface CreateTreeViewParams {

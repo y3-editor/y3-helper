@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as iconv from "iconv-lite";
 
-const CSI = {
+export const COLOR = {
     RESET_COLOR: '\x1b[0m',
     BLACK: '\x1b[30m',
     RED: '\x1b[31m',
@@ -19,7 +19,9 @@ const CSI = {
     BG_MAGENTA: '\x1b[45m',
     BG_CYAN: '\x1b[46m',
     BG_WHITE: '\x1b[47m',
+};
 
+const CSI = {
     CURSOR_UP: '\x1b[A',
     CURSOR_DOWN: '\x1b[B',
     CURSOR_FORWARD: '\x1b[C',
@@ -284,7 +286,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     private async newStart() {
-        this.write(`${CSI.GREEN}>${CSI.RESET_COLOR}`);
+        this.write(`${COLOR.GREEN}>${COLOR.RESET_COLOR}`);
         this.undoStack.splice(0);
         this.undoIndex = 0;
         this.historyIndex = 0;
@@ -354,7 +356,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         // 恢复用户的输入
         let [newRow, newCol] = await this.requestCursorPos();
         this.headPos[0] = newRow;
-        this.write(`${CSI.GREEN}>${CSI.RESET_COLOR}`);
+        this.write(`${COLOR.GREEN}>${COLOR.RESET_COLOR}`);
         this.refreshLineWithoutUndo(this.inputedData, this.curOffset);
     }
 
