@@ -6,7 +6,6 @@ class TreeItem extends vscode.TreeItem {
 
     constructor(readonly uid: number, name: string) {
         super(name);
-        this.id = `${name}(${uid})`;
     }
 }
 
@@ -116,9 +115,7 @@ export class TreeView {
         readonly id: number,
         readonly name: string,
         readonly root: number,
-    ) {
-        vscode.commands.executeCommand('y3-helper.custom.focus');
-    }
+    ) {}
 }
 
 interface getTreeNodeResponse {
@@ -162,6 +159,7 @@ export class TreeViewManager extends vscode.Disposable {
                 this.notifyChangeTreeNodeVisible(item.childs, false);
             }
         });
+        vscode.commands.executeCommand('y3-helper.custom.focus');
     }
 
     private view: vscode.TreeView<number>;
