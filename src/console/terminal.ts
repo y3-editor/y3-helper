@@ -38,8 +38,6 @@ const CSI = {
 
 class Pseudoterminal implements vscode.Pseudoterminal {
     constructor(private applyHandler: (data: string) => Promise<void>) {
-        this.onDidWrite = this.writeEmitter.event;
-
         this.queue(async () => {
             await this.waitOpen();
         });
@@ -47,7 +45,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 
     private writeEmitter = new vscode.EventEmitter<string>();
 
-    onDidWrite: vscode.Event<string>;
+    onDidWrite = this.writeEmitter.event;
 
     private opened = false;
     async open() {
@@ -130,12 +128,16 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         }
     }
 
-    private async refreshLine(data: string, offset: number) {
+    private async refreshLine(data = this.inputedData, offset = this.curOffset) {
         this.saveUndoStack();
         await this.refreshLineWithoutUndo(data, offset);
     }
 
-    private async refreshLineWithoutUndo(data: string, offset: number) {
+    private async refreshLineWithoutUndo(data = this.inputedData, offset = this.curOffset) {
+        if (this.needUpdateCursorPos) {
+            await this.updateCursorPos();
+            this.needUpdateCursorPos = false;
+        }
         this.moveCursor(0);
         this.write(CSI.CLEAR_LINE);
         this.write(data);
@@ -373,6 +375,16 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         this.write(CSI.CURSOR_SHOW);
 
         await this.refreshLineWithoutUndo(this.inputedData, this.curOffset);
+    }
+
+    private async updateCursorPos() {
+        let [row, col] = await this.requestCursorPos();
+        this.headPos = [row, col];
+    }
+    
+    private needUpdateCursorPos: boolean = false;
+    setDimensions(dimensions: vscode.TerminalDimensions) {
+        this.needUpdateCursorPos = true;
     }
 }
 
