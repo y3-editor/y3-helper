@@ -381,10 +381,15 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         let [row, col] = await this.requestCursorPos();
         this.headPos = [row, col];
     }
-    
+
+    private maxRow = 0;
+    private maxCol = 0;
+
     private needUpdateCursorPos: boolean = false;
     setDimensions(dimensions: vscode.TerminalDimensions) {
         this.needUpdateCursorPos = true;
+        this.maxRow = dimensions.rows;
+        this.maxCol = dimensions.columns;
     }
 }
 
