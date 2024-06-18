@@ -104,6 +104,13 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
     }
 
     refresh(id: number | undefined) {
+        if (id !== undefined) {
+            let node = this.itemMap.get(id);
+            if (node) {
+                node.childs = undefined;
+            }
+        }
+
         this.onDidChange.fire(id);
     }
 }
