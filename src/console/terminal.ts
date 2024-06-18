@@ -274,7 +274,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         if (data.charCodeAt(0) < 32) {
             return;
         }
-        data = data.replace(/[^\x20-\x7E\u4E00-\u9FA5]/g, ' ');
+        data = data.replace(/[^\x20-\x7E\u0000-\uFFFFFFFF]/g, ' ');
         let newData = this.inputedData.slice(0, this.curOffset) + data + this.inputedData.slice(this.curOffset);
         this.refreshLine(newData, this.curOffset + data.length);
         this.historyIndex = 0;
