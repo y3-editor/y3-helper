@@ -26,16 +26,16 @@ function registerAllMethods() {
         switch (level) {
             case 'fatal':
             case 'error':
-                client.print(terminal.COLOR.RED + params.message);
+                client.print(terminal.COLOR.RED + params.message + terminal.COLOR.RESET);
                 break;
             case 'warn':
-                client.print(terminal.COLOR.YELLOW + params.message);
+                client.print(terminal.COLOR.YELLOW + params.message + terminal.COLOR.RESET);
                 break;
             case 'info':
-                client.print(terminal.COLOR.CYAN + params.message);
+                client.print(terminal.COLOR.CYAN + params.message + terminal.COLOR.RESET);
                 break;
             case 'debug':
-                client.print(terminal.COLOR.GREEN + params.message);
+                client.print(terminal.COLOR.GREEN + params.message + terminal.COLOR.RESET);
                 break;
             default:
                 client.print(params.message);

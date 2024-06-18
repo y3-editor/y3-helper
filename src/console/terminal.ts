@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as iconv from "iconv-lite";
 
 export const COLOR = {
-    RESET_COLOR: '\x1b[0m',
+    RESET: '\x1b[0m',
     BLACK: '\x1b[30m',
     RED: '\x1b[31m',
     GREEN: '\x1b[32m',
@@ -288,7 +288,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     private async newStart() {
-        this.write(`${COLOR.GREEN}>${COLOR.RESET_COLOR}`);
+        this.write(`${COLOR.GREEN}>${COLOR.RESET}`);
         this.undoStack.splice(0);
         this.undoIndex = 0;
         this.historyIndex = 0;
@@ -358,7 +358,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         // 恢复用户的输入
         let [newRow, newCol] = await this.requestCursorPos();
         this.headPos[0] = newRow;
-        this.write(`${COLOR.GREEN}>${COLOR.RESET_COLOR}`);
+        this.write(`${COLOR.GREEN}>${COLOR.RESET}`);
         this.refreshLineWithoutUndo(this.inputedData, this.curOffset);
     }
 

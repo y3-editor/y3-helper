@@ -65,8 +65,20 @@ export class Client extends vscode.Disposable {
     private terminal: Terminal;
     private button: vscode.StatusBarItem;
 
+    private printBuffer: string[] | undefined;
     print(msg: string) {
-        this.terminal.print(msg);
+        if (this.printBuffer) {
+            this.printBuffer.push(msg);
+            return;
+        }
+        this.printBuffer = [];
+        this.terminal.print(msg).then(() => {
+            if (this.printBuffer!.length > 0) {
+                let merged = this.printBuffer!.join('\n');
+                this.printBuffer = undefined;
+                this.print(merged);
+            }
+        });
     }
 
     disableInput() {
