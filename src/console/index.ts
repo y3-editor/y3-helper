@@ -91,7 +91,10 @@ function registerAllMethods() {
 export function init() {
     registerAllMethods();
 
-    let port = randomInt(10000, 65535);
+    let port: number | undefined = vscode.workspace.getConfiguration('Y3-Helper').get('ServerPort');
+    if (port === 0 || typeof port !== 'number') {
+        port = randomInt(10000, 65535);
+    }
 
     server = new ConsoleServer(port);
 
