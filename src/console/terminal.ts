@@ -346,6 +346,10 @@ class Pseudoterminal implements vscode.Pseudoterminal {
     }
 
     private async rawPrint(msg: string) {
+        if (this.needUpdateCursorPos) {
+            await this.updateCursorPos();
+            this.needUpdateCursorPos = false;
+        }
         // 清除当前行
         let row = this.headPos[0];
         let col = 0;
