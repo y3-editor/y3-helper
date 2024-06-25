@@ -7,7 +7,6 @@ import { env } from './env';
 import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
-import { EXCELimporter } from './editorTable/EXCEL/EXCELimporter';
 import { TemplateGenerator } from './editorTable/templateGenerator';
 import { englishPathToChinese } from './constants';
 import { NetworkServer } from './networkServer';
@@ -19,6 +18,7 @@ import {
     updateEditorTableItemMap, CSVeditor
 } from './editorTable';
 import * as metaBuilder from './metaBuilder';
+import { excelExporter } from './editorTable/EXCEL/excelExporter';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
 
@@ -266,7 +266,6 @@ class Helper {
             await env.mapReady(true);
             
             let projectUri = env.projectUri;
-            let editorExeUri = env.editorExeUri;
             let scriptUri = env.scriptUri;
             if (!projectUri) {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
@@ -278,12 +277,14 @@ class Helper {
                 return false;
             }
             await vscode.window.withProgress({
-                title: '正在导入...',
-                location: vscode.ProgressLocation.Window,
-            }, async (progress) => {
-                let excelImporter = new EXCELimporter();
-                await excelImporter.excelImport();
-                this.editorTableDataProvider?.refresh();
+                location: vscode.ProgressLocation.Notification,
+                title: "Executing Task",
+                cancellable: false
+            }, async (progress, token) => {
+                let Expoter = excelExporter.getInstance();
+                await Expoter?.excelExport();
+
+                // this.editorTableDataProvider?.refresh();
             });
         });
     }
@@ -534,18 +535,12 @@ class Helper {
                 vscode.window.showErrorMessage("没有打开工作目录！，请先初始化");
                 return false;
             }
-            if (!env.excelTablePath) {
+            if (!env.excelUri || ! env.ruleUri) {
                 vscode.window.showErrorMessage("未找到合适的位置生成物编数据Excel表模板");
                 return false;
             }
-            let targetUri: vscode.Uri= env.excelTablePath;
-            if (targetUri) {
-                // 把模板template/excel文件夹生成到模板文件夹的父级路径下
-                await templateGenerator.generateExcelTemplate(targetUri);
-            }
-            else {
-                vscode.window.showErrorMessage("找不到正确的路径生成物编数据Excel表模板，请检查插件配置Y3-Helper.editorTablceDataExcelFolder");
-            }
+            // 把模板template/excel文件夹生成到模板文件夹的父级路径下
+            await templateGenerator.generateExcelTemplate(env.excelUri, env.ruleUri);
         });
     }
 

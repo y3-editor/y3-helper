@@ -78,9 +78,10 @@ export class TemplateGenerator {
     /**
      * 生成excel模板
      */
-    public async generateExcelTemplate(targetPath: vscode.Uri):Promise<boolean> {
+    public async generateExcelTemplate(dstExcelPath: vscode.Uri, dstRulePath: vscode.Uri):Promise<boolean> {
         try {
-            fs.copySync(path.join(__dirname, "../../template/excel"), targetPath.fsPath, { overwrite: false });
+            fs.copySync(path.join(__dirname, "../../template/excel/table"), dstExcelPath.fsPath, { overwrite: true });
+            fs.copySync(path.join(__dirname, "../../template/excel/rule"), dstRulePath.fsPath, { overwrite: true });
         }
         catch (error) {
             vscode.window.showErrorMessage("ExcelTemplate生成异常:" + error);

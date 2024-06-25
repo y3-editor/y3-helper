@@ -97,7 +97,7 @@ export function toUnicodeIgnoreASCII(str: string): string {
     for (let i = 0; i < str.length; i++) {
         
         if (!isASCII(str[i])) {
-            result += "\\u" + str.charCodeAt(i).toString(16);
+            result += "\\u" + str.charCodeAt(i).toString(16).padStart(4, '0');
         }
         else {
             result += str[i];
@@ -300,7 +300,11 @@ export function mergeObject(base: any, extra: any): any {
     }
     for (let key in extra) {
         if ((key in res) === false) {
-            res[key] = {};
+            if(Array.isArray(extra[key])){
+                res[key] = [];
+            }else if(extra[key] instanceof Object){
+                res[key] = {};
+            }
         }
         if (extra[key] instanceof Object) {
             res[key] = mergeObject(res[key], extra[key]);
@@ -321,7 +325,7 @@ export function mergeObject(base: any, extra: any): any {
 export function tryWriteJson(jsonData: any, jsonFilePath: string): boolean {
     try {
         // 将更新后的数据写回文件
-        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 2)), 'utf8');
+        fs.writeFileSync(jsonFilePath, toUnicodeIgnoreASCII(JSON.stringify(jsonData, null, 4)), 'utf8');
     }
     catch (err) {
         vscode.window.showErrorMessage('保存Json文件时出错 Error writing file:');

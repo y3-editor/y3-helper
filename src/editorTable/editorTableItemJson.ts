@@ -26,20 +26,13 @@ function writeJsonTemplate(tableType: string, jsonFilePath: string) {
  * @param tableType 
  * @returns true or false 成功或失败
  */
-export async function saveEditorTableItemJson(data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
-
-    if (!data.hasOwnProperty('uid')) {
-        vscode.window.showErrorMessage('提供的CSV文件格式错误，缺少uid字段,出错的表类型为:' + tableType);
-        return false;
-    }
-
-    let uid = data['uid'];
+export async function saveEditorTableItemJson(index: any ,data: any, targetPath: vscode.Uri, tableType: string): Promise<boolean> {
+    let uid = index.toString();
+    let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if ('name' in data) {
         let k = env.writeDataInLanguageJson(data['name']);
         data['name'] = k;
     }
-
-    let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
         console.log("没有检测到对应物品的Json，从模板新建了Json文件存储物编数据:" + jsonFilePath);
         writeJsonTemplate(tableType, jsonFilePath);
