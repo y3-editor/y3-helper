@@ -308,9 +308,9 @@ class EnvPath {
             this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
             this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
             this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3helper/editor_table/csv/");
-            this.excelUri = vscode.Uri.joinPath(this.mapUri, "./excel/");
-            this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3helper/editor_table/excel/rule/");
+            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/editor_table/csv/");
+            this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
+            this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
             this.initTableTypeToCSVfolderPath();
         }
         tools.log.info(`mapUri: ${this.mapUri}`);

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 export const enum FieldType {
     Default,
     Int,
@@ -427,5 +428,3 @@ export function RatiosInt(retios: any = 1, value: any = 0){
 export function RatiosFloat(retios: any = 1, value: any = 0){
     return new RatiosFloatKlass(retios, value);
 }
-
-

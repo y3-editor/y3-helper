@@ -99,7 +99,7 @@ export function init() {
     server = new ConsoleServer(port);
 
     env.onDidChange(() => {
-        setPort(port);
+        setPort(port!);
     });
     setPort(port);
 }
