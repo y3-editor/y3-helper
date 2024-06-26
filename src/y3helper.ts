@@ -1,4 +1,2 @@
-export * from './editorTable/EXCEL/fieldTypes';
-export * from './editorTable/EXCEL/attrType';
-export * from './editorTable/EXCEL/importRule';
+export * as excel from './editorTable/EXCEL';
 export * from './tools';

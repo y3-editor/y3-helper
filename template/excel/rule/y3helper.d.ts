@@ -4,10 +4,20 @@
 //   ../../vscode
 
 declare module 'y3helper' {
+    export * as excel from 'y3helper/editorTable/EXCEL';
+    export * from 'y3helper/tools';
+}
+
+declare module 'y3helper/editorTable/EXCEL' {
     export * from 'y3helper/editorTable/EXCEL/fieldTypes';
     export * from 'y3helper/editorTable/EXCEL/attrType';
     export * from 'y3helper/editorTable/EXCEL/importRule';
-    export * from 'y3helper/tools';
+}
+
+declare module 'y3helper/tools' {
+    export { download } from 'y3helper/tools/download';
+    export { log } from 'y3helper/tools/log';
+    export * from 'y3helper/tools/fs';
 }
 
 declare module 'y3helper/editorTable/EXCEL/fieldTypes' {
@@ -163,12 +173,6 @@ declare module 'y3helper/editorTable/EXCEL/importRule' {
         copyRule(): ImportRule;
         deepCopy(obj: any): any;
     }
-}
-
-declare module 'y3helper/tools' {
-    export { download } from 'y3helper/tools/download';
-    export { log } from 'y3helper/tools/log';
-    export * from 'y3helper/tools/fs';
 }
 
 declare module 'y3helper/tools/download' {
