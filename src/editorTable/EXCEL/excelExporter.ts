@@ -94,14 +94,15 @@ export class excelExporter extends tableExpoter{
         try {
             this.importRules = [];
             // 读取目录中的所有.mjs文件
-            const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.mjs'));
+            const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.js'));
             for (const file of files) {
                 let src = vscode.Uri.joinPath(this.rulePath, file);
-                let tar = vscode.Uri.joinPath(vscode.Uri.file(__dirname+'../../EXCEL'), file); 
-                fs.copySync(src.fsPath, tar.fsPath, { overwrite: true });
-                let filePath = './' + file;
-                const dynamicPath = `${filePath}?t=${new Date().getTime()}`; // 使用不同的动态路径
-                let ImportRulesModule = await import(dynamicPath);
+                //let tar = vscode.Uri.joinPath(vscode.Uri.file(__dirname+'../../EXCEL'), file); 
+                //fs.copySync(src.fsPath, tar.fsPath, { overwrite: true });
+                //let filePath = './' + file;
+                //const dynamicPath = `${filePath}?t=${new Date().getTime()}`; // 使用不同的动态路径
+                delete require.cache[src.fsPath];
+                let ImportRulesModule = require(src.fsPath);
                 for(let ruleName in ImportRulesModule){
                     if(ImportRulesModule[ruleName] instanceof ImportRule){
                         this.importRules.push(ImportRulesModule[ruleName]);

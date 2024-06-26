@@ -1,3 +1,9 @@
+import moduleAlias from 'module-alias';
+
+moduleAlias.addAliases({
+  'y3helper': __dirname + '/y3helper'
+});
+
 import * as fs from 'fs';
 import * as tools from "./tools";
 import * as vscode from 'vscode';
@@ -21,6 +27,7 @@ import * as metaBuilder from './metaBuilder';
 import { excelExporter } from './editorTable/EXCEL/excelExporter';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
+
 
 class Helper {
     private context: vscode.ExtensionContext;
