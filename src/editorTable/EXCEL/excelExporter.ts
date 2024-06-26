@@ -91,16 +91,12 @@ export class excelExporter extends tableExpoter{
       }
 
     private async loadImportRules(){
-        try {
-            this.importRules = [];
-            // 读取目录中的所有.mjs文件
-            const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.js'));
-            for (const file of files) {
-                let src = vscode.Uri.joinPath(this.rulePath, file);
-                //let tar = vscode.Uri.joinPath(vscode.Uri.file(__dirname+'../../EXCEL'), file); 
-                //fs.copySync(src.fsPath, tar.fsPath, { overwrite: true });
-                //let filePath = './' + file;
-                //const dynamicPath = `${filePath}?t=${new Date().getTime()}`; // 使用不同的动态路径
+        this.importRules = [];
+        // 读取目录中的所有.mjs文件
+        const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.js'));
+        for (const file of files) {
+            let src = vscode.Uri.joinPath(this.rulePath, file);
+            try {
                 delete require.cache[src.fsPath];
                 let ImportRulesModule = require(src.fsPath);
                 for(let ruleName in ImportRulesModule){
@@ -108,12 +104,11 @@ export class excelExporter extends tableExpoter{
                         this.importRules.push(ImportRulesModule[ruleName]);
                     }
                 }
+            } catch (error) {
+                vscode.window.showErrorMessage(`加载导入规则"${file}"出错：${error}`);
             }
         }
-        catch (error){
-            vscode.window.showErrorMessage("加载导入规则importRules.mjs加载出错 错误类型为：" + error);
-        }
-    }    
+    }
 
     public async getTmpJsDict(editorTableType: string, tmpID: string){
         let data = this.editorTableDatas[editorTableType];
