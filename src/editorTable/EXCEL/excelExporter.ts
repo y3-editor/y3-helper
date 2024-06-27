@@ -93,7 +93,7 @@ export class excelExporter extends tableExpoter{
     private async loadImportRules(){
         this.importRules = [];
         // 读取目录中的所有.mjs文件
-        const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.js'));
+        const files = fs.readdirSync(this.rulePath.fsPath).filter(file => file.endsWith('.js') || file.endsWith('.mjs'));
         for (const file of files) {
             let src = vscode.Uri.joinPath(this.rulePath, file);
             try {
