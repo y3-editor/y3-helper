@@ -3,24 +3,24 @@
 //   ../../https
 //   ../../vscode
 
-declare module 'y3helper' {
-    export * as excel from 'y3helper/editorTable/EXCEL';
-    export * from 'y3helper/tools';
+declare module 'y3-helper' {
+    export * as excel from 'y3-helper/editorTable/EXCEL';
+    export * from 'y3-helper/tools';
 }
 
-declare module 'y3helper/editorTable/EXCEL' {
-    export * from 'y3helper/editorTable/EXCEL/fieldTypes';
-    export * from 'y3helper/editorTable/EXCEL/attrType';
-    export * from 'y3helper/editorTable/EXCEL/importRule';
+declare module 'y3-helper/editorTable/EXCEL' {
+    export * from 'y3-helper/editorTable/EXCEL/fieldTypes';
+    export * from 'y3-helper/editorTable/EXCEL/attrType';
+    export * from 'y3-helper/editorTable/EXCEL/importRule';
 }
 
-declare module 'y3helper/tools' {
-    export { download } from 'y3helper/tools/download';
-    export { log } from 'y3helper/tools/log';
-    export * from 'y3helper/tools/fs';
+declare module 'y3-helper/tools' {
+    export { download } from 'y3-helper/tools/download';
+    export { log } from 'y3-helper/tools/log';
+    export * from 'y3-helper/tools/fs';
 }
 
-declare module 'y3helper/editorTable/EXCEL/fieldTypes' {
+declare module 'y3-helper/editorTable/EXCEL/fieldTypes' {
     export const enum FieldType {
         Default = 0,
         Int = 1,
@@ -133,7 +133,7 @@ declare module 'y3helper/editorTable/EXCEL/fieldTypes' {
     export function RatiosFloat(retios?: any, value?: any): RatiosFloatKlass;
 }
 
-declare module 'y3helper/editorTable/EXCEL/attrType' {
+declare module 'y3-helper/editorTable/EXCEL/attrType' {
     export class AttrKlass {
         constructor(name: any, desc?: string);
         getString(): string;
@@ -153,7 +153,7 @@ declare module 'y3helper/editorTable/EXCEL/attrType' {
     }
 }
 
-declare module 'y3helper/editorTable/EXCEL/importRule' {
+declare module 'y3-helper/editorTable/EXCEL/importRule' {
     export class ImportRule {
         editorTableType: string;
         excelRelativePath: string;
@@ -175,18 +175,18 @@ declare module 'y3helper/editorTable/EXCEL/importRule' {
     }
 }
 
-declare module 'y3helper/tools/download' {
+declare module 'y3-helper/tools/download' {
     import * as https from 'https';
     export function download(options: string | URL | https.RequestOptions): Promise<Buffer>;
 }
 
-declare module 'y3helper/tools/log' {
+declare module 'y3-helper/tools/log' {
     import * as vscode from 'vscode';
     let log: vscode.LogOutputChannel;
     export { log };
 }
 
-declare module 'y3helper/tools/fs' {
+declare module 'y3-helper/tools/fs' {
     import * as vscode from 'vscode';
     class File {
         write(data: Uint8Array): this;

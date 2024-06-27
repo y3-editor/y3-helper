@@ -1,7 +1,7 @@
 import moduleAlias from 'module-alias';
 
 moduleAlias.addAliases({
-  'y3helper': __dirname + '/y3helper'
+  'y3-helper': __dirname + '/y-3helper'
 });
 
 import * as fs from 'fs';
