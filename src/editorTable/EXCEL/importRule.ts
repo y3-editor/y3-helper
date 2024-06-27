@@ -1,21 +1,22 @@
 import { INDEX } from "./attrType";
 import { Int, Str, Templete } from "./fieldTypes";
+import * as constants from "./../../constants";
 
 export class ImportRule {
-    public editorTableType: string;
-    public excelRelativePath: string;
-    public sheet: string;
+    public editorTableType: constants.ObjectTypeNameCN;
+    public excelRelativePath?: string;
+    public sheet?: string;
     public fieldDefs: {[key: string] : [string | string[] | number[], any, any]} = {};
     public filter: Function | undefined;
     public jumpHeader: number = 1;
     public dataRehandle: Function | undefined;
 
-    constructor(editorTableType: string, excelRelativePath: string, sheetName: string){
+    constructor(editorTableType: constants.ObjectTypeNameCN, excelRelativePath?: string, sheetName?: string){
         this.editorTableType = editorTableType;
         this.excelRelativePath = excelRelativePath;
         this.sheet = sheetName;
     }
-    public resetRule(editorTableType: string, excelRelativePath: string, sheetName: string){
+    public resetRule(editorTableType: constants.ObjectTypeNameCN, excelRelativePath?: string, sheetName?: string){
         this.editorTableType = editorTableType;
         this.excelRelativePath = excelRelativePath;
         this.sheet = sheetName;

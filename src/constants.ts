@@ -18,7 +18,7 @@ export enum EditorTableType {
 /**
  * Y3项目的editor_table文件夹下的各个文件夹名和物编数据种类中文名的对应关系
  */
-export const englishPathToChinese: Readonly<{ [key: string]: string } >= {
+export const englishPathToChinese = {
     "editorunit": "单位",
     "soundall": "声音",
     "abilityall": "技能",
@@ -28,12 +28,14 @@ export const englishPathToChinese: Readonly<{ [key: string]: string } >= {
     "modifierall": "魔法效果",
     "projectileall": "投射物",
     "technologyall": "科技"
-};
+} as const;
+
+export type EditorTableName = keyof typeof englishPathToChinese;
 
 /**
  * 物编数据种类对应的中文名
  */
-export const englishTypeNameToChineseTypeName: Readonly<{ [key: string]: string } >= {
+export const englishTypeNameToChineseTypeName = {
         "unit": "单位",
         "decoration": "装饰物",
         "item": "物品",
@@ -43,27 +45,31 @@ export const englishTypeNameToChineseTypeName: Readonly<{ [key: string]: string 
         "technology": "科技",
         "destructible": "可破坏物",
         "sound": "声音"
-};
+} as const;
+
+export type ObjectTypeNameEN = keyof typeof englishTypeNameToChineseTypeName;
 
 /**
  * 物编数据种类对应的英文名
  */
-export const chineseTypeNameToEnglishTypeName:Readonly< { [key: string]: string } >= {
-        "单位": "unit",
-        "装饰物": "decoration",
-        "物品": "item",
-        "技能": "ability",
-        "魔法效果": "modifier",
-        "投射物": "projectile",
-        "科技": "technology",
-        "可破坏物": "destructible",
-        "声音": "sound"
-};
+export const chineseTypeNameToEnglishTypeName = {
+    "单位": "unit",
+    "装饰物": "decoration",
+    "物品": "item",
+    "技能": "ability",
+    "魔法效果": "modifier",
+    "投射物": "projectile",
+    "科技": "technology",
+    "可破坏物": "destructible",
+    "声音": "sound"
+} as const;
+
+export type ObjectTypeNameCN = keyof typeof chineseTypeNameToEnglishTypeName;
 
 /**
  * 物编数据类型与其在Y3项目中存放的文件夹名的对应关系
  */
-export const editorTableTypeToFolderName: Readonly<{ [key: string]: string }> = {
+export const editorTableTypeToFolderName = {
     "unit": "editorunit",
     "decoration": "editordecoration",
     "item": "editoritem",
@@ -73,12 +79,12 @@ export const editorTableTypeToFolderName: Readonly<{ [key: string]: string }> = 
     "technology": "technologyall",
     "destructible": "editordestructible",
     "sound":"soundall"
-};
+} as const;
 
 /**
  * 不同类型的CSV文件导入为Json后会放入不同的文件夹
  */
-export const csvTypeToPath: Readonly<{ [key: string]: string }> = {
+export const csvTypeToPath = {
     "unit": "editorunit",
     "sound": "soundall",
     "ability": "abilityall",
@@ -94,10 +100,10 @@ export const csvTypeToPath: Readonly<{ [key: string]: string }> = {
     "projectile": "projectileall",
     "store": "storeall",
     "technology": "technologyall"
-};
+} as const;
 
 // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-export const defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }> = {
+export const defaultTableTypeToCSVfolderPath = {
     unit: "./y3-helper/editor_table/csv/单位",
     decoration: "./y3-helper/editor_table/csv/装饰物",
     item: "./y3-helper/editor_table/csv/物品",
@@ -107,9 +113,9 @@ export const defaultTableTypeToCSVfolderPath: Readonly<{ [key: string]: string }
     technology: "./y3-helper/editor_table/csv/科技",
     destructible: "./y3-helper/editor_table/csv/可破坏物",
     sound: "./y3-helper/editor_table/csv/声音"
-};
+} as const;
 
-export const typeID: { [key: number]: [string, string]} = {
+export const typeID = {
     100000: ["number", "实数"],
     100001: ["boolean", "布尔"],
     100002: ["integer", "整数"],
@@ -126,4 +132,4 @@ export const typeID: { [key: number]: [string, string]} = {
     100032: ["ItemKey", "物品类型"],
     100039: ["AbilityKey", "技能类型"],
     100263: ["Mover", "运动器"],
-};
+} as const;

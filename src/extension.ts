@@ -14,7 +14,7 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
 import { TemplateGenerator } from './editorTable/templateGenerator';
-import { englishPathToChinese } from './constants';
+import { ObjectTypeNameEN, englishPathToChinese } from './constants';
 import { NetworkServer } from './networkServer';
 import * as console from './console';
 import {
@@ -346,7 +346,7 @@ class Helper {
                             vscode.window.showInformationMessage('未选择');
                             return;
                         }
-                        csvEditor.addNewUIDandNameInCSVwithoutConflict(selection.description, value);
+                        csvEditor.addNewUIDandNameInCSVwithoutConflict(selection.description as ObjectTypeNameEN, value);
                     }
                 });
             });

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { isPathValid } from '../utility';
-import { chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
+import { ObjectTypeNameCN, ObjectTypeNameEN, chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
 
 
 export class TemplateGenerator {
@@ -48,9 +48,9 @@ export class TemplateGenerator {
      * vsocde插件的发布打包程序不支持中文路径 只能被迫转换一下 完后又改回原名
      */
     private async renameTemplateCSVtoChinese() {
-        for (let key in this.englishToChinese) {
+        for (const key in this.englishToChinese) {
             let oldFile: string = key;
-            let newFile: string = this.englishToChinese[key];
+            let newFile: string = this.englishToChinese[key as ObjectTypeNameEN];
             oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
             newFile = path.join(__dirname, "../../template/csv/" + newFile);
             if (isPathValid(newFile)) {
@@ -65,7 +65,7 @@ export class TemplateGenerator {
     private async renameTemplateCSVtoEnglish() {
         for (let key in this.chineseToEnglish) {
             let oldFile: string = key;
-            let newFile: string = this.chineseToEnglish[key];
+            let newFile: string = this.chineseToEnglish[key as ObjectTypeNameCN];
             oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
             newFile = path.join(__dirname, "../../template/csv/" + newFile);
             if (isPathValid(newFile)) {

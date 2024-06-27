@@ -251,7 +251,7 @@ class EnvPath {
         let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
         for (const key in defaultTableTypeToCSVfolderPath) {
-            this._tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key];
+            this._tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key as keyof typeof defaultTableTypeToCSVfolderPath];
             // console.log(key + " " + this._tableTypeToCSVfolderPath[key]);
         }
         

@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { csvTypeToPath } from '../constants';
+import { ObjectTypeNameCN, ObjectTypeNameEN, csvTypeToPath } from '../constants';
 import { EditorTableItemInfo } from './types';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
@@ -74,7 +74,7 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
     for (let type in EditorTableType) {
         let typeStr = EditorTableType[type as keyof typeof EditorTableType];
         let folderName: string = editorTableTypeToFolderName[typeStr];
-        res = res.concat(searchEditorTableItemsInFolder(type, path.join(env.editorTablePath, folderName), query));
+        res = res.concat(searchEditorTableItemsInFolder(typeStr, path.join(env.editorTablePath, folderName), query));
     }
     return res;
 }
@@ -86,10 +86,9 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
  * @param query 
  * @returns 
  */
-export function searchEditorTableItemsInFolder(editorTableType: string, pathStr: string, query: string): vscode.QuickPickItem[] {
+export function searchEditorTableItemsInFolder(editorTableType: ObjectTypeNameEN, pathStr: string, query: string): vscode.QuickPickItem[] {
     let res: vscode.QuickPickItem[] = [];
     const files = fs.readdirSync(pathStr);
-    editorTableType = editorTableType.toLowerCase();
     files.forEach(file => {
         const filePath: string = path.join(pathStr, file);
         const stat = fs.statSync(filePath);
@@ -298,7 +297,7 @@ function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
     
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
     Object.values(EditorTableType).forEach(type => {
-        let typeStr:string = type;
+        let typeStr = type;
         let folderName: string = editorTableTypeToFolderName[typeStr];
         res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
     });
@@ -359,7 +358,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pat
     return res;
 }
 
-export function addNewEditorTableItemInProject(editorTableType: string,name:string):boolean {
+export function addNewEditorTableItemInProject(editorTableType: ObjectTypeNameEN,name:string):boolean {
     if (!env.editorTableUri) {
         return false;
     }

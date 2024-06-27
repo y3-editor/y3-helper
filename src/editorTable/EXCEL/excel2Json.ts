@@ -12,10 +12,10 @@ export class excel2Json extends excelConverter{
     }
     public interpret(){
         let editorTableType = chineseTypeNameToEnglishTypeName[this.rule.editorTableType];
-                for(let index in this.targetDatas){
-                    //把获取到的数据转换成json
-                    //异步的
-                    saveEditorTableItemJson(index, this.targetDatas[index], this.targetPath, editorTableType);
-                }
+        for(let index in this.targetDatas){
+            //把获取到的数据转换成json
+            //异步的
+            saveEditorTableItemJson(index, this.targetDatas[index], this.targetPath, editorTableType);
+        }
     }
 }

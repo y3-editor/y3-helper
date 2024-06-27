@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { chineseTypeNameToEnglishTypeName, csvTypeToPath, englishPathToChinese } from '../../constants';
+import { EditorTableName, ObjectTypeNameCN, ObjectTypeNameEN, chineseTypeNameToEnglishTypeName, csvTypeToPath, englishPathToChinese } from '../../constants';
 import { tableExpoter } from './tableExpoter';
 import { excel2Json } from './excel2Json';
 import { ImportRule } from './importRule';
@@ -22,7 +22,7 @@ export class excelExporter extends tableExpoter{
     private excelPath: vscode.Uri;
     private rulePath: vscode.Uri;
     private editorTablePath: vscode.Uri;
-    private importRules: any;
+    private importRules: ImportRule[];
     private editorTableDatas: {[key: string] : editorTableDir};
 
     constructor(excelUri: vscode.Uri, ruleUri: vscode.Uri, destinationUri: vscode.Uri){
@@ -58,7 +58,7 @@ export class excelExporter extends tableExpoter{
           const filePath = path.join(editorTablePath, file);
           let editorTableType: string = file;
           if (editorTableType in englishPathToChinese) {
-            editorTableType = englishPathToChinese[editorTableType];
+            editorTableType = englishPathToChinese[editorTableType as EditorTableName];
             const jsFileList = await fs.promises.readdir(filePath);// 此目录下的编文件js文件目录
             this.editorTableDatas[editorTableType] = new editorTableDir(jsFileList, filePath);
           }
@@ -71,7 +71,7 @@ export class excelExporter extends tableExpoter{
     private async convertByRules(){
         // 处理 Excel 文件
         try {
-            let importRules: any[] = this.importRules;
+            let importRules = this.importRules;
             for(let rule of importRules){
                 if(!rule || !rule.excelRelativePath || !rule.editorTableType){
                     throw new Error("rule定义出错");

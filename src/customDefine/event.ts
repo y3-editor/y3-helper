@@ -68,7 +68,7 @@ export class Events extends BaseDefine {
                 }
                 for (let item of conf) {
                     let name = item[0];
-                    let type = item[1];
+                    let type: keyof typeof typeID = item[1];
                     if (name && type) {
                         event.args.push({
                             name,

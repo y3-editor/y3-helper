@@ -5,7 +5,7 @@ import * as path from 'path';
 import { env } from "../../env";
 import { SpinLock, isCSV, isPathValid } from "../../utility";
 import { allocateNewUIDofEditorTableItem } from '../editorTableUtility';
-import {EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName
+import {EditorTableType, englishTypeNameToChineseTypeName,chineseTypeNameToEnglishTypeName, ObjectTypeNameEN, ObjectTypeNameCN
 } from '../../constants';
 /**
  *  物编数据CSV表格的编辑器s
@@ -140,10 +140,10 @@ export class CSVeditor {
      * @param typeStr 物编数据种类
      * @param name 物编项目名称
      */
-    public async addNewUIDandNameInCSVwithoutConflict(typeStr:string,name:string) {
+    public async addNewUIDandNameInCSVwithoutConflict(typeStr:ObjectTypeNameEN,name:string) {
         let uid: number =await this.allocateNewUIDofEditorTableItemToCSV();
         this.addNewUIDandNameInCSV(typeStr, uid, name);
-        let englishTypeStr=englishTypeNameToChineseTypeName[typeStr];
+        let englishTypeStr = englishTypeNameToChineseTypeName[typeStr];
         vscode.window.showInformationMessage("添加 " + englishTypeStr +": "+name+" 成功");
     }
 
@@ -226,7 +226,7 @@ export class CSVeditor {
             vscode.window.showErrorMessage("选择的项目的label或description或label不存在");
             return;
         }
-        let englishEditorTableType = chineseTypeNameToEnglishTypeName[editorTableItem.description];
+        let englishEditorTableType = chineseTypeNameToEnglishTypeName[editorTableItem.description as ObjectTypeNameCN];
         let uid: number = Number(editorTableItem.detail);
         this.addNewUIDandNameInCSV(englishEditorTableType, uid, editorTableItem.label);
         

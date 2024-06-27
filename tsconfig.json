@@ -12,7 +12,7 @@
 		"rootDir": "src",
 		"strict": true,
 		"paths": {
-			"y3helper": ["./src/y3helper"],
+			"y3-helper": ["./src/y3-helper"],
 		},
 	},
 	
