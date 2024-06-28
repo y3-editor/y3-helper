@@ -3,6 +3,7 @@ import { env } from "../env";
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 type Attr = {
     name: string,
@@ -12,13 +13,13 @@ type Attr = {
 export class EditorTables extends BaseDefine {
     constructor(filePath: string) {
         super();
-        this.filePath = filePath
+        this.filePath = filePath;
         this.onDidChange(() => {
             this._attrsCache = undefined;
         });
     }
 
-    public filePath: string
+    public filePath: string;
     private _attrsCache?: Attr[];
 
     get watchPattern() {
@@ -35,27 +36,26 @@ export class EditorTables extends BaseDefine {
                 return attrs;
             }
 
-            let files = await vscode.workspace.fs.readDirectory(vscode.Uri.joinPath(env.editorTableUri, this.filePath))
+            let files = await vscode.workspace.fs.readDirectory(vscode.Uri.joinPath(env.editorTableUri, this.filePath));
             for (const file of files) {
                 if (file[1] === vscode.FileType.File) {
-                    let jsonFile = await tools.readFile(env.editorTableUri, this.filePath + "/" + file[0]);
+                    let jsonFile = await tools.fs.readFile(env.editorTableUri, this.filePath + "/" + file[0]);
                     if (!jsonFile) {
-                        break
+                        break;
                     }
                     let json = JSON.parse(jsonFile.string);
                     if (typeof json !== 'object') {
-                        break
+                        break;
                     }
-                    let name = env.languageJson[json.name]
-                    let key = json.uid
+                    let name = y3.language.get(json.name) ?? json.name;
+                    let key = json.uid;
                     if (name && key) {
-                        name =
-                            attrs.push({ name, key });
+                        name = attrs.push({ name, key });
                     }
                 }
             }
 
-            return attrs
+            return attrs;
 
         } finally {
             return attrs;

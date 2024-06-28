@@ -28,9 +28,16 @@ export async function readFile(uri: vscode.Uri, relativePath?: string) {
     } catch {}
 }
 
-export async function writeFile(uri: vscode.Uri, relativePath: string | undefined, data: string) {
-    if (relativePath) {
+export async function writeFile(uri: vscode.Uri, relativePath: string | undefined, data: string): Promise<boolean>;
+export async function writeFile(uri: vscode.Uri, data: string): Promise<boolean>;
+export async function writeFile(uri: vscode.Uri, ...args: any[]) {
+    let data: string;
+    if (args.length === 1) {
+        data = args[0];
+    } else {
+        let relativePath: string = args[0];
         uri = vscode.Uri.joinPath(uri, relativePath);
+        data = args[1];
     }
     try {
         await vscode.workspace.fs.writeFile(uri, Buffer.from(data));
@@ -59,5 +66,15 @@ export async function dir(uri: vscode.Uri, relativePath?: string) {
     try {
         let files = await vscode.workspace.fs.readDirectory(uri);
         return files;
+    } catch {}
+}
+
+export async function stat(uri: vscode.Uri, relativePath?: string) {
+    if (relativePath) {
+        uri = vscode.Uri.joinPath(uri, relativePath);
+    }
+    try {
+        let stat = await vscode.workspace.fs.stat(uri);
+        return stat;
     } catch {}
 }

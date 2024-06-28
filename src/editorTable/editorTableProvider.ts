@@ -5,13 +5,13 @@ import { env } from '../env';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
 import { Table } from '../constants';
 import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
+import * as y3 from 'y3-helper';
 
 
 export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
   private _onDidChangeTreeData: vscode.EventEmitter<FileNode | undefined> = new vscode.EventEmitter<FileNode | undefined>();
   readonly onDidChangeTreeData: vscode.Event<FileNode | undefined> = this._onDidChangeTreeData.event;
   private editorTablePath: string = "";
-  private languageJson: any = undefined;
   
   constructor() {
     if (!vscode.workspace.workspaceFolders) {
@@ -20,9 +20,6 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     }
 
     this.editorTablePath = env.editorTablePath;
-
-    // 载入中文名称
-    this.languageJson = env.languageJson;
   }
   
 
@@ -55,7 +52,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       let newNameHashcode = hash(newName);
       let editorTableJsonStr = await fs.promises.readFile(fileNode.resourceUri.fsPath, 'utf8');
       let editorTableJson = JSON.parse(editorTableJsonStr);
-      let k = env.writeDataInLanguageJson(newName);
+      let k = y3.language.fetch(newName);
       if (!k) {
         return false;
       }
@@ -70,9 +67,6 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
     return success;
   }
   refresh(): void {
-    // 重新读取language.json以刷新
-    env.refreshlanguageJson();
-    this.languageJson = env.languageJson;
     this._onDidChangeTreeData.fire(undefined);
   }
   getParent(element: FileNode): vscode.ProviderResult<FileNode> {
@@ -118,7 +112,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         let name;
         if (editorTableJson.hasOwnProperty('name')) {
           let nameKey: any = editorTableJson['name'];
-          name = this.languageJson[nameKey];
+          name = y3.language.get(nameKey);
         }
         if (name !== undefined && typeof name === "string") {
           label = name + "(" + label.substring(0, label.length - 5) + ")";//显示为"这是一个单位(134219828)"的格式
@@ -198,13 +192,7 @@ export class FileNode extends vscode.TreeItem {
  * 提供物编数据对应的Json文件的SymbolProvider
  */
 export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvider {
-  constructor(private editorTablePath: string = "",
-    private zhlanguageJson: any = undefined,
-    private englishPathToChinese: { [key: string]: string }
-  ) {
-    
-  }
- 
+
   private async searchEditorTableItemsInFolder(pathStr: string,query:string): Promise<vscode.SymbolInformation[]> {
     let res: vscode.SymbolInformation[] = [];
     const files = await fs.promises.readdir(pathStr);
@@ -232,7 +220,7 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
         let name;
         if (editorTableJson.hasOwnProperty('name')) {
           let nameKey: any = editorTableJson['name'];
-          name = this.zhlanguageJson[nameKey];
+          name = y3.language.get(nameKey);
         }
         if (name !== undefined && typeof name === "string") {
           label = name + "(" + label.substring(0, label.length - 5) + ")";//显示为"这是一个单位(134219828)"的格式
@@ -270,8 +258,8 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
     }
 
     //只搜索九个文件夹下对应的九类类物编数据，不递归搜索子文件夹
-    for (let key in this.englishPathToChinese) {
-      res=res.concat(await this.searchEditorTableItemsInFolder(path.join(this.editorTablePath, key), query));
+    for (let key in Table.path.toCN) {
+      res=res.concat(await this.searchEditorTableItemsInFolder(path.join(env.editorTablePath, key), query));
     }
     
     

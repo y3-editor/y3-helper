@@ -14,6 +14,7 @@ import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
     HashSet, SpinLock, hash, toUnicodeIgnoreASCII
 } from '../utility';
+import * as y3 from 'y3-helper';
 
  /**
  * 通过物编数据项目的(uid)判断其是否存在于项目中
@@ -106,7 +107,7 @@ export function searchEditorTableItemsInFolder(editorTableType: Table.NameEN, pa
             let name;
             if (editorTableJson.hasOwnProperty('name')) {
                 let nameKey: any = editorTableJson['name'];
-                name = env.languageJson[nameKey];
+                name = y3.language.get(nameKey);
             }
             let uid = editorTableJson['uid'];
             if (!uid || typeof uid !== 'number') {
@@ -120,7 +121,7 @@ export function searchEditorTableItemsInFolder(editorTableType: Table.NameEN, pa
             if (label.includes(query)||chineseTypeName.includes(query)) {
                 let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
                 let quickPickItem: vscode.QuickPickItem = {
-                    label: name,
+                    label: name ?? '<未知>',
                     description: chineseTypeName,
                     detail: uid,
                 };
@@ -323,7 +324,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: Table.NameEN, pathSt
             let name;
             if (editorTableJson.hasOwnProperty('name')) {
                 let nameKey: any = editorTableJson['name'];
-                name = env.languageJson[nameKey];
+                name = y3.language.get(nameKey);
             }
             let uid = editorTableJson['uid'];
             if (!uid || typeof uid !== 'number') {
@@ -336,7 +337,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: Table.NameEN, pathSt
             let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
             let item: EditorTableItemInfo = new EditorTableItemInfo(
                 uid,
-                name,
+                name ?? '<未知>',
                 editorTableType,
                 editorTableJsonUri
             );
@@ -357,7 +358,7 @@ export function addNewEditorTableItemInProject(editorTableType: Table.NameEN, na
     try {
         let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
         let templateJson = JSON.parse(templateJsonStr);
-        let nameHashCode = env.writeDataInLanguageJson(name);
+        let nameHashCode = y3.language.fetch(name);
         if (!nameHashCode) {
             throw new Error("writeDataInLanguageJson失败");
         }

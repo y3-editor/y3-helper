@@ -34,7 +34,7 @@ export class UnitAttrs extends BaseDefine {
             if (!env.mapUri) {
                 return attrs;
             }
-            let jsonFile = await tools.readFile(env.mapUri, filePath);
+            let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
             if (!jsonFile) {
                 return attrs;
             }

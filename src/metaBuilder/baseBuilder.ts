@@ -29,9 +29,9 @@ export abstract class BaseBuilder {
         }
         let code = await this.make();
         if (code) {
-            this.updateExists(await tools.writeFile(env.scriptUri, this.path, code));
+            this.updateExists(await tools.fs.writeFile(env.scriptUri, this.path, code));
         } else {
-            tools.removeFile(env.scriptUri, this.path);
+            tools.fs.removeFile(env.scriptUri, this.path);
             this.updateExists(false);
         }
     }

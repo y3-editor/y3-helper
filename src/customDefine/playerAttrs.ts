@@ -34,7 +34,7 @@ export class PlayerAttrs extends BaseDefine {
             if (!env.projectUri) {
                 return attrs;
             }
-            let jsonFile = await tools.readFile(env.projectUri, filePath);
+            let jsonFile = await tools.fs.readFile(env.projectUri, filePath);
             if (!jsonFile) {
                 return attrs;
             }

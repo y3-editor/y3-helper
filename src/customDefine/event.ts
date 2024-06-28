@@ -43,7 +43,7 @@ export class Events extends BaseDefine {
             if (!env.mapUri) {
                 return events;
             }
-            let jsonFile = await tools.readFile(env.mapUri, filePath);
+            let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
             if (!jsonFile) {
                 return events;
             }

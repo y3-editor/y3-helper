@@ -52,7 +52,7 @@ export class UI extends BaseDefine {
     }
 
     private async loadUI(fileUri: vscode.Uri): Promise<Node|undefined> {
-        let jsonText = (await tools.readFile(fileUri))?.string;
+        let jsonText = (await tools.fs.readFile(fileUri))?.string;
         if (!jsonText) {
             return;
         }
@@ -72,7 +72,7 @@ export class UI extends BaseDefine {
     }
 
     private async loadSceneUI(fileUri: vscode.Uri) {
-        let jsonText = (await tools.readFile(fileUri))?.string;
+        let jsonText = (await tools.fs.readFile(fileUri))?.string;
         if (!jsonText) {
             return undefined;
         }
@@ -100,7 +100,7 @@ export class UI extends BaseDefine {
     }
 
     private async loadPrefeb(fileUri: vscode.Uri) {
-        let jsonText = (await tools.readFile(fileUri))?.string;
+        let jsonText = (await tools.fs.readFile(fileUri))?.string;
         if (!jsonText) {
             return undefined;
         }

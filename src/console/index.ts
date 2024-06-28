@@ -11,7 +11,7 @@ function setPort(port: number) {
     if (!env.scriptUri) {
         return;
     }
-    tools.writeFile(env.scriptUri, 'log/helper_port.lua', `return ${port}`);
+    tools.fs.writeFile(env.scriptUri, 'log/helper_port.lua', `return ${port}`);
 }
 
 let server: ConsoleServer | undefined;

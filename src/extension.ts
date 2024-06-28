@@ -27,7 +27,7 @@ import * as metaBuilder from './metaBuilder';
 import { excelExporter } from './editorTable/EXCEL/excelExporter';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
-
+import * as editorTable from 'src/editorTable';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -576,15 +576,11 @@ class Helper {
 
         vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
 
-        const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
-            env.editorTablePath,
-            env.languageJson,
-            Table.path.toCN,
-        );
+        const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider();
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));
 
-        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider(env.languageJson);
+        const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider();
         let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
         this.context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(sel, goEditorTableDocumentSymbolProvider));
         
@@ -735,6 +731,7 @@ class Helper {
             metaBuilder.init();
             debug.init(this.context);
             console.init();
+            editorTable.init();
 
             this.initEditorTableWatcher();
         }, 100);

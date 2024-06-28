@@ -7,7 +7,7 @@ import {
     isInDirectory, isPathValid, toUnicodeIgnoreASCII,
     hash, mergeObject, tryWriteJson, tryReadJson
 } from '../utility';
-
+import * as y3 from 'y3-helper';
 
 /**
  * 从模板中新建物编项目数据Json
@@ -30,7 +30,7 @@ export async function saveEditorTableItemJson(index: any ,data: any, targetPath:
     let uid = index.toString();
     let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if ('name' in data) {
-        let k = env.writeDataInLanguageJson(data['name']);
+        let k = y3.language.fetch(data['name']);
         data['name'] = k;
     }
     if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
@@ -275,4 +275,3 @@ export async function saveRowOfCSV(data: any, targetPath: vscode.Uri, tableType:
     // 尝试保存并返回是否能保存成功
     return tryWriteJson(jsonData, jsonFilePath);
 }
-
