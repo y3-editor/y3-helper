@@ -14,6 +14,7 @@
 		"paths": {
 			"y3-helper": ["./src/y3-helper"],
 		},
+		"experimentalDecorators": true,
 	},
 	
 	// 忽略对template/excel/importRules.ts的编译 因为它只是个模板 生成给用户用

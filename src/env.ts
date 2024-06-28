@@ -2,29 +2,12 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
-import util from 'util';
 import * as tools from './tools';
 import { Template } from './constants';
 import { isPathValid } from './utility';
+import { throttle } from './utility/decorators';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
-
-function rePrepare(method: Function, context: ClassMethodDecoratorContext) {
-    let running = false;
-    return async function (this: any, ...args: any[]) {
-        if (running) {
-            while (running) {
-                await util.promisify(setTimeout)(100);
-            }
-        }
-        running = true;
-        try {
-            await method.apply(this, args);
-        } finally {
-            running = false;
-        }
-    };
-}
 
 class Env {
     private envChangeEmitter = new vscode.EventEmitter<void>();
@@ -264,7 +247,7 @@ class Env {
         }, 100);
     }
 
-    @rePrepare
+    @throttle(1000)
     public async updateEditor(askUser = false) {
         let editorUri = await this.searchEditorUri(askUser);
         if (!editorUri) {
@@ -286,7 +269,7 @@ class Env {
         await this.updateEditor(askUser);
     }
 
-    @rePrepare
+    @throttle(1000)
     public async updateMap(search: boolean, askUser: boolean) {
         let mapUri = await this.searchProjectPath(search, askUser);
         if (!mapUri) {

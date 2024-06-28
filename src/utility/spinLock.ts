@@ -4,14 +4,15 @@ import util from 'util';
  */
 export class SpinLock {
     private locked: boolean = false;
-    private  waitTime=0;
+    private waitTime = 0;
 
-    constructor(waitTime?:number) {
+    constructor(waitTime?: number) {
         if (waitTime) {
             this.waitTime = waitTime;
         }
     }
-    public async acquire(){
+
+    public async acquire() {
         while (this.locked) {
             // 自旋等待直到锁可用
             await util.promisify(setTimeout)(this.waitTime);

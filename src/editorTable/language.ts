@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { env } from '../env';
 import * as y3 from 'y3-helper';
 import { hash } from '../utility';
+import { throttle } from '../utility/decorators';
 
 class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
@@ -44,12 +45,12 @@ class Language extends vscode.Disposable {
         return this._language[key];
     }
 
-    // TODO: 未来支持修改语言文件
     set(key: string, value: string) {
         this._language[key] = value;
         if (this._reverse) {
             this._reverse[value] = key;
         }
+        this.updateFile();
     }
 
     fetch(value: string): string {
@@ -70,6 +71,12 @@ class Language extends vscode.Disposable {
 
     private makeKey(value: string): string {
         return hash(value).toString();
+    }
+
+    @throttle(1000)
+    private updateFile() {
+        let content = JSON.stringify(this._language, null, 4);
+        y3.fs.writeFile(this.uri!, content);
     }
 }
 

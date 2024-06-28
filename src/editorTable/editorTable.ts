@@ -3,10 +3,30 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 
+type ObjectShape = {
+    "name": string | number,
+    [key: string]: ItemShape,
+};
+
+type ItemShape = string | boolean | number | TupleShape | MapShape | ArrayShape;
+type ArrayShape = ItemShape[];
+
+type TupleShape = {
+    "__tuple__": true,
+    "items": ItemShape[],
+};
+
+type MapShape = {
+    [key: string]: any,
+};
+
 class EditorObject {
-    public raw: Object;
+    public raw: ObjectShape;
+    public name: string;
     constructor(public key: number, public uri: vscode.Uri, json: string) {
         this.raw = JSON.parse(json);
+        let name = this.raw['name'];
+        this.name = y3.language.get(name) ?? '<未知>';
     }
 }
 
