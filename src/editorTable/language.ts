@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { env } from 'src/env';
+import { env } from '../env';
 import * as y3 from 'y3-helper';
-import { hash } from 'src/utility';
+import { hash } from '../utility';
 
 class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];

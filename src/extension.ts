@@ -27,7 +27,7 @@ import * as metaBuilder from './metaBuilder';
 import { excelExporter } from './editorTable/EXCEL/excelExporter';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
-import * as editorTable from 'src/editorTable';
+import * as editorTable from './editorTable';
 
 class Helper {
     private context: vscode.ExtensionContext;

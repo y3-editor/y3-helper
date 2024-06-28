@@ -1,5 +1,5 @@
-import { Table } from "src/constants";
-import { env } from "src/env";
+import { Table } from "../constants";
+import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 
