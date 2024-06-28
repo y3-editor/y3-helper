@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
-import { Table, TableNameCN, TableNameEN, TablePath } from '../constants';
+import { Table } from '../constants';
 import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
 
 
@@ -31,11 +31,11 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
    * @returns true or false 成功或失败
    */
   public createNewTableItemByFileNode(fileNode: FileNode,name:string) :boolean{
-    let editorTableType = Table.name.fromCN[fileNode.label as TableNameCN];
+    let editorTableType = Table.name.fromCN[fileNode.label as Table.NameCN];
     if (!editorTableType) {
       return false;
     }
-    if (addNewEditorTableItemInProject(editorTableType as TableNameEN, name)) {
+    if (addNewEditorTableItemInProject(editorTableType as Table.NameEN, name)) {
       this.refresh();
       return true;
     }
@@ -141,7 +141,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       }
       else if (stat.isDirectory()) {
         if (label in Table.path.toCN) {
-          label = Table.path.toCN[label as TablePath];
+          label = Table.path.toCN[label as Table.Path];
           const files = await fs.promises.readdir(filePath);// 检查此目录下有多少个物编文件
           label += '(' + files.length + ')';//显示为 单位(10) 括号内的数字为有多少个物编项目
           const fileNode = new FileNode(

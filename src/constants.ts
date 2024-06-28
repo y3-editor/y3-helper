@@ -15,8 +15,8 @@ export enum EditorTableType {
     Sound = "sound"
 }
 
-export const Table = {
-    path: {
+export namespace Table {
+    export const path = {
         toCN: {
             "editorunit": "单位",
             "soundall": "声音",
@@ -61,8 +61,9 @@ export const Table = {
             "projectile": "projectileall",
             "technology": "technologyall",
         },
-    },
-    name: {
+    } as const;
+
+    export const name = {
         toCN: {
             "unit": "单位",
             "decoration": "装饰物",
@@ -85,12 +86,12 @@ export const Table = {
             "可破坏物": "destructible",
             "声音": "sound",
         },
-    },
-} as const;
+    } as const;
 
-export type TablePath = keyof typeof Table.path.toCN;
-export type TableNameEN = keyof typeof Table.name.toCN;
-export type TableNameCN = keyof typeof Table.name.fromCN;
+    export type Path = keyof typeof path.toCN;
+    export type NameEN = keyof typeof name.toCN;
+    export type NameCN = keyof typeof name.fromCN;
+}
 
 /**
  * 不同类型的CSV文件导入为Json后会放入不同的文件夹

@@ -8,19 +8,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { TableNameCN, TableNameEN, csvTypeToPath } from '../constants';
+import { Table, csvTypeToPath, EditorTableType } from '../constants';
 import { EditorTableItemInfo } from './types';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
     HashSet, SpinLock, hash, toUnicodeIgnoreASCII
 } from '../utility';
-import {
-    Table,
-    EditorTableType,
-} from '../constants';
-import { error } from 'console';
-
-
 
  /**
  * 通过物编数据项目的(uid)判断其是否存在于项目中
@@ -86,7 +79,7 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
  * @param query 
  * @returns 
  */
-export function searchEditorTableItemsInFolder(editorTableType: TableNameEN, pathStr: string, query: string): vscode.QuickPickItem[] {
+export function searchEditorTableItemsInFolder(editorTableType: Table.NameEN, pathStr: string, query: string): vscode.QuickPickItem[] {
     let res: vscode.QuickPickItem[] = [];
     const files = fs.readdirSync(pathStr);
     files.forEach(file => {
@@ -358,7 +351,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pat
     return res;
 }
 
-export function addNewEditorTableItemInProject(editorTableType: TableNameEN,name:string):boolean {
+export function addNewEditorTableItemInProject(editorTableType: Table.NameEN,name:string):boolean {
     if (!env.editorTableUri) {
         return false;
     }

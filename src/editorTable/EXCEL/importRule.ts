@@ -3,7 +3,7 @@ import { Int, Str, Templete } from "./fieldTypes";
 import * as constants from "./../../constants";
 
 export class ImportRule {
-    public editorTableType: constants.TableNameCN;
+    public editorTableType: constants.Table.NameCN;
     public excelRelativePath?: string;
     public sheet?: string;
     public fieldDefs: {
@@ -14,7 +14,7 @@ export class ImportRule {
     public dataRehandle: Function | undefined;
 
     constructor(
-        editorTableType: constants.TableNameCN,
+        editorTableType: constants.Table.NameCN,
         excelRelativePath?: string,
         sheetName?: string
     ) {
@@ -23,7 +23,7 @@ export class ImportRule {
         this.sheet = sheetName;
     }
     public resetRule(
-        editorTableType: constants.TableNameCN,
+        editorTableType: constants.Table.NameCN,
         excelRelativePath?: string,
         sheetName?: string
     ) {
