@@ -76,26 +76,29 @@ export namespace Table {
     export type NameCN = keyof typeof name.fromCN;
 }
 
-/**
- * 不同类型的CSV文件导入为Json后会放入不同的文件夹
- */
-export const csvTypeToPath = {
-    "unit": "editorunit",
-    "sound": "soundall",
-    "ability": "abilityall",
-    "model": "editormodel",
-    "decoration": "editordecoration",
-    "destructible": "editordestructible",
-    "effect": "editoreffect",
-    "icon": "editoricon",
-    "item": "editoritem",
-    "physics_object": "editorphysicsobject",
-    "physics_object_logic": "editorphysicsobjectlogic",
-    "modifier": "modifierall",
-    "projectile": "projectileall",
-    "store": "storeall",
-    "technology": "technologyall"
-} as const;
+export namespace CSV {
+    export const type = {
+        toPath: {
+            "unit": "editorunit",
+            "sound": "soundall",
+            "ability": "abilityall",
+            "model": "editormodel",
+            "decoration": "editordecoration",
+            "destructible": "editordestructible",
+            "effect": "editoreffect",
+            "icon": "editoricon",
+            "item": "editoritem",
+            "physics_object": "editorphysicsobject",
+            "physics_object_logic": "editorphysicsobjectlogic",
+            "modifier": "modifierall",
+            "projectile": "projectileall",
+            "store": "storeall",
+            "technology": "technologyall"
+        } as const,
+    } as const;
+
+    export type Type = keyof typeof type.toPath;
+}
 
 // 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
 export const defaultTableTypeToCSVfolderPath = {

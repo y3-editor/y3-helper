@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { csvTypeToPath, Table } from '../../constants';
+import { CSV, Table } from '../../constants';
 import { excel2Json } from './excel2Json';
 import { ImportRule } from './importRule';
 import { env } from '../../env';
@@ -57,7 +57,7 @@ export class excelExporter {
     async runRule(rule: ImportRule) {
         let excelPath = rule.excelRelativePath ? vscode.Uri.joinPath(this.excelPath, rule.excelRelativePath) : undefined;
         let editorTableType = Table.name.fromCN[rule.editorTableType];
-        let targetPath: vscode.Uri = vscode.Uri.joinPath(this.editorTablePath, csvTypeToPath[editorTableType]);
+        let targetPath: vscode.Uri = vscode.Uri.joinPath(this.editorTablePath, CSV.type.toPath[editorTableType]);
         //let converter = new excel2Json(rule, excelPath, targetPath);
         //await converter.convert();//TODO: 把excel数据通过converter转换为目标数据
     }

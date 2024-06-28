@@ -6,15 +6,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { env } from "../../env";
 import { isPathValid } from '../../utility';
-import { csvTypeToPath } from "../../constants";
+import { CSV } from "../../constants";
 import { saveRowOfCSV } from '../editorTableItemJson';
 
 
 export class CSVimporter
 {
-    private readonly csvTypeToPath: Readonly<{ [key: string]: string }>;
     public constructor() {
-        this.csvTypeToPath = csvTypeToPath;
     }
 
     /**
@@ -33,7 +31,7 @@ export class CSVimporter
                 vscode.window.showErrorMessage("未找到CSV表格的路径，请从模板中生成");
                 return false;
             }
-            if (!await this.importAllCSVinFolder(csvFolderUri, key)) {
+            if (!await this.importAllCSVinFolder(csvFolderUri, key as CSV.Type)) {
                 return false;
             }
         }
@@ -47,12 +45,12 @@ export class CSVimporter
      * @param tableType 
      * @returns 
      */
-    private async importAllCSVinFolder(folder: vscode.Uri, tableType:string): Promise<boolean> {
+    private async importAllCSVinFolder(folder: vscode.Uri, tableType: CSV.Type): Promise<boolean> {
         if (!env.editorTableUri) {
             vscode.window.showErrorMessage("物编数据表路径为空");
             return false;
         }
-        let targetTableFolder = this.csvTypeToPath[tableType];
+        let targetTableFolder = CSV.type.toPath[tableType];
         let targetEditorTablePath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, targetTableFolder);
         let files = await vscode.workspace.fs.readDirectory(folder);
         for (const file of files) {

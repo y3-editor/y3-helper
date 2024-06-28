@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { Table, csvTypeToPath } from '../constants';
+import { Table, CSV } from '../constants';
 import { EditorTableItemInfo } from './types';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
@@ -347,12 +347,12 @@ function getAllEditorTableItemInfoInFolder(editorTableType: Table.NameEN, pathSt
     return res;
 }
 
-export function addNewEditorTableItemInProject(editorTableType: Table.NameEN,name:string):boolean {
+export function addNewEditorTableItemInProject(editorTableType: Table.NameEN, name:string):boolean {
     if (!env.editorTableUri) {
         return false;
     }
     let uid: number = allocateNewUIDofEditorTableItem(env.editorTableUri);
-    let targetPath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, csvTypeToPath[editorTableType], String(uid) + '.json');
+    let targetPath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, CSV.type.toPath[editorTableType], String(uid) + '.json');
     
     try {
         let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
