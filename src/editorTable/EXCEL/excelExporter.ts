@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { EditorTableName, ObjectTypeNameCN, ObjectTypeNameEN, chineseTypeNameToEnglishTypeName, csvTypeToPath, englishPathToChinese } from '../../constants';
+import { TablePath, TableNameCN, TableNameEN, chineseTypeNameToEnglishTypeName, csvTypeToPath, englishPathToChinese } from '../../constants';
 import { excel2Json } from './excel2Json';
 import { ImportRule } from './importRule';
 import { env } from '../../env';
@@ -43,7 +43,7 @@ export class excelExporter {
             const filePath = path.join(editorTablePath, file);
             let editorTableType: string = file;
             if (editorTableType in englishPathToChinese) {
-                editorTableType = englishPathToChinese[editorTableType as EditorTableName];
+                editorTableType = englishPathToChinese[editorTableType as TablePath];
                 const jsFileList = await fs.promises.readdir(filePath);// 此目录下的编文件js文件目录
                 this.editorTableDatas[editorTableType] = new editorTableDir(jsFileList, filePath);
             }

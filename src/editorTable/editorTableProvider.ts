@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
-import { englishPathToChinese, chineseTypeNameToEnglishTypeName, ObjectTypeNameCN, ObjectTypeNameEN } from '../constants';
+import { englishPathToChinese, chineseTypeNameToEnglishTypeName, TableNameCN, TableNameEN } from '../constants';
 import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
 
 
@@ -33,11 +33,11 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
    * @returns true or false 成功或失败
    */
   public createNewTableItemByFileNode(fileNode: FileNode,name:string) :boolean{
-    let editorTableType = chineseTypeNameToEnglishTypeName[fileNode.label as ObjectTypeNameCN];
+    let editorTableType = chineseTypeNameToEnglishTypeName[fileNode.label as TableNameCN];
     if (!editorTableType) {
       return false;
     }
-    if (addNewEditorTableItemInProject(editorTableType as ObjectTypeNameEN, name)) {
+    if (addNewEditorTableItemInProject(editorTableType as TableNameEN, name)) {
       this.refresh();
       return true;
     }

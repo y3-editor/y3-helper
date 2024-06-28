@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { isPathValid } from '../utility';
-import { ObjectTypeNameCN, ObjectTypeNameEN, chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
+import { TableNameCN, TableNameEN, chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
 
 
 export class TemplateGenerator {
@@ -50,7 +50,7 @@ export class TemplateGenerator {
     private async renameTemplateCSVtoChinese() {
         for (const key in this.englishToChinese) {
             let oldFile: string = key;
-            let newFile: string = this.englishToChinese[key as ObjectTypeNameEN];
+            let newFile: string = this.englishToChinese[key as TableNameEN];
             oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
             newFile = path.join(__dirname, "../../template/csv/" + newFile);
             if (isPathValid(newFile)) {
@@ -65,7 +65,7 @@ export class TemplateGenerator {
     private async renameTemplateCSVtoEnglish() {
         for (let key in this.chineseToEnglish) {
             let oldFile: string = key;
-            let newFile: string = this.chineseToEnglish[key as ObjectTypeNameCN];
+            let newFile: string = this.chineseToEnglish[key as TableNameCN];
             oldFile = path.join(__dirname, "../../template/csv/" + oldFile);
             newFile = path.join(__dirname, "../../template/csv/" + newFile);
             if (isPathValid(newFile)) {

@@ -30,7 +30,6 @@ export const englishPathToChinese = {
     "technologyall": "科技"
 } as const;
 
-export type EditorTableName = keyof typeof englishPathToChinese;
 
 /**
  * 物编数据种类对应的中文名
@@ -47,7 +46,6 @@ export const englishTypeNameToChineseTypeName = {
         "sound": "声音"
 } as const;
 
-export type ObjectTypeNameEN = keyof typeof englishTypeNameToChineseTypeName;
 
 /**
  * 物编数据种类对应的英文名
@@ -64,22 +62,82 @@ export const chineseTypeNameToEnglishTypeName = {
     "声音": "sound"
 } as const;
 
-export type ObjectTypeNameCN = keyof typeof chineseTypeNameToEnglishTypeName;
-
-/**
- * 物编数据类型与其在Y3项目中存放的文件夹名的对应关系
- */
-export const editorTableTypeToFolderName = {
-    "unit": "editorunit",
-    "decoration": "editordecoration",
-    "item": "editoritem",
-    "ability": "abilityall",
-    "modifier": "modifierall",
-    "projectile": "projectileall",
-    "technology": "technologyall",
-    "destructible": "editordestructible",
-    "sound":"soundall"
+export const table = {
+    path: {
+        toCN: {
+            "editorunit": "单位",
+            "soundall": "声音",
+            "abilityall": "技能",
+            "editordecoration": "装饰物",
+            "editordestructible": "可破坏物",
+            "editoritem": "物品",
+            "modifierall": "魔法效果",
+            "projectileall": "投射物",
+            "technologyall": "科技",
+        },
+        fromCN: {
+            "单位": "editorunit",
+            "声音": "soundall",
+            "技能": "abilityall",
+            "装饰物": "editordecoration",
+            "可破坏物": "editordestructible",
+            "物品": "editoritem",
+            "魔法效果": "modifierall",
+            "投射物": "projectileall",
+            "科技": "technologyall",
+        },
+        toName: {
+            "editorunit": "unit",
+            "soundall": "sound",
+            "abilityall": "ability",
+            "editordecoration": "decoration",
+            "editordestructible": "destructible",
+            "editoritem": "item",
+            "modifierall": "modifier",
+            "projectileall": "projectile",
+            "technologyall": "technology",
+        },
+        fromName: {
+            "unit": "editorunit",
+            "sound": "soundall",
+            "ability": "abilityall",
+            "decoration": "editordecoration",
+            "destructible": "editordestructible",
+            "item": "editoritem",
+            "modifier": "modifierall",
+            "projectile": "projectileall",
+            "technology": "technologyall",
+        },
+    },
+    name: {
+        toCN: {
+            "unit": "单位",
+            "decoration": "装饰物",
+            "item": "物品",
+            "ability": "技能",
+            "modifier": "魔法效果",
+            "projectile": "投射物",
+            "technology": "科技",
+            "destructible": "可破坏物",
+            "sound": "声音",
+        },
+        fromCN: {
+            "单位": "unit",
+            "装饰物": "decoration",
+            "物品": "item",
+            "技能": "ability",
+            "魔法效果": "modifier",
+            "投射物": "projectile",
+            "科技": "technology",
+            "可破坏物": "destructible",
+            "声音": "sound",
+        },
+    },
 } as const;
+
+export type TablePath = keyof typeof table.path.toCN;
+export type TableNameEN = keyof typeof table.name.toCN;
+export type TableNameCN = keyof typeof table.name.fromCN;
 
 /**
  * 不同类型的CSV文件导入为Json后会放入不同的文件夹

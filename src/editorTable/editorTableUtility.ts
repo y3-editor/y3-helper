@@ -8,14 +8,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { ObjectTypeNameCN, ObjectTypeNameEN, csvTypeToPath } from '../constants';
+import { TableNameCN, TableNameEN, csvTypeToPath } from '../constants';
 import { EditorTableItemInfo } from './types';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
     HashSet, SpinLock, hash, toUnicodeIgnoreASCII
 } from '../utility';
 import {
-    englishPathToChinese, editorTableTypeToFolderName,
+    table, englishPathToChinese,
     EditorTableType, englishTypeNameToChineseTypeName
 } from '../constants';
 import { error } from 'console';
@@ -73,7 +73,7 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
     for (let type in EditorTableType) {
         let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-        let folderName: string = editorTableTypeToFolderName[typeStr];
+        let folderName: string = table.path.fromName[typeStr];
         res = res.concat(searchEditorTableItemsInFolder(typeStr, path.join(env.editorTablePath, folderName), query));
     }
     return res;
@@ -86,7 +86,7 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
  * @param query 
  * @returns 
  */
-export function searchEditorTableItemsInFolder(editorTableType: ObjectTypeNameEN, pathStr: string, query: string): vscode.QuickPickItem[] {
+export function searchEditorTableItemsInFolder(editorTableType: TableNameEN, pathStr: string, query: string): vscode.QuickPickItem[] {
     let res: vscode.QuickPickItem[] = [];
     const files = fs.readdirSync(pathStr);
     files.forEach(file => {
@@ -298,7 +298,7 @@ function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
     Object.values(EditorTableType).forEach(type => {
         let typeStr = type;
-        let folderName: string = editorTableTypeToFolderName[typeStr];
+        let folderName: string = table.path.fromName[typeStr];
         res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
     });
     
@@ -358,7 +358,7 @@ function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pat
     return res;
 }
 
-export function addNewEditorTableItemInProject(editorTableType: ObjectTypeNameEN,name:string):boolean {
+export function addNewEditorTableItemInProject(editorTableType: TableNameEN,name:string):boolean {
     if (!env.editorTableUri) {
         return false;
     }

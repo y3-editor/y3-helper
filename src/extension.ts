@@ -1,7 +1,7 @@
 import moduleAlias from 'module-alias';
 
 moduleAlias.addAliases({
-  'y3-helper': __dirname + '/y-3helper'
+  'y3-helper': __dirname + '/y3-helper'
 });
 
 import * as fs from 'fs';
@@ -14,7 +14,7 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
 import { TemplateGenerator } from './editorTable/templateGenerator';
-import { ObjectTypeNameEN, englishPathToChinese } from './constants';
+import { TableNameEN, englishPathToChinese } from './constants';
 import { NetworkServer } from './networkServer';
 import * as console from './console';
 import {
@@ -346,7 +346,7 @@ class Helper {
                             vscode.window.showInformationMessage('未选择');
                             return;
                         }
-                        csvEditor.addNewUIDandNameInCSVwithoutConflict(selection.description as ObjectTypeNameEN, value);
+                        csvEditor.addNewUIDandNameInCSVwithoutConflict(selection.description as TableNameEN, value);
                     }
                 });
             });
