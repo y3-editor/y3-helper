@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { Table, csvTypeToPath, EditorTableType } from '../constants';
+import { Table, csvTypeToPath } from '../constants';
 import { EditorTableItemInfo } from './types';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
@@ -64,10 +64,9 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
         return res;
     }
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-    for (let type in EditorTableType) {
-        let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-        let folderName: string = Table.path.fromName[typeStr];
-        res = res.concat(searchEditorTableItemsInFolder(typeStr, path.join(env.editorTablePath, folderName), query));
+    for (let type of Object.keys(Table.name.toCN) as Table.NameEN[]) {
+        let folderName: string = Table.path.fromName[type];
+        res = res.concat(searchEditorTableItemsInFolder(type, path.join(env.editorTablePath, folderName), query));
     }
     return res;
 }
@@ -150,9 +149,8 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
     let resSet = new HashSet<vscode.QuickPickItem>();
 
     // 搜索九类CSV文件
-    for (let type in EditorTableType) {
-        let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-        let csvRelativePath = env.tableTypeToCSVfolderPath[typeStr];
+    for (let type of Object.keys(Table.name.toCN) as Table.NameEN[]) {
+        let csvRelativePath = env.tableTypeToCSVfolderPath[type];
         let csvPath = vscode.Uri.joinPath(env.scriptUri, csvRelativePath);
         if (!isPathValid(csvPath.fsPath)) {
             vscode.window.showErrorMessage("未找到CSV文件，请先生成");
@@ -206,7 +204,7 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
                         }
                         let uid: number = row['uid'];
                         let name: string = row['name'];
-                        let ChinesTypeName = Table.name.toCN[typeStr];
+                        let ChinesTypeName = Table.name.toCN[type];
 
                         // 如果uid匹配或者名称匹配或者类型匹配都纳入结果
                         if (String(uid).includes(query)||name.includes(query)||ChinesTypeName.includes(query)) {
@@ -289,19 +287,17 @@ function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
     let res: EditorTableItemInfo[] = [];
     
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-    Object.values(EditorTableType).forEach(type => {
-        let typeStr = type;
-        let folderName: string = Table.path.fromName[typeStr];
+    Object.values(Table.path.toName).forEach(type => {
+        let folderName = Table.path.fromName[type];
         res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
     });
     
     return res;
 }
 
-function getAllEditorTableItemInfoInFolder(editorTableType: EditorTableType, pathStr: string) {
+function getAllEditorTableItemInfoInFolder(editorTableType: Table.NameEN, pathStr: string) {
     let res: EditorTableItemInfo[] = [];
     const files = fs.readdirSync(pathStr);
-    let editorTableTypeStr:string = editorTableType.toLowerCase();
     files.forEach(file => {
         const filePath: string = path.join(pathStr, file);
         const stat = fs.statSync(filePath);

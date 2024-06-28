@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EditorTableType } from '../constants';
+import { Table } from '../constants';
 import { isFileValid, isJson} from '../utility';
 import * as fs from 'fs';
 import { toUnicodeIgnoreASCII } from '../utility';
@@ -11,7 +11,7 @@ import { toUnicodeIgnoreASCII } from '../utility';
 export class EditorTableItemInfo{
     constructor(public  uid: number,
         public  name: string,
-        public  editorTableType: EditorTableType,
+        public  editorTableType: Table.NameEN,
         public  jsonUri:vscode.Uri
         ) {
     }

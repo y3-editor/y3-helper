@@ -5,7 +5,7 @@ import * as path from 'path';
 import { env } from "../../env";
 import { SpinLock, isCSV, isPathValid } from "../../utility";
 import { allocateNewUIDofEditorTableItem } from '../editorTableUtility';
-import { EditorTableType, Table } from '../../constants';
+import { Table } from '../../constants';
 /**
  *  物编数据CSV表格的编辑器s
  */
@@ -22,9 +22,8 @@ export class CSVeditor {
             return;
         }
         //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-        for (let type in EditorTableType) {
-            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let folderName: string = env.tableTypeToCSVfolderPath[typeStr];
+        for (let type in Table.name.toCN) {
+            let folderName: string = env.tableTypeToCSVfolderPath[type];
             this.modifyNameinFolder(vscode.Uri.joinPath(env.scriptUri, folderName), uid, newName);
         }
     }
@@ -83,9 +82,8 @@ export class CSVeditor {
             return;
         }
         //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-        for (let type in EditorTableType) {
-            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let folderName: string = env.tableTypeToCSVfolderPath[typeStr];
+        for (let type in Table.name.toCN) {
+            let folderName: string = env.tableTypeToCSVfolderPath[type];
             this.modifyUIDinFolder(vscode.Uri.joinPath(env.scriptUri, folderName), oldUID, newUID);
         }
     };
@@ -245,9 +243,8 @@ export class CSVeditor {
         this.uidToFolder = {};
         
         // 搜索九类CSV文件
-        for (let type in EditorTableType ) {
-            let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-            let csvRelativePath = env.tableTypeToCSVfolderPath[typeStr];
+        for (let type in Table.name.toCN ) {
+            let csvRelativePath = env.tableTypeToCSVfolderPath[type];
             let csvPath = vscode.Uri.joinPath(env.scriptUri, csvRelativePath);
             if (!isPathValid(csvPath.fsPath)) {
                 vscode.window.showErrorMessage("未找到CSV文件，请先生成");

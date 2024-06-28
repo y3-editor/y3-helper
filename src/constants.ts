@@ -1,20 +1,3 @@
-// 本项目的常量尽量放到这里
-
-/**
- * 物编数据种类枚举
- */
-export enum EditorTableType {
-    Unit = "unit",
-    Decoration = "decoration",
-    Item = "item",
-    Ability = "ability",
-    Modifier = "modifier",
-    Projectile = "projectile",
-    Technology = "technology",
-    Destructible = "destructible",
-    Sound = "sound"
-}
-
 export namespace Table {
     export const path = {
         toCN: {
@@ -27,7 +10,7 @@ export namespace Table {
             "modifierall": "魔法效果",
             "projectileall": "投射物",
             "technologyall": "科技",
-        },
+        } as const,
         fromCN: {
             "单位": "editorunit",
             "声音": "soundall",
@@ -38,7 +21,7 @@ export namespace Table {
             "魔法效果": "modifierall",
             "投射物": "projectileall",
             "科技": "technologyall",
-        },
+        } as const,
         toName: {
             "editorunit": "unit",
             "soundall": "sound",
@@ -49,7 +32,7 @@ export namespace Table {
             "modifierall": "modifier",
             "projectileall": "projectile",
             "technologyall": "technology",
-        },
+        } as const,
         fromName: {
             "unit": "editorunit",
             "sound": "soundall",
@@ -60,7 +43,7 @@ export namespace Table {
             "modifier": "modifierall",
             "projectile": "projectileall",
             "technology": "technologyall",
-        },
+        } as const,
     } as const;
 
     export const name = {
@@ -74,7 +57,7 @@ export namespace Table {
             "technology": "科技",
             "destructible": "可破坏物",
             "sound": "声音",
-        },
+        } as const,
         fromCN: {
             "单位": "unit",
             "装饰物": "decoration",
@@ -85,7 +68,7 @@ export namespace Table {
             "科技": "technology",
             "可破坏物": "destructible",
             "声音": "sound",
-        },
+        } as const,
     } as const;
 
     export type Path = keyof typeof path.toCN;
