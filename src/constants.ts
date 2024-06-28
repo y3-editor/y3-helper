@@ -71,9 +71,49 @@ export namespace Table {
         } as const,
     } as const;
 
+    export const type = {
+        toLuaType: {
+            100000: "number",
+            100001: "boolean",
+            100002: "integer",
+            100003: "string",
+            100004: "Point",
+            100006: "Unit",
+            100010: "UnitKey",
+            100011: "table",
+            100014: "Ability",
+            100025: "Player",
+            100026: "UnitGroup",
+            100027: "PlayerGroup",
+            100031: "Item",
+            100032: "ItemKey",
+            100039: "AbilityKey",
+            100263: "Mover",
+        } as const,
+        toName: {
+            100000: "实数",
+            100001: "布尔",
+            100002: "整数",
+            100003: "字符串",
+            100004: "点",
+            100006: "单位",
+            100010: "单位类型",
+            100011: "表",
+            100014: "技能",
+            100025: "玩家",
+            100026: "单位组",
+            100027: "玩家组",
+            100031: "物品",
+            100032: "物品类型",
+            100039: "技能类型",
+            100263: "运动器",
+        } as const,
+    } as const;
+
     export type Path = keyof typeof path.toCN;
     export type NameEN = keyof typeof name.toCN;
     export type NameCN = keyof typeof name.fromCN;
+    export type TypeID = keyof typeof type.toLuaType;
 }
 
 export namespace CSV {
@@ -100,34 +140,18 @@ export namespace CSV {
     export type Type = keyof typeof type.toPath;
 }
 
-// 默认情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-export const defaultTableTypeToCSVfolderPath = {
-    unit: "./y3-helper/editor_table/csv/单位",
-    decoration: "./y3-helper/editor_table/csv/装饰物",
-    item: "./y3-helper/editor_table/csv/物品",
-    ability: "./y3-helper/editor_table/csv/技能",
-    modifier: "./y3-helper/editor_table/csv/魔法效果",
-    projectile: "./y3-helper/editor_table/csv/投射物",
-    technology: "./y3-helper/editor_table/csv/科技",
-    destructible: "./y3-helper/editor_table/csv/可破坏物",
-    sound: "./y3-helper/editor_table/csv/声音"
-} as const;
-
-export const typeID = {
-    100000: ["number", "实数"],
-    100001: ["boolean", "布尔"],
-    100002: ["integer", "整数"],
-    100003: ["string", "字符串"],
-    100004: ["Point", "点"],
-    100006: ["Unit", "单位"],
-    100010: ["UnitKey", "单位类型"],
-    100011: ["table", "表"],
-    100014: ["Ability", "技能"],
-    100025: ["Player", "玩家"],
-    100026: ["UnitGroup", "单位组"],
-    100027: ["PlayerGroup", "玩家组"],
-    100031: ["Item", "物品"],
-    100032: ["ItemKey", "物品类型"],
-    100039: ["AbilityKey", "技能类型"],
-    100263: ["Mover", "运动器"],
-} as const;
+export namespace Template {
+    export const path = {
+        csv: {
+            unit: "./y3-helper/editor_table/csv/单位",
+            decoration: "./y3-helper/editor_table/csv/装饰物",
+            item: "./y3-helper/editor_table/csv/物品",
+            ability: "./y3-helper/editor_table/csv/技能",
+            modifier: "./y3-helper/editor_table/csv/魔法效果",
+            projectile: "./y3-helper/editor_table/csv/投射物",
+            technology: "./y3-helper/editor_table/csv/科技",
+            destructible: "./y3-helper/editor_table/csv/可破坏物",
+            sound: "./y3-helper/editor_table/csv/声音",
+        } as const,
+    };
+}

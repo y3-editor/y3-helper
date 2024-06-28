@@ -6,7 +6,7 @@ import util from 'util';
 import * as tools from './tools';
 import { isFileValid, isPathValid, randomInt, toUnicodeIgnoreASCII, hash } from './utility';
 import * as fs from 'fs';
-import { defaultTableTypeToCSVfolderPath } from './constants';
+import { Template } from './constants';
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 
@@ -250,16 +250,8 @@ class EnvPath {
     private initTableTypeToCSVfolderPath(): void {
         let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
-        for (const key in defaultTableTypeToCSVfolderPath) {
-            this._tableTypeToCSVfolderPath[key] = defaultTableTypeToCSVfolderPath[key as keyof typeof defaultTableTypeToCSVfolderPath];
-            // console.log(key + " " + this._tableTypeToCSVfolderPath[key]);
-        }
-        
-        for (const key in csvPathConfig) {
-            if (key in defaultTableTypeToCSVfolderPath) {
-                this._tableTypeToCSVfolderPath[key] = csvPathConfig[key];
-                // console.log("update:"+key + " " + csvPathConfig[key]);
-            }
+        for (const [key, value] of Object.entries(Template.path.csv)) {
+            this._tableTypeToCSVfolderPath[key] = csvPathConfig[key] ?? value;
         }
     }
 

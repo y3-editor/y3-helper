@@ -2,7 +2,7 @@ import { RelativePattern } from "vscode";
 import { env } from "../env";
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
-import { typeID } from "../constants";
+import { Table } from "../constants";
 
 const filePath = 'customevent.json';
 
@@ -68,13 +68,13 @@ export class Events extends BaseDefine {
                 }
                 for (let item of conf) {
                     let name = item[0];
-                    let type: keyof typeof typeID = item[1];
+                    let type: Table.TypeID = item[1];
                     if (name && type) {
                         event.args.push({
                             name,
                             type,
-                            luaType: typeID[type]?.[0] ?? 'any',
-                            desc: typeID[type]?.[1] ?? '不支持的类型',
+                            luaType: Table.type.toLuaType[type]?.[0] ?? 'any',
+                            desc: Table.type.toName[type]?.[1] ?? '不支持的类型',
                         });
                     }
                 }
