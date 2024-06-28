@@ -15,8 +15,8 @@ import {
     HashSet, SpinLock, hash, toUnicodeIgnoreASCII
 } from '../utility';
 import {
-    table, englishPathToChinese,
-    EditorTableType, englishTypeNameToChineseTypeName
+    Table,
+    EditorTableType,
 } from '../constants';
 import { error } from 'console';
 
@@ -32,7 +32,7 @@ export function haveEditorTableJson(editorTableUri:vscode.Uri,uid: number): bool
         return false;
     }
     let jsonName: string = String(uid) + '.json';
-    for (let folderName in englishPathToChinese) {
+    for (let folderName in Table.path.toCN) {
         let filePath = vscode.Uri.joinPath(editorTableUri, folderName, jsonName);
         if (isFileValid(filePath)) {
             return true;
@@ -73,7 +73,7 @@ export function allocateNewUIDofEditorTableItem(editorTableUri: vscode.Uri) :num
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
     for (let type in EditorTableType) {
         let typeStr = EditorTableType[type as keyof typeof EditorTableType];
-        let folderName: string = table.path.fromName[typeStr];
+        let folderName: string = Table.path.fromName[typeStr];
         res = res.concat(searchEditorTableItemsInFolder(typeStr, path.join(env.editorTablePath, folderName), query));
     }
     return res;
@@ -124,7 +124,7 @@ export function searchEditorTableItemsInFolder(editorTableType: TableNameEN, pat
                 label = name + "(" + uid + ")";//转为"这是一个单位(134219828)"的格式
             }
 
-            let chineseTypeName = englishTypeNameToChineseTypeName[editorTableType];
+            let chineseTypeName = Table.name.toCN[editorTableType];
             if (label.includes(query)||chineseTypeName.includes(query)) {
                 let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
                 let quickPickItem: vscode.QuickPickItem = {
@@ -213,7 +213,7 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
                         }
                         let uid: number = row['uid'];
                         let name: string = row['name'];
-                        let ChinesTypeName = englishTypeNameToChineseTypeName[typeStr];
+                        let ChinesTypeName = Table.name.toCN[typeStr];
 
                         // 如果uid匹配或者名称匹配或者类型匹配都纳入结果
                         if (String(uid).includes(query)||name.includes(query)||ChinesTypeName.includes(query)) {
@@ -298,7 +298,7 @@ function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
     //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
     Object.values(EditorTableType).forEach(type => {
         let typeStr = type;
-        let folderName: string = table.path.fromName[typeStr];
+        let folderName: string = Table.path.fromName[typeStr];
         res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
     });
     

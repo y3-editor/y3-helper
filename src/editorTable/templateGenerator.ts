@@ -2,15 +2,15 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { isPathValid } from '../utility';
-import { TableNameCN, TableNameEN, chineseTypeNameToEnglishTypeName, englishTypeNameToChineseTypeName } from '../constants';
+import { TableNameCN, TableNameEN, Table } from '../constants';
 
 
 export class TemplateGenerator {
     private readonly englishToChinese;
     private readonly chineseToEnglish;
     public constructor() {
-        this.chineseToEnglish = chineseTypeNameToEnglishTypeName;
-        this.englishToChinese = englishTypeNameToChineseTypeName;
+        this.chineseToEnglish = Table.name.fromCN;
+        this.englishToChinese = Table.name.toCN;
     }
     
     /**

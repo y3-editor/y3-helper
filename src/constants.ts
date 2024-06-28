@@ -15,54 +15,7 @@ export enum EditorTableType {
     Sound = "sound"
 }
 
-/**
- * Y3项目的editor_table文件夹下的各个文件夹名和物编数据种类中文名的对应关系
- */
-export const englishPathToChinese = {
-    "editorunit": "单位",
-    "soundall": "声音",
-    "abilityall": "技能",
-    "editordecoration": "装饰物",
-    "editordestructible": "可破坏物",
-    "editoritem": "物品",
-    "modifierall": "魔法效果",
-    "projectileall": "投射物",
-    "technologyall": "科技"
-} as const;
-
-
-/**
- * 物编数据种类对应的中文名
- */
-export const englishTypeNameToChineseTypeName = {
-        "unit": "单位",
-        "decoration": "装饰物",
-        "item": "物品",
-        "ability": "技能",
-        "modifier": "魔法效果",
-        "projectile": "投射物",
-        "technology": "科技",
-        "destructible": "可破坏物",
-        "sound": "声音"
-} as const;
-
-
-/**
- * 物编数据种类对应的英文名
- */
-export const chineseTypeNameToEnglishTypeName = {
-    "单位": "unit",
-    "装饰物": "decoration",
-    "物品": "item",
-    "技能": "ability",
-    "魔法效果": "modifier",
-    "投射物": "projectile",
-    "科技": "technology",
-    "可破坏物": "destructible",
-    "声音": "sound"
-} as const;
-
-export const table = {
+export const Table = {
     path: {
         toCN: {
             "editorunit": "单位",
@@ -135,9 +88,9 @@ export const table = {
     },
 } as const;
 
-export type TablePath = keyof typeof table.path.toCN;
-export type TableNameEN = keyof typeof table.name.toCN;
-export type TableNameCN = keyof typeof table.name.fromCN;
+export type TablePath = keyof typeof Table.path.toCN;
+export type TableNameEN = keyof typeof Table.name.toCN;
+export type TableNameCN = keyof typeof Table.name.fromCN;
 
 /**
  * 不同类型的CSV文件导入为Json后会放入不同的文件夹

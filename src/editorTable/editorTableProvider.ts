@@ -3,19 +3,17 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { env } from '../env';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
-import { englishPathToChinese, chineseTypeNameToEnglishTypeName, TableNameCN, TableNameEN } from '../constants';
+import { Table, TableNameCN, TableNameEN, TablePath } from '../constants';
 import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
 
 
 export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode> {
   private _onDidChangeTreeData: vscode.EventEmitter<FileNode | undefined> = new vscode.EventEmitter<FileNode | undefined>();
   readonly onDidChangeTreeData: vscode.Event<FileNode | undefined> = this._onDidChangeTreeData.event;
-  public readonly englishPathToChinese: { [key: string]: string };
   private editorTablePath: string = "";
   private languageJson: any = undefined;
   
   constructor() {
-    this.englishPathToChinese = englishPathToChinese;
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("当前未打开工作目录");
       return;
@@ -33,7 +31,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
    * @returns true or false 成功或失败
    */
   public createNewTableItemByFileNode(fileNode: FileNode,name:string) :boolean{
-    let editorTableType = chineseTypeNameToEnglishTypeName[fileNode.label as TableNameCN];
+    let editorTableType = Table.name.fromCN[fileNode.label as TableNameCN];
     if (!editorTableType) {
       return false;
     }
@@ -142,8 +140,8 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
         fileNodes.push(fileNode);
       }
       else if (stat.isDirectory()) {
-        if (label in this.englishPathToChinese) {
-          label = this.englishPathToChinese[label];
+        if (label in Table.path.toCN) {
+          label = Table.path.toCN[label as TablePath];
           const files = await fs.promises.readdir(filePath);// 检查此目录下有多少个物编文件
           label += '(' + files.length + ')';//显示为 单位(10) 括号内的数字为有多少个物编项目
           const fileNode = new FileNode(

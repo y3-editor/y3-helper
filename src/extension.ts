@@ -14,7 +14,7 @@ import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
 import { TemplateGenerator } from './editorTable/templateGenerator';
-import { TableNameEN, englishPathToChinese } from './constants';
+import { TableNameEN, Table } from './constants';
 import { NetworkServer } from './networkServer';
 import * as console from './console';
 import {
@@ -579,7 +579,7 @@ class Helper {
         const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider(
             env.editorTablePath,
             env.languageJson,
-            englishPathToChinese
+            Table.path.toCN,
         );
         
         this.context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider));

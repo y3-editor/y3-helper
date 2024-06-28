@@ -2,10 +2,11 @@ import * as fs from 'fs-extra';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { TablePath, TableNameCN, TableNameEN, chineseTypeNameToEnglishTypeName, csvTypeToPath, englishPathToChinese } from '../../constants';
+import { TablePath, csvTypeToPath, Table } from '../../constants';
 import { excel2Json } from './excel2Json';
 import { ImportRule } from './importRule';
 import { env } from '../../env';
+import { table } from 'y3-helper';
 
 class editorTableDir{
     public fileNameList: string[];
@@ -42,8 +43,8 @@ export class excelExporter {
         for (const file of files) {
             const filePath = path.join(editorTablePath, file);
             let editorTableType: string = file;
-            if (editorTableType in englishPathToChinese) {
-                editorTableType = englishPathToChinese[editorTableType as TablePath];
+            if (editorTableType in Table.path.toCN) {
+                editorTableType = Table.path.toCN[editorTableType as TablePath];
                 const jsFileList = await fs.promises.readdir(filePath);// 此目录下的编文件js文件目录
                 this.editorTableDatas[editorTableType] = new editorTableDir(jsFileList, filePath);
             }
@@ -55,7 +56,7 @@ export class excelExporter {
 
     async runRule(rule: ImportRule) {
         let excelPath = rule.excelRelativePath ? vscode.Uri.joinPath(this.excelPath, rule.excelRelativePath) : undefined;
-        let editorTableType = chineseTypeNameToEnglishTypeName[rule.editorTableType];
+        let editorTableType = Table.name.fromCN[rule.editorTableType];
         let targetPath: vscode.Uri = vscode.Uri.joinPath(this.editorTablePath, csvTypeToPath[editorTableType]);
         //let converter = new excel2Json(rule, excelPath, targetPath);
         //await converter.convert();//TODO: 把excel数据通过converter转换为目标数据
