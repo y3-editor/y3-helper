@@ -288,7 +288,7 @@ class Helper {
                 title: "Executing Task",
                 cancellable: false
             }, async (progress, token) => {
-                let Expoter = excelExporter.getInstance();
+                let Expoter = new excelExporter();
                 await Expoter?.excelExport();
 
                 // this.editorTableDataProvider?.refresh();

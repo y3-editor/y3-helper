@@ -167,7 +167,7 @@ export class excelConverter{
                     }
                 }
                 if(tmpID){
-                    let exporter = excelExporter.getInstance();
+                    let exporter = new excelExporter();
                     if(exporter){
                         output = await exporter.getTmpJsDict(this.rule.editorTableType, tmpID);
                     }

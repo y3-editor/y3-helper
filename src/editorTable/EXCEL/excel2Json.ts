@@ -6,7 +6,7 @@ import { chineseTypeNameToEnglishTypeName } from '../../constants';
 import { excelConverter } from './excelConverter';
 
 
-export class excel2Json extends excelConverter{
+export class excel2Json extends excelConverter {
     constructor(rule: ImportRule, excelPath: vscode.Uri, targetPath: vscode.Uri)  {
         super(rule, excelPath, targetPath);
     }
