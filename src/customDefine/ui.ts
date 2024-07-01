@@ -5,6 +5,7 @@ import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 
 const dirPath = 'ui';
+const prefabPath = 'ui/prefab';
 
 type Node = {
     name: string,
@@ -110,21 +111,11 @@ export class UI extends BaseDefine {
                 return undefined;
             }
 
-            let prefab_data = json['prefab_data'];
-            if (!prefab_data || typeof prefab_data !== 'object') {
-                return undefined;
+            let node = this.makeNode(json['data']);
+            if (node) {
+                node.name = json['name'];
             }
-
-            let nodes: Node[] = [];
-            for (const key in prefab_data) {
-                let prefeb = prefab_data[key];
-                let node = this.makeNode(prefeb['data']);
-                if (node) {
-                    node.name = prefeb['name'];
-                    nodes.push(node);
-                }
-            }
-            return nodes;
+            return node;
         } catch(e) {
             tools.log.error(e as Error);
         }
@@ -158,19 +149,27 @@ export class UI extends BaseDefine {
                         }
                         continue;
                     }
-                    case 'ui_config.json': {
-                        let nodes = await this.loadPrefeb(uri);
-                        if (nodes) {
-                            uiPackage.元件 = nodes;
-                        }
-                        continue;
-                    }
                     default: {
                         let node = await this.loadUI(uri);
                         if (node) {
                             uiPackage.画板.push(node);
                         }
                     }
+                }
+            }
+            let prefabDir = vscode.Uri.joinPath(env.mapUri, prefabPath);
+            let prefabFiles = await vscode.workspace.fs.readDirectory(prefabDir);
+            for (let [fileName, fileType] of prefabFiles) {
+                if (fileType !== vscode.FileType.File) {
+                    continue;
+                };
+                if (!fileName.endsWith('.json')) {
+                    continue;
+                };
+                let uri = vscode.Uri.joinPath(prefabDir, fileName);
+                let node = await this.loadPrefeb(uri);
+                if (node) {
+                    uiPackage.元件.push(node);
                 }
             }
         } finally {
