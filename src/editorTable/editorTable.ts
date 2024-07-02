@@ -35,7 +35,7 @@ class EditorObject {
 
     public get name(): string {
         if (!this._name) {
-            let name = this.json.match(/"name"\s*:\s*\(-?\d*)/);
+            let name = this.json.match(/"name"\s*:\s*(\-?\d*)/);
             if (name && name[1]) {
                 let id = parseInt(name[1]);
                 if (!isNaN(id)) {
