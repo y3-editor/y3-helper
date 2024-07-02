@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { env } from '../env';
 import { addNewEditorTableItemInProject } from './editorTableUtility';
 import { Table } from '../constants';
-import { isPathValid, isJson, getFileNameByVscodeUri, hash, toUnicodeIgnoreASCII } from '../utility';
+import { hash, toUnicodeIgnoreASCII } from '../utility';
 import * as y3 from 'y3-helper';
 
 
@@ -92,7 +92,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
 
       // 如果这个是物编数据的Json文件 那么它的label就需要加上其名称
       let label: string = file;
-      if (isJson(filePath)) {
+      if (filePath.toLowerCase().endsWith('.json')) {
         let editorTableJsonData: any;
         try {
           editorTableJsonData = await fs.promises.readFile(filePath, 'utf8');
@@ -179,7 +179,7 @@ export class FileNode extends vscode.TreeItem {
     if (this.isDirectory) {
       this.contextValue = 'directory';
     }
-    else if (isJson(resourceUri.fsPath)) {
+    else if (resourceUri.fsPath.toLowerCase().endsWith('.json')) {
       this.contextValue = 'json';
     }
     else {

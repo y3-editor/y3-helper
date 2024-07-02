@@ -82,7 +82,7 @@ function getFileID(uri: vscode.Uri): number|undefined {
 }
 
 class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
-    public tableUri;
+    public uri;
     public nameEN;
     private _objectCache: { [key: number]: EditorObject | null | undefined } = {};
     private watcher?: vscode.FileSystemWatcher;
@@ -94,7 +94,7 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
             throw new Error('未选择地图路径');
         }
         this.nameEN = Table.name.fromCN[nameCN];
-        this.tableUri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[nameCN]);
+        this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[nameCN]);
     }
 
     public async get(id: number): Promise<EditorObject | null> {
@@ -108,7 +108,7 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     public async list() {
         if (!this._listCache) {
             this._listCache = [];
-            let files = await y3.fs.dir(this.tableUri);
+            let files = await y3.fs.dir(this.uri);
             this.initWatcher();
             if (!files) {
                 return this._listCache;
@@ -133,7 +133,7 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     private _onDidChange: vscode.EventEmitter<void> = new vscode.EventEmitter();
 
     private initWatcher() {
-        this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.tableUri, '*.json'));
+        this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, '*.json'));
         this.watcher.onDidChange((fileUri) => {
             let id = getFileID(fileUri);
             if (id === undefined) {

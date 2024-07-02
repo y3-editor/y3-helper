@@ -86,8 +86,6 @@ export class GoEditorTableSymbolProvider implements vscode.WorkspaceSymbolProvid
     }
 }
 
-
-
 /**
  * 提供物编数据的Json文件内的中英文字段搜索的DocumentSymbolProvider
  */

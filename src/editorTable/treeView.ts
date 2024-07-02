@@ -1,12 +1,87 @@
 import * as vscode from 'vscode';
-import { FileNode, EditorTableDataProvider } from './editorTableProvider';
 import { GoEditorTableDocumentSymbolProvider, GoEditorTableSymbolProvider } from './fileView';
 import { env } from '../env';
+import { Table } from '../constants';
+import * as editorTable from './editorTable';
 
-export function init() {
+class FileNode extends vscode.TreeItem {
+    constructor(public tableName: Table.NameCN, key: number) {
+        super(`读取中...(${key})`);
+
+        let table = editorTable.open(tableName);
+        table.get(key).then((object) => {
+            if (!object) {
+                return;
+            }
+            this.label = `${object.name}(${key})`;
+            this.resourceUri = object.uri;
+        });
+    }
+
+    readonly contextValue = 'json';
+}
+
+class DirNode extends vscode.TreeItem {
+    constructor(public tableName: Table.NameCN) {
+        super(`${tableName}(加载中...)`);
+
+        let table = editorTable.open(tableName);
+        this.resourceUri = table.uri;
+
+        table.list().then((keys) => {
+            this.label = `${tableName}(${keys.length})`;
+        });
+    }
+
+    readonly contextValue = 'directory';
+
+    public async getChildren(): Promise<FileNode[]> {
+        let nodes: FileNode[] = [];
+        let table = editorTable.open(this.tableName);
+        let keys = await table.list();
+        for (const key of keys) {
+            nodes.push(new FileNode(this.tableName, key));
+        }
+        return nodes;
+    }
+}
+
+type TreeNode = FileNode | DirNode;
+
+class EditorTableDataProvider implements vscode.TreeDataProvider<TreeNode> {
+    private async getRoot(): Promise<DirNode[]> {
+        let nodes: DirNode[] = [];
+        for (const nameCN in Table.name.fromCN) {
+            nodes.push(new DirNode(nameCN as Table.NameCN));
+        }
+        return nodes;
+    }
+
+    public async getChildren(node?: TreeNode | undefined) {
+        if (node === undefined) {
+            return await this.getRoot();
+        } else if(node instanceof DirNode) {
+            return await node.getChildren();
+        } else {
+            return [];
+        }
+    }
+
+    public async getTreeItem(element: FileNode) {
+        return element;
+    }
+
+    private _onDidChange = new vscode.EventEmitter<TreeNode|undefined>();
+    readonly onDidChangeTreeData = this._onDidChange.event;
+    public refresh() {
+        this._onDidChange.fire(undefined);
+    }
+}
+
+function createTreeView() {
     const editorTableDataProvider = new EditorTableDataProvider();
-    
-    vscode.window.createTreeView('y3-helper.editorTableView', {
+
+    const treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
         treeDataProvider: editorTableDataProvider,
         showCollapseAll: true,
     });
@@ -16,6 +91,25 @@ export function init() {
     });
 
     vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => editorTableDataProvider.refresh());
+
+    return treeView;
+}
+
+export async function init() {
+    await env.mapReady();
+
+    let treeView: vscode.TreeView<TreeNode>;
+    if (env.editorTableUri) {
+        treeView = createTreeView();
+    }
+    env.onDidChange(() => {
+        if (treeView) {
+            treeView.dispose();
+        }
+        if (env.editorTableUri) {
+            treeView = createTreeView();
+        }
+    });
 
     const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider();
     
