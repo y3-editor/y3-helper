@@ -71,7 +71,7 @@ async function loadObject(tableName: Table.NameCN, key: number) {
 }
 
 function getFileID(uri: vscode.Uri): number|undefined {
-    if (!uri.path.endsWith('.json')) {
+    if (!uri.path.toLowerCase().endsWith('.json')) {
         return;
     }
     let id = parseInt(uri.path.slice(0, -5));
@@ -117,7 +117,7 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 if (type !== vscode.FileType.File) {
                     continue;
                 }
-                if (!name.endsWith('.json')) {
+                if (!name.toLowerCase().endsWith('.json')) {
                     continue;
                 }
                 let id = parseInt(name.slice(0, -5));

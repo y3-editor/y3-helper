@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { EditorTableDataProvider, GoEditorTableSymbolProvider, GoEditorTableDocumentSymbolProvider, FileNode } from './editorTableProvider';
+import { FileNode, EditorTableDataProvider } from './editorTableProvider';
+import { GoEditorTableDocumentSymbolProvider, GoEditorTableSymbolProvider } from './fileView';
 import { env } from '../env';
 
 export function init() {
     const editorTableDataProvider = new EditorTableDataProvider();
     
-    let treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
+    vscode.window.createTreeView('y3-helper.editorTableView', {
         treeDataProvider: editorTableDataProvider,
         showCollapseAll: true,
     });
@@ -35,6 +36,7 @@ export function init() {
         }
         //editorTableDataProvider.refresh();
     });
+
     vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
         // vscode自带的从系统文件浏览器中打开某一文件的命令
         vscode.commands.executeCommand('revealFileInOS', fileNode.resourceUri);
@@ -44,8 +46,8 @@ export function init() {
         if (fileNode.uid) {
             vscode.env.clipboard.writeText(String(fileNode.uid));
         }
-        
     });
+
     vscode.commands.registerCommand("y3-helper.copyTableItemName", (fileNode: FileNode) => {
         if (fileNode.name) {
             vscode.env.clipboard.writeText(fileNode.name);
