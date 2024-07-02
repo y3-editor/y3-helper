@@ -17,7 +17,7 @@ import { Table } from './constants';
 import { NetworkServer } from './networkServer';
 import * as console from './console';
 import {
-    CSVimporter, FileNode,
+    CSVimporter,
     searchAllEditorTableItemInProject, searchAllEditorTableItemInCSV, CSVeditor
 } from './editorTable';
 import * as metaBuilder from './metaBuilder';
@@ -546,13 +546,6 @@ class Helper {
         });
     }
 
-    private registerCommandOfOpenFile() {
-        vscode.commands.registerCommand('y3-helper.openFile', async (args: FileNode) => {
-            const document = await vscode.workspace.openTextDocument(args.resourceUri.fsPath);
-            vscode.window.showTextDocument(document);
-        });
-    }
-
     private checkNewProject() {
         let newProjectPath = this.context.globalState.get("NewProjectPath");
         if (!newProjectPath) {
@@ -589,8 +582,6 @@ class Helper {
         this.registerCommandOfImportEditorTableDataFromExcel();
 
         this.registerCommandOfGenerateTemplates();
-
-        this.registerCommandOfOpenFile();
         
         this.reloadEnvWhenConfigChange();
 
