@@ -358,7 +358,7 @@ export function addNewEditorTableItemInProject(editorTableType: Table.NameEN, na
     try {
         let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
         let templateJson = JSON.parse(templateJsonStr);
-        let nameHashCode = y3.language.fetch(name);
+        let nameHashCode = y3.language.keyOf(name);
         if (!nameHashCode) {
             throw new Error("writeDataInLanguageJson失败");
         }

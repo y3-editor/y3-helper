@@ -3,64 +3,68 @@ import { GoEditorTableDocumentSymbolProvider, GoEditorTableSymbolProvider } from
 import { env } from '../env';
 import { Table } from '../constants';
 import * as editorTable from './editorTable';
+import { throttle } from '../utility/decorators';
 
 class FileNode extends vscode.TreeItem {
+    readonly contextValue = 'json';
     constructor(
-        private dir: DirNode,
+        public parent: DirNode,
         public tableName: Table.NameCN,
-        key: number,
+        public key: number,
     ) {
         super(`加载中...(${key})`);
-
-        let table = editorTable.open(tableName);
-        table.get(key).then((object) => {
-            if (!object) {
-                return;
-            }
-            this.label = `${object.name}(${key})`;
-            this.resourceUri = object.uri;
-            this.refresh();
-        });
     }
 
-    readonly contextValue = 'json';
-
-    public refresh() {
-        this.dir.provider.refresh(this.dir);
+    public update(): void | Promise<void> {
+        let table = editorTable.open(this.tableName);
+        let object = table.fetch(this.key);
+        if (object) {
+            this.label = `${object.name}(${this.key})`;
+            this.resourceUri = object.uri;
+            return;
+        } else if (object === undefined) {
+            return new Promise<void>(async resolve => {
+                await table.get(this.key);
+                resolve();
+            });
+        }
     }
 }
 
 class DirNode extends vscode.TreeItem {
+    readonly contextValue = 'directory';
+    readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
     constructor(
-        public provider: TreeViewProvider,
         public tableName: Table.NameCN,
     ) {
         super(`${tableName}(加载中...)`);
 
         let table = editorTable.open(tableName);
         this.resourceUri = table.uri;
-
-        table.list().then((keys) => {
-            this.label = `${tableName}(${keys.length})`;
-            this.refresh();
-        });
     }
 
-    readonly contextValue = 'directory';
-    readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+    public update(): void | Promise<void> {
+        let table = editorTable.open(this.tableName);
+        let list = table.fetchList();
+        if (list) {
+            this.label = `${this.tableName}(${list.length})`;
+            return;
+        } else {
+            return new Promise<void>(async resolve => {
+                await table.getList();
+                resolve();
+            });
+        }
+    }
 
     public async getChildren(): Promise<FileNode[]> {
         let nodes: FileNode[] = [];
         let table = editorTable.open(this.tableName);
-        let keys = await table.list();
+        let keys = await table.getList();
         for (const key of keys) {
             nodes.push(new FileNode(this, this.tableName, key));
         }
         return nodes;
-    }
-
-    public refresh() {
-        this.provider.refresh(this);
     }
 }
 
@@ -70,12 +74,15 @@ class TreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
     private async getRoot(): Promise<DirNode[]> {
         let nodes: DirNode[] = [];
         for (const nameCN in Table.name.fromCN) {
-            nodes.push(new DirNode(this, nameCN as Table.NameCN));
+            nodes.push(new DirNode(nameCN as Table.NameCN));
         }
         return nodes;
     }
 
     public async getChildren(node?: TreeNode | undefined) {
+        if (!env.editorTableUri) {
+            return;
+        }
         if (node === undefined) {
             return await this.getRoot();
         } else if(node instanceof DirNode) {
@@ -85,7 +92,11 @@ class TreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
         }
     }
 
-    public async getTreeItem(node: TreeNode) {
+    public getTreeItem(node: TreeNode) {
+        let promise = node.update();
+        if (promise) {
+            promise.then(() => this.refreshAll());
+        }
         return node;
     }
 
@@ -93,6 +104,11 @@ class TreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
     readonly onDidChangeTreeData = this._onDidChange.event;
     public refresh(node?: TreeNode) {
         this._onDidChange.fire(node);
+    }
+
+    @throttle(200)
+    public refreshAll() {
+        this.refresh(undefined);
     }
 }
 

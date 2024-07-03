@@ -53,7 +53,7 @@ class Language extends vscode.Disposable {
         this.updateFile();
     }
 
-    fetch(value: string): string {
+    keyOf(value: string): string {
         if (!this._reverse) {
             this._reverse = {};
             for (let key in this._language) {
@@ -90,7 +90,9 @@ export function init() {
     });
 }
 
-// 根据key获取中文文本
+/**
+ * 根据key获取中文文本
+ */
 export function get(key: string | number): string | undefined {
     if (typeof key === 'number') {
         key = key.toString();
@@ -98,7 +100,9 @@ export function get(key: string | number): string | undefined {
     return language.get(key);
 }
 
-// 添加中文文本
+/**
+ * 添加中文文本
+ */
 export function set(key: string | number, value: string) {
     if (typeof key === 'number') {
         key = key.toString();
@@ -106,10 +110,12 @@ export function set(key: string | number, value: string) {
     language.set(key, value);
 }
 
-// 获取中文文本对应的key，如果不存在会新建
-export function fetch(value: string | number): string {
+/**
+ * 获取中文文本对应的key，如果不存在会新建
+ */
+export function keyOf(value: string | number): string {
     if (typeof value === 'number') {
         value = value.toString();
     }
-    return language.fetch(value);
+    return language.keyOf(value);
 }

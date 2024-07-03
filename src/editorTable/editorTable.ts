@@ -104,8 +104,12 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return this._objectCache[id]!;
     }
 
+    public fetch(id: number): EditorObject | null | undefined {
+        return this._objectCache[id];
+    }
+
     private _listCache?: number[];
-    public async list() {
+    public async getList() {
         if (!this._listCache) {
             this._listCache = [];
             let files = await y3.fs.dir(this.uri);
@@ -127,6 +131,10 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 this._listCache.push(id);
             }
         }
+        return this._listCache;
+    }
+
+    public fetchList() {
         return this._listCache;
     }
 

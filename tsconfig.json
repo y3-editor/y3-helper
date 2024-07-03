@@ -7,7 +7,6 @@
 		"lib": [
 			"ES2022"
 		],
-		"baseUrl": ".",
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,

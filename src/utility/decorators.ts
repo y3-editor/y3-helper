@@ -3,15 +3,17 @@
 export function throttle(wait: number) {
     return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
-        let isThrottled = false;
+        let isThrottled = new Set<any>();
 
         descriptor.value = function(...args: any[]) {
-            if (isThrottled) {
+            if (isThrottled.has(this)) {
                 return;
             };
-            isThrottled = true;
-            setTimeout(() => isThrottled = false, wait);
-            return originalMethod.apply(this, args);
+            isThrottled.add(this);
+            setTimeout(() => {
+                isThrottled.delete(this);
+                originalMethod.apply(this, args);
+            }, wait);
         };
     };
 }

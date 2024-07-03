@@ -52,7 +52,7 @@ export class EditorTableDataProvider implements vscode.TreeDataProvider<FileNode
       let newNameHashcode = hash(newName);
       let editorTableJsonStr = await fs.promises.readFile(fileNode.resourceUri.fsPath, 'utf8');
       let editorTableJson = JSON.parse(editorTableJsonStr);
-      let k = y3.language.fetch(newName);
+      let k = y3.language.keyOf(newName);
       if (!k) {
         return false;
       }

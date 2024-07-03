@@ -30,7 +30,7 @@ export async function saveEditorTableItemJson(index: any ,data: any, targetPath:
     let uid = index.toString();
     let jsonFilePath = targetPath.fsPath + '\\' + uid + '.json';
     if ('name' in data) {
-        let k = y3.language.fetch(data['name']);
+        let k = y3.language.keyOf(data['name']);
         data['name'] = k;
     }
     if (!isInDirectory(targetPath.fsPath, uid + '.json')) {
