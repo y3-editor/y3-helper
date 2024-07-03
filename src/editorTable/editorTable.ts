@@ -2,6 +2,7 @@ import { Table } from "../constants";
 import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
+import { throttle } from "../utility/decorators";
 
 type ObjectShape = {
     "name": string | number,
@@ -70,18 +71,26 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     }
 }
 
-function getFileID(uri: vscode.Uri): number|undefined {
-    if (!uri.path.toLowerCase().endsWith('.json')) {
+function getFileID(fileName: string): number|undefined {
+    if (!fileName.toLowerCase().endsWith('.json')) {
         return;
     }
-    let id = parseInt(uri.path.slice(0, -5));
+    let idStr = fileName.slice(0, -5).split('/').pop();
+    if (!idStr) {
+        return;
+    }
+    // 确保只有数字
+    if (!/^\d+$/.test(idStr)) {
+        return;
+    }
+    let id = parseInt(idStr);
     if (isNaN(id)) {
         return;
     }
     return id;
 }
 
-class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
+export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     public uri;
     public nameEN;
     private _objectCache: { [key: number]: EditorObject | null | undefined } = {};
@@ -121,21 +130,51 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 if (type !== vscode.FileType.File) {
                     continue;
                 }
-                if (!name.toLowerCase().endsWith('.json')) {
-                    continue;
-                }
-                let id = parseInt(name.slice(0, -5));
-                if (isNaN(id)) {
+                let id = getFileID(name);
+                if (id === undefined) {
                     continue;
                 }
                 this._listCache.push(id);
             }
+            this._listCache.sort();
         }
+        this.resortList();
         return this._listCache;
     }
 
     public fetchList() {
+        this.resortList();
         return this._listCache;
+    }
+
+    private _listActions: ['create' | 'delete', number][] = [];
+    private resortList() {
+        if (this._listActions.length === 0) {
+            return;
+        }
+        let map: { [key: number]: boolean } = {};
+        let list: number[] = [];
+        for (const id of this._listCache!) {
+            map[id] = true;
+        }
+        for (const [action, id] of this._listActions) {
+            if (action === 'create') {
+                map[id] = true;
+            } else {
+                delete map[id];
+            }
+        }
+        this._listActions.length = 0;
+        for (const id in map) {
+            list.push(Number(id));
+        }
+        list.sort();
+        this._listCache = list;
+    }
+
+    @throttle(200)
+    private callOnDidChange() {
+        this._onDidChange.fire();
     }
 
     private _onDidChange: vscode.EventEmitter<void> = new vscode.EventEmitter();
@@ -143,7 +182,7 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     private initWatcher() {
         this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, '*.json'));
         this.watcher.onDidChange((fileUri) => {
-            let id = getFileID(fileUri);
+            let id = getFileID(fileUri.path);
             if (id === undefined) {
                 return;
             }
@@ -151,33 +190,30 @@ class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 return;
             }
             this._objectCache[id] = undefined;
-            this._onDidChange.fire();
+            this.callOnDidChange();
         });
         this.watcher.onDidCreate((fileUri) => {
-            let id = getFileID(fileUri);
+            let id = getFileID(fileUri.path);
             if (id === undefined) {
                 return;
             }
             if (!this._listCache) {
                 return;
             }
-            this._listCache.push(id);
-            this._onDidChange.fire();
+            this._listActions.push(['create', id]);
+            this.callOnDidChange();
         });
         this.watcher.onDidDelete((fileUri) => {
-            let id = getFileID(fileUri);
+            let id = getFileID(fileUri.path);
             if (id === undefined) {
                 return;
             }
             if (!this._listCache) {
                 return;
             }
-            let index = this._listCache.indexOf(id);
-            if (index !== -1) {
-                this._listCache.splice(index, 1);
-            }
             this._objectCache[id] = undefined;
-            this._onDidChange.fire();
+            this._listActions.push(['delete', id]);
+            this.callOnDidChange();
         });
     }
 

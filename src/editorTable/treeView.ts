@@ -13,6 +13,8 @@ class FileNode extends vscode.TreeItem {
         public key: number,
     ) {
         super(`加载中...(${key})`);
+
+        this.id = `${tableName}/${key}`;
     }
 
     public update(): void | Promise<void> {
@@ -39,24 +41,25 @@ class FileNode extends vscode.TreeItem {
 class DirNode extends vscode.TreeItem {
     readonly contextValue = 'directory';
     readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+    readonly table: editorTable.EditorTable<any>;
     constructor(
         public tableName: Table.NameCN,
     ) {
         super(`${tableName}(加载中...)`);
 
-        let table = editorTable.open(tableName);
-        this.resourceUri = table.uri;
+        this.table = editorTable.open(tableName);
+        this.resourceUri = this.table.uri;
+        this.id = tableName;
     }
 
     public update(): void | Promise<void> {
-        let table = editorTable.open(this.tableName);
-        let list = table.fetchList();
+        let list = this.table.fetchList();
         if (list) {
             this.label = `${this.tableName}(${list.length})`;
             return;
         } else {
             return new Promise<void>(async resolve => {
-                await table.getList();
+                await this.table.getList();
                 resolve();
             });
         }
@@ -75,13 +78,30 @@ class DirNode extends vscode.TreeItem {
 
 type TreeNode = FileNode | DirNode;
 
-class TreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
-    private async getRoot(): Promise<DirNode[]> {
-        let nodes: DirNode[] = [];
-        for (const nameCN in Table.name.fromCN) {
-            nodes.push(new DirNode(nameCN as Table.NameCN));
+class TreeViewProvider extends vscode.Disposable implements vscode.TreeDataProvider<TreeNode>  {
+    constructor() {
+        super(() => {
+            this.disposables.forEach(d => d.dispose());
+        });
+    }
+
+    private dirNodes?: DirNode[];
+    private disposables: vscode.Disposable[] = [];
+
+    private getRoot(): DirNode[] {
+        if (this.dirNodes) {
+            return this.dirNodes;
         }
-        return nodes;
+        this.dirNodes = [];
+        for (const nameCN in Table.name.fromCN) {
+            let dirNode = new DirNode(nameCN as Table.NameCN);
+            this.dirNodes.push(dirNode);
+
+            this.disposables.push(dirNode.table.onDidChange(() => {
+                this.refresh(dirNode);
+            }));
+        }
+        return this.dirNodes;
     }
 
     public async getChildren(node?: TreeNode | undefined) {
@@ -89,7 +109,7 @@ class TreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
             return;
         }
         if (node === undefined) {
-            return await this.getRoot();
+            return this.getRoot();
         } else if(node instanceof DirNode) {
             return await node.getChildren();
         } else {
@@ -122,7 +142,7 @@ class TreeView extends vscode.Disposable {
         super(() => {
             this.disposables.forEach(d => d.dispose());
         });
-        this.provider = new TreeViewProvider();
+        this.disposables.push(this.provider = new TreeViewProvider());
 
         this.disposables.push(this.treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
             treeDataProvider: this.provider,
