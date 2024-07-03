@@ -21,7 +21,7 @@ type MapShape = {
     [key: string]: any,
 };
 
-class EditorObject {
+export class EditorObject {
     private _raw?: ObjectShape;
     private _name?: string;
     constructor(public key: number, public uri: vscode.Uri, private json: string) {

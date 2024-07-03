@@ -17,19 +17,20 @@ class FileNode extends vscode.TreeItem {
         this.id = `${tableName}/${key}`;
     }
 
+    public object?: editorTable.EditorObject | null;
     public update(): void | Promise<void> {
         let table = editorTable.open(this.tableName);
-        let object = table.fetch(this.key);
-        if (object) {
-            this.label = `${object.name}(${this.key})`;
-            this.resourceUri = object.uri;
+        this.object = table.fetch(this.key);
+        if (this.object) {
+            this.label = `${this.object.name}(${this.key})`;
+            this.resourceUri = this.object.uri;
             this.command = {
                 command: 'vscode.open',
                 title: '打开文件',
-                arguments: [object.uri],
+                arguments: [this.object.uri],
             };
             return;
-        } else if (object === undefined) {
+        } else if (this.object === undefined) {
             return new Promise<void>(async resolve => {
                 await table.get(this.key);
                 resolve();
@@ -166,9 +167,28 @@ class TreeView extends vscode.Disposable {
         }));
         
         // 在Windows中浏览
-        vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
-            vscode.commands.executeCommand('revealFileInOS', fileNode.resourceUri);
+        vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (node: TreeNode) => {
+            if (!node.resourceUri) {
+                return;
+            }
+            vscode.commands.executeCommand('revealFileInOS', node.resourceUri);
         });
+
+        // 复制名字
+        vscode.commands.registerCommand("y3-helper.copyTableItemName", (fileNode: FileNode) => {
+            if (!fileNode.object) {
+                return;
+            }
+            vscode.env.clipboard.writeText(fileNode.object.name);
+        });
+
+        vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
+            if (!fileNode.object) {
+                return;
+            }
+            vscode.env.clipboard.writeText(fileNode.object.key.toString());
+        });
+
     }
 
     async refresh() {
@@ -206,17 +226,6 @@ export async function init() {
     //     //editorTableDataProvider.refresh();
     // });
 
-    // vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
-    //     if (fileNode.uid) {
-    //         vscode.env.clipboard.writeText(String(fileNode.uid));
-    //     }
-    // });
-
-    // vscode.commands.registerCommand("y3-helper.copyTableItemName", (fileNode: FileNode) => {
-    //     if (fileNode.name) {
-    //         vscode.env.clipboard.writeText(fileNode.name);
-    //     }
-    // });
 
     // vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (fileNode: FileNode) => {
     //     await env.mapReady(true);
