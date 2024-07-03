@@ -195,6 +195,29 @@ class TreeView extends vscode.Disposable {
             let table = editorTable.open(fileNode.tableName);
             table.delete(fileNode.key);
         });
+
+        // 重命名
+        vscode.commands.registerCommand("y3-helper.renameEditorTableItem", async (fileNode: FileNode) => {
+            if (!fileNode.object) {
+                return;
+            }
+            const inputOptions: vscode.InputBoxOptions = {
+                prompt: '修改后的新名称',
+                value: fileNode.object.name,
+                placeHolder: '新名称',
+                validateInput: (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    return null;
+                }
+            };
+            let value = await vscode.window.showInputBox(inputOptions);
+            if (!value) {
+                return;
+            }
+            await fileNode.object.rename(value);
+        });
     }
 
     async refresh() {

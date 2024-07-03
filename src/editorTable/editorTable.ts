@@ -56,6 +56,16 @@ export class EditorObject {
         }
         return this._name;
     }
+
+    public async rename(name: string): Promise<boolean> {
+        let id = y3.language.keyOf(name);
+        let obj = JSON.parse(this.json);
+        obj.name = id;
+        let newJson = JSON.stringify(obj, null, 4);
+        this._name = undefined;
+        this._raw = undefined;
+        return await y3.fs.writeFile(this.uri, newJson);
+    }
 }
 
 async function loadObject(tableName: Table.NameCN, key: number) {
@@ -149,7 +159,9 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
 
     public async delete(key: number) {
         let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
-        await y3.fs.removeFile(uri);
+        await y3.fs.removeFile(uri, {
+            useTrash: true,
+        }) ?? await y3.fs.removeFile(uri);
         this.changeTable('delete', key);
     }
 

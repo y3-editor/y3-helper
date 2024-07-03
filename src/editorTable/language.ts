@@ -53,7 +53,7 @@ class Language extends vscode.Disposable {
         this.updateFile();
     }
 
-    keyOf(value: string): string {
+    keyOf(value: string): string | number {
         if (!this._reverse) {
             this._reverse = {};
             for (let key in this._language) {
@@ -61,16 +61,16 @@ class Language extends vscode.Disposable {
             }
         }
         if (this._reverse[value]) {
-            return this._reverse[value];
+            return parseInt(this._reverse[value]) ?? this._reverse[value];
         } else {
             let key = this.makeKey(value);
-            this.set(key, value);
+            this.set(key.toString(), value);
             return key;
         }
     }
 
-    private makeKey(value: string): string {
-        return hash(value).toString();
+    private makeKey(value: string): number {
+        return hash(value);
     }
 
     @throttle(1000)
@@ -113,7 +113,7 @@ export function set(key: string | number, value: string) {
 /**
  * 获取中文文本对应的key，如果不存在会新建
  */
-export function keyOf(value: string | number): string {
+export function keyOf(value: string | number): string | number {
     if (typeof value === 'number') {
         value = value.toString();
     }
