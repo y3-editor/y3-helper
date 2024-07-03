@@ -182,6 +182,7 @@ class TreeView extends vscode.Disposable {
             vscode.env.clipboard.writeText(fileNode.object.name);
         });
 
+        // 复制UID
         vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
             if (!fileNode.object) {
                 return;
@@ -189,6 +190,11 @@ class TreeView extends vscode.Disposable {
             vscode.env.clipboard.writeText(fileNode.object.key.toString());
         });
 
+        // 删除
+        vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
+            let table = editorTable.open(fileNode.tableName);
+            table.delete(fileNode.key);
+        });
     }
 
     async refresh() {
@@ -216,15 +222,7 @@ export async function init() {
 
 
     // 右键菜单的命令注册
-    // vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
-    //     try {
-    //         vscode.workspace.fs.delete(fileNode.resourceUri);
-    //     }
-    //     catch (error) {
-    //         vscode.window.showErrorMessage("删除失败，错误为" + error);
-    //     }
-    //     //editorTableDataProvider.refresh();
-    // });
+    
 
 
     // vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (fileNode: FileNode) => {

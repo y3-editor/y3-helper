@@ -147,6 +147,12 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return this._listCache;
     }
 
+    public async delete(key: number) {
+        let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
+        await y3.fs.removeFile(uri);
+        this.changeTable('delete', key);
+    }
+
     private _listActions: ['create' | 'delete', number][] = [];
     private resortList() {
         if (this._listActions.length === 0) {
@@ -173,8 +179,36 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     }
 
     @throttle(200)
-    private callOnDidChange() {
+    private notifyChange() {
         this._onDidChange.fire();
+    }
+
+    private changeTable(action: 'create' | 'delete' | 'change', id: number) {
+        switch (action) {
+            case 'create': {
+                if (!this._listCache) {
+                    return;
+                }
+                this._listActions.push(['create', id]);
+                break;
+            }
+            case 'delete': {
+                if (!this._listCache) {
+                    return;
+                }
+                this._objectCache[id] = undefined;
+                this._listActions.push(['delete', id]);
+                break;
+            }
+            case 'change': {
+                if (!this._objectCache[id]) {
+                    return;
+                }
+                this._objectCache[id] = undefined;
+                break;
+            }
+        }
+        this.notifyChange();
     }
 
     private _onDidChange: vscode.EventEmitter<void> = new vscode.EventEmitter();
@@ -186,34 +220,21 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
             if (id === undefined) {
                 return;
             }
-            if (!this._objectCache[id]) {
-                return;
-            }
-            this._objectCache[id] = undefined;
-            this.callOnDidChange();
+            this.changeTable('change', id);
         });
         this.watcher.onDidCreate((fileUri) => {
             let id = getFileID(fileUri.path);
             if (id === undefined) {
                 return;
             }
-            if (!this._listCache) {
-                return;
-            }
-            this._listActions.push(['create', id]);
-            this.callOnDidChange();
+            this.changeTable('create', id);
         });
         this.watcher.onDidDelete((fileUri) => {
             let id = getFileID(fileUri.path);
             if (id === undefined) {
                 return;
             }
-            if (!this._listCache) {
-                return;
-            }
-            this._objectCache[id] = undefined;
-            this._listActions.push(['delete', id]);
-            this.callOnDidChange();
+            this.changeTable('delete', id);
         });
     }
 

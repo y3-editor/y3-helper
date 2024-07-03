@@ -47,12 +47,29 @@ export async function writeFile(uri: vscode.Uri, ...args: any[]) {
     }
 }
 
-export async function removeFile(uri: vscode.Uri, relativePath?: string) {
-    if (relativePath) {
-        uri = vscode.Uri.joinPath(uri, relativePath);
+interface DeleteOptions {
+    /**
+     * 递归删除文件夹
+     */
+    recursive?: boolean;
+    /**
+     * 尝试移动到回收站
+     */
+    useTrash?: boolean;
+}
+
+export async function removeFile(uri: vscode.Uri, options?: DeleteOptions): Promise<boolean>;
+export async function removeFile(uri: vscode.Uri, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
+export async function removeFile(uri: vscode.Uri, ...args: any[]) {
+    let options: DeleteOptions | undefined;
+    if (typeof args[0] === 'string') {
+        uri = vscode.Uri.joinPath(uri, args[0]);
+        options = args[1];
+    } else {
+        options = args[0];
     }
     try {
-        await vscode.workspace.fs.delete(uri);
+        await vscode.workspace.fs.delete(uri, options);
         return true;
     } catch {
         return false;
