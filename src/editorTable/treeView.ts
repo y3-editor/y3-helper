@@ -21,6 +21,11 @@ class FileNode extends vscode.TreeItem {
         if (object) {
             this.label = `${object.name}(${this.key})`;
             this.resourceUri = object.uri;
+            this.command = {
+                command: 'vscode.open',
+                title: '打开文件',
+                arguments: [object.uri],
+            };
             return;
         } else if (object === undefined) {
             return new Promise<void>(async resolve => {
@@ -126,16 +131,24 @@ class TreeView extends vscode.Disposable {
 
         env.onDidChange(() => this.refresh());
 
+        // 刷新按钮
         this.disposables.push(vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => this.provider.refresh()));
 
+        // 内置的刷新命令
         this.disposables.push(vscode.commands.registerCommand('y3-helper.editorTableView.refresh', () => this.provider.refresh()));
 
+        // 打开文件
         this.disposables.push(vscode.commands.registerCommand('y3-helper.openFile', async (fileNode: FileNode) => {
             if (!fileNode.resourceUri) {
                 return;
             }
             vscode.commands.executeCommand('vscode.open', fileNode.resourceUri);
         }));
+        
+        // 在Windows中浏览
+        vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
+            vscode.commands.executeCommand('revealFileInOS', fileNode.resourceUri);
+        });
     }
 
     async refresh() {
@@ -171,11 +184,6 @@ export async function init() {
     //         vscode.window.showErrorMessage("删除失败，错误为" + error);
     //     }
     //     //editorTableDataProvider.refresh();
-    // });
-
-    // vscode.commands.registerCommand("y3-helper.revealInFileExplorer", (fileNode: FileNode) => {
-    //     // vscode自带的从系统文件浏览器中打开某一文件的命令
-    //     vscode.commands.executeCommand('revealFileInOS', fileNode.resourceUri);
     // });
 
     // vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
