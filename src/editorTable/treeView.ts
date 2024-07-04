@@ -225,8 +225,6 @@ class TreeView extends vscode.Disposable {
             if (!fileNode.object) {
                 return;
             }
-            let table = editorTable.open(fileNode.tableName);
-            let key = fileNode.object.key;
             let name = fileNode.object.name;
             if (name.match(/（复制）/)) {
                 name = name.replace(/（复制）/, '（复制 2）');
@@ -236,55 +234,21 @@ class TreeView extends vscode.Disposable {
                 name += '（复制）';
             }
 
-            let newName = await vscode.window.showInputBox({
-                prompt: '新名称',
-                value: name,
-                placeHolder: '新名称',
-                validateInput: (text: string) => {
-                    if (text.length === 0) {
-                        return "输入的内容为空";
-                    }
-                    return null;
-                }
-            });
-            if (!newName) {
-                return;
-            }
+            let newObj = await this.createObject(fileNode.tableName, name, fileNode.object.key);
 
-            let newKey = await vscode.window.showInputBox({
-                prompt: 'key',
-                value: (await table.makeNewKey()).toString(),
-                placeHolder: 'key',
-                validateInput: async (text: string) => {
-                    if (text.length === 0) {
-                        return "输入的内容为空";
-                    }
-                    if (text.match(/\D/)) {
-                        return "key只能是正整数";
-                    }
-                    let key = Number(text);
-                    if (!Number.isSafeInteger(key) || key <= 0) {
-                        return "此数字不可用";
-                    }
-                    if ((await table.getList()).includes(key)) {
-                        return "此key已存在";
-                    }
-
-                    return null;
-                }
-            });
-            if (!newKey) {
-                return;
-            }
-
-            let res = await table.create({
-                name: newName,
-                key: Number(newKey),
-                copyFrom: key,
-            });
-            if (!res) {
+            if (!newObj) {
                 y3.log.error('复制失败');
                 vscode.window.showErrorMessage('复制失败');
+            }
+        });
+
+        // 新建对象
+        vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (dirNode: DirNode) => {
+            let newObj = await this.createObject(dirNode.tableName, '新建对象');
+
+            if (!newObj) {
+                y3.log.error('新建失败');
+                vscode.window.showErrorMessage('新建失败');
             }
         });
     }
@@ -297,6 +261,56 @@ class TreeView extends vscode.Disposable {
     private provider: TreeViewProvider;
     private treeView: vscode.TreeView<TreeNode>;
     private disposables: vscode.Disposable[] = [];
+
+    private async createObject(tableName: Table.NameCN, defaultName: string, copyFrom?: number) {
+        let newName = await vscode.window.showInputBox({
+            prompt: '新名称',
+            value: defaultName,
+            placeHolder: '新名称',
+            validateInput: (text: string) => {
+                if (text.length === 0) {
+                    return "输入的内容为空";
+                }
+                return null;
+            }
+        });
+        if (!newName) {
+            return;
+        }
+
+        let table = editorTable.open(tableName);
+        let newKey = await vscode.window.showInputBox({
+            prompt: 'key',
+            value: (await table.makeNewKey()).toString(),
+            placeHolder: 'key',
+            validateInput: async (text: string) => {
+                if (text.length === 0) {
+                    return "输入的内容为空";
+                }
+                if (text.match(/\D/)) {
+                    return "key只能是正整数";
+                }
+                let key = Number(text);
+                if (!Number.isSafeInteger(key) || key <= 0) {
+                    return "此数字不可用";
+                }
+                if ((await table.getList()).includes(key)) {
+                    return "此key已存在";
+                }
+
+                return null;
+            }
+        });
+        if (!newKey) {
+            return;
+        }
+
+        return await table.create({
+            name: newName,
+            key: Number(newKey),
+            copyFrom: copyFrom,
+        });
+    }
 }
 
 export async function init() {
@@ -311,54 +325,4 @@ export async function init() {
     // const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider();
     // let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
     // vscode.languages.registerDocumentSymbolProvider(sel, goEditorTableDocumentSymbolProvider);
-
-
-    // 右键菜单的命令注册
-    
-
-
-    // vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (fileNode: FileNode) => {
-    //     await env.mapReady(true);
-    //     const inputOptions: vscode.InputBoxOptions = {
-    //         prompt: '名称',
-    //         value: fileNode.name,
-    //         placeHolder: '名称',
-    //         validateInput: (text: string) => {
-    //             if (text.length === 0) {
-    //                 return "输入的内容为空";
-    //             }
-    //             return null;
-    //         }
-    //     };
-    //     vscode.window.showInputBox(inputOptions).then(
-    //         value => {
-    //             if (value) {
-    //                 if (editorTableDataProvider.createNewTableItemByFileNode(fileNode,value)) {
-    //                     vscode.window.showInformationMessage("成功创建"+fileNode.label+":" + value);
-    //                 }
-    //             }
-    //         }
-    //     );
-    // });
-
-    // vscode.commands.registerCommand("y3-helper.renameEditorTableItem", (fileNode: FileNode) => {
-    //     const inputOptions: vscode.InputBoxOptions = {
-    //         prompt: '修改后的新名称',
-    //         value: fileNode.name,
-    //         placeHolder: '新名称',
-    //         validateInput: (text: string) => {
-    //             if (text.length === 0) {
-    //                 return "输入的内容为空";
-    //             }
-    //             return null;
-    //         }
-    //     };
-    //     vscode.window.showInputBox(inputOptions).then(
-    //         value => {
-    //             if (value) {
-    //                 editorTableDataProvider.renameEditorTableItemByFileNode(fileNode, value);
-    //             }
-    //         }
-    //     );
-    // });
 }

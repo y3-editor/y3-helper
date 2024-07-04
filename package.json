@@ -202,7 +202,7 @@
             },
             {
                 "command": "y3-helper.addNewEditorTableItem",
-                "title": "新建",
+                "title": "新建对象",
                 "enablement": "view == y3-helper.editorTableView",
                 "category": "Y3开发助手"
             },
