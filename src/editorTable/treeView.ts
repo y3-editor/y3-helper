@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { GoEditorTableDocumentSymbolProvider, GoEditorTableSymbolProvider } from './fileView';
 import { env } from '../env';
 import { Table } from '../constants';
 import * as editorTable from './editorTable';
@@ -317,12 +316,4 @@ export async function init() {
     await env.mapReady();
 
     let treeView = new TreeView();
-
-    // const goEditorTableSymbolProvider = new GoEditorTableSymbolProvider();
-    
-    // vscode.languages.registerWorkspaceSymbolProvider(goEditorTableSymbolProvider);
-
-    // const goEditorTableDocumentSymbolProvider = new GoEditorTableDocumentSymbolProvider();
-    // let sel: vscode.DocumentSelector = { scheme: 'file', language: 'json' };
-    // vscode.languages.registerDocumentSymbolProvider(sel, goEditorTableDocumentSymbolProvider);
 }

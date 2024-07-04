@@ -6,7 +6,7 @@ export * from './CSV/CSVeditor';
 import { test } from './EXCEL/test';
 import * as language from './language';
 import * as treeView from './treeView';
-import * as fileView from './fileView';
+import * as objectSymbol from './objectSymbol';
 
 vscode.commands.registerCommand('y3-helper.testExcel', () => {
     test();
@@ -15,5 +15,5 @@ vscode.commands.registerCommand('y3-helper.testExcel', () => {
 export function init() {
     language.init();
     treeView.init();
-    fileView.init();
+    objectSymbol.init();
 }

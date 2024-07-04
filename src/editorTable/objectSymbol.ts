@@ -182,4 +182,10 @@ export class GoEditorTableDocumentSymbolProvider implements vscode.DocumentSymbo
 
 export function init() {
 
+    vscode.languages.registerDocumentSymbolProvider({
+        scheme: 'file',
+        language: 'json',
+    }, new GoEditorTableDocumentSymbolProvider());
+
+    //vscode.languages.registerWorkspaceSymbolProvider(new GoEditorTableSymbolProvider());
 }
