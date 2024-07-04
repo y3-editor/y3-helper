@@ -4,8 +4,13 @@ import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { throttle } from "../utility/decorators";
 
+const template_dir = 'template\\json_template';
+
 type ObjectShape = {
     "name": string | number,
+    "_ref_": number,
+    "key": number,
+    "uid": number,
     [key: string]: ItemShape,
 };
 
@@ -24,7 +29,9 @@ type MapShape = {
 export class EditorObject {
     private _raw?: ObjectShape;
     private _name?: string;
-    constructor(public key: number, public uri: vscode.Uri, private json: string) {
+    private _json: string;
+    constructor(public key: number, public uri: vscode.Uri, json: string) {
+        this._json = json;
     }
 
     public get raw(): ObjectShape {
@@ -57,14 +64,23 @@ export class EditorObject {
         return this._name;
     }
 
+    public get json(): string {
+        return this._json;
+    }
+
     public async rename(name: string): Promise<boolean> {
         let id = y3.language.keyOf(name);
-        let obj = JSON.parse(this.json);
-        obj.name = id;
-        let newJson = JSON.stringify(obj, null, 4);
-        this._name = undefined;
-        this._raw = undefined;
-        return await y3.fs.writeFile(this.uri, newJson);
+        let raw: ObjectShape = JSON.parse(this.json);
+        raw.name = id;
+        let newJson = JSON.stringify(raw, null, 4);
+        let suc = await y3.fs.writeFile(this.uri, newJson);
+        if (!suc) {
+            return false;
+        }
+        this._name = name;
+        this._json = newJson;
+        this._raw  = raw;
+        return true;
     }
 }
 
@@ -81,23 +97,38 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     }
 }
 
-function getFileID(fileName: string): number|undefined {
+function getFileKey(fileName: string): number|undefined {
     if (!fileName.toLowerCase().endsWith('.json')) {
         return;
     }
-    let idStr = fileName.slice(0, -5).split('/').pop();
-    if (!idStr) {
+    let keyStr = fileName.slice(0, -5).split('/').pop();
+    if (!keyStr) {
         return;
     }
     // 确保只有数字
-    if (!/^\d+$/.test(idStr)) {
+    if (!/^\d+$/.test(keyStr)) {
         return;
     }
-    let id = parseInt(idStr);
-    if (isNaN(id)) {
+    let key = parseInt(keyStr);
+    if (isNaN(key)) {
         return;
     }
-    return id;
+    return key;
+}
+
+interface CreateOptions {
+    /**
+     * 新对象的名称，如果不填则使用默认名称
+     */
+    name?: string,
+    /**
+     * 新对象的key，如果不填则自动生成
+     */
+    key?: number,
+    /**
+     * 从哪个对象复制，如果不填则从模板复制为空对象
+     */
+    copyFrom?: number,
 }
 
 export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
@@ -116,15 +147,15 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[nameCN]);
     }
 
-    public async get(id: number): Promise<EditorObject | null> {
-        if (this._objectCache[id] === undefined) {
-            this._objectCache[id] = await loadObject(this.nameCN, id);
+    public async get(key: number): Promise<EditorObject | undefined> {
+        if (this._objectCache[key] === undefined) {
+            this._objectCache[key] = await loadObject(this.nameCN, key);
         }
-        return this._objectCache[id]!;
+        return this._objectCache[key] ?? undefined;
     }
 
-    public fetch(id: number): EditorObject | null | undefined {
-        return this._objectCache[id];
+    public fetch(key: number): EditorObject | undefined {
+        return this._objectCache[key] ?? undefined;
     }
 
     private _listCache?: number[];
@@ -140,11 +171,11 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 if (type !== vscode.FileType.File) {
                     continue;
                 }
-                let id = getFileID(name);
-                if (id === undefined) {
+                let key = getFileKey(name);
+                if (key === undefined) {
                     continue;
                 }
-                this._listCache.push(id);
+                this._listCache.push(key);
             }
             this._listCache.sort();
         }
@@ -165,6 +196,67 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this.changeTable('delete', key);
     }
 
+    public async canUseKey(key: number) {
+        if (!Number.isSafeInteger(key) || key <= 0) {
+            return false;
+        }
+        if ((await this.getList()).includes(key)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public async makeNewKey() {
+        let list = await this.getList();
+        let max = list[list.length - 1];
+        return max ? max + 1 : 100001;
+    }
+
+    public async create(options?: CreateOptions) {
+        let name = options?.name ?? `新建${this.nameCN}`;
+        let key: number;
+        if (options?.key) {
+            key = options.key;
+            if (!await this.canUseKey(key)) {
+                return undefined;
+            }
+        } else {
+            key = await this.makeNewKey();
+        }
+
+        let templateJson: string;
+        if (options?.copyFrom) {
+            let obj = await this.get(options.copyFrom);
+            if (!obj) {
+                return undefined;
+            }
+            templateJson = obj.json;
+        } else {
+            let templateUri = vscode.Uri.joinPath(y3.context.extensionUri, template_dir, `${this.nameEN}.json`);
+            let template = await y3.fs.readFile(templateUri);
+            if (!template) {
+                return undefined;
+            }
+            templateJson = template.string;
+        }
+
+        let raw: ObjectShape = JSON.parse(templateJson);
+        raw.name = y3.language.keyOf(name);
+        raw.uid = key;
+        raw.key = key;
+        raw._ref_ = key;
+
+        let json = JSON.stringify(raw, null, 4);
+        let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
+        let suc = await y3.fs.writeFile(uri, json);
+        if (!suc) {
+            return undefined;
+        }
+
+        return await this.get(key);
+    }
+
     private _listActions: ['create' | 'delete', number][] = [];
     private resortList() {
         if (this._listActions.length === 0) {
@@ -172,19 +264,19 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
         let map: { [key: number]: boolean } = {};
         let list: number[] = [];
-        for (const id of this._listCache!) {
-            map[id] = true;
+        for (const key of this._listCache!) {
+            map[key] = true;
         }
-        for (const [action, id] of this._listActions) {
+        for (const [action, key] of this._listActions) {
             if (action === 'create') {
-                map[id] = true;
+                map[key] = true;
             } else {
-                delete map[id];
+                delete map[key];
             }
         }
         this._listActions.length = 0;
-        for (const id in map) {
-            list.push(Number(id));
+        for (const key in map) {
+            list.push(Number(key));
         }
         list.sort();
         this._listCache = list;
@@ -195,28 +287,28 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this._onDidChange.fire();
     }
 
-    private changeTable(action: 'create' | 'delete' | 'change', id: number) {
+    private changeTable(action: 'create' | 'delete' | 'change', key: number) {
         switch (action) {
             case 'create': {
                 if (!this._listCache) {
                     return;
                 }
-                this._listActions.push(['create', id]);
+                this._listActions.push(['create', key]);
                 break;
             }
             case 'delete': {
                 if (!this._listCache) {
                     return;
                 }
-                this._objectCache[id] = undefined;
-                this._listActions.push(['delete', id]);
+                this._objectCache[key] = undefined;
+                this._listActions.push(['delete', key]);
                 break;
             }
             case 'change': {
-                if (!this._objectCache[id]) {
+                if (!this._objectCache[key]) {
                     return;
                 }
-                this._objectCache[id] = undefined;
+                this._objectCache[key] = undefined;
                 break;
             }
         }
@@ -228,25 +320,25 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     private initWatcher() {
         this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, '*.json'));
         this.watcher.onDidChange((fileUri) => {
-            let id = getFileID(fileUri.path);
-            if (id === undefined) {
+            let key = getFileKey(fileUri.path);
+            if (key === undefined) {
                 return;
             }
-            this.changeTable('change', id);
+            this.changeTable('change', key);
         });
         this.watcher.onDidCreate((fileUri) => {
-            let id = getFileID(fileUri.path);
-            if (id === undefined) {
+            let key = getFileKey(fileUri.path);
+            if (key === undefined) {
                 return;
             }
-            this.changeTable('create', id);
+            this.changeTable('create', key);
         });
         this.watcher.onDidDelete((fileUri) => {
-            let id = getFileID(fileUri.path);
-            if (id === undefined) {
+            let key = getFileKey(fileUri.path);
+            if (key === undefined) {
                 return;
             }
-            this.changeTable('delete', id);
+            this.changeTable('delete', key);
         });
     }
 

@@ -76,12 +76,17 @@
                     "group": "modification"
                 },
                 {
-                    "command": "y3-helper.copyTableItemUID",
+                    "command": "y3-helper.copyTableItemKey",
                     "when": "view == y3-helper.editorTableView && viewItem == json",
                     "group": "copy"
                 },
                 {
                     "command": "y3-helper.copyTableItemName",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyFromEditorTableItem",
                     "when": "view == y3-helper.editorTableView && viewItem == json",
                     "group": "copy"
                 },
@@ -214,8 +219,8 @@
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.copyTableItemUID",
-                "title": "复制UID",
+                "command": "y3-helper.copyTableItemKey",
+                "title": "复制Key",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
                 "category": "Y3开发助手"
             },
@@ -228,6 +233,12 @@
             {
                 "command": "y3-helper.addNewDataInCSV",
                 "title": "添加新物编数据到CSV表格中",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.copyFromEditorTableItem",
+                "title": "复制为新的对象",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
                 "category": "Y3开发助手"
             },
             {

@@ -25,6 +25,7 @@ import { excelExporter } from './editorTable/EXCEL/excelExporter';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
 import * as editorTable from './editorTable';
+import * as y3 from 'y3-helper';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -603,6 +604,7 @@ class Helper {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    y3.setContext(context);
     let helper = new Helper(context);
 
     helper.start();

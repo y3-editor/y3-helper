@@ -4,6 +4,7 @@ import { env } from '../env';
 import { Table } from '../constants';
 import * as editorTable from './editorTable';
 import { throttle } from '../utility/decorators';
+import * as y3 from 'y3-helper';
 
 class FileNode extends vscode.TreeItem {
     readonly contextValue = 'json';
@@ -17,7 +18,7 @@ class FileNode extends vscode.TreeItem {
         this.id = `${tableName}/${key}`;
     }
 
-    public object?: editorTable.EditorObject | null;
+    public object?: editorTable.EditorObject;
     public update(): void | Promise<void> {
         let table = editorTable.open(this.tableName);
         this.object = table.fetch(this.key);
@@ -132,7 +133,7 @@ class TreeViewProvider extends vscode.Disposable implements vscode.TreeDataProvi
         this._onDidChange.fire(node);
     }
 
-    @throttle(200)
+    @throttle(100)
     public refreshAll() {
         this.refresh(undefined);
     }
@@ -182,8 +183,8 @@ class TreeView extends vscode.Disposable {
             vscode.env.clipboard.writeText(fileNode.object.name);
         });
 
-        // 复制UID
-        vscode.commands.registerCommand("y3-helper.copyTableItemUID", (fileNode: FileNode) => {
+        // 复制Key
+        vscode.commands.registerCommand("y3-helper.copyTableItemKey", (fileNode: FileNode) => {
             if (!fileNode.object) {
                 return;
             }
@@ -213,10 +214,78 @@ class TreeView extends vscode.Disposable {
                 }
             };
             let value = await vscode.window.showInputBox(inputOptions);
-            if (!value) {
+            if (!value || value === fileNode.object.name) {
                 return;
             }
             await fileNode.object.rename(value);
+        });
+
+        // 复制对象
+        vscode.commands.registerCommand("y3-helper.copyFromEditorTableItem", async (fileNode: FileNode) => {
+            if (!fileNode.object) {
+                return;
+            }
+            let table = editorTable.open(fileNode.tableName);
+            let key = fileNode.object.key;
+            let name = fileNode.object.name;
+            if (name.match(/（复制）/)) {
+                name = name.replace(/（复制）/, '（复制 2）');
+            } else if (name.match(/（复制 \d+）/)) {
+                name = name.replace(/（复制 (\d+)）/, (match, num) => `（复制 ${Number(num) + 1}）`);
+            } else {
+                name += '（复制）';
+            }
+
+            let newName = await vscode.window.showInputBox({
+                prompt: '新名称',
+                value: name,
+                placeHolder: '新名称',
+                validateInput: (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    return null;
+                }
+            });
+            if (!newName) {
+                return;
+            }
+
+            let newKey = await vscode.window.showInputBox({
+                prompt: 'key',
+                value: (await table.makeNewKey()).toString(),
+                placeHolder: 'key',
+                validateInput: async (text: string) => {
+                    if (text.length === 0) {
+                        return "输入的内容为空";
+                    }
+                    if (text.match(/\D/)) {
+                        return "key只能是正整数";
+                    }
+                    let key = Number(text);
+                    if (!Number.isSafeInteger(key) || key <= 0) {
+                        return "此数字不可用";
+                    }
+                    if ((await table.getList()).includes(key)) {
+                        return "此key已存在";
+                    }
+
+                    return null;
+                }
+            });
+            if (!newKey) {
+                return;
+            }
+
+            let res = await table.create({
+                name: newName,
+                key: Number(newKey),
+                copyFrom: key,
+            });
+            if (!res) {
+                y3.log.error('复制失败');
+                vscode.window.showErrorMessage('复制失败');
+            }
         });
     }
 
