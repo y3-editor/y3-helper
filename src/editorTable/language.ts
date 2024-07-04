@@ -73,7 +73,7 @@ class Language extends vscode.Disposable {
         return hash(value);
     }
 
-    @throttle(1000)
+    @throttle(500)
     private updateFile() {
         let content = JSON.stringify(this._language, null, 4);
         y3.fs.writeFile(this.uri!, content);

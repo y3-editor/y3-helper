@@ -5,7 +5,7 @@ import path from 'path';
 import * as tools from './tools';
 import { Template } from './constants';
 import { isPathValid } from './utility';
-import { throttle } from './utility/decorators';
+import { throttle, queue } from './utility/decorators';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
@@ -247,7 +247,7 @@ class Env {
         }, 100);
     }
 
-    @throttle(1000)
+    @queue()
     public async updateEditor(askUser = false) {
         let editorUri = await this.searchEditorUri(askUser);
         if (!editorUri) {
@@ -262,6 +262,7 @@ class Env {
         this.fireOnDidReload();
     }
 
+    @queue()
     public async editorReady(askUser = false) {
         if (this.editorUri) {
             return;
@@ -269,7 +270,7 @@ class Env {
         await this.updateEditor(askUser);
     }
 
-    @throttle(1000)
+    @queue()
     public async updateMap(search: boolean, askUser: boolean) {
         let mapUri = await this.searchProjectPath(search, askUser);
         if (!mapUri) {
@@ -294,6 +295,7 @@ class Env {
         this.fireOnDidReload();
     }
 
+    @queue()
     public async mapReady(askUser = false) {
         if (this.mapUri) {
             return;
