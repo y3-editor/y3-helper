@@ -201,7 +201,7 @@ class Helper {
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
-                let suc = gameLauncher.launch({
+                let suc = await gameLauncher.launch({
                     "lua_wait_debugger": true,
                 });
                 if (!suc) {
