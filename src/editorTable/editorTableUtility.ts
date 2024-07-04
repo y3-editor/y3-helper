@@ -8,11 +8,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { env } from "../env";
-import { Table, CSV } from '../constants';
-import { EditorTableItemInfo } from './types';
+import { Table } from '../constants';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
-    HashSet, SpinLock, hash, toUnicodeIgnoreASCII
+    HashSet, SpinLock
 } from '../utility';
 import * as y3 from 'y3-helper';
 
@@ -253,122 +252,4 @@ export async function searchAllEditorTableItemInCSV(query: string):Promise< vsco
         res.push(element);
     }
     return Promise.resolve(res);
-}
-
-let editorTableItemMap: Map<number, EditorTableItemInfo> = new Map<number,EditorTableItemInfo>();
-
-/**
- * 获取项目中的所有物编数据,返回一个HashMap可通过uid查询对应物编数据
- * @returns 
- */
-export function getEditorTableItemMap(): Map<number, EditorTableItemInfo>
-{
-    return editorTableItemMap;
-}
-
-export function updateEditorTableItemMap(){
-    editorTableItemMap = getMapOfEditorTableItemInfoInProject();
-}
-/**
- * 获取项目中的所有物编数据,返回一个HashMap可通过uid查询对应物编数据
- */
-function getMapOfEditorTableItemInfoInProject(): Map<number, EditorTableItemInfo> {
-    let res: Map<number, EditorTableItemInfo> = new Map<number, EditorTableItemInfo>();
-    let items: EditorTableItemInfo[] = getAllEditorTableItemInfoInProject();
-    for (let item of items) {
-        res.set(item.uid, item);
-    }
-    return res;
-}
-
-/**
- * 获取项目中的所有物编数据,返回一个数组
- */
-function getAllEditorTableItemInfoInProject(): EditorTableItemInfo[]{
-    let res: EditorTableItemInfo[] = [];
-    
-    //只搜索九类物编数据的文件夹下的物编数据 不递归搜索
-    Object.values(Table.path.toName).forEach(type => {
-        let folderName = Table.path.fromName[type];
-        res = res.concat(getAllEditorTableItemInfoInFolder(type, path.join(env.editorTablePath, folderName)));
-    });
-    
-    return res;
-}
-
-function getAllEditorTableItemInfoInFolder(editorTableType: Table.NameEN, pathStr: string) {
-    let res: EditorTableItemInfo[] = [];
-    const files = fs.readdirSync(pathStr);
-    files.forEach(file => {
-        const filePath: string = path.join(pathStr, file);
-        const stat = fs.statSync(filePath);
-
-        if (isJson(filePath)) {
-            let editorTableJsonData: any;
-            let label = file;
-            try {
-                editorTableJsonData = fs.readFileSync(filePath, 'utf8');
-            }
-            catch (error) {
-                vscode.window.showErrorMessage("读取" + filePath + "时出错");
-            }
-
-            let editorTableJson: any = undefined;
-            try {
-                editorTableJson = JSON.parse(editorTableJsonData);
-
-            }
-            catch (error) {
-                vscode.window.showErrorMessage("读取" + filePath + "时失败，错误为：" + error);
-            }
-            let name;
-            if (editorTableJson.hasOwnProperty('name')) {
-                let nameKey: any = editorTableJson['name'];
-                name = y3.language.get(nameKey);
-            }
-            let uid = editorTableJson['uid'];
-            if (!uid || typeof uid !== 'number') {
-                uid = label.substring(0, label.length - 5);
-            }
-            if (name !== undefined && typeof name === "string") {
-                label = name + "(" + uid + ")";//转为"这是一个单位(134219828)"的格式
-            }
-
-            let editorTableJsonUri: vscode.Uri = vscode.Uri.file(filePath);
-            let item: EditorTableItemInfo = new EditorTableItemInfo(
-                uid,
-                name ?? '<未知>',
-                editorTableType,
-                editorTableJsonUri
-            );
-            res.push(item);
-            
-        }
-    });
-    return res;
-}
-
-export function addNewEditorTableItemInProject(editorTableType: Table.NameEN, name:string):boolean {
-    if (!env.editorTableUri) {
-        return false;
-    }
-    let uid: number = allocateNewUIDofEditorTableItem(env.editorTableUri);
-    let targetPath: vscode.Uri = vscode.Uri.joinPath(env.editorTableUri, CSV.type.toPath[editorTableType], String(uid) + '.json');
-    
-    try {
-        let templateJsonStr:string = fs.readFileSync(path.join(__dirname, "../../template/json_template/" + editorTableType + ".json"), 'utf8');
-        let templateJson = JSON.parse(templateJsonStr);
-        let nameHashCode = y3.language.keyOf(name);
-        if (!nameHashCode) {
-            throw new Error("writeDataInLanguageJson失败");
-        }
-        templateJson['name'] = nameHashCode;
-        templateJson['uid'] = uid;
-        fs.writeFileSync(targetPath.fsPath, toUnicodeIgnoreASCII(JSON.stringify(templateJson, null, 2)), 'utf8');
-    }
-    catch (error) {
-        vscode.window.showErrorMessage("新建物编项目时出错，错误为：" + error);
-        return false;
-    }
-    return true;
 }
