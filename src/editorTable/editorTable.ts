@@ -26,16 +26,29 @@ type MapShape = {
     [key: string]: any,
 };
 
+export class FieldInfo {
+    name: string;
+
+    constructor(public tableName: Table.NameCN, public field: string) {
+        const nameEN = Table.name.fromCN[tableName];
+        const languageKey = `code_explorer_${nameEN}_${field}`;
+        this.name = y3.language.get(languageKey) ?? field;
+    }
+}
+
 export class EditorObject {
     private _raw?: ObjectShape;
     private _name?: string;
-    private _json: string;
-    constructor(public key: number, public uri: vscode.Uri, json: string) {
-        this._json = json;
+    public json?: string;
+    public uri?: vscode.Uri;
+    constructor(public tableName: Table.NameCN, public key: number) {
     }
 
-    public get raw(): ObjectShape {
+    public get raw(): ObjectShape | undefined {
         if (!this._raw) {
+            if (!this.json) {
+                return;
+            }
             this._raw = JSON.parse(this.json);
         }
         return this._raw!;
@@ -43,14 +56,14 @@ export class EditorObject {
 
     public get name(): string {
         if (!this._name) {
-            let name = this.json.match(/"name"\s*:\s*(\-?\d*)/);
+            let name = this.json?.match(/"name"\s*:\s*(\-?\d*)/);
             if (name && name[1]) {
                 let id = parseInt(name[1]);
                 if (!isNaN(id)) {
                     this._name = y3.language.get(id);
                 }
             } else {
-                let name = this.raw.name;
+                let name = this.raw?.name;
                 if (typeof name === 'string') {
                     this._name = name;
                 } else if (typeof name === 'number') {
@@ -64,11 +77,10 @@ export class EditorObject {
         return this._name;
     }
 
-    public get json(): string {
-        return this._json;
-    }
-
     public async rename(name: string): Promise<boolean> {
+        if (!this.uri || !this.json) {
+            return false;
+        }
         let strKey = await y3.language.keyOf(name, true);
         let raw: ObjectShape = JSON.parse(this.json);
         raw.name = strKey;
@@ -77,10 +89,15 @@ export class EditorObject {
         if (!suc) {
             return false;
         }
+        this.json = newJson;
         this._name = name;
-        this._json = newJson;
         this._raw  = raw;
         return true;
+    }
+
+    public getFieldInfo(field: string) {
+        let table = openTable(this.tableName);
+        return table.getFieldInfo(field);
     }
 }
 
@@ -92,29 +109,13 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     }
     await y3.language.ready();
     try {
-        return new EditorObject(key, uri, file.string);
+        let obj = new EditorObject(tableName, key);
+        obj.uri = uri;
+        obj.json = file.string;
+        return obj;
     } catch {
         return null;
     }
-}
-
-function getFileKey(fileName: string): number|undefined {
-    if (!fileName.toLowerCase().endsWith('.json')) {
-        return;
-    }
-    let keyStr = fileName.slice(0, -5).split('/').pop();
-    if (!keyStr) {
-        return;
-    }
-    // 确保只有数字
-    if (!/^\d+$/.test(keyStr)) {
-        return;
-    }
-    let key = parseInt(keyStr);
-    if (isNaN(key)) {
-        return;
-    }
-    return key;
 }
 
 interface CreateOptions {
@@ -229,7 +230,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         let templateJson: string;
         if (options?.copyFrom) {
             let obj = await this.get(options.copyFrom);
-            if (!obj) {
+            if (!obj || !obj.json) {
                 return undefined;
             }
             templateJson = obj.json;
@@ -256,6 +257,14 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
 
         return await this.get(key);
+    }
+
+    private _fieldInfoCache: { [field: string]: FieldInfo } = {};
+    public getFieldInfo(field: string) {
+        if (!this._fieldInfoCache[field]) {
+            this._fieldInfoCache[field] = new FieldInfo(this.nameCN, field);
+        }
+        return this._fieldInfoCache[field];
     }
 
     private _listActions: ['create' | 'delete', number][] = [];
@@ -350,8 +359,47 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
 
 let editorTables: { [key: string]: any } = {};
 
-export function open<N extends Table.NameCN>(tableName: N): EditorTable<N> {
+export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
     let table = editorTables[tableName]
             ?? (editorTables[tableName] = new EditorTable(tableName));
     return table;
+}
+
+export function getFileKey(fileName: string): number | undefined {
+    if (!fileName.toLowerCase().endsWith('.json')) {
+        return;
+    }
+    let keyStr = fileName.slice(0, -5).split('/').pop();
+    if (!keyStr) {
+        return;
+    }
+    // 确保只有数字
+    if (!/^\d+$/.test(keyStr)) {
+        return;
+    }
+    let key = parseInt(keyStr);
+    if (isNaN(key)) {
+        return;
+    }
+    return key;
+}
+
+export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefined> {
+    const nameEN = uri.path.match(/([^\/]+)\/[^\/]+\.json$/)?.[1];
+    if (!nameEN || !(nameEN in Table.name.toCN)) {
+        return;
+    }
+    const key = getFileKey(uri.path);
+    if (!key) {
+        return;
+    }
+    const file = await y3.fs.readFile(uri);
+    if (!file) {
+        return;
+    }
+    const nameCN = Table.name.toCN[nameEN as Table.NameEN];
+    const obj = new EditorObject(nameCN, key);
+    obj.uri = uri;
+    obj.json = file.string;
+    return obj;
 }

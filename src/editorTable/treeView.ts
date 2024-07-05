@@ -19,7 +19,7 @@ class FileNode extends vscode.TreeItem {
 
     public object?: editorTable.EditorObject;
     public update(): void | Promise<void> {
-        let table = editorTable.open(this.tableName);
+        let table = editorTable.openTable(this.tableName);
         this.object = table.fetch(this.key);
         if (this.object) {
             this.label = `${this.object.name}(${this.key})`;
@@ -48,7 +48,7 @@ class DirNode extends vscode.TreeItem {
     ) {
         super(`${tableName}(加载中...)`);
 
-        this.table = editorTable.open(tableName);
+        this.table = editorTable.openTable(tableName);
         this.resourceUri = this.table.uri;
         this.id = tableName;
     }
@@ -68,7 +68,7 @@ class DirNode extends vscode.TreeItem {
 
     public async getChildren(): Promise<FileNode[]> {
         let nodes: FileNode[] = [];
-        let table = editorTable.open(this.tableName);
+        let table = editorTable.openTable(this.tableName);
         let keys = await table.getList();
         for (const key of keys) {
             nodes.push(new FileNode(this, this.tableName, key));
@@ -192,7 +192,7 @@ class TreeView extends vscode.Disposable {
 
         // 删除
         vscode.commands.registerCommand("y3-helper.deleteEditorTableItem", (fileNode: FileNode) => {
-            let table = editorTable.open(fileNode.tableName);
+            let table = editorTable.openTable(fileNode.tableName);
             table.delete(fileNode.key);
         });
 
@@ -277,7 +277,7 @@ class TreeView extends vscode.Disposable {
             return;
         }
 
-        let table = editorTable.open(tableName);
+        let table = editorTable.openTable(tableName);
         let newKey = await vscode.window.showInputBox({
             prompt: 'key',
             value: (await table.makeNewKey()).toString(),
