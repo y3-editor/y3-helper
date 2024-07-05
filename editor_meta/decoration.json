@@ -1,0 +1,137 @@
+{
+    "attach_models": {
+        "desc": "挂接物列表",
+        "key": "attach_models",
+        "type": "PAst"
+    },
+    "cast_shadow": {
+        "desc": "是否产生阴影",
+        "key": "cast_shadow",
+        "type": "PBool"
+    },
+    "collision_box": {
+        "desc": "碰撞盒",
+        "key": "collision_box",
+        "type": "PAst"
+    },
+    "collision_height": {
+        "desc": "高度图",
+        "key": "collision_height",
+        "type": "PAst"
+    },
+    "collision_points": {
+        "desc": "碰撞格点",
+        "key": "collision_points",
+        "type": "PAst"
+    },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
+    "effect_button": {
+        "desc": "效果编辑按钮",
+        "key": "effect_button",
+        "type": "PButton"
+    },
+    "effect_list": {
+        "desc": "获得特效列表",
+        "key": "effect_list",
+        "type": "PAst"
+    },
+    "enable_camera_collision": {
+        "desc": "",
+        "key": "enable_camera_collision",
+        "type": "PBool"
+    },
+    "enable_occlusion_perspective": {
+        "desc": "遮挡透视",
+        "key": "enable_occlusion_perspective",
+        "type": "PBool"
+    },
+    "icon": {
+        "desc": "暂未配置55",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "material_alpha": {
+        "desc": "不透明度",
+        "key": "material_alpha",
+        "type": "PFloat"
+    },
+    "material_change": {
+        "desc": "材质变化",
+        "key": "material_change",
+        "type": "PEnum"
+    },
+    "material_color": {
+        "desc": "基础材质变色",
+        "key": "material_color",
+        "type": "PAst"
+    },
+    "material_color_intensity": {
+        "desc": "材质变色强度",
+        "key": "material_color_intensity",
+        "type": "PFloat"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "type": "PResource"
+    },
+    "model_opacity": {
+        "desc": "模型不透明度",
+        "key": "model_opacity",
+        "type": "PFloat"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "receive_decal": {
+        "desc": "接收贴花",
+        "key": "receive_decal",
+        "type": "PBool"
+    },
+    "scale": {
+        "desc": "缩放",
+        "key": "scale",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_physics": {
+        "desc": "可通行",
+        "key": "use_physics",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    }
+}

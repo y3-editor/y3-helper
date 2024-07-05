@@ -4,7 +4,7 @@ import * as y3 from 'y3-helper';
 import { hash } from '../utility';
 import { throttle } from '../utility/decorators';
 
-const languageDataPath = 'config/language_data.json';
+const languageDataPath = 'editor_meta/language_data.json';
 
 class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];

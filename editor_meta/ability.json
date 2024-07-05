@@ -1,0 +1,282 @@
+{
+    "ability_break_cast_range": {
+        "desc": "施法打断范围",
+        "key": "ability_break_cast_range",
+        "type": "PAbilityFormula"
+    },
+    "ability_bw_point": {
+        "desc": "施法完成",
+        "key": "ability_bw_point",
+        "type": "PFloat"
+    },
+    "ability_cast_point": {
+        "desc": "施法开始",
+        "key": "ability_cast_point",
+        "type": "PFloat"
+    },
+    "ability_cast_range": {
+        "desc": "释放范围",
+        "key": "ability_cast_range",
+        "type": "PAbilityFormula"
+    },
+    "ability_channel_time": {
+        "desc": "施法出手",
+        "key": "ability_channel_time",
+        "type": "PFloat"
+    },
+    "ability_cost": {
+        "desc": "技能消耗",
+        "key": "ability_cost",
+        "type": "PAbilityFormula"
+    },
+    "ability_damage": {
+        "desc": "技能伤害值",
+        "key": "ability_damage",
+        "type": "PAbilityFormula"
+    },
+    "ability_damage_range": {
+        "desc": "技能影响范围",
+        "key": "ability_damage_range",
+        "type": "PAbilityFormula"
+    },
+    "ability_hp_cost": {
+        "desc": "生命值消耗",
+        "key": "ability_hp_cost",
+        "type": "PAbilityFormula"
+    },
+    "ability_icon": {
+        "desc": "图标",
+        "key": "ability_icon",
+        "type": "PResource"
+    },
+    "ability_max_level": {
+        "desc": "技能最大等级",
+        "key": "ability_max_level",
+        "type": "PInt"
+    },
+    "ability_max_stack_count": {
+        "desc": "最大充能数",
+        "key": "ability_max_stack_count",
+        "type": "PAbilityFormula"
+    },
+    "ability_prepare_time": {
+        "desc": "施法引导",
+        "key": "ability_prepare_time",
+        "type": "PFloat"
+    },
+    "ability_stack_cd": {
+        "desc": "充能时间",
+        "key": "ability_stack_cd",
+        "type": "PAbilityFormula"
+    },
+    "arrow_length": {
+        "desc": "长度",
+        "key": "arrow_length",
+        "type": "PAbilityFormula"
+    },
+    "arrow_width": {
+        "desc": "宽度",
+        "key": "arrow_width",
+        "type": "PAbilityFormula"
+    },
+    "art_resource_btn": {
+        "desc": "编辑技能效果",
+        "key": "art_resource_btn",
+        "type": "PButton"
+    },
+    "auto_pick": {
+        "desc": "自动拾取",
+        "key": "auto_pick",
+        "type": "PBool"
+    },
+    "building_attack_range_sfx": {
+        "desc": "攻击范围预览特效",
+        "key": "building_attack_range_sfx",
+        "type": "PResource"
+    },
+    "camp_priority_enemy": {
+        "desc": "敌人",
+        "key": "camp_priority_enemy",
+        "type": "PInt"
+    },
+    "camp_priority_friend": {
+        "desc": "队友",
+        "key": "camp_priority_friend",
+        "type": "PInt"
+    },
+    "camp_priority_neutral": {
+        "desc": "中立",
+        "key": "camp_priority_neutral",
+        "type": "PInt"
+    },
+    "camp_priority_self": {
+        "desc": "己方",
+        "key": "camp_priority_self",
+        "type": "PInt"
+    },
+    "can_autocast_when_attack_target": {
+        "desc": "攻击命令触发自动施法",
+        "key": "can_autocast_when_attack_target",
+        "type": "PBool"
+    },
+    "can_bs_interrupt": {
+        "desc": "施法完成可以被打断",
+        "key": "can_bs_interrupt",
+        "type": "PBool"
+    },
+    "can_cache": {
+        "desc": "可以缓存",
+        "key": "can_cache",
+        "type": "PBool"
+    },
+    "can_cast_interrupt": {
+        "desc": "施法出手可以被打断",
+        "key": "can_cast_interrupt",
+        "type": "PBool"
+    },
+    "can_interrupt_others": {
+        "desc": "技能可以打断其他技能",
+        "key": "can_interrupt_others",
+        "type": "PBool"
+    },
+    "can_prepare_interrupt": {
+        "desc": "施法引导可以被打断",
+        "key": "can_prepare_interrupt",
+        "type": "PBool"
+    },
+    "can_ps_interrupt": {
+        "desc": "施法开始可以被打断",
+        "key": "can_ps_interrupt",
+        "type": "PBool"
+    },
+    "circle_radius": {
+        "desc": "圆形半径",
+        "key": "circle_radius",
+        "type": "PAbilityFormula"
+    },
+    "cold_down_time": {
+        "desc": "冷却时间",
+        "key": "cold_down_time",
+        "type": "PAbilityFormula"
+    },
+    "collection_animation": {
+        "desc": "采集动画",
+        "key": "collection_animation",
+        "type": "PText"
+    },
+    "collection_animation_loop": {
+        "desc": "循环播放动画",
+        "key": "collection_animation_loop",
+        "type": "PBool"
+    },
+    "collection_continuously": {
+        "desc": "连续施法",
+        "key": "collection_continuously",
+        "type": "PBool"
+    },
+    "influenced_by_move": {
+        "desc": "移动会对技能产生影响",
+        "key": "influenced_by_move",
+        "type": "PBool"
+    },
+    "is_autocast": {
+        "desc": "自动施法",
+        "key": "is_autocast",
+        "type": "PBool"
+    },
+    "is_immediate": {
+        "desc": "立刻施法",
+        "key": "is_immediate",
+        "type": "PBool"
+    },
+    "is_meele": {
+        "desc": "近战",
+        "key": "is_meele",
+        "type": "PBool"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "pick_count": {
+        "desc": "采集获得量",
+        "key": "pick_count",
+        "type": "PInt"
+    },
+    "player_props_cost": {
+        "desc": "玩家属性消耗",
+        "key": "player_props_cost",
+        "type": "PResList"
+    },
+    "required_level": {
+        "desc": "允许学习等级",
+        "key": "required_level",
+        "type": "PRequiredLevel"
+    },
+    "sector_angle": {
+        "desc": "角度",
+        "key": "sector_angle",
+        "type": "PAbilityFormula"
+    },
+    "sector_radius": {
+        "desc": "扇形半径",
+        "key": "sector_radius",
+        "type": "PAbilityFormula"
+    },
+    "show_building_attack_range": {
+        "desc": "攻击范围预览",
+        "key": "show_building_attack_range",
+        "type": "PBool"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "sp_count_down": {
+        "desc": "显示准备倒计时",
+        "key": "sp_count_down",
+        "type": "PBool"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "type_priority_building": {
+        "desc": "建筑",
+        "key": "type_priority_building",
+        "type": "PInt"
+    },
+    "type_priority_creature": {
+        "desc": "生物",
+        "key": "type_priority_creature",
+        "type": "PInt"
+    },
+    "type_priority_destructible": {
+        "desc": "可破坏物",
+        "key": "type_priority_destructible",
+        "type": "PInt"
+    },
+    "type_priority_hero": {
+        "desc": "英雄",
+        "key": "type_priority_hero",
+        "type": "PInt"
+    },
+    "type_priority_item": {
+        "desc": "物品",
+        "key": "type_priority_item",
+        "type": "PInt"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    }
+}

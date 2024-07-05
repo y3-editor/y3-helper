@@ -1,0 +1,67 @@
+{
+    "async_effect": {
+        "desc": "区分敌我特效显示",
+        "key": "async_effect",
+        "type": "PBool"
+    },
+    "effect_foes": {
+        "desc": "敌方特效",
+        "key": "effect_foes",
+        "type": "PAst"
+    },
+    "effect_friend": {
+        "desc": "特效配置",
+        "key": "effect_friend",
+        "type": "PAst"
+    },
+    "icon": {
+        "desc": "图标",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "max_duration": {
+        "desc": "最大持续时间",
+        "key": "max_duration",
+        "type": "PFloat"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "sfx_loop": {
+        "desc": "是否循环播放",
+        "key": "sfx_loop",
+        "type": "PBool"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "uid": {
+        "desc": "字符串ID",
+        "key": "uid",
+        "type": "PText"
+    }
+}

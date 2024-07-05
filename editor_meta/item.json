@@ -1,0 +1,162 @@
+{
+    "auto_use": {
+        "desc": "自动使用",
+        "key": "auto_use",
+        "type": "PBool"
+    },
+    "body_size": {
+        "desc": "尺寸",
+        "key": "body_size",
+        "type": "PFloat"
+    },
+    "cd_type": {
+        "desc": "CD组",
+        "key": "cd_type",
+        "type": "PText"
+    },
+    "delete_on_discard": {
+        "desc": "掉落后时间到期消失",
+        "key": "delete_on_discard",
+        "type": "PBool"
+    },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
+    "disable_overlapping": {
+        "desc": "开启碰撞",
+        "key": "disable_overlapping",
+        "type": "PBool"
+    },
+    "discard_enable": {
+        "desc": "可以遗弃",
+        "key": "discard_enable",
+        "type": "PBool"
+    },
+    "discard_when_dead": {
+        "desc": "持有者死亡时掉落",
+        "key": "discard_when_dead",
+        "type": "PBool"
+    },
+    "drop_stay_time": {
+        "desc": "消失时间",
+        "key": "drop_stay_time",
+        "type": "PFloat"
+    },
+    "effect_list": {
+        "desc": "特效列表",
+        "key": "effect_list",
+        "type": "PAst"
+    },
+    "hp_max": {
+        "desc": "生命值",
+        "key": "hp_max",
+        "type": "PFloat"
+    },
+    "icon": {
+        "desc": "图标",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "init_stock": {
+        "desc": "初始库存",
+        "key": "init_stock",
+        "type": "PInt"
+    },
+    "item_billboard_type": {
+        "desc": "名称显示方式",
+        "key": "item_billboard_type",
+        "type": "PEnum"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "level": {
+        "desc": "等级",
+        "key": "level",
+        "type": "PInt"
+    },
+    "max_stock": {
+        "desc": "最大库存",
+        "key": "max_stock",
+        "type": "PInt"
+    },
+    "maximum_charging": {
+        "desc": "最大充能数",
+        "key": "maximum_charging",
+        "type": "PInt"
+    },
+    "maximum_stacking": {
+        "desc": "最大堆叠",
+        "key": "maximum_stacking",
+        "type": "PInt"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "type": "PResource"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "refresh_interval": {
+        "desc": "库存恢复间隔",
+        "key": "refresh_interval",
+        "type": "PFloat"
+    },
+    "sale_enable": {
+        "desc": "可以被抵押",
+        "key": "sale_enable",
+        "type": "PBool"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "start_rft": {
+        "desc": "购买开始时间",
+        "key": "start_rft",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "物品标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_consume": {
+        "desc": "使用消耗次数",
+        "key": "use_consume",
+        "type": "PInt"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    }
+}

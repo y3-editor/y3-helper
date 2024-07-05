@@ -1,0 +1,102 @@
+{
+    "attach_model_list": {
+        "desc": "最大持续时间",
+        "key": "attach_model_list",
+        "type": "PAst"
+    },
+    "cycle_time": {
+        "desc": "循环周期",
+        "key": "cycle_time",
+        "type": "PFloat"
+    },
+    "disappear_when_dead": {
+        "desc": "是否死亡时消失",
+        "key": "disappear_when_dead",
+        "type": "PBool"
+    },
+    "get_effect_list": {
+        "desc": "最大持续时间",
+        "key": "get_effect_list",
+        "type": "PAst"
+    },
+    "influence_rng": {
+        "desc": "影响范围",
+        "key": "influence_rng",
+        "type": "PFloat"
+    },
+    "is_influence_self": {
+        "desc": "是否影响自己",
+        "key": "is_influence_self",
+        "type": "PBool"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "layer_max": {
+        "desc": "层数上限",
+        "key": "layer_max",
+        "type": "PInt"
+    },
+    "lose_effect_list": {
+        "desc": "最大持续时间",
+        "key": "lose_effect_list",
+        "type": "PAst"
+    },
+    "material_alpha": {
+        "desc": "不透明度",
+        "key": "material_alpha",
+        "type": "PFloat"
+    },
+    "material_change": {
+        "desc": "材质变化",
+        "key": "material_change",
+        "type": "PEnum"
+    },
+    "material_color": {
+        "desc": "基础材质变色",
+        "key": "material_color",
+        "type": "PAst"
+    },
+    "material_color_intensity": {
+        "desc": "材质变色强度",
+        "key": "material_color_intensity",
+        "type": "PFloat"
+    },
+    "shield_type": {
+        "desc": "护盾类型",
+        "key": "shield_type",
+        "type": "PEnum"
+    },
+    "shield_value": {
+        "desc": "护盾值",
+        "key": "shield_value",
+        "type": "PInt"
+    },
+    "show_on_ui": {
+        "desc": "显示图标",
+        "key": "show_on_ui",
+        "type": "PBool"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    }
+}

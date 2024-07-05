@@ -1,0 +1,227 @@
+{
+    "alive_height_box_data": {
+        "desc": "",
+        "key": "alive_height_box_data",
+        "type": "PText"
+    },
+    "body_size": {
+        "desc": "模型缩放",
+        "key": "body_size",
+        "type": "PFloat"
+    },
+    "collision_box": {
+        "desc": "默认角度",
+        "key": "collision_box",
+        "type": "PAst"
+    },
+    "collision_points_alive": {
+        "desc": "默认角度",
+        "key": "collision_points_alive",
+        "type": "PAst"
+    },
+    "collision_points_dead": {
+        "desc": "默认角度",
+        "key": "collision_points_dead",
+        "type": "PAst"
+    },
+    "dead_height_box_data": {
+        "desc": "",
+        "key": "dead_height_box_data",
+        "type": "PText"
+    },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
+    "destroy_delay": {
+        "desc": "死亡销毁延迟",
+        "key": "destroy_delay",
+        "type": "PFloat"
+    },
+    "destroy_on_die": {
+        "desc": "死亡时销毁",
+        "key": "destroy_on_die",
+        "type": "PBool"
+    },
+    "die_effect_list": {
+        "desc": "死亡特效列表",
+        "key": "die_effect_list",
+        "type": "PAst"
+    },
+    "die_on_source_run_out": {
+        "desc": "资源耗尽时死亡",
+        "key": "die_on_source_run_out",
+        "type": "PBool"
+    },
+    "effect_list": {
+        "desc": "持续特效列表",
+        "key": "effect_list",
+        "type": "PAst"
+    },
+    "enable_occlusion_perspective": {
+        "desc": "遮挡透视",
+        "key": "enable_occlusion_perspective",
+        "type": "PBool"
+    },
+    "hp_max": {
+        "desc": "生命值",
+        "key": "hp_max",
+        "type": "PFloat"
+    },
+    "icon": {
+        "desc": "图标",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "is_ability_target": {
+        "desc": "可被作为技能目标",
+        "key": "is_ability_target",
+        "type": "PBool"
+    },
+    "is_attacked": {
+        "desc": "可被攻击",
+        "key": "is_attacked",
+        "type": "PBool"
+    },
+    "is_collected": {
+        "desc": "可被采集",
+        "key": "is_collected",
+        "type": "PBool"
+    },
+    "is_selected": {
+        "desc": "可被选中",
+        "key": "is_selected",
+        "type": "PBool"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "material_alpha": {
+        "desc": "不透明度",
+        "key": "material_alpha",
+        "type": "PFloat"
+    },
+    "material_change": {
+        "desc": "材质变化",
+        "key": "material_change",
+        "type": "PEnum"
+    },
+    "material_color": {
+        "desc": "基础材质变色",
+        "key": "material_color",
+        "type": "PAst"
+    },
+    "material_color_intensity": {
+        "desc": "材质变色强度",
+        "key": "material_color_intensity",
+        "type": "PFloat"
+    },
+    "mini_map_color": {
+        "desc": "小地图 - 颜色",
+        "key": "mini_map_color",
+        "type": "PAst"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "type": "PResource"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "passable": {
+        "desc": "是否可通行",
+        "key": "passable",
+        "type": "PBool"
+    },
+    "receive_decal": {
+        "desc": "接收贴花",
+        "key": "receive_decal",
+        "type": "PBool"
+    },
+    "show_on_mini_map": {
+        "desc": "小地图 - 显示",
+        "key": "show_on_mini_map",
+        "type": "PBool"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "source_desc": {
+        "desc": "资源名称",
+        "key": "source_desc",
+        "type": "PLocalizeText"
+    },
+    "source_item": {
+        "desc": "物品类型",
+        "key": "source_item",
+        "type": "PSingleSelectExplorer"
+    },
+    "source_nums_init": {
+        "desc": "资源初始数量",
+        "key": "source_nums_init",
+        "type": "PInt"
+    },
+    "source_nums_max": {
+        "desc": "资源最大数量",
+        "key": "source_nums_max",
+        "type": "PInt"
+    },
+    "source_player_prop": {
+        "desc": "玩家属性资源",
+        "key": "source_player_prop",
+        "type": "PEnum"
+    },
+    "source_refresh_count": {
+        "desc": "资源回复数量",
+        "key": "source_refresh_count",
+        "type": "PInt"
+    },
+    "source_refresh_interval": {
+        "desc": "资源回复间隔",
+        "key": "source_refresh_interval",
+        "type": "PFloat"
+    },
+    "source_type": {
+        "desc": "资源类型",
+        "key": "source_type",
+        "type": "PEnum"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "物品标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    }
+}

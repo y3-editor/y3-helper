@@ -1,0 +1,612 @@
+{
+    "agility": {
+        "desc": "敏捷",
+        "key": "agility",
+        "type": "PFloat"
+    },
+    "agility_grow": {
+        "desc": "敏捷",
+        "key": "agility_grow",
+        "type": "PFloat"
+    },
+    "alarm_range": {
+        "desc": "警戒范围(AI)",
+        "key": "alarm_range",
+        "type": "PFloat"
+    },
+    "angle_tolerance": {
+        "desc": "转向补正",
+        "key": "angle_tolerance",
+        "type": "PFloat"
+    },
+    "anim_state_name": {
+        "desc": "动画状态名",
+        "key": "anim_state_name",
+        "type": "PText"
+    },
+    "attack_interval_grow": {
+        "desc": "攻击间隔",
+        "key": "attack_interval_grow",
+        "type": "PFloat"
+    },
+    "attack_mag_grow": {
+        "desc": "法术攻击力",
+        "key": "attack_mag_grow",
+        "type": "PFloat"
+    },
+    "attack_phy_grow": {
+        "desc": "物理攻击力",
+        "key": "attack_phy_grow",
+        "type": "PFloat"
+    },
+    "attack_range_grow": {
+        "desc": "攻击范围",
+        "key": "attack_range_grow",
+        "type": "PFloat"
+    },
+    "attack_speed_grow": {
+        "desc": "攻击速度(%)",
+        "key": "attack_speed_grow",
+        "type": "PFloat"
+    },
+    "bar_show_scale": {
+        "desc": "是否显示血条刻度",
+        "key": "bar_show_scale",
+        "type": "PBool"
+    },
+    "bar_slot_size": {
+        "desc": "物品栏",
+        "key": "bar_slot_size",
+        "type": "PInt"
+    },
+    "base_tint_color": {
+        "desc": "基础材质变色",
+        "key": "base_tint_color",
+        "type": "PAst"
+    },
+    "billboard_height_offset": {
+        "desc": "单位血条高度偏移",
+        "key": "billboard_height_offset",
+        "type": "PFloat"
+    },
+    "billboard_scale_x": {
+        "desc": "x轴缩放",
+        "key": "billboard_scale_x",
+        "type": "PFloat"
+    },
+    "billboard_scale_y": {
+        "desc": "y轴缩放",
+        "key": "billboard_scale_y",
+        "type": "PFloat"
+    },
+    "body_size": {
+        "desc": "模型缩放",
+        "key": "body_size",
+        "type": "PFloat"
+    },
+    "build_time": {
+        "desc": "建造时间（秒）",
+        "key": "build_time",
+        "type": "PInt"
+    },
+    "can_flee": {
+        "desc": "无法反击时会逃跑",
+        "key": "can_flee",
+        "type": "PBool"
+    },
+    "cancel_alarm_range": {
+        "desc": "取消警戒范围(AI)",
+        "key": "cancel_alarm_range",
+        "type": "PFloat"
+    },
+    "cc_jump_height": {
+        "desc": "物理主控跳跃高度",
+        "key": "cc_jump_height",
+        "type": "PFloat"
+    },
+    "cc_move_acc": {
+        "desc": "物理主控加速度",
+        "key": "cc_move_acc",
+        "type": "PFloat"
+    },
+    "cc_move_acc_rate": {
+        "desc": "物理主控加速速率",
+        "key": "cc_move_acc_rate",
+        "type": "PFloat"
+    },
+    "cc_run_speed": {
+        "desc": "物理主控跑步速度",
+        "key": "cc_run_speed",
+        "type": "PFloat"
+    },
+    "cc_walk_speed": {
+        "desc": "物理主控行走速度",
+        "key": "cc_walk_speed",
+        "type": "PFloat"
+    },
+    "cd_reduce_grow": {
+        "desc": "冷却缩减(%)",
+        "key": "cd_reduce_grow",
+        "type": "PFloat"
+    },
+    "collision_box_turning_enable": {
+        "desc": "静态碰撞跟随面向",
+        "key": "collision_box_turning_enable",
+        "type": "PBool"
+    },
+    "collision_points": {
+        "desc": "碰撞格点",
+        "key": "collision_points",
+        "type": "PAst"
+    },
+    "collision_radius_2": {
+        "desc": "",
+        "key": "collision_radius_2",
+        "type": "PFloat"
+    },
+    "common_atk_type": {
+        "desc": "普攻类型",
+        "key": "common_atk_type",
+        "type": "PEnum"
+    },
+    "counterattack_range": {
+        "desc": "允许反击范围",
+        "key": "counterattack_range",
+        "type": "PFloat"
+    },
+    "critical_chance_grow": {
+        "desc": "暴击率(%)",
+        "key": "critical_chance_grow",
+        "type": "PFloat"
+    },
+    "critical_dmg_grow": {
+        "desc": "暴击伤害(%)",
+        "key": "critical_dmg_grow",
+        "type": "PFloat"
+    },
+    "defense_mag_grow": {
+        "desc": "法术防御力",
+        "key": "defense_mag_grow",
+        "type": "PFloat"
+    },
+    "defense_phy_grow": {
+        "desc": "物理防御力",
+        "key": "defense_phy_grow",
+        "type": "PFloat"
+    },
+    "die_anim": {
+        "desc": "死亡",
+        "key": "die_anim",
+        "type": "PText"
+    },
+    "disk_shadow_size": {
+        "desc": "圆盘阴影大小",
+        "key": "disk_shadow_size",
+        "type": "PFloat"
+    },
+    "dodge_rate_grow": {
+        "desc": "躲避率(%)",
+        "key": "dodge_rate_grow",
+        "type": "PFloat"
+    },
+    "dynamic_collision_r": {
+        "desc": "碰撞半径",
+        "key": "dynamic_collision_r",
+        "type": "PFloat"
+    },
+    "enemy_mini_map_icon": {
+        "desc": "敌方小地图头像",
+        "key": "enemy_mini_map_icon",
+        "type": "PResource"
+    },
+    "extra_dmg_grow": {
+        "desc": "所有伤害加成(%)",
+        "key": "extra_dmg_grow",
+        "type": "PFloat"
+    },
+    "has_mp": {
+        "desc": "是否有技能资源条",
+        "key": "has_mp",
+        "type": "PBool"
+    },
+    "hit_rate_grow": {
+        "desc": "命中率(%)",
+        "key": "hit_rate_grow",
+        "type": "PFloat"
+    },
+    "hp_max_grow": {
+        "desc": "最大生命值",
+        "key": "hp_max_grow",
+        "type": "PFloat"
+    },
+    "hp_rec_grow": {
+        "desc": "生命恢复",
+        "key": "hp_rec_grow",
+        "type": "PFloat"
+    },
+    "icon": {
+        "desc": "头像",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "idle_anim": {
+        "desc": "默认状态",
+        "key": "idle_anim",
+        "type": "PText"
+    },
+    "init_stock": {
+        "desc": "初始库存",
+        "key": "init_stock",
+        "type": "PInt"
+    },
+    "intelligence": {
+        "desc": "智力",
+        "key": "intelligence",
+        "type": "PFloat"
+    },
+    "intelligence_grow": {
+        "desc": "智力",
+        "key": "intelligence_grow",
+        "type": "PFloat"
+    },
+    "is_open_Xray": {
+        "desc": "是否开启透视",
+        "key": "is_open_Xray",
+        "type": "PBool"
+    },
+    "is_open_disk_shadow": {
+        "desc": "启用圆盘阴影",
+        "key": "is_open_disk_shadow",
+        "type": "PBool"
+    },
+    "is_shop": {
+        "desc": "是否做为商店",
+        "key": "is_shop",
+        "type": "PBool"
+    },
+    "is_x_offset": {
+        "desc": "",
+        "key": "is_x_offset",
+        "type": "PBool"
+    },
+    "is_z_offset": {
+        "desc": "",
+        "key": "is_z_offset",
+        "type": "PBool"
+    },
+    "jump_to_display": {
+        "desc": "编辑简易普攻",
+        "key": "jump_to_display",
+        "type": "PButton"
+    },
+    "keep_dead_body_time": {
+        "desc": "尸体消失时间",
+        "key": "keep_dead_body_time",
+        "type": "PFloat"
+    },
+    "keep_target": {
+        "desc": "无法移动时仍然保持目标",
+        "key": "keep_target",
+        "type": "PBool"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "level": {
+        "desc": "等级",
+        "key": "level",
+        "type": "PInt"
+    },
+    "max_balance_angle": {
+        "desc": "最大平衡角度",
+        "key": "max_balance_angle",
+        "type": "PFloat"
+    },
+    "max_stock": {
+        "desc": "最大库存",
+        "key": "max_stock",
+        "type": "PInt"
+    },
+    "mini_map_icon_scale": {
+        "desc": "小地图头像缩放",
+        "key": "mini_map_icon_scale",
+        "type": "PFloat"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "type": "PResource"
+    },
+    "model_height": {
+        "desc": "离地高度",
+        "key": "model_height",
+        "type": "PFloat"
+    },
+    "move_channel": {
+        "desc": "移动类型",
+        "key": "move_channel",
+        "type": "PEnum"
+    },
+    "move_limitation": {
+        "desc": "可移动通道",
+        "key": "move_limitation",
+        "type": "PCheckBoxBit"
+    },
+    "move_type": {
+        "desc": "移动类型",
+        "key": "move_type",
+        "type": "PCheckBoxBit"
+    },
+    "mp_key": {
+        "desc": "技能资源名称",
+        "key": "mp_key",
+        "type": "PText"
+    },
+    "mp_max_grow": {
+        "desc": "最大技能资源",
+        "key": "mp_max_grow",
+        "type": "PFloat"
+    },
+    "mp_rec_grow": {
+        "desc": "技能资源恢复",
+        "key": "mp_rec_grow",
+        "type": "PFloat"
+    },
+    "need_preview_billboard": {
+        "desc": "是否预览血条",
+        "key": "need_preview_billboard",
+        "type": "PBool"
+    },
+    "ori_bits": {
+        "desc": "单位状态",
+        "key": "ori_bits",
+        "type": "PCheckBoxBit"
+    },
+    "pene_mag_grow": {
+        "desc": "法术穿透",
+        "key": "pene_mag_grow",
+        "type": "PFloat"
+    },
+    "pene_phy_grow": {
+        "desc": "物理穿透",
+        "key": "pene_phy_grow",
+        "type": "PFloat"
+    },
+    "physics_composite": {
+        "desc": "物理",
+        "key": "physics_composite",
+        "type": "PropertyDict"
+    },
+    "pkg_slot_size": {
+        "desc": "背包栏",
+        "key": "pkg_slot_size",
+        "type": "PInt"
+    },
+    "preview_billboard_health_value": {
+        "desc": "预览血量",
+        "key": "preview_billboard_health_value",
+        "type": "PFloat"
+    },
+    "refresh_interval": {
+        "desc": "库存恢复间隔",
+        "key": "refresh_interval",
+        "type": "PFloat"
+    },
+    "rescue_finish_return": {
+        "desc": "救援后返回",
+        "key": "rescue_finish_return",
+        "type": "PBool"
+    },
+    "rescue_seeker_distance": {
+        "desc": "求救距离",
+        "key": "rescue_seeker_distance",
+        "type": "PFloat"
+    },
+    "rescue_seeker_interval": {
+        "desc": "求救间隔",
+        "key": "rescue_seeker_interval",
+        "type": "PFloat"
+    },
+    "reward_exp": {
+        "desc": "经验",
+        "key": "reward_exp",
+        "type": "PInt"
+    },
+    "rotate_speed": {
+        "desc": "转身速度",
+        "key": "rotate_speed",
+        "type": "PFloat"
+    },
+    "sell_list": {
+        "desc": "出售列表",
+        "key": "sell_list",
+        "type": "PAst"
+    },
+    "separate_enemy_icon": {
+        "desc": "是否敌友方显示不同头像",
+        "key": "separate_enemy_icon",
+        "type": "PBool"
+    },
+    "shop_camp_args": {
+        "desc": "",
+        "key": "shop_camp_args",
+        "type": "PAst"
+    },
+    "shop_edit": {
+        "desc": "商店",
+        "key": "shop_edit",
+        "type": "PButton"
+    },
+    "shop_range": {
+        "desc": "商店范围",
+        "key": "shop_range",
+        "type": "PFloat"
+    },
+    "shop_sell_type": {
+        "desc": "",
+        "key": "shop_sell_type",
+        "type": "PEnum"
+    },
+    "show_y3_extra_info": {
+        "desc": "悬浮信息显示",
+        "key": "show_y3_extra_info",
+        "type": "PBool"
+    },
+    "simple_common_atk": {
+        "desc": "简易普攻",
+        "key": "simple_common_atk",
+        "type": "PAst"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "type": "PSoundList"
+    },
+    "special_idle_anim": {
+        "desc": "特殊状态",
+        "key": "special_idle_anim",
+        "type": "PText"
+    },
+    "speed_ratio_in_turn": {
+        "desc": "转向时移动速度系数",
+        "key": "speed_ratio_in_turn",
+        "type": "PFloat"
+    },
+    "start_rft": {
+        "desc": "购买开始时间",
+        "key": "start_rft",
+        "type": "PFloat"
+    },
+    "state_init": {
+        "desc": "单位初始状态",
+        "key": "state_init",
+        "type": "PEnum"
+    },
+    "strength": {
+        "desc": "力量",
+        "key": "strength",
+        "type": "PFloat"
+    },
+    "strength_grow": {
+        "desc": "力量",
+        "key": "strength_grow",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_base_tint_color": {
+        "desc": "是否启用基础材质变色",
+        "key": "use_base_tint_color",
+        "type": "PBool"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    },
+    "vampire_mag_grow": {
+        "desc": "法术吸血(%)",
+        "key": "vampire_mag_grow",
+        "type": "PFloat"
+    },
+    "vampire_phy_grow": {
+        "desc": "物理吸血(%)",
+        "key": "vampire_phy_grow",
+        "type": "PFloat"
+    },
+    "vision_night": {
+        "desc": "夜晚视野",
+        "key": "vision_night",
+        "type": "PFloat"
+    },
+    "vision_night_grow": {
+        "desc": "夜晚视野",
+        "key": "vision_night_grow",
+        "type": "PFloat"
+    },
+    "vision_rng": {
+        "desc": "白天视野",
+        "key": "vision_rng",
+        "type": "PFloat"
+    },
+    "vision_rng_grow": {
+        "desc": "白天视野",
+        "key": "vision_rng_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_day": {
+        "desc": "扇形视野白天夹角",
+        "key": "vision_sector_angle_day",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_day_grow": {
+        "desc": "",
+        "key": "vision_sector_angle_day_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_night": {
+        "desc": "扇形视野夜晚夹角",
+        "key": "vision_sector_angle_night",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_night_grow": {
+        "desc": "",
+        "key": "vision_sector_angle_night_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_night": {
+        "desc": "扇形视野夜晚半径",
+        "key": "vision_sector_night",
+        "type": "PFloat"
+    },
+    "vision_sector_night_grow": {
+        "desc": "",
+        "key": "vision_sector_night_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_rng": {
+        "desc": "扇形视野白天半径",
+        "key": "vision_sector_rng",
+        "type": "PFloat"
+    },
+    "vision_sector_rng_grow": {
+        "desc": "",
+        "key": "vision_sector_rng_grow",
+        "type": "PFloat"
+    },
+    "vision_true": {
+        "desc": "真实视野",
+        "key": "vision_true",
+        "type": "PFloat"
+    },
+    "vision_true_grow": {
+        "desc": "真实视野",
+        "key": "vision_true_grow",
+        "type": "PFloat"
+    },
+    "walk_anim": {
+        "desc": "行走",
+        "key": "walk_anim",
+        "type": "PText"
+    }
+}
