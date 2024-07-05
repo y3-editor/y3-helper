@@ -2,16 +2,19 @@
     "agility": {
         "desc": "敏捷",
         "key": "agility",
+        "tips": "敏捷",
         "type": "PFloat"
     },
     "agility_grow": {
         "desc": "敏捷",
         "key": "agility_grow",
+        "tips": "敏捷",
         "type": "PFloat"
     },
     "alarm_range": {
         "desc": "警戒范围(AI)",
         "key": "alarm_range",
+        "tips": "单位的警戒范围(AI)",
         "type": "PFloat"
     },
     "angle_tolerance": {
@@ -32,11 +35,13 @@
     "attack_mag_grow": {
         "desc": "法术攻击力",
         "key": "attack_mag_grow",
+        "tips": "单位的法术攻击力",
         "type": "PFloat"
     },
     "attack_phy_grow": {
         "desc": "物理攻击力",
         "key": "attack_phy_grow",
+        "tips": "单位的物理攻击力",
         "type": "PFloat"
     },
     "attack_range_grow": {
@@ -47,16 +52,19 @@
     "attack_speed_grow": {
         "desc": "攻击速度(%)",
         "key": "attack_speed_grow",
+        "tips": "攻击速度(倍数)",
         "type": "PFloat"
     },
     "bar_show_scale": {
         "desc": "是否显示血条刻度",
         "key": "bar_show_scale",
+        "tips": "单位血条上是否会出现刻度线",
         "type": "PBool"
     },
     "bar_slot_size": {
         "desc": "物品栏",
         "key": "bar_slot_size",
+        "tips": "单位的物品栏格数",
         "type": "PInt"
     },
     "base_tint_color": {
@@ -82,6 +90,7 @@
     "body_size": {
         "desc": "模型缩放",
         "key": "body_size",
+        "tips": "对当前物体模型的缩放倍数，用于调整模型大小。",
         "type": "PFloat"
     },
     "build_time": {
@@ -92,11 +101,13 @@
     "can_flee": {
         "desc": "无法反击时会逃跑",
         "key": "can_flee",
+        "tips": "当单位受到伤害且自身无法反击时，会向伤害来源的相反方向移动一段距离，仅在警戒状态下生效",
         "type": "PBool"
     },
     "cancel_alarm_range": {
         "desc": "取消警戒范围(AI)",
         "key": "cancel_alarm_range",
+        "tips": "单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方",
         "type": "PFloat"
     },
     "cc_jump_height": {
@@ -127,11 +138,13 @@
     "cd_reduce_grow": {
         "desc": "冷却缩减(%)",
         "key": "cd_reduce_grow",
+        "tips": "单位技能进入cd时减少部分冷却时间",
         "type": "PFloat"
     },
     "collision_box_turning_enable": {
         "desc": "静态碰撞跟随面向",
         "key": "collision_box_turning_enable",
+        "tips": "仅对建筑类型单位生效。勾选时，单位改变朝向时会使静态碰撞跟随旋转。",
         "type": "PBool"
     },
     "collision_points": {
@@ -140,7 +153,6 @@
         "type": "PAst"
     },
     "collision_radius_2": {
-        "desc": "",
         "key": "collision_radius_2",
         "type": "PFloat"
     },
@@ -157,26 +169,31 @@
     "critical_chance_grow": {
         "desc": "暴击率(%)",
         "key": "critical_chance_grow",
+        "tips": "单位普通攻击有概率造成额外伤害",
         "type": "PFloat"
     },
     "critical_dmg_grow": {
         "desc": "暴击伤害(%)",
         "key": "critical_dmg_grow",
+        "tips": "发生暴击时，造成的暴击伤害倍数",
         "type": "PFloat"
     },
     "defense_mag_grow": {
         "desc": "法术防御力",
         "key": "defense_mag_grow",
+        "tips": "单位的法术防御力",
         "type": "PFloat"
     },
     "defense_phy_grow": {
         "desc": "物理防御力",
         "key": "defense_phy_grow",
+        "tips": "单位的物理防御力",
         "type": "PFloat"
     },
     "die_anim": {
         "desc": "死亡",
         "key": "die_anim",
+        "tips": "死亡状态下会播放的动画",
         "type": "PText"
     },
     "disk_shadow_size": {
@@ -187,11 +204,13 @@
     "dodge_rate_grow": {
         "desc": "躲避率(%)",
         "key": "dodge_rate_grow",
+        "tips": "单位躲避其他单位普通攻击的概率",
         "type": "PFloat"
     },
     "dynamic_collision_r": {
         "desc": "碰撞半径",
         "key": "dynamic_collision_r",
+        "tips": "碰撞动态半径，每50为1个标准格。",
         "type": "PFloat"
     },
     "enemy_mini_map_icon": {
@@ -202,51 +221,61 @@
     "extra_dmg_grow": {
         "desc": "所有伤害加成(%)",
         "key": "extra_dmg_grow",
+        "tips": "百分比提高造成的伤害",
         "type": "PFloat"
     },
     "has_mp": {
         "desc": "是否有技能资源条",
         "key": "has_mp",
+        "tips": "该单位是否有可以用来释放技能的能量",
         "type": "PBool"
     },
     "hit_rate_grow": {
         "desc": "命中率(%)",
         "key": "hit_rate_grow",
+        "tips": "单位普通攻击命中其他单位的概率",
         "type": "PFloat"
     },
     "hp_max_grow": {
         "desc": "最大生命值",
         "key": "hp_max_grow",
+        "tips": "单位的最大生命值",
         "type": "PFloat"
     },
     "hp_rec_grow": {
         "desc": "生命恢复",
         "key": "hp_rec_grow",
+        "tips": "单位的每秒生命恢复数值",
         "type": "PFloat"
     },
     "icon": {
         "desc": "头像",
         "key": "icon",
+        "tips": "单位在游戏中显示的头像",
         "type": "PResource"
     },
     "idle_anim": {
         "desc": "默认状态",
         "key": "idle_anim",
+        "tips": "默认状态下会播放的动画",
         "type": "PText"
     },
     "init_stock": {
         "desc": "初始库存",
         "key": "init_stock",
+        "tips": "单位作为商品的初始库存",
         "type": "PInt"
     },
     "intelligence": {
         "desc": "智力",
         "key": "intelligence",
+        "tips": "智力",
         "type": "PFloat"
     },
     "intelligence_grow": {
         "desc": "智力",
         "key": "intelligence_grow",
+        "tips": "智力",
         "type": "PFloat"
     },
     "is_open_Xray": {
@@ -262,15 +291,14 @@
     "is_shop": {
         "desc": "是否做为商店",
         "key": "is_shop",
+        "tips": "开启后单位可以作为商店编辑出售的物品",
         "type": "PBool"
     },
     "is_x_offset": {
-        "desc": "",
         "key": "is_x_offset",
         "type": "PBool"
     },
     "is_z_offset": {
-        "desc": "",
         "key": "is_z_offset",
         "type": "PBool"
     },
@@ -282,16 +310,19 @@
     "keep_dead_body_time": {
         "desc": "尸体消失时间",
         "key": "keep_dead_body_time",
+        "tips": "尸体消失时间",
         "type": "PFloat"
     },
     "keep_target": {
         "desc": "无法移动时仍然保持目标",
         "key": "keep_target",
+        "tips": "该字段未勾选时，在目标移动出自身的警戒范围后，且自身不能移动时，会立即开始寻找一个新的攻击目标。多用于定点守卫。",
         "type": "PBool"
     },
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "单位的唯一表示",
         "type": "PInt"
     },
     "kv": {
@@ -302,6 +333,7 @@
     "level": {
         "desc": "等级",
         "key": "level",
+        "tips": "单位的默认等级",
         "type": "PInt"
     },
     "max_balance_angle": {
@@ -312,51 +344,61 @@
     "max_stock": {
         "desc": "最大库存",
         "key": "max_stock",
+        "tips": "单位作为商品的最大库存",
         "type": "PInt"
     },
     "mini_map_icon_scale": {
         "desc": "小地图头像缩放",
         "key": "mini_map_icon_scale",
+        "tips": "单位在小地图上的头像的缩放",
         "type": "PFloat"
     },
     "model": {
         "desc": "模型",
         "key": "model",
+        "tips": "当前单位所使用的的模型",
         "type": "PResource"
     },
     "model_height": {
         "desc": "离地高度",
         "key": "model_height",
+        "tips": "单位的离地高度",
         "type": "PFloat"
     },
     "move_channel": {
         "desc": "移动类型",
         "key": "move_channel",
+        "tips": "单位的移动类型，决定单位究竟是在地面移动还是在空中移动。",
         "type": "PEnum"
     },
     "move_limitation": {
         "desc": "可移动通道",
         "key": "move_limitation",
+        "tips": "对单位移动类型的补充，决定单位究竟是在哪些通道移动。任意通道被碰撞阻挡该单位均无法通过。",
         "type": "PCheckBoxBit"
     },
     "move_type": {
         "desc": "移动类型",
         "key": "move_type",
+        "tips": "影响可用的可移动通道。",
         "type": "PCheckBoxBit"
     },
     "mp_key": {
         "desc": "技能资源名称",
         "key": "mp_key",
+        "tips": "该单位用来释放技能的能量的名称",
         "type": "PText"
     },
     "mp_max_grow": {
         "desc": "最大技能资源",
         "key": "mp_max_grow",
+        "tips": "单位的最大技能资源",
         "type": "PFloat"
     },
     "mp_rec_grow": {
         "desc": "技能资源恢复",
         "key": "mp_rec_grow",
+        "tips": "单位的每秒技能资源恢复数值",
         "type": "PFloat"
     },
     "need_preview_billboard": {
@@ -367,16 +409,19 @@
     "ori_bits": {
         "desc": "单位状态",
         "key": "ori_bits",
+        "tips": "进入游戏时，为单位附加的初始状态",
         "type": "PCheckBoxBit"
     },
     "pene_mag_grow": {
         "desc": "法术穿透",
         "key": "pene_mag_grow",
+        "tips": "穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透",
         "type": "PFloat"
     },
     "pene_phy_grow": {
         "desc": "物理穿透",
         "key": "pene_phy_grow",
+        "tips": "穿透敌人物理防御力。先计算固定穿透，再计算百分比穿透",
         "type": "PFloat"
     },
     "physics_composite": {
@@ -387,6 +432,7 @@
     "pkg_slot_size": {
         "desc": "背包栏",
         "key": "pkg_slot_size",
+        "tips": "单位的背包栏格数",
         "type": "PInt"
     },
     "preview_billboard_health_value": {
@@ -397,6 +443,7 @@
     "refresh_interval": {
         "desc": "库存恢复间隔",
         "key": "refresh_interval",
+        "tips": "单位作为商品的库存恢复间隔",
         "type": "PFloat"
     },
     "rescue_finish_return": {
@@ -417,16 +464,19 @@
     "reward_exp": {
         "desc": "经验",
         "key": "reward_exp",
+        "tips": "单位被敌方击杀后，敌方可获得的经验",
         "type": "PInt"
     },
     "rotate_speed": {
         "desc": "转身速度",
         "key": "rotate_speed",
+        "tips": "单位的转身速度",
         "type": "PFloat"
     },
     "sell_list": {
         "desc": "出售列表",
         "key": "sell_list",
+        "tips": "单位作为商店时的出售列表",
         "type": "PAst"
     },
     "separate_enemy_icon": {
@@ -435,7 +485,6 @@
         "type": "PBool"
     },
     "shop_camp_args": {
-        "desc": "",
         "key": "shop_camp_args",
         "type": "PAst"
     },
@@ -450,13 +499,13 @@
         "type": "PFloat"
     },
     "shop_sell_type": {
-        "desc": "",
         "key": "shop_sell_type",
         "type": "PEnum"
     },
     "show_y3_extra_info": {
         "desc": "悬浮信息显示",
         "key": "show_y3_extra_info",
+        "tips": "开启后鼠标悬浮到单位身上时会显示单位名称和等级的文本框",
         "type": "PBool"
     },
     "simple_common_atk": {
@@ -472,6 +521,7 @@
     "special_idle_anim": {
         "desc": "特殊状态",
         "key": "special_idle_anim",
+        "tips": "特殊状态下会播放的动画",
         "type": "PText"
     },
     "speed_ratio_in_turn": {
@@ -482,6 +532,7 @@
     "start_rft": {
         "desc": "购买开始时间",
         "key": "start_rft",
+        "tips": "单位作为商品的可购买时间(游戏开始多久后可以购买）",
         "type": "PFloat"
     },
     "state_init": {
@@ -492,16 +543,19 @@
     "strength": {
         "desc": "力量",
         "key": "strength",
+        "tips": "力量",
         "type": "PFloat"
     },
     "strength_grow": {
         "desc": "力量",
         "key": "strength_grow",
+        "tips": "力量",
         "type": "PFloat"
     },
     "suffix": {
         "desc": "编辑器后缀",
         "key": "suffix",
+        "tips": "给使用编辑器的用户看的备注，无实际作用",
         "type": "PText"
     },
     "uid": {
@@ -527,86 +581,95 @@
     "vampire_mag_grow": {
         "desc": "法术吸血(%)",
         "key": "vampire_mag_grow",
+        "tips": "造成法术伤害后可以恢复自身生命值",
         "type": "PFloat"
     },
     "vampire_phy_grow": {
         "desc": "物理吸血(%)",
         "key": "vampire_phy_grow",
+        "tips": "造成物理伤害后可以恢复自身生命值",
         "type": "PFloat"
     },
     "vision_night": {
         "desc": "夜晚视野",
         "key": "vision_night",
+        "tips": "单位在夜晚可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_night_grow": {
         "desc": "夜晚视野",
         "key": "vision_night_grow",
+        "tips": "单位在夜晚可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_rng": {
         "desc": "白天视野",
         "key": "vision_rng",
+        "tips": "单位在白天可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_rng_grow": {
         "desc": "白天视野",
         "key": "vision_rng_grow",
+        "tips": "单位在白天可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_sector_angle_day": {
         "desc": "扇形视野白天夹角",
         "key": "vision_sector_angle_day",
+        "tips": "单位在白天拥有的扇形视野夹角。",
         "type": "PFloat"
     },
     "vision_sector_angle_day_grow": {
-        "desc": "",
         "key": "vision_sector_angle_day_grow",
         "type": "PFloat"
     },
     "vision_sector_angle_night": {
         "desc": "扇形视野夜晚夹角",
         "key": "vision_sector_angle_night",
+        "tips": "单位在夜晚拥有的扇形视野夹角。",
         "type": "PFloat"
     },
     "vision_sector_angle_night_grow": {
-        "desc": "",
         "key": "vision_sector_angle_night_grow",
         "type": "PFloat"
     },
     "vision_sector_night": {
         "desc": "扇形视野夜晚半径",
         "key": "vision_sector_night",
+        "tips": "单位在夜晚拥有的扇形视野半径。",
         "type": "PFloat"
     },
     "vision_sector_night_grow": {
-        "desc": "",
         "key": "vision_sector_night_grow",
         "type": "PFloat"
     },
     "vision_sector_rng": {
         "desc": "扇形视野白天半径",
         "key": "vision_sector_rng",
+        "tips": "单位在白天拥有的扇形视野半径。",
         "type": "PFloat"
     },
     "vision_sector_rng_grow": {
-        "desc": "",
         "key": "vision_sector_rng_grow",
         "type": "PFloat"
     },
     "vision_true": {
         "desc": "真实视野",
         "key": "vision_true",
+        "tips": "单位所能侦测到隐身单位的范围",
         "type": "PFloat"
     },
     "vision_true_grow": {
         "desc": "真实视野",
         "key": "vision_true_grow",
+        "tips": "单位所能侦测到隐身单位的范围",
         "type": "PFloat"
     },
     "walk_anim": {
         "desc": "行走",
         "key": "walk_anim",
+        "tips": "行走状态下会播放的动作",
         "type": "PText"
     }
 }

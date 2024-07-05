@@ -22,6 +22,7 @@
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "单位的唯一表示",
         "type": "PInt"
     },
     "kv": {
@@ -42,6 +43,7 @@
     "suffix": {
         "desc": "编辑器后缀",
         "key": "suffix",
+        "tips": "在编辑器下显示在名字后面的后缀，在游戏内不显示",
         "type": "PText"
     },
     "tags": {

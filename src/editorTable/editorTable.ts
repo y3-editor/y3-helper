@@ -3,6 +3,7 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { throttle } from "../utility/decorators";
+import * as jsonc from 'jsonc-parser';
 
 const template_dir = 'template\\json_template';
 const meta_dir = 'editor_meta';
@@ -27,23 +28,48 @@ type MapShape = {
     [key: string]: any,
 };
 
+type FieldMeta = {
+    key:   string;
+    type:  string;
+    desc?: string;
+    tips?: string;
+};
+
+type TableMeta = { [key: string]: FieldMeta };
+
+let tableMeta: { [key: string]: TableMeta } = {};
+
 export class FieldInfo {
-    name: string;
+    desc?: string;
+    tips?: string;
 
     constructor(public tableName: Table.NameCN, public field: string) {
-        const nameEN = Table.name.fromCN[tableName];
-        const languageKey = `code_explorer_${nameEN}_${field}`;
-        this.name = y3.language.get(languageKey) ?? field;
+        this.desc = tableMeta[tableName]?.[field]?.desc;
+        this.tips = tableMeta[tableName]?.[field]?.tips;
+    }
+}
+
+async function tableReady(tableName: Table.NameCN) {
+    await y3.language.ready();
+    if (tableMeta[tableName] === undefined) {
+        let nameEN = Table.name.fromCN[tableName];
+        let metaUri = vscode.Uri.joinPath(y3.context.extensionUri, meta_dir, `${nameEN}.json`);
+        let metaFile = await y3.fs.readFile(metaUri);
+        if (metaFile) {
+            tableMeta[tableName] = JSON.parse(metaFile.string);
+        } else {
+            tableMeta[tableName] = {};
+        }
     }
 }
 
 export class EditorObject {
     private _raw?: ObjectShape;
+    private _tree?: jsonc.Node;
     private _name?: string;
     public json?: string;
     public uri?: vscode.Uri;
-    constructor(public tableName: Table.NameCN, public key: number) {
-    }
+    constructor(public tableName: Table.NameCN, public key: number) {}
 
     public get raw(): ObjectShape | undefined {
         if (!this._raw) {
@@ -78,6 +104,19 @@ export class EditorObject {
         return this._name;
     }
 
+    public get tree(): jsonc.Node | undefined {
+        if (!this.json) {
+            return;
+        }
+        if (!this._tree) {
+            let tree = jsonc.parseTree(this.json);
+            if (tree && tree.type === 'object') {
+                this._tree = tree;
+            }
+        }
+        return this._tree;
+    }
+
     public async rename(name: string): Promise<boolean> {
         if (!this.uri || !this.json) {
             return false;
@@ -100,6 +139,12 @@ export class EditorObject {
         let table = openTable(this.tableName);
         return table.getFieldInfo(field);
     }
+
+    private _fieldList?: string[];
+    public listFields(): string[] {
+        this._fieldList ??= Object.keys(tableMeta[this.tableName]);
+        return this._fieldList;
+    }
 }
 
 async function loadObject(tableName: Table.NameCN, key: number) {
@@ -108,7 +153,7 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     if (!file) {
         return null;
     }
-    await y3.language.ready();
+    await tableReady(tableName);
     try {
         let obj = new EditorObject(tableName, key);
         obj.uri = uri;
@@ -268,6 +313,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return this._fieldInfoCache[field];
     }
 
+    public listFields(): string[] {
+        return Object.keys(tableMeta[this.nameCN]);
+    }
+
     private _listActions: ['create' | 'delete', number][] = [];
     private resortList() {
         if (this._listActions.length === 0) {
@@ -386,19 +435,20 @@ export function getFileKey(fileName: string): number | undefined {
 }
 
 export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefined> {
-    const nameEN = uri.path.match(/([^\/]+)\/[^\/]+\.json$/)?.[1];
-    if (!nameEN || !(nameEN in Table.name.toCN)) {
+    const path = uri.path.match(/([^\/]+)\/[^\/]+\.json$/)?.[1];
+    if (!path || !(path in Table.path.toCN)) {
         return;
     }
     const key = getFileKey(uri.path);
     if (!key) {
         return;
     }
+    const nameCN = Table.path.toCN[path as Table.Path];
+    await tableReady(nameCN);
     const file = await y3.fs.readFile(uri);
     if (!file) {
         return;
     }
-    const nameCN = Table.name.toCN[nameEN as Table.NameEN];
     const obj = new EditorObject(nameCN, key);
     obj.uri = uri;
     obj.json = file.string;

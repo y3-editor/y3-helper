@@ -40,7 +40,6 @@
         "type": "PAst"
     },
     "enable_camera_collision": {
-        "desc": "",
         "key": "enable_camera_collision",
         "type": "PBool"
     },
