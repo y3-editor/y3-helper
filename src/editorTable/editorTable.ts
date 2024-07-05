@@ -5,6 +5,7 @@ import * as y3 from 'y3-helper';
 import { throttle } from "../utility/decorators";
 
 const template_dir = 'template\\json_template';
+const meta_dir = 'editor_meta';
 
 type ObjectShape = {
     "name": string | number,

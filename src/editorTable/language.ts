@@ -4,16 +4,10 @@ import * as y3 from 'y3-helper';
 import { hash } from '../utility';
 import { throttle } from '../utility/decorators';
 
-const languageDataPath = 'editor_meta/language_data.json';
-
 class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
     public mapUri?: vscode.Uri;
-    public innerUri = y3.joinPath(languageDataPath);
-    private _innerLanguage: { [key: string]: string } = {};
-    private _innerReverse?: { [key: string]: string } = {};
     private _mapReady = true;
-    private _innerReady = false;
 
     constructor() {
         super(() => {
@@ -28,13 +22,6 @@ class Language extends vscode.Disposable {
             this.disposeList.push(watcher);
             this.reload();
         }
-        y3.fs.readFile(this.innerUri).then((file) => {
-            this._innerReady = true;
-            if (!file) {
-                return;
-            }
-            this._innerLanguage = JSON.parse(file.string);
-        });
     }
 
     private _mapLanguage: { [key: string]: string } = {};
@@ -61,12 +48,12 @@ class Language extends vscode.Disposable {
     }
 
     async ready() {
-        if (this._mapReady && this._innerReady) {
+        if (this._mapReady) {
             return;
         }
         await new Promise<void>(resolve => {
             let interval = setInterval(() => {
-                if (this._mapReady && this._innerReady) {
+                if (this._mapReady) {
                     clearInterval(interval);
                     resolve();
                 }
@@ -75,7 +62,7 @@ class Language extends vscode.Disposable {
     }
 
     get(key: string): string | undefined {
-        return this._mapLanguage[key] ?? this._innerLanguage[key];
+        return this._mapLanguage[key];
     }
 
     async set(key: string, value: string) {
@@ -99,11 +86,6 @@ class Language extends vscode.Disposable {
         this._mapReverse = this._mapReverse ?? this.makeReverse(this._mapLanguage);
         if (this._mapReverse[value]) {
             return this._mapReverse[value];
-        }
-
-        this._innerReverse = this._innerReverse ?? this.makeReverse(this._innerLanguage);
-        if (this._innerReverse[value]) {
-            return this._innerReverse[value];
         }
 
         let key = this.makeKey(value);
