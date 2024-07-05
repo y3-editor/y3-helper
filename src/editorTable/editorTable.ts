@@ -69,9 +69,9 @@ export class EditorObject {
     }
 
     public async rename(name: string): Promise<boolean> {
-        let id = y3.language.keyOf(name);
+        let strKey = await y3.language.keyOf(name, true);
         let raw: ObjectShape = JSON.parse(this.json);
-        raw.name = id;
+        raw.name = strKey;
         let newJson = JSON.stringify(raw, null, 4);
         let suc = await y3.fs.writeFile(this.uri, newJson);
         if (!suc) {
@@ -90,6 +90,7 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     if (!file) {
         return null;
     }
+    await y3.language.ready();
     try {
         return new EditorObject(key, uri, file.string);
     } catch {
@@ -242,7 +243,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
 
         let raw: ObjectShape = JSON.parse(templateJson);
-        raw.name = y3.language.keyOf(name);
+        raw.name = await y3.language.keyOf(name, true);
         raw.uid = key;
         raw.key = key;
         raw._ref_ = key;

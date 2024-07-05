@@ -6,6 +6,10 @@ export * as language from './editorTable/language';
 export * from './tools';
 export let context: vscode.ExtensionContext;
 
+export function joinPath(...paths: string[]): vscode.Uri {
+    return vscode.Uri.joinPath(context.extensionUri, ...paths);
+}
+
 export function setContext(ctx: vscode.ExtensionContext) {
     context = ctx;
 }
