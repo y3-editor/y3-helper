@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
+import { FieldInfo } from '../editorTable';
+import * as jsonc from 'jsonc-parser';
 
 interface ObjectResult {
     object: y3.table.EditorObject;
@@ -9,6 +11,7 @@ interface ObjectResult {
 
 interface FieldResult {
     objectResult: ObjectResult;
+    fieldInfo: FieldInfo;
     query: string;
     other: string;
 }
@@ -39,6 +42,38 @@ class FieldInfomation extends vscode.SymbolInformation {
             ),
         );
     }
+
+    private computePosition(text: string, offset: number) {
+        let line = 0;
+        let character = 0;
+        for (let i = 0; i < offset; i++) {
+            if (text[i] === '\n') {
+                line++;
+                character = 0;
+            } else {
+                character++;
+            }
+        }
+        return new vscode.Position(line, character);
+    }
+
+    async updateInformation() {
+        const object = this.fieldResult.objectResult.object;
+        const root = object.tree;
+        if (!root) {
+            return;
+        }
+        for (const property of root.children!) {
+            const key = property.children![0];
+            if (key.value === this.fieldResult.fieldInfo.field) {
+                this.location.range = new vscode.Range(
+                    this.computePosition(object.json!, property.offset),
+                    this.computePosition(object.json!, property.offset + property.length),
+                );
+                return;
+            }
+        }
+    }
 }
 
 class Provider implements vscode.WorkspaceSymbolProvider {
@@ -50,7 +85,7 @@ class Provider implements vscode.WorkspaceSymbolProvider {
         if (token.isCancellationRequested) {
             return;
         }
-        let matchResult = query.match(/^([^\.\/]*)([\.\/]?)([^\.\/]*)?$/);
+        let matchResult = query.match(/^([^\.\/、。]*)([\.\/、。]?)([^\.\/、。]*)?$/);
         if (!matchResult) {
             return;
         }
@@ -66,6 +101,13 @@ class Provider implements vscode.WorkspaceSymbolProvider {
         let fieldResults = this.searchObjectFields(objectResults, field ?? '');
         let results = fieldResults.map((FieldResult) => new FieldInfomation(FieldResult, sep));
         return results;
+    }
+
+    async resolveWorkspaceSymbol(symbol: ObjectInfomation | FieldInfomation, token: vscode.CancellationToken) {
+        if (symbol instanceof FieldInfomation) {
+            await symbol.updateInformation();
+        }
+        return symbol;
     }
 
     private compileString(str: string) {
@@ -120,12 +162,14 @@ class Provider implements vscode.WorkspaceSymbolProvider {
                 if (fieldInfo.desc && this.matchString(queryChars, fieldInfo.desc)) {
                     result.push({
                         objectResult,
+                        fieldInfo,
                         query: fieldInfo.desc,
                         other: field,
                     });
                 } else if (this.matchString(queryChars, field)) {
                     result.push({
                         objectResult,
+                        fieldInfo,
                         query: field,
                         other: fieldInfo.desc ?? '',
                     });
