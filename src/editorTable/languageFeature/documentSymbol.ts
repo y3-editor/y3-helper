@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import { EditorObject } from './editorTable';
+import { EditorObject } from '../editorTable';
 import * as jsonc from 'jsonc-parser';
 
 let objectMap: { [key: string]: EditorObject | null } = {};
@@ -61,7 +61,7 @@ export function init() {
         scheme: 'file',
         language: 'json',
     }, new Provider(), {
-        label: '物编字段',
+        label: 'Y3开发助手：物编字段',
     });
     vscode.workspace.onDidChangeTextDocument((e) => {
         delete objectMap[e.document.uri.path];
