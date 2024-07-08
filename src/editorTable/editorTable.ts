@@ -2,7 +2,7 @@ import { Table } from "../constants";
 import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
-import { throttle } from "../utility/decorators";
+import { queue, throttle } from "../utility/decorators";
 import * as jsonc from 'jsonc-parser';
 
 const template_dir = 'template\\json_template';
@@ -455,4 +455,33 @@ export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefin
     obj.uri = uri;
     obj.json = file.string;
     return obj;
+}
+
+class Manager {
+    @queue()
+    async getAllObjects() {
+        let allObjects: EditorObject[] = [];
+        let promises: Promise<any>[] = [];
+        for (const tableName in Table.name.fromCN) {
+            const table = openTable(tableName as Table.NameCN);
+            table.getList().then((list) => {
+                for (const key of list) {
+                    let promise = table.get(key).then((obj) => obj && allObjects.push(obj));
+                    promises.push(promise);
+                }
+            });
+        }
+        await Promise.allSettled(promises);
+        allObjects.sort((a, b) => a.key - b.key);
+        return allObjects;
+    }
+}
+
+const ManagerInstance = new Manager();
+
+export async function getAllObjects() {
+    return await ManagerInstance.getAllObjects();
+}
+
+export function init() {
 }
