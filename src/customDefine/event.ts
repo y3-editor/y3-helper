@@ -73,8 +73,8 @@ export class Events extends BaseDefine {
                         event.args.push({
                             name,
                             type,
-                            luaType: Table.type.toLuaType[type]?.[0] ?? 'any',
-                            desc: Table.type.toName[type]?.[1] ?? '不支持的类型',
+                            luaType: Table.type.toLuaType[type] ?? 'any',
+                            desc: Table.type.toName[type] ?? '不支持的类型',
                         });
                     }
                 }
