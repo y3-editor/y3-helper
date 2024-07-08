@@ -308,7 +308,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     }
 
     private _fieldInfoCache: { [field: string]: FieldInfo } = {};
-    public getFieldInfo(field: string) {
+    public getFieldInfo(field: string): FieldInfo | undefined {
         if (!this._fieldInfoCache[field]) {
             this._fieldInfoCache[field] = new FieldInfo(this.nameCN, field);
         }

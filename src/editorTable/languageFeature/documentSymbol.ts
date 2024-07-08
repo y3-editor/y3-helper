@@ -11,7 +11,7 @@ class Provider implements vscode.DocumentSymbolProvider {
         const fieldNode = child.children![0];
         const field: string = fieldNode.value;
         const info = object.getFieldInfo(field);
-        if (!info.desc) {
+        if (!info?.desc) {
             return undefined;
         }
         let symbol = new vscode.DocumentSymbol(

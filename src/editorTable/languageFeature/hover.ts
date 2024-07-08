@@ -29,7 +29,7 @@ class Provider implements vscode.HoverProvider {
         }
 
         const info = object.getFieldInfo(key);
-        if (!info.desc) {
+        if (!info?.desc) {
             return;
         }
 
