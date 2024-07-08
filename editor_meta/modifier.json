@@ -9,6 +9,11 @@
         "key": "cycle_time",
         "type": "PFloat"
     },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
     "disappear_when_dead": {
         "desc": "是否死亡时消失",
         "key": "disappear_when_dead",
@@ -18,6 +23,26 @@
         "desc": "最大持续时间",
         "key": "get_effect_list",
         "type": "PAst"
+    },
+    "halo_effect": {
+        "desc": "光环效果",
+        "key": "halo_effect",
+        "type": "PSingleSelectExplorer"
+    },
+    "ign_inf_unit_tag": {
+        "desc": "不影响单位标签",
+        "key": "ign_inf_unit_tag",
+        "type": "PList"
+    },
+    "ign_inf_unit_type": {
+        "desc": "不影响单位类型",
+        "key": "ign_inf_unit_type",
+        "type": "PCheckBoxBit"
+    },
+    "inf_unit_tag": {
+        "desc": "影响单位标签",
+        "key": "inf_unit_tag",
+        "type": "PList"
     },
     "influence_rng": {
         "desc": "影响范围",
@@ -38,6 +63,11 @@
         "desc": "玩家自定义",
         "key": "kv",
         "type": "PAst"
+    },
+    "layer_change_of_cover": {
+        "desc": "覆盖层数变化",
+        "key": "layer_change_of_cover",
+        "type": "PEnum"
     },
     "layer_max": {
         "desc": "层数上限",
@@ -69,6 +99,41 @@
         "key": "material_color_intensity",
         "type": "PFloat"
     },
+    "modifier_cover_type": {
+        "desc": "覆盖类型",
+        "key": "modifier_cover_type",
+        "type": "PEnum"
+    },
+    "modifier_effect": {
+        "desc": "效果影响",
+        "key": "modifier_effect",
+        "type": "PEnum"
+    },
+    "modifier_icon": {
+        "desc": "图标",
+        "key": "modifier_icon",
+        "type": "PResource"
+    },
+    "modifier_type": {
+        "desc": "效果类别",
+        "key": "modifier_type",
+        "type": "PEnum"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "same_origin_cover": {
+        "desc": "同源覆盖",
+        "key": "same_origin_cover",
+        "type": "PBool"
+    },
+    "shield_change_of_cover": {
+        "desc": "覆盖护盾变化",
+        "key": "shield_change_of_cover",
+        "type": "PEnum"
+    },
     "shield_type": {
         "desc": "护盾类型",
         "key": "shield_type",
@@ -93,6 +158,21 @@
         "desc": "编辑器后缀",
         "key": "suffix",
         "type": "PText"
+    },
+    "tags": {
+        "desc": "标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "target_allow": {
+        "desc": "目标允许",
+        "key": "target_allow",
+        "type": "PCheckBoxBit"
+    },
+    "time_change_of_cover": {
+        "desc": "覆盖时间变化",
+        "key": "time_change_of_cover",
+        "type": "PEnum"
     },
     "uid": {
         "desc": "UID",

@@ -42,10 +42,12 @@ let tableMeta: { [key: string]: TableMeta } = {};
 export class FieldInfo {
     desc?: string;
     tips?: string;
+    type?: string;
 
     constructor(public tableName: Table.NameCN, public field: string) {
         this.desc = tableMeta[tableName]?.[field]?.desc;
         this.tips = tableMeta[tableName]?.[field]?.tips;
+        this.type = tableMeta[tableName]?.[field]?.type;
     }
 }
 

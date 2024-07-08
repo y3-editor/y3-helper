@@ -4,6 +4,16 @@
         "key": "attach_models",
         "type": "PAst"
     },
+    "base_color_mod": {
+        "desc": "材质颜色叠加类型",
+        "key": "base_color_mod",
+        "type": "PEnum"
+    },
+    "base_tint_color": {
+        "desc": "基础材质变色",
+        "key": "base_tint_color",
+        "type": "PColor"
+    },
     "cast_shadow": {
         "desc": "是否产生阴影",
         "key": "cast_shadow",
@@ -47,6 +57,21 @@
         "desc": "遮挡透视",
         "key": "enable_occlusion_perspective",
         "type": "PBool"
+    },
+    "fresnel_color": {
+        "desc": "菲涅尔颜色",
+        "key": "fresnel_color",
+        "type": "PAst"
+    },
+    "fresnel_emissive_color_strength": {
+        "desc": "菲涅尔强度",
+        "key": "fresnel_emissive_color_strength",
+        "type": "PFloat"
+    },
+    "fresnel_exp": {
+        "desc": "菲涅尔指数",
+        "key": "fresnel_exp",
+        "type": "PFloat"
     },
     "icon": {
         "desc": "暂未配置55",
@@ -117,6 +142,11 @@
         "desc": "UID",
         "key": "uid",
         "type": "PText"
+    },
+    "use_base_tint_color": {
+        "desc": "是否启用基础材质变色",
+        "key": "use_base_tint_color",
+        "type": "PBool"
     },
     "use_fresnel": {
         "desc": "启用菲涅尔效果",

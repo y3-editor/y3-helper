@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import { EditorObject } from '../editorTable';
 import * as jsonc from 'jsonc-parser';
+import { getObject } from './documentManager';
 
-let objectMap: { [key: string]: EditorObject | null } = {};
-
-export class Provider implements vscode.DocumentSymbolProvider {
+class Provider implements vscode.DocumentSymbolProvider {
     private makeSymbole(document: vscode.TextDocument, object: y3.table.EditorObject, child: jsonc.Node) {
         if (child.type !== 'property') {
             return;
@@ -34,11 +32,8 @@ export class Provider implements vscode.DocumentSymbolProvider {
 
     async provideDocumentSymbols(document: vscode.TextDocument) {
         const uri = document.uri;
-        if (objectMap[uri.path] === undefined) {
-            objectMap[uri.path] = await y3.table.getObject(uri) ?? null;
-        }
-        let object = objectMap[uri.path];
-        if (object === null) {
+        let object = await getObject(uri);
+        if (!object) {
             return;
         }
         let tree = object.tree;
@@ -62,8 +57,5 @@ export function init() {
         language: 'json',
     }, new Provider(), {
         label: 'Y3开发助手：物编字段',
-    });
-    vscode.workspace.onDidChangeTextDocument((e) => {
-        delete objectMap[e.document.uri.path];
     });
 }

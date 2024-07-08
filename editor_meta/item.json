@@ -1,9 +1,30 @@
 {
+    "attached_ability": {
+        "desc": "主动技能",
+        "key": "attached_ability",
+        "tips": "使用该物品的时释放的主动技能",
+        "type": "PSingleSelectExplorer"
+    },
+    "attached_passive_abilities": {
+        "desc": "被动技能",
+        "key": "attached_passive_abilities",
+        "type": "PExplorerList"
+    },
     "auto_use": {
         "desc": "自动使用",
         "key": "auto_use",
         "tips": "勾选后获得该物品时会自动使用该物品，如果不满足该物品的主动技能消耗条件则无法拾取",
         "type": "PBool"
+    },
+    "base_color_mod": {
+        "desc": "材质颜色叠加类型",
+        "key": "base_color_mod",
+        "type": "PEnum"
+    },
+    "base_tint_color": {
+        "desc": "基础材质变色",
+        "key": "base_tint_color",
+        "type": "PColor"
     },
     "body_size": {
         "desc": "尺寸",
@@ -11,11 +32,33 @@
         "tips": "物品模型的缩放比例",
         "type": "PFloat"
     },
+    "buy_res_list": {
+        "desc": "购买所需资源",
+        "key": "buy_res_list",
+        "tips": "从商店里购买这件物品所需要的资源",
+        "type": "PResList"
+    },
     "cd_type": {
         "desc": "CD组",
         "key": "cd_type",
         "tips": "该物品所在的CD组，物品使用时会使单位持有的相同CD组内所有物品进入使用物品的主动技能冷却",
         "type": "PText"
+    },
+    "compose_list": {
+        "desc": "合成素材",
+        "key": "compose_list",
+        "tips": "合成这件物品所需要的材料，拥有所有合成原料后会自动合成该物品",
+        "type": "PList"
+    },
+    "cur_charge": {
+        "desc": "默认充能数",
+        "key": "cur_charge",
+        "type": "PInt"
+    },
+    "cur_stack": {
+        "desc": "默认堆叠数",
+        "key": "cur_stack",
+        "type": "PInt"
     },
     "delete_on_discard": {
         "desc": "掉落后时间到期消失",
@@ -55,6 +98,21 @@
         "desc": "特效列表",
         "key": "effect_list",
         "type": "PAst"
+    },
+    "fresnel_color": {
+        "desc": "菲涅尔颜色",
+        "key": "fresnel_color",
+        "type": "PAst"
+    },
+    "fresnel_emissive_color_strength": {
+        "desc": "菲涅尔强度",
+        "key": "fresnel_emissive_color_strength",
+        "type": "PFloat"
+    },
+    "fresnel_exp": {
+        "desc": "菲涅尔指数",
+        "key": "fresnel_exp",
+        "type": "PFloat"
     },
     "hp_max": {
         "desc": "生命值",
@@ -96,6 +154,26 @@
         "tips": "物品的等级",
         "type": "PInt"
     },
+    "material_alpha": {
+        "desc": "不透明度",
+        "key": "material_alpha",
+        "type": "PFloat"
+    },
+    "material_change": {
+        "desc": "材质变化",
+        "key": "material_change",
+        "type": "PEnum"
+    },
+    "material_color": {
+        "desc": "材质变化颜色",
+        "key": "material_color",
+        "type": "PColor"
+    },
+    "material_color_intensity": {
+        "desc": "材质变色强度",
+        "key": "material_color_intensity",
+        "type": "PFloat"
+    },
     "max_stock": {
         "desc": "最大库存",
         "key": "max_stock",
@@ -120,10 +198,21 @@
         "tips": "物品掉落在地面的模型",
         "type": "PResource"
     },
+    "model_opacity": {
+        "desc": "模型不透明度",
+        "key": "model_opacity",
+        "type": "PFloat"
+    },
     "name": {
         "desc": "名称",
         "key": "name",
         "type": "PLocalizeText"
+    },
+    "precondition_list": {
+        "desc": "前置条件",
+        "key": "precondition_list",
+        "tips": "训练、购买、建造该单位的前置条件",
+        "type": "PreconditionList"
     },
     "refresh_interval": {
         "desc": "库存恢复间隔",
@@ -137,10 +226,22 @@
         "tips": "是否可以将该物品出售到商店",
         "type": "PBool"
     },
+    "sell_res_list": {
+        "desc": "出售获得资源",
+        "key": "sell_res_list",
+        "tips": "出售到商店时获得的资源",
+        "type": "PResList"
+    },
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
         "type": "PSoundList"
+    },
+    "stack_type": {
+        "desc": "堆叠类型",
+        "key": "stack_type",
+        "tips": "物品的堆叠或者充能逻辑。",
+        "type": "PEnum"
     },
     "start_rft": {
         "desc": "购买开始时间",
@@ -164,6 +265,11 @@
         "desc": "UID",
         "key": "uid",
         "type": "PText"
+    },
+    "use_base_tint_color": {
+        "desc": "是否启用基础材质变色",
+        "key": "use_base_tint_color",
+        "type": "PBool"
     },
     "use_consume": {
         "desc": "使用消耗次数",
