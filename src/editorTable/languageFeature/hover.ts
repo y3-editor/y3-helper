@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { getObject } from '../editorTable';
+import { getObject } from './documentManager';
 import * as jsonc from 'jsonc-parser';
+import { language } from 'y3-helper';
 
-class Provider implements vscode.HoverProvider {
+class FieldProvider implements vscode.HoverProvider {
     async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
         const object = await getObject(document.uri);
         if (!object) {
@@ -41,9 +42,62 @@ class Provider implements vscode.HoverProvider {
     }
 }
 
+class UnicodeProvider implements vscode.HoverProvider {
+    async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
+        const object = await getObject(document.uri);
+        if (!object?.tree) {
+            return;
+        }
+
+        const node = jsonc.findNodeAtOffset(object.tree, document.offsetAt(position));
+
+        if (node?.type !== 'string') {
+            return;
+        }
+
+        const raw = object.json!.slice(node.offset + 1, node.offset + node.length - 1);
+        if (raw === node.value) {
+            return;
+        }
+
+        return new vscode.Hover(new vscode.MarkdownString(node.value));
+    }
+}
+
+class TranslateProvider implements vscode.HoverProvider {
+    async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
+        const object = await getObject(document.uri);
+        if (!object?.tree) {
+            return;
+        }
+
+        const node = jsonc.findNodeAtOffset(object.tree, document.offsetAt(position));
+        if (node?.type !== 'number') {
+            return;
+        }
+
+        const text = language.get(node.value);
+        if (!text) {
+            return;
+        }
+
+        return new vscode.Hover(new vscode.MarkdownString(text));
+    }
+}
+
 export function init() {
     vscode.languages.registerHoverProvider({
         scheme: 'file',
         language: 'json',
-    }, new Provider());
+    }, new FieldProvider());
+
+    vscode.languages.registerHoverProvider({
+        scheme: 'file',
+        language: 'json',
+    }, new UnicodeProvider());
+
+    vscode.languages.registerHoverProvider({
+        scheme: 'file',
+        language: 'json',
+    }, new TranslateProvider());
 }
