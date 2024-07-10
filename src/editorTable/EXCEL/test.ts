@@ -1,30 +1,8 @@
 import * as y3 from 'y3-helper';
 
-const Keys = {
-    /**
-     * 描述1
-     */
-    a: 1,
-} as const;
-
-/**
- * 设置值1
- * @param k - 键
- * @param v - 值
- */
-function testSet(k: 'a', v: number): void;
-
-/**
- * 设置值2
- * @param k - 键
- * @param v - 值
- */
-function testSet(k: 'b', v: string): void;
-
-function testSet(...args: any[]) {}
-
-testSet('a', 1);
-testSet('b', '1');
+declare interface EditorData<N extends y3.const.Table.NameCN> {
+    name: number;
+}
 
 export async function test() {
     let table = y3.table.openTable('装饰物');
@@ -32,7 +10,7 @@ export async function test() {
     if (!obj) {
         throw new Error('not found');
     }
-    obj.set('name', '测试');
+    obj.data.name = '测试66';
 
     let newObj = await table.create({
         name: '测试42',

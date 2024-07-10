@@ -5,7 +5,7 @@ import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
 
 const template_dir = 'template\\json_template';
-const meta_dir = 'src\\meta\\editor_meta';
+const meta_dir = 'editor_meta';
 
 type ActionType = 'create' | 'delete' | 'change';
 
@@ -58,6 +58,8 @@ async function ready(tableName: Table.NameCN) {
     }
 }
 
+declare interface EditorData<N extends Table.NameCN> {}
+
 export class EditorObject<N extends Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
@@ -73,6 +75,26 @@ export class EditorObject<N extends Table.NameCN> {
             this._json = new y3.json.Json(this.text);
         }
         return this._json;
+    }
+
+    private _data?: EditorData<N>;
+    public get data(): EditorData<N> {
+        if (this._data === undefined) {
+            this._data = new Proxy({}, {
+                get: (target, p, receiver) => {
+                    if (typeof p === 'string') {
+                        return this.get(p);
+                    }
+                },
+                set: (target, p, value, receiver) => {
+                    if (typeof p === 'string') {
+                        return this.set(p, value);
+                    }
+                    return false;
+                },
+            });
+        }
+        return this._data;
     }
 
     public get(key: string): any {
