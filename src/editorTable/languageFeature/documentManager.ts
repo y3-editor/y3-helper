@@ -3,11 +3,11 @@ import { EditorObject } from '../editorTable';
 import * as y3 from 'y3-helper';
 import { queue } from '../../utility/decorators';
 
-let objectMap: { [key: string]: EditorObject | null } = {};
+let objectMap: { [key: string]: EditorObject<any> | null } = {};
 
 class Manager {
     @queue()
-    async getObject(uri: vscode.Uri): Promise<EditorObject | undefined> {
+    async getObject(uri: vscode.Uri): Promise<EditorObject<any> | undefined> {
         if (objectMap[uri.path] === undefined) {
             objectMap[uri.path] = await y3.table.getObject(uri) ?? null;
         }
@@ -18,7 +18,7 @@ class Manager {
 
 const ManagerInstance = new Manager();
 
-export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefined> {
+export async function getObject(uri: vscode.Uri): Promise<EditorObject<any> | undefined> {
     return await ManagerInstance.getObject(uri);
 }
 

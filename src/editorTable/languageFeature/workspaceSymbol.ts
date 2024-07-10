@@ -4,7 +4,7 @@ import { FieldInfo } from '../editorTable';
 import * as jsonc from 'jsonc-parser';
 
 interface ObjectResult {
-    object: y3.table.EditorObject;
+    object: y3.table.EditorObject<any>;
     query: string;
     other: string;
 }
@@ -129,7 +129,7 @@ class Provider implements vscode.WorkspaceSymbolProvider {
         return true;
     }
 
-    private searchObject(objects: y3.table.EditorObject[], query: string) {
+    private searchObject(objects: y3.table.EditorObject<any>[], query: string) {
         const queryChars = this.compileString(query);
         let result: ObjectResult[] = [];
         for (const object of objects) {

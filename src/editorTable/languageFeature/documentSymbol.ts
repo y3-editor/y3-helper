@@ -4,7 +4,7 @@ import * as jsonc from 'jsonc-parser';
 import { getObject } from './documentManager';
 
 class Provider implements vscode.DocumentSymbolProvider {
-    private makeSymbole(document: vscode.TextDocument, object: y3.table.EditorObject, child: jsonc.Node) {
+    private makeSymbole(document: vscode.TextDocument, object: y3.table.EditorObject<any>, child: jsonc.Node) {
         if (child.type !== 'property') {
             return;
         }

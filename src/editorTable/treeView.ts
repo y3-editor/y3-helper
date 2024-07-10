@@ -17,7 +17,7 @@ class FileNode extends vscode.TreeItem {
         this.id = `${tableName}/${key}`;
     }
 
-    public object?: editorTable.EditorObject;
+    public object?: editorTable.EditorObject<any>;
     public update(): void | Promise<void> {
         let table = editorTable.openTable(this.tableName);
         this.object = table.fetch(this.key);

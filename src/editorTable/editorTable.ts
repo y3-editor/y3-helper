@@ -5,7 +5,7 @@ import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
 
 const template_dir = 'template\\json_template';
-const meta_dir = 'editor_meta';
+const meta_dir = 'src\\meta\\editor_meta';
 
 type ActionType = 'create' | 'delete' | 'change';
 
@@ -58,7 +58,7 @@ async function ready(tableName: Table.NameCN) {
     }
 }
 
-export class EditorObject {
+export class EditorObject<N extends Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
     public text?: string;
@@ -308,7 +308,7 @@ interface CreateOptions {
 export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     public uri;
     public nameEN;
-    private _objectCache: { [key: number]: EditorObject | null | undefined } = {};
+    private _objectCache: { [key: number]: EditorObject<N> | null | undefined } = {};
     private watcher?: vscode.FileSystemWatcher;
     constructor(public nameCN: N) {
         super(() => {
@@ -321,14 +321,14 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[nameCN]);
     }
 
-    public async get(key: number): Promise<EditorObject | undefined> {
+    public async get(key: number): Promise<EditorObject<N> | undefined> {
         if (this._objectCache[key] === undefined) {
             this._objectCache[key] = await loadObject(this.nameCN, key);
         }
         return this._objectCache[key] ?? undefined;
     }
 
-    public fetch(key: number): EditorObject | undefined {
+    public fetch(key: number): EditorObject<N> | undefined {
         return this._objectCache[key] ?? undefined;
     }
 
@@ -387,7 +387,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return max ? max + 1 : 100001;
     }
 
-    public async create(options?: CreateOptions) {
+    public async create(options?: CreateOptions): Promise<EditorObject<N> | undefined>{
         let name = options?.name ?? `新建${this.nameCN}`;
         let key: number;
         if (options?.key) {
@@ -568,7 +568,7 @@ export function getFileKey(fileName: string): number | undefined {
     return key;
 }
 
-export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefined> {
+export async function getObject(uri: vscode.Uri): Promise<EditorObject<Table.NameCN> | undefined> {
     const path = uri.path.match(/([^\/]+)\/[^\/]+\.json$/)?.[1];
     if (!path || !(path in Table.path.toCN)) {
         return;
@@ -592,7 +592,7 @@ export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefin
 class Manager {
     @queue()
     async getAllObjects() {
-        let allObjects: EditorObject[] = [];
+        let allObjects: EditorObject<Table.NameCN>[] = [];
         let promises: Promise<any>[] = [];
         for (const tableName in Table.name.fromCN) {
             const table = openTable(tableName as Table.NameCN);
