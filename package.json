@@ -336,6 +336,11 @@
                 "command": "y3-helper.testExcel",
                 "title": "测试导表",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.objectEditor",
+                "title": "物编修改器",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {

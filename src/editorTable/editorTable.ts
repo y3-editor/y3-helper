@@ -58,7 +58,7 @@ async function ready(tableName: Table.NameCN) {
     await y3.language.ready();
     if (tableMeta[tableName] === undefined) {
         let nameEN = Table.name.fromCN[tableName];
-        let metaUri = vscode.Uri.joinPath(y3.context.extensionUri, meta_dir, `${nameEN}.json`);
+        let metaUri = vscode.Uri.joinPath(y3.helper.extensionUri, meta_dir, `${nameEN}.json`);
         let metaFile = await y3.fs.readFile(metaUri);
         if (metaFile) {
             tableMeta[tableName] = JSON.parse(metaFile.string);
@@ -448,7 +448,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
             }
             templateJson = obj.text;
         } else {
-            let templateUri = vscode.Uri.joinPath(y3.context.extensionUri, template_dir, `${this.nameEN}.json`);
+            let templateUri = vscode.Uri.joinPath(y3.helper.extensionUri, template_dir, `${this.nameEN}.json`);
             let template = await y3.fs.readFile(templateUri);
             if (!template) {
                 return undefined;

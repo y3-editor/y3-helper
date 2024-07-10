@@ -83,7 +83,9 @@ export async function dir(uri: vscode.Uri, relativePath?: string) {
     try {
         let files = await vscode.workspace.fs.readDirectory(uri);
         return files;
-    } catch {}
+    } catch {
+        return [];
+    }
 }
 
 export async function stat(uri: vscode.Uri, relativePath?: string) {
@@ -94,4 +96,13 @@ export async function stat(uri: vscode.Uri, relativePath?: string) {
         let stat = await vscode.workspace.fs.stat(uri);
         return stat;
     } catch {}
+}
+
+export async function copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }) {
+    try {
+        await vscode.workspace.fs.copy(source, target, options);
+        return true;
+    } catch {
+        return false;
+    }
 }
