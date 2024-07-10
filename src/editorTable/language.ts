@@ -15,7 +15,7 @@ class Language extends vscode.Disposable {
         });
         if (env.mapUri) {
             this.mapUri = vscode.Uri.joinPath(env.mapUri, "zhlanguage.json");
-            let watcher = vscode.workspace.createFileSystemWatcher(this.mapUri.fsPath);
+            let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(env.mapUri, "zhlanguage.json"));
             watcher.onDidChange(() => this.reload());
             watcher.onDidCreate(() => this.reload());
             watcher.onDidDelete(() => this.reload());
@@ -24,7 +24,7 @@ class Language extends vscode.Disposable {
         }
     }
 
-    private _mapLanguage: { [key: string]: string } = {};
+    private _mapLanguage?: y3.Json;
     private _mapReverse?: { [key: string]: string } = {};
     async reload() {
         this._mapReady = false;
@@ -37,7 +37,7 @@ class Language extends vscode.Disposable {
                 return;
             }
             try {
-                this._mapLanguage = JSON.parse(languageFile.string);
+                this._mapLanguage = new y3.Json(languageFile.string);
                 this._mapReverse = undefined;
             } catch(e) {
                 y3.log.warn(`解析中文语言文件失败：${e}`);
@@ -62,7 +62,7 @@ class Language extends vscode.Disposable {
     }
 
     get(key: string): string | undefined {
-        return this._mapLanguage[key];
+        return this._mapLanguage?.get(key);
     }
 
     async set(key: string, value: string) {
@@ -70,7 +70,7 @@ class Language extends vscode.Disposable {
         if (this.get(key) === value) {
             return;
         }
-        this._mapLanguage[key] = value;
+        this._mapLanguage?.set(key, value);
         if (this._mapReverse) {
             this._mapReverse[value] = key;
         }
@@ -78,12 +78,15 @@ class Language extends vscode.Disposable {
     }
 
     private makeReverse(object: { [key: string]: string }) {
+        if (typeof object !== 'object' || object === null) {
+            return {};
+        }
         return Object.fromEntries(Object.entries(object).map(([k, v]) => [v, k]));
     }
 
     async keyOf(value: string): Promise<string> {
         await this.ready();
-        this._mapReverse = this._mapReverse ?? this.makeReverse(this._mapLanguage);
+        this._mapReverse = this._mapReverse ?? this.makeReverse(this._mapLanguage?.data);
         if (this._mapReverse[value]) {
             return this._mapReverse[value];
         }
@@ -104,7 +107,10 @@ class Language extends vscode.Disposable {
     @throttle(500)
     private async updateFile() {
         await this.ready();
-        let content = JSON.stringify(this._mapLanguage, null, 4);
+        let content = this._mapLanguage?.text;
+        if (!content) {
+            return;
+        }
         await y3.fs.writeFile(this.mapUri!, content);
     }
 }
