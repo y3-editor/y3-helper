@@ -6,11 +6,6 @@ const parseOptions = {
     allowEmptyContent: true,
 };
 
-interface Patch {
-    key: string;
-    value: any;
-}
-
 const editOptions = {
     formattingOptions: {
         tabSize: 4,
@@ -18,6 +13,10 @@ const editOptions = {
         eol: '\n',
     },
 };
+
+export type Item = string | boolean | number | Object | Array;
+export type Array = Item[];
+export type Object = { [key: string]: Item };
 
 export class Json {
     private _text: string;
@@ -30,10 +29,13 @@ export class Json {
         return this._text;
     }
 
-    private _data?: any | null;
+    private _data?: Object | null;
     public get data() {
         if (this._data === undefined) {
             this._data = jsonc.parse(this.text, undefined, parseOptions) ?? null;
+            if (typeof this._data !== 'object' || this._data === null) {
+                this._data = null;
+            }
         }
         return this._data ?? undefined;
     }
@@ -47,30 +49,36 @@ export class Json {
         return this._tree ?? undefined;
     }
 
-    public get(key: string): any {
-        return this.data[key];
+    public get(key: string): Item | undefined {
+        return this.data?.[key];
     }
 
-    private _patch: Patch[] = [];
+    private _patch?: { [key: string]: any };
     public set(key: string, value: any) {
-        if (this.data[key] === value) {
-            return;
+        if (!this.data) {
+            return false;
         }
-        this._data[key] = value;
-        this._patch.push({ key, value });
+        if (this.data[key] === value) {
+            return false;
+        }
+        this._data![key] = value;
+        this._patch ??= {};
+        this._patch[key] = value;
+        return true;
     }
 
     private applyPatch() {
-        if (this._patch.length === 0) {
+        if (this._patch === undefined) {
             return;
         }
         this._tree = undefined;
         let allEdits: jsonc.Edit[] = [];
-        for (const patch of this._patch) {
-            let edits = jsonc.modify(this._text, [patch.key], patch.value, editOptions);
+        for (const key in this._patch) {
+            const value = this._patch[key];
+            let edits = jsonc.modify(this._text, [key], value, editOptions);
             allEdits.push(...edits);
         }
-        this._patch = [];
+        this._patch = undefined;
         this._text = jsonc.applyEdits(this._text, allEdits);
     }
 }

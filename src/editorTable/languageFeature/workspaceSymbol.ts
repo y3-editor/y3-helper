@@ -59,7 +59,7 @@ class FieldInfomation extends vscode.SymbolInformation {
 
     async updateInformation() {
         const object = this.fieldResult.objectResult.object;
-        const root = object.tree;
+        const root = object.json?.tree;
         if (!root) {
             return;
         }
@@ -67,8 +67,8 @@ class FieldInfomation extends vscode.SymbolInformation {
             const key = property.children![0];
             if (key.value === this.fieldResult.fieldInfo.field) {
                 this.location.range = new vscode.Range(
-                    this.computePosition(object.json!, property.offset),
-                    this.computePosition(object.json!, property.offset + property.length),
+                    this.computePosition(object.text!, property.offset),
+                    this.computePosition(object.text!, property.offset + property.length),
                 );
                 return;
             }

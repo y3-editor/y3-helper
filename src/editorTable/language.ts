@@ -24,7 +24,7 @@ class Language extends vscode.Disposable {
         }
     }
 
-    private _mapLanguage?: y3.Json;
+    private _mapLanguage?: y3.json.Json;
     private _mapReverse?: { [key: string]: string } = {};
     async reload() {
         this._mapReady = false;
@@ -37,7 +37,7 @@ class Language extends vscode.Disposable {
                 return;
             }
             try {
-                this._mapLanguage = new y3.Json(languageFile.string);
+                this._mapLanguage = new y3.json.Json(languageFile.string);
                 this._mapReverse = undefined;
             } catch(e) {
                 y3.log.warn(`解析中文语言文件失败：${e}`);
@@ -62,7 +62,11 @@ class Language extends vscode.Disposable {
     }
 
     get(key: string): string | undefined {
-        return this._mapLanguage?.get(key);
+        let value = this._mapLanguage?.get(key);
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        return value;
     }
 
     async set(key: string, value: string) {
@@ -77,15 +81,21 @@ class Language extends vscode.Disposable {
         this.updateFile();
     }
 
-    private makeReverse(object: { [key: string]: string }) {
+    private makeReverse(object: any): { [key: string]: string } {
         if (typeof object !== 'object' || object === null) {
             return {};
         }
-        return Object.fromEntries(Object.entries(object).map(([k, v]) => [v, k]));
+        let result: { [key: string]: string} = {};
+        for (let key in object) {
+            const value = object[key];
+            if (typeof value === 'string') {
+                result[value] = key;
+            }
+        }
+        return result;
     }
 
-    async keyOf(value: string): Promise<string> {
-        await this.ready();
+    keyOf(value: string): string {
         this._mapReverse = this._mapReverse ?? this.makeReverse(this._mapLanguage?.data);
         if (this._mapReverse[value]) {
             return this._mapReverse[value];
@@ -151,12 +161,14 @@ export async function set(key: string | number, value: string) {
 
 /**
  * 获取中文文本对应的key，如果不存在会新建
+ * @param value 中文文本
+ * @param preferNumber 如果可能，将key转换为数字
  */
-export async function keyOf(value: string | number, preferNumber?: boolean): Promise<string | number> {
+export function keyOf(value: string | number, preferNumber?: boolean): string | number {
     if (typeof value === 'number') {
         value = value.toString();
     }
-    let key = await language.keyOf(value);
+    let key = language.keyOf(value);
     if (preferNumber && Number.isSafeInteger(parseInt(key))) {
         return parseInt(key);
     }

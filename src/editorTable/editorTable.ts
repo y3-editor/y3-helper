@@ -3,7 +3,6 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
-import * as jsonc from 'jsonc-parser';
 
 const template_dir = 'template\\json_template';
 const meta_dir = 'editor_meta';
@@ -51,7 +50,7 @@ export class FieldInfo {
     }
 }
 
-async function tableReady(tableName: Table.NameCN) {
+async function ready(tableName: Table.NameCN) {
     await y3.language.ready();
     if (tableMeta[tableName] === undefined) {
         let nameEN = Table.name.fromCN[tableName];
@@ -66,33 +65,66 @@ async function tableReady(tableName: Table.NameCN) {
 }
 
 export class EditorObject {
-    private _raw?: ObjectShape;
-    private _tree?: jsonc.Node;
+    private _json?: y3.json.Json;
     private _name?: string;
-    public json?: string;
+    public text?: string;
     public uri?: vscode.Uri;
     constructor(public tableName: Table.NameCN, public key: number) {}
 
-    public get raw(): ObjectShape | undefined {
-        if (!this._raw) {
-            if (!this.json) {
-                return;
+    public get json(): y3.json.Json | undefined {
+        if (this._json === undefined) {
+            if (!this.text) {
+                return undefined;
             }
-            this._raw = JSON.parse(this.json);
+            this._json = new y3.json.Json(this.text);
         }
-        return this._raw!;
+        return this._json;
+    }
+
+    public get(key: string): any {
+        if (key === 'name') {
+            return this.name;
+        }
+        return this.rawGet(key);
+    }
+
+    public set(key: string, value: ItemShape): boolean {
+        if (key === 'name') {
+            if (typeof value === 'string') {
+                this._name = value;
+                value = y3.language.keyOf(value, true);
+            } else {
+                return false;
+            }
+        }
+        return this.rawSet(key, value);
+    }
+
+    public rawGet(key: string): any {
+        return this.json?.get(key);
+    }
+
+    public rawSet(key: string, value: any): boolean {
+        if (!this.json) {
+            return false;
+        }
+        let res = this.json.set(key, value);
+        if (res) {
+            this.updateFile();
+        }
+        return res;
     }
 
     public get name(): string {
         if (!this._name) {
-            let name = this.json?.match(/"name"\s*:\s*(\-?\d*)/);
+            let name = this.text?.match(/"name"\s*:\s*(\-?\d*)/);
             if (name && name[1]) {
                 let id = parseInt(name[1]);
                 if (!isNaN(id)) {
                     this._name = y3.language.get(id);
                 }
             } else {
-                let name = this.raw?.name;
+                let name = this.json?.get('name');
                 if (typeof name === 'string') {
                     this._name = name;
                 } else if (typeof name === 'number') {
@@ -106,35 +138,14 @@ export class EditorObject {
         return this._name;
     }
 
-    public get tree(): jsonc.Node | undefined {
-        if (!this.json) {
-            return;
-        }
-        if (!this._tree) {
-            let tree = jsonc.parseTree(this.json);
-            if (tree && tree.type === 'object') {
-                this._tree = tree;
-            }
-        }
-        return this._tree;
-    }
-
-    public async rename(name: string): Promise<boolean> {
+    @throttle(500)
+    private async updateFile(): Promise<boolean> {
         if (!this.uri || !this.json) {
             return false;
         }
-        let strKey = await y3.language.keyOf(name, true);
-        let raw: ObjectShape = JSON.parse(this.json);
-        raw.name = strKey;
-        let newJson = JSON.stringify(raw, null, 4);
-        let suc = await y3.fs.writeFile(this.uri, newJson);
-        if (!suc) {
-            return false;
-        }
-        this.json = newJson;
-        this._name = name;
-        this._raw  = raw;
-        return true;
+        let content = this.json.text;
+        let suc = await y3.fs.writeFile(this.uri, content);
+        return suc;
     }
 
     public getFieldInfo(field: string) {
@@ -155,11 +166,11 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     if (!file) {
         return null;
     }
-    await tableReady(tableName);
+    await ready(tableName);
     try {
         let obj = new EditorObject(tableName, key);
         obj.uri = uri;
-        obj.json = file.string;
+        obj.text = file.string;
         return obj;
     } catch {
         return null;
@@ -278,10 +289,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         let templateJson: string;
         if (options?.copyFrom) {
             let obj = await this.get(options.copyFrom);
-            if (!obj || !obj.json) {
+            if (!obj || !obj.text) {
                 return undefined;
             }
-            templateJson = obj.json;
+            templateJson = obj.text;
         } else {
             let templateUri = vscode.Uri.joinPath(y3.context.extensionUri, template_dir, `${this.nameEN}.json`);
             let template = await y3.fs.readFile(templateUri);
@@ -291,15 +302,14 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
             templateJson = template.string;
         }
 
-        let raw: ObjectShape = JSON.parse(templateJson);
-        raw.name = await y3.language.keyOf(name, true);
-        raw.uid = key;
-        raw.key = key;
-        raw._ref_ = key;
+        let json = new y3.json.Json(templateJson);
+        json.set('name', y3.language.keyOf(name, true));
+        json.set('uid', key.toString());
+        json.set('key', key);
+        json.set('_ref_', key);
 
-        let json = JSON.stringify(raw, null, 4);
         let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
-        let suc = await y3.fs.writeFile(uri, json);
+        let suc = await y3.fs.writeFile(uri, json.text);
         if (!suc) {
             return undefined;
         }
@@ -446,14 +456,14 @@ export async function getObject(uri: vscode.Uri): Promise<EditorObject | undefin
         return;
     }
     const nameCN = Table.path.toCN[path as Table.Path];
-    await tableReady(nameCN);
+    await ready(nameCN);
     const file = await y3.fs.readFile(uri);
     if (!file) {
         return;
     }
     const obj = new EditorObject(nameCN, key);
     obj.uri = uri;
-    obj.json = file.string;
+    obj.text = file.string;
     return obj;
 }
 

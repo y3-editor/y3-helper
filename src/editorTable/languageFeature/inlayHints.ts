@@ -8,7 +8,7 @@ class Provider implements vscode.InlayHintsProvider {
             return;
         }
 
-        const root = object.tree;
+        const root = object.json?.tree;
         if (!root) {
             return;
         }

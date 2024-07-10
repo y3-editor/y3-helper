@@ -216,7 +216,7 @@ class TreeView extends vscode.Disposable {
             if (!value || value === fileNode.object.name) {
                 return;
             }
-            await fileNode.object.rename(value);
+            fileNode.object.set('name', value);
         });
 
         // 复制对象

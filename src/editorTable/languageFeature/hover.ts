@@ -10,7 +10,7 @@ class FieldProvider implements vscode.HoverProvider {
             return;
         }
 
-        let root = object.tree;
+        let root = object.json?.tree;
         if (!root) {
             return;
         }
@@ -45,17 +45,17 @@ class FieldProvider implements vscode.HoverProvider {
 class UnicodeProvider implements vscode.HoverProvider {
     async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
         const object = await getObject(document.uri);
-        if (!object?.tree) {
+        if (!object?.json?.tree) {
             return;
         }
 
-        const node = jsonc.findNodeAtOffset(object.tree, document.offsetAt(position));
+        const node = jsonc.findNodeAtOffset(object.json.tree, document.offsetAt(position));
 
         if (node?.type !== 'string') {
             return;
         }
 
-        const raw = object.json!.slice(node.offset + 1, node.offset + node.length - 1);
+        const raw = object.text!.slice(node.offset + 1, node.offset + node.length - 1);
         if (raw === node.value) {
             return;
         }
@@ -67,11 +67,11 @@ class UnicodeProvider implements vscode.HoverProvider {
 class TranslateProvider implements vscode.HoverProvider {
     async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
         const object = await getObject(document.uri);
-        if (!object?.tree) {
+        if (!object?.json?.tree) {
             return;
         }
 
-        const node = jsonc.findNodeAtOffset(object.tree, document.offsetAt(position));
+        const node = jsonc.findNodeAtOffset(object.json.tree, document.offsetAt(position));
         if (node?.type !== 'number') {
             return;
         }

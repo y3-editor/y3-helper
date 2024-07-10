@@ -36,7 +36,7 @@ class Provider implements vscode.DocumentSymbolProvider {
         if (!object) {
             return;
         }
-        let tree = object.tree;
+        let tree = object.json?.tree;
         if (!tree || !tree.children) {
             return;
         }
