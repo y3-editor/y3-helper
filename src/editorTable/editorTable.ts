@@ -96,25 +96,74 @@ export class EditorObject {
         return value;
     }
 
+    private checkType(fieldInfo: FieldInfo, value: ItemShape) {
+        if (!fieldInfo.type) {
+            throw new Error(`未知字段类型:'${fieldInfo.field}'`);
+        }
+        switch (fieldInfo.type) {
+            case 'PLocalizeText': {
+                if (typeof value !== 'string') {
+                    throw new Error(`'${fieldInfo.field}'字段应为字符串`);
+                }
+                value = y3.language.keyOf(value, true);
+                break;
+            }
+            case 'PBool': {
+                if (typeof value !== 'boolean') {
+                    throw new Error(`'${fieldInfo.field}'字段应为布尔值`);
+                }
+                break;
+            }
+            case 'PFloat': {
+                if (typeof value !== 'number') {
+                    throw new Error(`'${fieldInfo.field}'字段应为数字`);
+                }
+                break;
+            }
+            case 'PInt': {
+                if (!Number.isSafeInteger(value)) {
+                    throw new Error(`'${fieldInfo.field}'字段应为整数`);
+                }
+                break;
+            }
+            case 'PText': {
+                if (typeof value !== 'string') {
+                    throw new Error(`'${fieldInfo.field}'字段应为字符串`);
+                }
+                break;
+            }
+        }
+
+        if (fieldInfo.type.endsWith('List')) {
+            if (!Array.isArray(value)) {
+                throw new Error(`'${fieldInfo.field}'字段应为数组`);
+            }
+        }
+        if (fieldInfo.type.endsWith('Formula')) {
+            if (!Array.isArray(value)) {
+                throw new Error(`'${fieldInfo.field}'字段应为数组`);
+            }
+            for (let i = 0; i < value.length; i++) {
+                if (typeof value[i] !== 'string') {
+                    throw new Error(`'${fieldInfo.field}'字段的第${i}项应为字符串`);
+                }
+            }
+        }
+    }
+
     public set(key: string, value: ItemShape): boolean {
         let fieldInfo = this.getFieldInfo(key);
         if (!fieldInfo) {
-            return false;
+            throw new Error(`未知字段:'${key}'`);
         }
-        if (key === 'name') {
-            if (typeof value === 'string') {
-                this._name = value;
-                value = y3.language.keyOf(value, true);
-            } else {
-                return false;
-            }
+        this.checkType(fieldInfo, value);
+        if (key === 'name' && typeof value === 'string') {
+            this._name = value;
+        }
+        if (fieldInfo.type === 'PLocalizeText') {
+            value = y3.language.keyOf(value as string, true);
         }
         let raw = this.serialize(value);
-        if (fieldInfo.type === 'PLocalizeText') {
-            if (typeof raw === 'string') {
-                raw = y3.language.keyOf(raw, true);
-            }
-        }
         return this.rawSet(key, raw);
     }
 
@@ -250,6 +299,10 @@ interface CreateOptions {
      * 从哪个对象复制，如果不填则从模板复制为空对象
      */
     copyFrom?: number,
+    /**
+     * 如果目标key已存在，是否覆盖
+     */
+    overwrite?: boolean,
 }
 
 export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
@@ -317,11 +370,11 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this.changeTable('delete', key);
     }
 
-    public async canUseKey(key: number) {
+    public async canUseKey(key: number, overwirte?: boolean) {
         if (!Number.isSafeInteger(key) || key <= 0) {
             return false;
         }
-        if ((await this.getList()).includes(key)) {
+        if (!overwirte && (await this.getList()).includes(key)) {
             return false;
         } else {
             return true;
@@ -339,7 +392,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         let key: number;
         if (options?.key) {
             key = options.key;
-            if (!await this.canUseKey(key)) {
+            if (!await this.canUseKey(key, options?.overwrite)) {
                 return undefined;
             }
         } else {
