@@ -21,14 +21,14 @@ class FileNode extends vscode.TreeItem {
     public update(): void | Promise<void> {
         let table = editorTable.openTable(this.tableName);
         this.object = table.fetch(this.key);
+        this.command = {
+            command: 'vscode.open',
+            title: '打开文件',
+            arguments: [table.getUri(this.key)],
+        };
         if (this.object) {
             this.label = `${this.object.name}(${this.key})`;
             this.resourceUri = this.object.uri;
-            this.command = {
-                command: 'vscode.open',
-                title: '打开文件',
-                arguments: [this.object.uri],
-            };
             return;
         } else if (this.object === undefined) {
             return new Promise<void>(async resolve => {

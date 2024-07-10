@@ -9,7 +9,7 @@ const meta_dir = 'editor_meta';
 
 type ActionType = 'create' | 'delete' | 'change';
 
-type ItemShape = string | boolean | number | TupleShape | MapShape | ArrayShape;
+type ItemShape = string | boolean | number | null | TupleShape | MapShape | ArrayShape;
 type ArrayShape = ItemShape[];
 
 type TupleShape = {
@@ -94,11 +94,11 @@ export class EditorObject {
         return this.rawSet(key, value);
     }
 
-    public rawGet(key: string): any {
+    private rawGet(key: string): ItemShape | undefined {
         return this.json?.get(key);
     }
 
-    public rawSet(key: string, value: any): boolean {
+    private rawSet(key: string, value: ItemShape): boolean {
         if (!this.json) {
             return false;
         }
@@ -132,7 +132,7 @@ export class EditorObject {
         return this._name;
     }
 
-    @throttle(500)
+    @throttle(100)
     private async updateFile(): Promise<boolean> {
         if (!this.uri || !this.json) {
             return false;
@@ -152,10 +152,20 @@ export class EditorObject {
         this._fieldList ??= Object.keys(tableMeta[this.tableName]);
         return this._fieldList;
     }
+
+    // private serialize(item: y3.json.Item): ItemShape {
+    //     if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
+    //         return item;
+    //     } else if (Array.isArray(item)) {
+    //         return item.map((i) => this.serialize(i));
+    //     } else if (typeof item === 'object') {
+    //     }
+    // }
 }
 
 async function loadObject(tableName: Table.NameCN, key: number) {
-    let uri = vscode.Uri.joinPath(env.editorTableUri!, Table.path.fromCN[tableName], `${key}.json`);
+    let table = openTable(tableName);
+    let uri = table.getUri(key);
     let file = await y3.fs.readFile(uri);
     if (!file) {
         return null;
@@ -303,7 +313,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         json.set('_ref_', key);
 
         let obj = new EditorObject(this.nameCN, key);
-        obj.uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
+        obj.uri = this.getUri(key);
         obj.text = json.text;
 
         this._objectCache[key] = obj;
@@ -315,6 +325,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
 
         return obj;
+    }
+
+    public getUri(key: number) {
+        return vscode.Uri.joinPath(this.uri, `${key}.json`);
     }
 
     private _fieldInfoCache: { [field: string]: FieldInfo } = {};

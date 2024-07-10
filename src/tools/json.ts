@@ -14,7 +14,7 @@ const editOptions = {
     },
 };
 
-export type Item = string | boolean | number | Object | Array;
+export type Item = string | boolean | number | null | Object | Array;
 export type Array = Item[];
 export type Object = { [key: string]: Item };
 
