@@ -3,19 +3,19 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
-import { UnitData } from "../../editor_meta/unit";
-import { SoundData } from "../../editor_meta/sound";
-import { AbilityData } from "../../editor_meta/ability";
-import { DecorationData } from "../../editor_meta/decoration";
-import { DestructibleData } from "../../editor_meta/destructible";
-import { ItemData } from "../../editor_meta/item";
-import { ModifierData } from "../../editor_meta/modifier";
-import { ProjectileData } from "../../editor_meta/projectile";
-import { TechData } from "../../editor_meta/tech";
+import { UnitData } from "../editor_meta/unit";
+import { SoundData } from "../editor_meta/sound";
+import { AbilityData } from "../editor_meta/ability";
+import { DecorationData } from "../editor_meta/decoration";
+import { DestructibleData } from "../editor_meta/destructible";
+import { ItemData } from "../editor_meta/item";
+import { ModifierData } from "../editor_meta/modifier";
+import { ProjectileData } from "../editor_meta/projectile";
+import { TechData } from "../editor_meta/tech";
 
 
 const template_dir = 'template\\json_template';
-const meta_dir = 'editor_meta';
+const meta_dir = 'src\\editor_meta';
 
 type ActionType = 'create' | 'delete' | 'change';
 

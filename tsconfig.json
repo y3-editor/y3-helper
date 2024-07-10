@@ -1,4 +1,13 @@
 {
+	"include": [
+		"src/**/*.ts",
+		"src/editor_meta/**/*.ts"
+	],
+	// 忽略对template/excel/importRules.ts的编译 因为它只是个模板 生成给用户用
+	"exclude": [
+		"template",
+		"tmp",
+	],
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"module": "Node16",
@@ -13,12 +22,8 @@
 		"paths": {
 			"y3-helper": ["./src/y3-helper"],
 		},
+		"declaration": true,
+		"declarationDir": "./tmp/types",
 		"experimentalDecorators": true,
 	},
-	
-	// 忽略对template/excel/importRules.ts的编译 因为它只是个模板 生成给用户用
-	"exclude": [
-		"template",
-		"tmp",
-	]
 }
