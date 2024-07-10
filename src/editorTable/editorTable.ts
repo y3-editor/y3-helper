@@ -7,13 +7,7 @@ import { queue, throttle } from "../utility/decorators";
 const template_dir = 'template\\json_template';
 const meta_dir = 'editor_meta';
 
-type ObjectShape = {
-    "name": string | number,
-    "_ref_": number,
-    "key": number,
-    "uid": number,
-    [key: string]: ItemShape,
-};
+type ActionType = 'create' | 'delete' | 'change';
 
 type ItemShape = string | boolean | number | TupleShape | MapShape | ArrayShape;
 type ArrayShape = ItemShape[];
@@ -308,13 +302,19 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         json.set('key', key);
         json.set('_ref_', key);
 
-        let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
-        let suc = await y3.fs.writeFile(uri, json.text);
+        let obj = new EditorObject(this.nameCN, key);
+        obj.uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
+        obj.text = json.text;
+
+        this._objectCache[key] = obj;
+
+        let suc = await y3.fs.writeFile(obj.uri, obj.text);
         if (!suc) {
+            this._objectCache[key] = undefined;
             return undefined;
         }
 
-        return await this.get(key);
+        return obj;
     }
 
     private _fieldInfoCache: { [field: string]: FieldInfo } = {};
@@ -329,61 +329,60 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return Object.keys(tableMeta[this.nameCN]);
     }
 
-    private _listActions: ['create' | 'delete', number][] = [];
+    private _listActions: [ActionType, number][] = [];
     private resortList() {
         if (this._listActions.length === 0) {
             return;
         }
-        let map: { [key: number]: boolean } = {};
-        let list: number[] = [];
-        for (const key of this._listCache!) {
-            map[key] = true;
+        if (!this._listCache) {
+            this._listActions.length = 0;
+            return;
         }
-        for (const [action, key] of this._listActions) {
+        let mergedActions: { [key: number]: ActionType } = {};
+        for (const [action, key] of this._listActions!) {
+            const lastAction = mergedActions[key];
             if (action === 'create') {
-                map[key] = true;
-            } else {
-                delete map[key];
+                mergedActions[key] = action;
+            } else if (action === 'change') {
+                if (lastAction !== 'create') {
+                    mergedActions[key] = action;
+                }
+            } else if (action === 'delete') {
+                if (lastAction === 'create') {
+                    delete mergedActions[key];
+                } else {
+                    mergedActions[key] = action;
+                }
             }
         }
         this._listActions.length = 0;
-        for (const key in map) {
-            list.push(Number(key));
+
+        let sets = new Set<number>(this._listCache);
+        for (const strKey in mergedActions) {
+            const key = Number(strKey);
+            if (mergedActions[key] === 'delete') {
+                sets.delete(key);
+                this._objectCache[key] = undefined;
+            } else if (mergedActions[key] === 'create') {
+                sets.add(key);
+                this._listCache.push(key);
+            } else {
+                this._objectCache[key] = undefined;
+            }
         }
-        list.sort();
-        this._listCache = list;
+
+        this._listCache = Array.from(sets);
+        this._listCache.sort();
     }
 
     @throttle(200)
     private notifyChange() {
+        this.resortList();
         this._onDidChange.fire();
     }
 
-    private changeTable(action: 'create' | 'delete' | 'change', key: number) {
-        switch (action) {
-            case 'create': {
-                if (!this._listCache) {
-                    return;
-                }
-                this._listActions.push(['create', key]);
-                break;
-            }
-            case 'delete': {
-                if (!this._listCache) {
-                    return;
-                }
-                this._objectCache[key] = undefined;
-                this._listActions.push(['delete', key]);
-                break;
-            }
-            case 'change': {
-                if (!this._objectCache[key]) {
-                    return;
-                }
-                this._objectCache[key] = undefined;
-                break;
-            }
-        }
+    private changeTable(action: ActionType, key: number) {
+        this._listActions.push([action, key]);
         this.notifyChange();
     }
 
