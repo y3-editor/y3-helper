@@ -7,12 +7,12 @@ import * as csv from 'fast-csv';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { env } from "../env";
-import { Table } from '../constants';
+import { env } from "../../env";
+import { Table } from '../../constants';
 import {
     isFileValid, randomInt, isJson, isCSV, isPathValid,
     HashSet, SpinLock
-} from '../utility';
+} from '../../utility';
 import * as y3 from 'y3-helper';
 
  /**

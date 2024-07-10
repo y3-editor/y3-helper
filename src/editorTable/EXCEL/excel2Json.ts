@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { ImportRule } from './importRule';
-import { saveEditorTableItemJson } from '../editorTableItemJson';
+import { saveEditorTableItemJson } from '../CSV/editorTableItemJson';
 import { Table } from '../../constants';
 import { excelConverter } from './excelConverter';
 

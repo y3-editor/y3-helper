@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { isPathValid } from '../utility';
-import { Table } from '../constants';
+import { isPathValid } from '../../utility';
+import { Table } from '../../constants';
 
 
 export class TemplateGenerator {

@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { env } from "../../env";
 import { SpinLock, isCSV, isPathValid } from "../../utility";
-import { allocateNewUIDofEditorTableItem } from '../editorTableUtility';
+import { allocateNewUIDofEditorTableItem } from './editorTableUtility';
 import { Table } from '../../constants';
 /**
  *  物编数据CSV表格的编辑器s

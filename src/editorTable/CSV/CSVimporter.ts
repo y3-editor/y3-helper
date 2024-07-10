@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import { env } from "../../env";
 import { isPathValid } from '../../utility';
 import { CSV } from "../../constants";
-import { saveRowOfCSV } from '../editorTableItemJson';
+import { saveRowOfCSV } from './editorTableItemJson';
 
 
 export class CSVimporter

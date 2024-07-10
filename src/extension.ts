@@ -12,7 +12,7 @@ import { env } from './env';
 import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
-import { TemplateGenerator } from './editorTable/templateGenerator';
+import { TemplateGenerator } from './editorTable/CSV/templateGenerator';
 import { Table } from './constants';
 import { NetworkServer } from './networkServer';
 import * as console from './console';

@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { env } from "../env";
+import { env } from "../../env";
 import { v4 as uuidv4 } from 'uuid';
 import {
     isInDirectory, isPathValid, toUnicodeIgnoreASCII,
     hash, mergeObject, tryWriteJson, tryReadJson
-} from '../utility';
+} from '../../utility';
 import * as y3 from 'y3-helper';
 
 /**
