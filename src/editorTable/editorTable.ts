@@ -116,7 +116,7 @@ export class EditorObject<N extends Table.NameCN> {
         return this._data;
     }
 
-    public get(key: string): any {
+    private get(key: string): any {
         let fieldInfo = this.getFieldInfo(key);
         if (!fieldInfo) {
             return undefined;
@@ -192,7 +192,7 @@ export class EditorObject<N extends Table.NameCN> {
         }
     }
 
-    public set(key: string, value: ItemShape): boolean {
+    private set(key: string, value: ItemShape): boolean {
         let fieldInfo = this.getFieldInfo(key);
         if (!fieldInfo) {
             throw new Error(`未知字段:'${key}'`);
