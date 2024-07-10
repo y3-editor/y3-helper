@@ -169,6 +169,7 @@ export interface AbilityData {
     end_sound_effect: any[]; // PList
     /**
      * 前置条件
+     *
      * 训练、购买、建造该单位的前置条件
      */
     precondition_list: any[]; // PreconditionList

@@ -13,6 +13,7 @@ export interface TechData {
     description: string; // PLocalizeText
     /**
      * 编辑器后缀
+     *
      * 在编辑器下显示在名字后面的后缀，在游戏内不显示
      */
     suffix: string; // PText
@@ -30,6 +31,7 @@ export interface TechData {
     name: string; // PLocalizeText
     /**
      * ID
+     *
      * 单位的唯一表示
      */
     key: number; // PInt

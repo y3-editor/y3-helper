@@ -18,4 +18,8 @@ export async function test() {
         key: 10001,
         overwrite: true,
     });
+
+    let unitTable = y3.table.openTable('单位');
+    let unit = await unitTable.get(10001);
+    unit?.data.standard_walk_rate;
 }

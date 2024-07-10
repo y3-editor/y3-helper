@@ -13,6 +13,7 @@ export interface DestructibleData {
     source_desc: string; // PLocalizeText
     /**
      * 模型缩放
+     *
      * 对当前物体模型的缩放倍数，用于调整模型大小。
      */
     body_size: number; // PFloat
@@ -138,6 +139,7 @@ export interface DestructibleData {
     material_color: any; // PAst
     /**
      * 物品标签
+     *
      * 用于对物体的分类处理。为单位贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：杀死所有拥有XX标签的单位
      */
     tags: any[]; // PList
