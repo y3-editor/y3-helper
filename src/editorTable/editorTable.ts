@@ -3,6 +3,16 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
+import { UnitData } from "../../editor_meta/unit";
+import { SoundData } from "../../editor_meta/sound";
+import { AbilityData } from "../../editor_meta/ability";
+import { DecorationData } from "../../editor_meta/decoration";
+import { DestructibleData } from "../../editor_meta/destructible";
+import { ItemData } from "../../editor_meta/item";
+import { ModifierData } from "../../editor_meta/modifier";
+import { ProjectileData } from "../../editor_meta/projectile";
+import { TechData } from "../../editor_meta/tech";
+
 
 const template_dir = 'template\\json_template';
 const meta_dir = 'editor_meta';
@@ -57,8 +67,17 @@ async function ready(tableName: Table.NameCN) {
         }
     }
 }
-
-declare interface EditorData<N extends Table.NameCN> {}
+type EditorData<N extends Table.NameCN>
+    = N extends '单位' ? UnitData
+    : N extends '声音' ? SoundData
+    : N extends '技能' ? AbilityData
+    : N extends '装饰物' ? DecorationData
+    : N extends '可破坏物' ? DestructibleData
+    : N extends '物品' ? ItemData
+    : N extends '魔法效果' ? ModifierData
+    : N extends '投射物' ? ProjectileData
+    : N extends '科技' ? TechData
+    : never;
 
 export class EditorObject<N extends Table.NameCN> {
     private _json?: y3.json.Json;
@@ -80,7 +99,7 @@ export class EditorObject<N extends Table.NameCN> {
     private _data?: EditorData<N>;
     public get data(): EditorData<N> {
         if (this._data === undefined) {
-            this._data = new Proxy({}, {
+            this._data = new Proxy({} as EditorData<N>, {
                 get: (target, p, receiver) => {
                     if (typeof p === 'string') {
                         return this.get(p);

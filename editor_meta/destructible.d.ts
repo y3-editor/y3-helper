@@ -1,4 +1,4 @@
-export interface DestructbleData {
+export interface DestructibleData {
     /**
      * UID
      */

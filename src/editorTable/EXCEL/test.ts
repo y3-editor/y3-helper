@@ -10,7 +10,7 @@ export async function test() {
     if (!obj) {
         throw new Error('not found');
     }
-    obj.data.name = '测试66';
+    obj.data.name = '41号';
 
     let newObj = await table.create({
         name: '测试42',
