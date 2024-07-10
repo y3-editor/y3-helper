@@ -13,8 +13,8 @@ type ItemShape = string | boolean | number | null | TupleShape | MapShape | Arra
 type ArrayShape = ItemShape[];
 
 type TupleShape = {
-    "__tuple__": true,
-    "items": ItemShape[],
+    __tuple__: true,
+    items:     ItemShape[],
 };
 
 type MapShape = {
@@ -76,13 +76,31 @@ export class EditorObject {
     }
 
     public get(key: string): any {
+        let fieldInfo = this.getFieldInfo(key);
+        if (!fieldInfo) {
+            return undefined;
+        }
         if (key === 'name') {
             return this.name;
         }
-        return this.rawGet(key);
+        let raw = this.rawGet(key);
+        if (raw === undefined) {
+            return undefined;
+        }
+        let value = this.deserialize(raw);
+        if (fieldInfo.type === 'PLocalizeText') {
+            if (typeof value === 'number' || typeof value === 'string') {
+                value = y3.language.get(value) ?? value;
+            }
+        }
+        return value;
     }
 
     public set(key: string, value: ItemShape): boolean {
+        let fieldInfo = this.getFieldInfo(key);
+        if (!fieldInfo) {
+            return false;
+        }
         if (key === 'name') {
             if (typeof value === 'string') {
                 this._name = value;
@@ -91,14 +109,20 @@ export class EditorObject {
                 return false;
             }
         }
-        return this.rawSet(key, value);
+        let raw = this.serialize(value);
+        if (fieldInfo.type === 'PLocalizeText') {
+            if (typeof raw === 'string') {
+                raw = y3.language.keyOf(raw, true);
+            }
+        }
+        return this.rawSet(key, raw);
     }
 
     private rawGet(key: string): ItemShape | undefined {
         return this.json?.get(key);
     }
 
-    private rawSet(key: string, value: ItemShape): boolean {
+    private rawSet(key: string, value: ItemShape | undefined): boolean {
         if (!this.json) {
             return false;
         }
@@ -153,14 +177,46 @@ export class EditorObject {
         return this._fieldList;
     }
 
-    // private serialize(item: y3.json.Item): ItemShape {
-    //     if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
-    //         return item;
-    //     } else if (Array.isArray(item)) {
-    //         return item.map((i) => this.serialize(i));
-    //     } else if (typeof item === 'object') {
-    //     }
-    // }
+    private serialize(item: y3.json.Item, canBeTuple = true): ItemShape {
+        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
+            return item;
+        } else if (Array.isArray(item)) {
+            if (canBeTuple) {
+                return {
+                    __tuple__: true,
+                    items: item.map((i) => this.serialize(i, false)),
+                };
+            } else {
+                return item.map((i) => this.serialize(i, canBeTuple));
+            }
+        } else if (typeof item === 'object') {
+            let map: MapShape = {};
+            for (const key in item) {
+                map[key] = this.serialize(item[key], canBeTuple);
+            }
+            return map;
+        }
+        throw new Error('不支持的数据类型:' + typeof item);
+    }
+
+    private deserialize(item: ItemShape): y3.json.Item {
+        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
+            return item;
+        } else if (Array.isArray(item)) {
+            return item.map((i) => this.deserialize(i));
+        } else if (typeof item === 'object') {
+            if (item.__tuple__) {
+                return this.deserialize(item.items);
+            } else {
+                let map: MapShape = {};
+                for (const key in item) {
+                    map[key] = this.deserialize((item as MapShape)[key]);
+                }
+                return map;
+            }
+        }
+        throw new Error('不支持的数据类型:' + typeof item);
+    }
 }
 
 async function loadObject(tableName: Table.NameCN, key: number) {

@@ -60,7 +60,7 @@ class UnicodeProvider implements vscode.HoverProvider {
             return;
         }
 
-        return new vscode.Hover(new vscode.MarkdownString(node.value));
+        return new vscode.Hover(new vscode.MarkdownString(`"${node.value}"`));
     }
 }
 
@@ -81,7 +81,7 @@ class TranslateProvider implements vscode.HoverProvider {
             return;
         }
 
-        return new vscode.Hover(new vscode.MarkdownString(text));
+        return new vscode.Hover(new vscode.MarkdownString(`"${text}"`));
     }
 }
 
