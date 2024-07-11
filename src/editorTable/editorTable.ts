@@ -86,6 +86,10 @@ export class EditorObject<N extends Table.NameCN> {
     public uri?: vscode.Uri;
     constructor(public tableName: Table.NameCN, public key: number) {}
 
+    toString() {
+        return `{物编对象|${this.name}|${this.tableName}-${this.key}}`;
+    }
+
     public get json(): y3.json.Json | undefined {
         if (this._json === undefined) {
             if (!this.text) {
@@ -327,7 +331,7 @@ async function loadObject(tableName: Table.NameCN, key: number) {
     }
 }
 
-interface CreateOptions {
+interface CreateOptions<N extends Table.NameCN> {
     /**
      * 新对象的名称，如果不填则使用默认名称
      */
@@ -339,7 +343,7 @@ interface CreateOptions {
     /**
      * 从哪个对象复制，如果不填则从模板复制为空对象
      */
-    copyFrom?: number,
+    copyFrom?: number | EditorObject<N>,
     /**
      * 如果目标key已存在，是否覆盖
      */
@@ -351,20 +355,29 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     public nameEN;
     private _objectCache: { [key: number]: EditorObject<N> | null | undefined } = {};
     private watcher?: vscode.FileSystemWatcher;
-    constructor(public nameCN: N) {
+    constructor(public name: N) {
         super(() => {
             this.watcher?.dispose();
         });
         if (!env.editorTableUri) {
             throw new Error('未选择地图路径');
         }
-        this.nameEN = Table.name.fromCN[nameCN];
-        this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[nameCN]);
+        this.nameEN = Table.name.fromCN[name];
+        this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[name]);
     }
 
+    toString() {
+        return `<物编表|${this.name}>`;
+    }
+
+    /**
+     * 获取具体的对象
+     * @param key 对象的key（一串数字）
+     * @returns 对象
+     */
     public async get(key: number): Promise<EditorObject<N> | undefined> {
         if (this._objectCache[key] === undefined) {
-            this._objectCache[key] = await loadObject(this.nameCN, key);
+            this._objectCache[key] = await loadObject(this.name, key);
         }
         return this._objectCache[key] ?? undefined;
     }
@@ -374,6 +387,11 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     }
 
     private _listCache?: number[];
+
+    /**
+     * 获取这个类型下的所有对象的key
+     * @returns 这个类型下的所有对象的key
+     */
     public async getList() {
         if (!this._listCache) {
             this._listCache = [];
@@ -403,6 +421,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return this._listCache;
     }
 
+    /**
+     * 删除一个对象
+     * @param key 对象的key
+     */
     public async delete(key: number) {
         let uri = vscode.Uri.joinPath(this.uri, `${key}.json`);
         await y3.fs.removeFile(uri, {
@@ -411,6 +433,12 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         this.changeTable('delete', key);
     }
 
+    /**
+     * 检查一个key是否可以使用
+     * @param key 要检查的key
+     * @param overwirte 是否允许覆盖已有的key，默认不允许
+     * @returns 
+     */
     public async canUseKey(key: number, overwirte?: boolean) {
         if (!Number.isSafeInteger(key) || key <= 0) {
             return false;
@@ -422,14 +450,23 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
     }
 
+    /**
+     * 生成一个可用的新key
+     * @returns 
+     */
     public async makeNewKey() {
         let list = await this.getList();
         let max = list[list.length - 1];
         return max ? max + 1 : 100001;
     }
 
-    public async create(options?: CreateOptions): Promise<EditorObject<N> | undefined>{
-        let name = options?.name ?? `新建${this.nameCN}`;
+    /**
+     * 创建一个对象
+     * @param options 创建的参数
+     * @returns 
+     */
+    public async create(options?: CreateOptions<N>): Promise<EditorObject<N> | undefined>{
+        let name = options?.name ?? `新建${this.name}`;
         let key: number;
         if (options?.key) {
             key = options.key;
@@ -442,8 +479,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
 
         let templateJson: string;
         if (options?.copyFrom) {
-            let obj = await this.get(options.copyFrom);
-            if (!obj || !obj.text) {
+            let obj = options.copyFrom instanceof EditorObject
+                    ? options.copyFrom
+                    : await this.get(options.copyFrom);
+            if (!obj || !obj.text || obj.tableName !== this.name) {
                 return undefined;
             }
             templateJson = obj.text;
@@ -462,7 +501,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         json.set('key', key);
         json.set('_ref_', key);
 
-        let obj = new EditorObject(this.nameCN, key);
+        let obj = new EditorObject(this.name, key);
         obj.uri = this.getUri(key);
         obj.text = json.text;
 
@@ -477,6 +516,11 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         return obj;
     }
 
+    /**
+     * 获取对象在硬盘中的文件路径
+     * @param key 对象的key
+     * @returns 对象的路径
+     */
     public getUri(key: number) {
         return vscode.Uri.joinPath(this.uri, `${key}.json`);
     }
@@ -484,13 +528,13 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     private _fieldInfoCache: { [field: string]: FieldInfo } = {};
     public getFieldInfo(field: string): FieldInfo | undefined {
         if (!this._fieldInfoCache[field]) {
-            this._fieldInfoCache[field] = new FieldInfo(this.nameCN, field);
+            this._fieldInfoCache[field] = new FieldInfo(this.name, field);
         }
         return this._fieldInfoCache[field];
     }
 
     public listFields(): string[] {
-        return Object.keys(tableMeta[this.nameCN]);
+        return Object.keys(tableMeta[this.name]);
     }
 
     private _listActions: [ActionType, number][] = [];
@@ -584,12 +628,22 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
 
 let editorTables: { [key: string]: any } = {};
 
+/**
+ * 打开物编表
+ * @param tableName 哪种表
+ * @returns 表对象
+ */
 export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
     let table = editorTables[tableName]
             ?? (editorTables[tableName] = new EditorTable(tableName));
     return table;
 }
 
+/**
+ * 根据文件名获取文件对应的key
+ * @param fileName 文件名
+ * @returns 文件名对应的key
+ */
 export function getFileKey(fileName: string): number | undefined {
     if (!fileName.toLowerCase().endsWith('.json')) {
         return;
@@ -609,7 +663,15 @@ export function getFileKey(fileName: string): number | undefined {
     return key;
 }
 
-export async function getObject(uri: vscode.Uri): Promise<EditorObject<Table.NameCN> | undefined> {
+/**
+ * 根据文件路径获取对象
+ * @param uri 文件路径
+ * @returns 对象
+*/
+export async function getObject(uri: vscode.Uri | string): Promise<EditorObject<Table.NameCN> | undefined> {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     const path = uri.path.match(/([^\/]+)\/[^\/]+\.json$/)?.[1];
     if (!path || !(path in Table.path.toCN)) {
         return;
@@ -652,6 +714,10 @@ class Manager {
 
 const ManagerInstance = new Manager();
 
+/**
+ * 获取所有的对象（速度比较慢）
+ * @returns 所有对象
+ */
 export async function getAllObjects() {
     return await ManagerInstance.getAllObjects();
 }
