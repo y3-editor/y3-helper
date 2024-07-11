@@ -26,6 +26,7 @@
         "out",
         "dist",
         "3rd",
-        "**/*.d.ts"
+        "**/*.d.ts",
+        "template"
     ]
 }

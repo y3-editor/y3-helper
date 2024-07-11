@@ -84,12 +84,15 @@ export class EditorObject<N extends Table.NameCN> {
     private _name?: string;
     public text?: string;
     public uri?: vscode.Uri;
-    constructor(public tableName: Table.NameCN, public key: number) {}
+    constructor(public tableName: N, public key: number) {}
 
     toString() {
         return `{物编对象|${this.name}|${this.tableName}-${this.key}}`;
     }
 
+    /**
+     * 获取对象的json数据语法树
+     */
     public get json(): y3.json.Json | undefined {
         if (this._json === undefined) {
             if (!this.text) {
@@ -100,6 +103,9 @@ export class EditorObject<N extends Table.NameCN> {
         return this._json;
     }
 
+    /**
+     * 获取对象的物编数据
+     */
     private _data?: EditorData<N>;
     public get data(): EditorData<N> {
         if (this._data === undefined) {
@@ -227,6 +233,9 @@ export class EditorObject<N extends Table.NameCN> {
         return res;
     }
 
+    /**
+     * 获取对象的名称
+     */
     public get name(): string {
         if (!this._name) {
             let name = this.text?.match(/"name"\s*:\s*(\-?\d*)/);
@@ -313,7 +322,7 @@ export class EditorObject<N extends Table.NameCN> {
     }
 }
 
-async function loadObject(tableName: Table.NameCN, key: number) {
+async function loadObject<N extends Table.NameCN>(tableName: N, key: number) {
     let table = openTable(tableName);
     let uri = table.getUri(key);
     let file = await y3.fs.readFile(uri);
@@ -377,7 +386,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
      */
     public async get(key: number): Promise<EditorObject<N> | undefined> {
         if (this._objectCache[key] === undefined) {
-            this._objectCache[key] = await loadObject(this.name, key);
+            this._objectCache[key] = await loadObject<N>(this.name, key);
         }
         return this._objectCache[key] ?? undefined;
     }
@@ -454,10 +463,18 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
      * 生成一个可用的新key
      * @returns 
      */
-    public async makeNewKey() {
+    public async makeNewKey(copyKey?: number) {
         let list = await this.getList();
-        let max = list[list.length - 1];
-        return max ? max + 1 : 100001;
+        if (copyKey) {
+            let i = copyKey + 1;
+            while (list.includes(i)) {
+                i++;
+            }
+            return i;
+        } else {
+            let max = list[list.length - 1];
+            return max ? max + 1 : 100001;
+        }
     }
 
     /**
@@ -467,6 +484,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
      */
     public async create(options?: CreateOptions<N>): Promise<EditorObject<N> | undefined>{
         let name = options?.name ?? `新建${this.name}`;
+
         let key: number;
         if (options?.key) {
             key = options.key;
@@ -474,7 +492,10 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 return undefined;
             }
         } else {
-            key = await this.makeNewKey();
+            let copyKey = options?.copyFrom instanceof EditorObject
+                        ? options.copyFrom.key
+                        : options?.copyFrom;
+            key = await this.makeNewKey(copyKey);
         }
 
         let templateJson: string;

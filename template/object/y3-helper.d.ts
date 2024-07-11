@@ -50,18 +50,25 @@ declare module 'y3-helper/editorTable/editorTable' {
     }
     type EditorData<N extends Table.NameCN> = N extends '单位' ? UnitData : N extends '声音' ? SoundData : N extends '技能' ? AbilityData : N extends '装饰物' ? DecorationData : N extends '可破坏物' ? DestructibleData : N extends '物品' ? ItemData : N extends '魔法效果' ? ModifierData : N extends '投射物' ? ProjectileData : N extends '科技' ? TechData : never;
     export class EditorObject<N extends Table.NameCN> {
-            tableName: Table.NameCN;
+            tableName: N;
             key: number;
             text?: string;
             uri?: vscode.Uri;
-            constructor(tableName: Table.NameCN, key: number);
+            constructor(tableName: N, key: number);
+            toString(): string;
+            /**
+                * 获取对象的json数据语法树
+                */
             get json(): y3.json.Json | undefined;
             get data(): EditorData<N>;
+            /**
+                * 获取对象的名称
+                */
             get name(): string;
             getFieldInfo(field: string): y3.table.FieldInfo | undefined;
             listFields(): string[];
     }
-    interface CreateOptions {
+    interface CreateOptions<N extends Table.NameCN> {
             /**
                 * 新对象的名称，如果不填则使用默认名称
                 */
@@ -73,14 +80,14 @@ declare module 'y3-helper/editorTable/editorTable' {
             /**
                 * 从哪个对象复制，如果不填则从模板复制为空对象
                 */
-            copyFrom?: number;
+            copyFrom?: number | EditorObject<N>;
             /**
                 * 如果目标key已存在，是否覆盖
                 */
             overwrite?: boolean;
     }
     export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
-            nameCN: N;
+            name: N;
             uri: vscode.Uri;
             nameEN: {
                     readonly 单位: "unit";
@@ -93,23 +100,76 @@ declare module 'y3-helper/editorTable/editorTable' {
                     readonly 可破坏物: "destructible";
                     readonly 声音: "sound";
             }[N];
-            constructor(nameCN: N);
+            constructor(name: N);
+            toString(): string;
+            /**
+                * 获取具体的对象
+                * @param key 对象的key（一串数字）
+                * @returns 对象
+                */
             get(key: number): Promise<EditorObject<N> | undefined>;
             fetch(key: number): EditorObject<N> | undefined;
+            /**
+                * 获取这个类型下的所有对象的key
+                * @returns 这个类型下的所有对象的key
+                */
             getList(): Promise<number[]>;
             fetchList(): number[] | undefined;
+            /**
+                * 删除一个对象
+                * @param key 对象的key
+                */
             delete(key: number): Promise<void>;
+            /**
+                * 检查一个key是否可以使用
+                * @param key 要检查的key
+                * @param overwirte 是否允许覆盖已有的key，默认不允许
+                * @returns
+                */
             canUseKey(key: number, overwirte?: boolean): Promise<boolean>;
-            makeNewKey(): Promise<number>;
-            create(options?: CreateOptions): Promise<EditorObject<N> | undefined>;
+            /**
+                * 生成一个可用的新key
+                * @returns
+                */
+            makeNewKey(copyKey?: number): Promise<number>;
+            /**
+                * 创建一个对象
+                * @param options 创建的参数
+                * @returns
+                */
+            create(options?: CreateOptions<N>): Promise<EditorObject<N> | undefined>;
+            /**
+                * 获取对象在硬盘中的文件路径
+                * @param key 对象的key
+                * @returns 对象的路径
+                */
             getUri(key: number): vscode.Uri;
             getFieldInfo(field: string): FieldInfo | undefined;
             listFields(): string[];
             onDidChange(callback: () => void): vscode.Disposable;
     }
+    /**
+        * 打开物编表
+        * @param tableName 哪种表
+        * @returns 表对象
+        */
     export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N>;
+    /**
+        * 根据文件名获取文件对应的key
+        * @param fileName 文件名
+        * @returns 文件名对应的key
+        */
     export function getFileKey(fileName: string): number | undefined;
-    export function getObject(uri: vscode.Uri): Promise<EditorObject<Table.NameCN> | undefined>;
+    /**
+        * 根据文件路径获取对象
+        * @param uri 文件路径
+        * @returns 对象
+     */
+    export function getObject(uri: vscode.Uri | string): Promise<EditorObject<Table.NameCN> | undefined>;
+    /**
+        * 获取所有的对象（速度比较慢）
+        * @returns 所有对象
+        */
     export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">[]>;
     export function init(): void;
     export {};

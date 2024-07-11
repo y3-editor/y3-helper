@@ -21,20 +21,20 @@ function makeSandbox() {
     };
 }
 
-export async function runEditor(uri: vscode.Uri) {
+export async function runEditor(uri: vscode.Uri, funcName: string = 'main') {
     y3.log.show();
     try {
         const file = await y3.fs.readFile(uri);
         let content = file!.string;
-        content = content + '\n\nmodule.exports = main';
+        content = content + `\n\nmodule.exports = ${funcName}`;
         let script = new vm.Script(content, {
             filename: uri.path,
         });
-        let main = script.runInNewContext(vm.createContext(makeSandbox()));
-        if (typeof main !== 'function') {
-            throw new Error('没有导出 main 函数');
+        let func = script.runInNewContext(vm.createContext(makeSandbox()));
+        if (typeof func !== 'function') {
+            throw new Error('没有找到要执行的函数');
         }
-        await main();
+        await func();
         y3.log.info(`执行 "${uri.path.split('/').pop()}" 成功！`);
     } catch (error) {
         vscode.window.showErrorMessage(`运行物编脚本出错：${error}`);
@@ -43,13 +43,19 @@ export async function runEditor(uri: vscode.Uri) {
 
 class RunButtonProvider implements vscode.CodeLensProvider {
     public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] | undefined {
-        return [
-            new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
-                title: '$(debug-start)运行',
-                command: 'y3-helper.runObjectEditor',
-                arguments: [document.uri],
-            }),
-        ];
+        let codeLens: vscode.CodeLens[] = [];
+        for (let i = 0; i < document.lineCount; i++) {
+            const line = document.lineAt(i);
+            const name = line.text.match(/^async\s+function\s+([\w_]+)/)?.[1];
+            if (name) {
+                codeLens.push(new vscode.CodeLens(new vscode.Range(i, 0, i, 0), {
+                    title: `$(debug-start)运行 ${name} 函数`,
+                    command: 'y3-helper.runObjectEditor',
+                    arguments: [document.uri, name],
+                }));
+            }
+        }
+        return codeLens;
     }
 }
 
@@ -79,14 +85,14 @@ export function init() {
         }
     });
 
-    vscode.commands.registerCommand('y3-helper.runObjectEditor', async (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('y3-helper.runObjectEditor', async (uri?: vscode.Uri, funcName?: string) => {
         if (!uri) {
             uri = vscode.window.activeTextEditor?.document.uri;
             if (!uri) {
                 return;
             }
         }
-        await runEditor(uri);
+        await runEditor(uri, funcName);
     });
 
     vscode.languages.registerCodeLensProvider({
