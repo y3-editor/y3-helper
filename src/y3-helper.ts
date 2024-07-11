@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { fs } from './tools';
 
 export * as excel from './editorTable/EXCEL';
 export * as table from './editorTable/editorTable';
@@ -8,7 +9,14 @@ export * as const from './constants';
 export { env } from './env';
 export let helper: vscode.ExtensionContext;
 
-export function joinPath(base: vscode.Uri, ...paths: string[]): vscode.Uri {
+export function uri(base: vscode.Uri | string, ...paths: string[]): vscode.Uri {
+    if (typeof base === 'string') {
+        if (fs.isAbsolutePath(base)) {
+            base = vscode.Uri.parse(base);
+        } else {
+            base = vscode.Uri.joinPath(helper.extensionUri, base);
+        }
+    }
     return vscode.Uri.joinPath(base, ...paths);
 }
 

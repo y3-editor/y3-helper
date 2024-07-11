@@ -17,7 +17,10 @@ class File {
     }
 }
 
-export async function readFile(uri: vscode.Uri, relativePath?: string) {
+export async function readFile(uri: vscode.Uri | string, relativePath?: string) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     if (relativePath) {
         uri = vscode.Uri.joinPath(uri, relativePath);
     }
@@ -28,9 +31,12 @@ export async function readFile(uri: vscode.Uri, relativePath?: string) {
     } catch {}
 }
 
-export async function writeFile(uri: vscode.Uri, relativePath: string | undefined, data: string): Promise<boolean>;
-export async function writeFile(uri: vscode.Uri, data: string): Promise<boolean>;
-export async function writeFile(uri: vscode.Uri, ...args: any[]) {
+export async function writeFile(uri: vscode.Uri | string, relativePath: string | undefined, data: string): Promise<boolean>;
+export async function writeFile(uri: vscode.Uri | string, data: string): Promise<boolean>;
+export async function writeFile(uri: vscode.Uri | string, ...args: any[]) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     let data: string;
     if (args.length === 1) {
         data = args[0];
@@ -58,9 +64,12 @@ interface DeleteOptions {
     useTrash?: boolean;
 }
 
-export async function removeFile(uri: vscode.Uri, options?: DeleteOptions): Promise<boolean>;
-export async function removeFile(uri: vscode.Uri, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
-export async function removeFile(uri: vscode.Uri, ...args: any[]) {
+export async function removeFile(uri: vscode.Uri | string, options?: DeleteOptions): Promise<boolean>;
+export async function removeFile(uri: vscode.Uri | string, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
+export async function removeFile(uri: vscode.Uri | string, ...args: any[]) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     let options: DeleteOptions | undefined;
     if (typeof args[0] === 'string') {
         uri = vscode.Uri.joinPath(uri, args[0]);
@@ -76,7 +85,10 @@ export async function removeFile(uri: vscode.Uri, ...args: any[]) {
     }
 }
 
-export async function dir(uri: vscode.Uri, relativePath?: string) {
+export async function dir(uri: vscode.Uri | string, relativePath?: string) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     if (relativePath) {
         uri = vscode.Uri.joinPath(uri, relativePath);
     }
@@ -88,7 +100,10 @@ export async function dir(uri: vscode.Uri, relativePath?: string) {
     }
 }
 
-export async function stat(uri: vscode.Uri, relativePath?: string) {
+export async function stat(uri: vscode.Uri | string, relativePath?: string) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
     if (relativePath) {
         uri = vscode.Uri.joinPath(uri, relativePath);
     }
@@ -98,11 +113,25 @@ export async function stat(uri: vscode.Uri, relativePath?: string) {
     } catch {}
 }
 
-export async function copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }) {
+export async function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: { overwrite?: boolean }) {
+    if (typeof source === 'string') {
+        source = vscode.Uri.file(source);
+    }
+    if (typeof target === 'string') {
+        target = vscode.Uri.file(target);
+    }
     try {
         await vscode.workspace.fs.copy(source, target, options);
         return true;
     } catch {
         return false;
     }
+}
+
+export function isRelativePath(path: string) {
+    return path.startsWith('./') || path.startsWith('../');
+}
+
+export function isAbsolutePath(path: string) {
+    return path.startsWith('/') || /^[a-zA-Z]:\\/.test(path);
 }
