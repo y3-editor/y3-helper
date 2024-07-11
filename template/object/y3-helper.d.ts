@@ -12,9 +12,12 @@ declare module 'y3-helper' {
     export * as language from 'y3-helper/editorTable/language';
     export * from 'y3-helper/tools';
     export * as const from 'y3-helper/constants';
-    export let context: vscode.ExtensionContext;
-    export function joinPath(...paths: string[]): vscode.Uri;
+    export { env } from 'y3-helper/env';
+    export let helper: vscode.ExtensionContext;
+    export function uri(base: vscode.Uri | string, ...paths: string[]): vscode.Uri;
+    export function extensionPath(...paths: string[]): vscode.Uri;
     export function setContext(ctx: vscode.ExtensionContext): void;
+    export function print(...args: any[]): void;
 }
 
 declare module 'y3-helper/editorTable/EXCEL' {
@@ -290,6 +293,36 @@ declare module 'y3-helper/constants' {
             };
         };
     }
+}
+
+declare module 'y3-helper/env' {
+    import * as vscode from 'vscode';
+    type EditorVersion = '1.0' | '2.0' | 'unknown';
+    class Env {
+        onDidChange: vscode.Event<void>;
+        editorVersion: EditorVersion;
+        editorUri?: vscode.Uri;
+        editorExeUri?: vscode.Uri;
+        mapUri?: vscode.Uri;
+        scriptUri?: vscode.Uri;
+        y3Uri?: vscode.Uri;
+        projectUri?: vscode.Uri;
+        editorTableUri?: vscode.Uri;
+        csvTableUri?: vscode.Uri;
+        excelUri?: vscode.Uri;
+        ruleUri?: vscode.Uri;
+        get tableTypeToCSVfolderPath(): {
+            [key: string]: string;
+        };
+        get editorTablePath(): string;
+        updateEditor(askUser?: boolean): Promise<void>;
+        editorReady(askUser?: boolean): Promise<void>;
+        updateMap(search: boolean, askUser: boolean): Promise<void>;
+        mapReady(askUser?: boolean): Promise<void>;
+        reload(): void;
+    }
+    export const env: Env;
+    export {};
 }
 
 declare module 'y3-helper/editorTable/EXCEL/fieldTypes' {
@@ -2920,9 +2953,9 @@ declare module 'y3-helper/tools/fs' {
             get buffer(): Buffer;
             get string(): string;
     }
-    export function readFile(uri: vscode.Uri, relativePath?: string): Promise<File | undefined>;
-    export function writeFile(uri: vscode.Uri, relativePath: string | undefined, data: string): Promise<boolean>;
-    export function writeFile(uri: vscode.Uri, data: string): Promise<boolean>;
+    export function readFile(uri: vscode.Uri | string, relativePath?: string): Promise<File | undefined>;
+    export function writeFile(uri: vscode.Uri | string, relativePath: string | undefined, data: string): Promise<boolean>;
+    export function writeFile(uri: vscode.Uri | string, data: string): Promise<boolean>;
     interface DeleteOptions {
             /**
                 * 递归删除文件夹
@@ -2933,10 +2966,15 @@ declare module 'y3-helper/tools/fs' {
                 */
             useTrash?: boolean;
     }
-    export function removeFile(uri: vscode.Uri, options?: DeleteOptions): Promise<boolean>;
-    export function removeFile(uri: vscode.Uri, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
-    export function dir(uri: vscode.Uri, relativePath?: string): Promise<[string, vscode.FileType][] | undefined>;
-    export function stat(uri: vscode.Uri, relativePath?: string): Promise<vscode.FileStat | undefined>;
+    export function removeFile(uri: vscode.Uri | string, options?: DeleteOptions): Promise<boolean>;
+    export function removeFile(uri: vscode.Uri | string, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
+    export function dir(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
+    export function stat(uri: vscode.Uri | string, relativePath?: string): Promise<vscode.FileStat | undefined>;
+    export function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: {
+            overwrite?: boolean;
+    }): Promise<boolean>;
+    export function isRelativePath(path: string): boolean;
+    export function isAbsolutePath(path: string): boolean;
     export {};
 }
 

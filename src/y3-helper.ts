@@ -27,3 +27,7 @@ export function extensionPath(...paths: string[]): vscode.Uri {
 export function setContext(ctx: vscode.ExtensionContext) {
     helper = ctx;
 }
+
+export function print(...args: any[]) {
+    vscode.window.showInformationMessage(args.join(' '));
+}

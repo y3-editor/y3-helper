@@ -1,9 +1,5 @@
 import * as y3 from 'y3-helper';
 
-declare interface EditorData<N extends y3.const.Table.NameCN> {
-    name: number;
-}
-
 export async function test() {
     let table = y3.table.openTable('装饰物');
     let obj = await table.get(201367371);

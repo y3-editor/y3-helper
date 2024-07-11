@@ -341,6 +341,11 @@
                 "command": "y3-helper.objectEditor",
                 "title": "物编修改器",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.runObjectEditor",
+                "title": "运行物编修改器脚本",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {
