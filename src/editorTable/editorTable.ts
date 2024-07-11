@@ -54,16 +54,18 @@ export class FieldInfo {
     }
 }
 
-async function ready(tableName: Table.NameCN) {
+export async function ready() {
     await y3.language.ready();
-    if (tableMeta[tableName] === undefined) {
-        let nameEN = Table.name.fromCN[tableName];
-        let metaUri = vscode.Uri.joinPath(y3.helper.extensionUri, meta_dir, `${nameEN}.json`);
-        let metaFile = await y3.fs.readFile(metaUri);
-        if (metaFile) {
-            tableMeta[tableName] = JSON.parse(metaFile.string);
-        } else {
-            tableMeta[tableName] = {};
+    for (const tableName in Table.name.fromCN) {
+        if (tableMeta[tableName] === undefined) {
+            let nameEN = Table.name.fromCN[tableName as Table.NameCN];
+            let metaUri = vscode.Uri.joinPath(y3.helper.extensionUri, meta_dir, `${nameEN}.json`);
+            let metaFile = await y3.fs.readFile(metaUri);
+            if (metaFile) {
+                tableMeta[tableName] = JSON.parse(metaFile.string);
+            } else {
+                tableMeta[tableName] = {};
+            }
         }
     }
 }
@@ -329,7 +331,7 @@ async function loadObject<N extends Table.NameCN>(tableName: N, key: number) {
     if (!file) {
         return null;
     }
-    await ready(tableName);
+    await ready();
     try {
         let obj = new EditorObject(tableName, key);
         obj.uri = uri;
@@ -702,7 +704,7 @@ export async function getObject(uri: vscode.Uri | string): Promise<EditorObject<
         return;
     }
     const nameCN = Table.path.toCN[path as Table.Path];
-    await ready(nameCN);
+    await ready();
     const file = await y3.fs.readFile(uri);
     if (!file) {
         return;

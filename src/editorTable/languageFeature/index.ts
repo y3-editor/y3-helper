@@ -1,10 +1,12 @@
+import * as y3 from 'y3-helper';
 import * as documentManager from './documentManager';
 import * as documentSymbol from './documentSymbol';
 import * as workspaceSymbol from './workspaceSymbol';
 import * as hover from './hover';
 import * as inlayHints from './inlayHints';
 
-export function init() {
+export async function init() {
+    await y3.table.ready();
     documentManager.init();
     documentSymbol.init();
     workspaceSymbol.init();

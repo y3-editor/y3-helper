@@ -22,23 +22,18 @@ function makeSandbox() {
 }
 
 export async function runEditor(uri: vscode.Uri, funcName: string = 'main') {
-    y3.log.show();
-    try {
-        const file = await y3.fs.readFile(uri);
-        let content = file!.string;
-        content = content + `\n\nmodule.exports = ${funcName}`;
-        let script = new vm.Script(content, {
-            filename: uri.path,
-        });
-        let func = script.runInNewContext(vm.createContext(makeSandbox()));
-        if (typeof func !== 'function') {
-            throw new Error('没有找到要执行的函数');
-        }
-        await func();
-        y3.log.info(`执行 "${uri.path.split('/').pop()}" 成功！`);
-    } catch (error) {
-        vscode.window.showErrorMessage(`运行物编脚本出错：${error}`);
+    const file = await y3.fs.readFile(uri);
+    let content = file!.string;
+    content = content + `\n\nmodule.exports = ${funcName}`;
+    let script = new vm.Script(content, {
+        filename: uri.path,
+    });
+    let func = script.runInNewContext(vm.createContext(makeSandbox()));
+    if (typeof func !== 'function') {
+        throw new Error('没有找到要执行的函数');
     }
+    await func();
+    y3.log.info(`执行 "${uri.path.split('/').pop()}" 成功！`);
 }
 
 class RunButtonProvider implements vscode.CodeLensProvider {
@@ -92,7 +87,12 @@ export function init() {
                 return;
             }
         }
-        await runEditor(uri, funcName);
+        y3.log.show();
+        try {
+            await runEditor(uri, funcName);
+        } catch (error) {
+            vscode.window.showErrorMessage(`运行物编脚本出错：${error}`);
+        }
     });
 
     vscode.languages.registerCodeLensProvider({
