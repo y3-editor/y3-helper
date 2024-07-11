@@ -14,10 +14,27 @@ declare module 'y3-helper' {
     export * as const from 'y3-helper/constants';
     export { env } from 'y3-helper/env';
     export let helper: vscode.ExtensionContext;
+    /**
+        * 拼接路径为 Uri
+        * @returns
+        */
     export function uri(base: vscode.Uri | string, ...paths: string[]): vscode.Uri;
+    /**
+        * 获取《Y3开发助手》插件的相对路径
+        * @returns
+        */
     export function extensionPath(...paths: string[]): vscode.Uri;
     export function setContext(ctx: vscode.ExtensionContext): void;
+    /**
+        * 打印内容，也会打印到日志窗口中
+        * @param args 要打印的内容
+        */
     export function print(...args: any[]): void;
+    /**
+        * 在VSCode中打开文件
+        * @param uri 文件路径
+        */
+    export function open(uri: vscode.Uri | string): void;
 }
 
 declare module 'y3-helper/editorTable/EXCEL' {
