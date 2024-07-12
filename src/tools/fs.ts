@@ -139,18 +139,75 @@ export async function stat(uri: vscode.Uri | string, relativePath?: string) {
     } catch {}
 }
 
-export async function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: { overwrite?: boolean }) {
+export async function isFile(uri: vscode.Uri | string, relativePath?: string) {
+    let statInfo = await stat(uri, relativePath);
+    return statInfo?.type === vscode.FileType.File;
+}
+
+export async function isDirectory(uri: vscode.Uri | string, relativePath?: string) {
+    let statInfo = await stat(uri, relativePath);
+    return statInfo?.type === vscode.FileType.Directory;
+}
+
+export async function isExists(uri: vscode.Uri | string, relativePath?: string) {
+    return (await stat(uri, relativePath)) !== undefined;
+}
+
+interface CopyOptions {
+    overwrite?: boolean;
+    recursive?: boolean;
+    nameMap?: string;
+    pattern?: RegExp;
+}
+
+async function loadNameMap(uri: vscode.Uri, nameMapPath: string): Promise<{[key: string]: string} | undefined>{
+    let nameMapFile = await readFile(uri, nameMapPath);
+    if (!nameMapFile) {
+        return undefined;
+    }
+    try {
+        let map = JSON.parse(nameMapFile.string);
+        if (typeof map !== 'object' || map === null) {
+            return undefined;
+        }
+        return map;
+    } catch {
+        return undefined;
+    }
+}
+
+export async function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: CopyOptions): Promise<boolean> {
     if (typeof source === 'string') {
         source = vscode.Uri.file(source);
     }
     if (typeof target === 'string') {
         target = vscode.Uri.file(target);
     }
-    try {
+    const fileStat = await stat(source);
+    if (!fileStat) {
+        return false;
+    }
+    if (fileStat.type === vscode.FileType.Directory) {
+        let promises: Promise<boolean>[] = [];
+        let nameMap = options?.nameMap ? await loadNameMap(source, options?.nameMap) : undefined;
+        for (const [name, fileType] of await dir(source)) {
+            if (options?.pattern && !options.pattern.test(name)) {
+                continue;
+            }
+            if (options?.nameMap && options.nameMap === name) {
+                continue;
+            }
+            let childSource = vscode.Uri.joinPath(source, name);
+            let childTarget = vscode.Uri.joinPath(target, nameMap?.[name] ?? name);
+            if (fileType !== vscode.FileType.Directory || options?.recursive) {
+                promises.push(copy(childSource, childTarget, options));
+            }
+        }
+        let results = await Promise.all(promises);
+        return results.every(value => value);
+    } else {
         await vscode.workspace.fs.copy(source, target, options);
         return true;
-    } catch {
-        return false;
     }
 }
 
