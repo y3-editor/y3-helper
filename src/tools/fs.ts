@@ -100,6 +100,32 @@ export async function dir(uri: vscode.Uri | string, relativePath?: string) {
     }
 }
 
+export async function scan(uri: vscode.Uri | string, relativePath?: string) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
+    if (relativePath) {
+        uri = vscode.Uri.joinPath(uri, relativePath);
+    }
+
+    let result: [string, vscode.FileType][] = [];
+
+    async function doScan(uri: vscode.Uri, path?: string) {
+        let files = await dir(uri, path);
+        for (const [name, fileType] of files) {
+            let fullPath = path ? `${path}/${name}` : name;
+            result.push([fullPath, fileType]);
+            if (fileType === vscode.FileType.Directory) {
+                await doScan(uri, fullPath);
+            }
+        }
+    }
+
+    await doScan(uri);
+
+    return result;
+}
+
 export async function stat(uri: vscode.Uri | string, relativePath?: string) {
     if (typeof uri === 'string') {
         uri = vscode.Uri.file(uri);

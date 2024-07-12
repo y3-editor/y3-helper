@@ -55,3 +55,7 @@ export function open(uri: vscode.Uri | string) {
     }
     vscode.commands.executeCommand('vscode.open', uri);
 }
+
+export async function sleep(ms: number) {
+    await new Promise(resolve => setTimeout(resolve, ms));
+}
