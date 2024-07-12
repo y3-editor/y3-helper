@@ -181,9 +181,9 @@ export class PluginManager extends vscode.Disposable {
                 if (name === 'y3-helper') {
                     return y3;
                 }
+                return require(name);
             },
-            module: {},
-            exports: {},
+            module: { exports: {} },
         };
         return vm.createContext(new Proxy(sandBox as any, {
             get(target, prop) {
@@ -224,7 +224,6 @@ export class PluginManager extends vscode.Disposable {
 
     public async runAll(funcName: string) {
         let plugins = await this.getAll();
-        const sandBox = this.makeSandbox();
         let errors = [];
         for (const plugin of plugins) {
             const infos = await plugin.getExports();
@@ -232,7 +231,7 @@ export class PluginManager extends vscode.Disposable {
                 continue;
             }
             try {
-                await plugin.run(funcName, sandBox);
+                await plugin.run(funcName, this.makeSandbox());
             } catch (error) {
                 let errorMessage = String(error).replace(/Error: /, '');
                 errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
