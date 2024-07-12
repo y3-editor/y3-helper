@@ -225,6 +225,7 @@ export class PluginManager extends vscode.Disposable {
     public async runAll(funcName: string) {
         let plugins = await this.getAll();
         let errors = [];
+        let count = 0;
         for (const plugin of plugins) {
             const infos = await plugin.getExports();
             if (!infos[funcName]) {
@@ -232,6 +233,7 @@ export class PluginManager extends vscode.Disposable {
             }
             try {
                 await plugin.run(funcName, this.makeSandbox());
+                count++;
             } catch (error) {
                 let errorMessage = String(error).replace(/Error: /, '');
                 errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
@@ -240,5 +242,6 @@ export class PluginManager extends vscode.Disposable {
         if (errors.length > 0) {
             throw new Error(errors.join('\n'));
         }
+        return count;
     }
 }

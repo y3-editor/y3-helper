@@ -1,8 +1,22 @@
 import * as vscode from 'vscode';
 import { env } from './env';
 import { runShell } from './runShell';
+import * as y3 from 'y3-helper';
 
 export class EditorLauncher {
+    private async runPlugin() {
+        try {
+            await y3.plugin.runAllPlugins('onEditor');
+        } catch (error) {
+            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
+                detail: String(error).replace(/Error: /, ''),
+                modal: true,
+            }, '仍要启动');
+            if (res !== '仍要启动') {
+                return false;
+            }
+        }
+    }
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
         await env.editorReady(true);
@@ -17,6 +31,9 @@ export class EditorLauncher {
             vscode.window.showErrorMessage("未找到编辑器！");
             return false;
         }
+
+        await this.runPlugin();
+
         let project_path = projectUri.fsPath.replaceAll("\\", "/") + '/header.project';
         let project_path_base64 = Buffer.from(project_path).toString('base64');
         let args = [];

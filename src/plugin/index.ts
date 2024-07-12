@@ -97,7 +97,11 @@ export async function runAllPlugins(funcName: string) {
     if (!pluginManager) {
         return;
     }
-    await pluginManager.runAll(funcName);
+    let count = await pluginManager.runAll(funcName);
+    if (count > 0) {
+        // 等待物编文件写入完成
+        await y3.sleep(200);
+    }
 }
 
 export async function init() {

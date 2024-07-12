@@ -8,14 +8,22 @@ let os = require('os')
 
 export async function onGame() {
     y3.print('启动游戏！')
+    // 在你的Lua代码里加入 `require 'log.onGame'` 试试看
     y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'log/onGame.lua'), `
--- 在你的Lua代码里加入 “require 'log.onGame'” 试试看
 print('运行者：${os.userInfo().username}，运行时间：${new Date().toLocaleString()}')
 `)
 }
 
 export async function onEditor() {
     y3.print('在编辑器中打开！')
+    // 偷偷生成一个单位
+    let unitTable = y3.table.openTable('单位')
+    let unit = await unitTable.create({
+        name: '打开编辑器时自动创建的单位',
+        key: 55555,
+        overwrite: true,
+    })
+    unit.data.description = `运行者：${os.userInfo().username}，运行时间：${new Date().toLocaleString()}`
 }
 
 export async function onSave() {

@@ -72,13 +72,11 @@ export class Json {
             return;
         }
         this._tree = undefined;
-        let allEdits: jsonc.Edit[] = [];
         for (const key in this._patch) {
             const value = this._patch[key];
             let edits = jsonc.modify(this._text, [key], value, editOptions);
-            allEdits.push(...edits);
+            this._text = jsonc.applyEdits(this._text, edits);
         }
         this._patch = undefined;
-        this._text = jsonc.applyEdits(this._text, allEdits);
     }
 }

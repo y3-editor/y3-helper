@@ -4,6 +4,19 @@ import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 
 export class GameLauncher {
+    private async runPlugin() {
+        try {
+            await y3.plugin.runAllPlugins('onGame');
+        } catch (error) {
+            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
+                detail: String(error).replace(/Error: /, ''),
+                modal: true,
+            }, '仍要启动');
+            if (res !== '仍要启动') {
+                return false;
+            }
+        }
+    }
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
         await env.editorReady(true);
@@ -18,17 +31,9 @@ export class GameLauncher {
             vscode.window.showErrorMessage("未找到编辑器！");
             return false;
         }
-        try {
-            await y3.plugin.runAllPlugins('onGame');
-        } catch (error) {
-            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
-                detail: String(error).replace(/Error: /, ''),
-                modal: true,
-            }, '仍要启动');
-            if (res !== '仍要启动') {
-                return false;
-            }
-        }
+
+        await this.runPlugin();
+
         let args = [];
         args.push('type@editor_game');
         args.push('subtype@editor_game');
