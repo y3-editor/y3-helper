@@ -338,12 +338,12 @@
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.objectEditor",
-                "title": "物编修改器",
+                "command": "y3-helper.initPlugin",
+                "title": "初始化插件",
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.runObjectEditor",
+                "command": "y3-helper.runPlugin",
                 "title": "运行物编修改器脚本",
                 "category": "Y3开发助手"
             }

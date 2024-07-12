@@ -1,7 +1,7 @@
 let y3 = require('y3-helper')
 
 // 定义一个函数，然后点击运行函数按钮即可执行
-async function example() {
+export async function example() {
     //1. 先来创建一个新的单位
     let unitTable = y3.table.openTable('单位') // 打开单位表
     
@@ -26,6 +26,7 @@ async function example() {
 
     //3. 修改单位的数据
     unit2.data.ori_speed = 5 // 修改移动速度
+    unit2.data.attack_phy = 100 // 修改物理攻击力
 
     y3.print('移动速度修改完成')
 }

@@ -12,13 +12,13 @@ import { env } from './env';
 import { runShell } from './runShell';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
-import { TemplateGenerator } from './editorTable/CSV/templateGenerator';
 import { NetworkServer } from './networkServer';
 import * as console from './console';
 import * as metaBuilder from './metaBuilder';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
 import * as editorTable from './editorTable';
+import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
 
 class Helper {
@@ -271,6 +271,7 @@ class Helper {
             debug.init(this.context);
             console.init();
             editorTable.init();
+            plugin.init();
         }, 100);
     }
 }

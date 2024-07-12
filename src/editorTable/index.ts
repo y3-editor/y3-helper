@@ -10,7 +10,6 @@ import * as editorTable from './editorTable';
 import * as language from './language';
 import * as languageFeature from './languageFeature';
 import * as treeView from './treeView';
-import * as editor from './editor';
 
 vscode.commands.registerCommand('y3-helper.testExcel', async () => {
     try {
@@ -25,7 +24,6 @@ export function init() {
     language.init();
     treeView.init();
     languageFeature.init();
-    editor.init();
     csv.init();
     excel.init();
 }
