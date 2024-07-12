@@ -28,4 +28,8 @@ export async function onEditor() {
 
 export async function onSave() {
     y3.print('保存地图！')
+    // 在你的Lua代码里加入 `require 'log.onSave'` 试试看
+    y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'log/onSave.lua'), `
+print('保存者：${os.userInfo().username}，保存时间：${new Date().toLocaleString()}')
+`)
 }

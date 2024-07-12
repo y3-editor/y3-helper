@@ -75,21 +75,30 @@ async function initPlugin() {
     }
 }
 
-function initPluginManager() {
-    if (y3.env.scriptUri) {
-        pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
-        pluginManager.onDidChange(() => {
-            runButtonProvider.notifyChange();
-        });
+function updatePluginManager() {
+    pluginManager?.dispose();
+    if (!y3.env.scriptUri) {
+        return;
     }
-    y3.env.onDidChange(() => {
-        pluginManager?.dispose();
-        if (y3.env.scriptUri) {
-            pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
-            pluginManager.onDidChange(() => {
-                runButtonProvider.notifyChange();
-            });
-        }
+    pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
+    pluginManager.onDidChange(() => {
+        runButtonProvider.notifyChange();
+    });
+}
+
+let watcher: vscode.FileSystemWatcher | undefined;
+
+function updateMapSaveWatcher() {
+    watcher?.dispose();
+    if (!y3.env.mapUri) {
+        return;
+    }
+    watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(y3.env.mapUri, '*.gmp'));
+    watcher.onDidCreate(() => {
+        runAllPlugins('onSave');
+    });
+    watcher.onDidChange(() => {
+        runAllPlugins('onSave');
     });
 }
 
@@ -107,7 +116,12 @@ export async function runAllPlugins(funcName: string) {
 export async function init() {
     await y3.env.mapReady();
 
-    initPluginManager();
+    updatePluginManager();
+    updateMapSaveWatcher();
+    y3.env.onDidChange(() => {
+        updatePluginManager();
+        updateMapSaveWatcher();
+    });
 
     vscode.commands.registerCommand('y3-helper.initPlugin', initPlugin);
 
