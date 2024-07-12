@@ -8,6 +8,8 @@ let scriptDir = 'y3-helper/plugin';
 let pluginManager: plugin.PluginManager | undefined;
 
 class RunButtonProvider implements vscode.CodeLensProvider {
+    private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
+    onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
     public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[] | undefined> {
         let plugin = await pluginManager?.findPlugin(document.uri);
         if (!plugin) {
@@ -26,7 +28,13 @@ class RunButtonProvider implements vscode.CodeLensProvider {
         }
         return codeLens;
     }
+
+    public notifyChange() {
+        this._onDidChangeCodeLenses.fire();
+    }
 }
+
+let runButtonProvider = new RunButtonProvider();
 
 async function initPlugin() {
     await y3.env.mapReady();
@@ -56,11 +64,17 @@ async function initPlugin() {
 function initPluginManager() {
     if (y3.env.scriptUri) {
         pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
+        pluginManager.onDidChange(() => {
+            runButtonProvider.notifyChange();
+        });
     }
     y3.env.onDidChange(() => {
         pluginManager?.dispose();
         if (y3.env.scriptUri) {
             pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
+            pluginManager.onDidChange(() => {
+                runButtonProvider.notifyChange();
+            });
         }
     });
 }
@@ -94,5 +108,5 @@ export async function init() {
     vscode.languages.registerCodeLensProvider({
         scheme: 'file',
         pattern: `**/*.js`,
-    }, new RunButtonProvider());
+    }, runButtonProvider);
 }

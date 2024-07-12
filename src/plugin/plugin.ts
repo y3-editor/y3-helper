@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as vm from 'vm';
-import { queue } from '../utility/decorators';
+import { queue, throttle } from '../utility/decorators';
 
 interface ExportInfo {
     name: string;
@@ -77,6 +77,7 @@ class Plugin {
 export class PluginManager extends vscode.Disposable {
     private _ready = false;
     private _watcher: vscode.FileSystemWatcher;
+    private _onDidChange = new vscode.EventEmitter<void>();
 
     constructor(public dir: vscode.Uri) {
         super(() => {
@@ -92,6 +93,7 @@ export class PluginManager extends vscode.Disposable {
                 return;
             }
             this.plugins[name] = new Plugin(e, name);
+            this.notifyChange();
         });
         this._watcher.onDidDelete((e) => {
             let name = this.getName(e);
@@ -99,6 +101,7 @@ export class PluginManager extends vscode.Disposable {
                 return;
             }
             delete this.plugins[name];
+            this.notifyChange();
         });
         this._watcher.onDidChange((e) => {
             let name = this.getName(e);
@@ -106,8 +109,16 @@ export class PluginManager extends vscode.Disposable {
                 return;
             }
             this.plugins[name] = new Plugin(e, name);
+            this.notifyChange();
         });
     }
+
+    @throttle(100)
+    private notifyChange() {
+        this._onDidChange.fire();
+    }
+
+    public onDidChange = this._onDidChange.event;
 
     public plugins: Record<string, Plugin> = {};
     private async loadPlugins() {
