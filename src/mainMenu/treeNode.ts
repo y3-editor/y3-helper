@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 
-let refreshCallback: (node: TreeNode) => void;
-
 export interface TreeNodeOptional {
     command?: typeof vscode.TreeItem.prototype.command;
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
@@ -11,6 +9,7 @@ export interface TreeNodeOptional {
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
     show?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
+    data?: any;
 }
 
 export class TreeNode extends vscode.TreeItem {
@@ -18,6 +17,8 @@ export class TreeNode extends vscode.TreeItem {
     parent?: TreeNode;
     show?: TreeNodeOptional["show"] = true;
     update?: TreeNodeOptional["update"];
+    data?: any;
+    tree?: TreeProvider;
     constructor(label: string, optional?: TreeNodeOptional) {
         super(label, vscode.TreeItemCollapsibleState.None);
         if (optional) {
@@ -29,6 +30,7 @@ export class TreeNode extends vscode.TreeItem {
             this.update = optional.update;
             this.show = optional.show ?? true;
             this.collapsibleState = optional.collapsibleState;
+            this.data = optional.data;
         }
         this.updateChilds();
     }
@@ -42,7 +44,7 @@ export class TreeNode extends vscode.TreeItem {
     }
 
     refresh() {
-        refreshCallback?.(this);
+        this.tree?.refresh.fire(this);
     }
 }
 
@@ -100,6 +102,48 @@ export class ViewInNewVSCode extends TreeNode {
     }
 }
 
-export function onRefresh(callback: typeof refreshCallback) {
-    refreshCallback = callback;
+export class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
+    constructor(private mainNode: TreeNode) {
+    }
+    public refresh = new vscode.EventEmitter<TreeNode | undefined>();
+    onDidChangeTreeData = this.refresh.event; 
+
+    async getChildren(node?: TreeNode): Promise<TreeNode[] | undefined> {
+        node = node ?? this.mainNode;
+
+        if (node.childs === undefined) {
+            return undefined;
+        }
+
+        let childs = [];
+        for (const child of node.childs) {
+            if (child.show instanceof Function) {
+                let show = await child.show(child);
+                if (!show) {
+                    continue;
+                }
+            }
+            if (!child.show) {
+                continue;
+            }
+            childs.push(child);
+        }
+
+        if (childs?.length === 0) {
+            return undefined;
+        }
+        return childs;
+    }
+
+    async getTreeItem(node: TreeNode): Promise<TreeNode> {
+        node.tree = this;
+        await node.update?.(node);
+        node.updateChilds();
+        node.collapsibleState = node.collapsibleState ?? (node.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        return node;
+    }
+
+    getParent(node: TreeNode): TreeNode | undefined {
+        return node.parent;
+    }
 }

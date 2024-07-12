@@ -13,6 +13,7 @@ declare module 'y3-helper' {
     export * from 'y3-helper/tools';
     export * as const from 'y3-helper/constants';
     export { env } from 'y3-helper/env';
+    export * as plugin from 'y3-helper/plugin';
     export let helper: vscode.ExtensionContext;
     /**
         * 拼接路径为 Uri
@@ -35,6 +36,7 @@ declare module 'y3-helper' {
         * @param uri 文件路径
         */
     export function open(uri: vscode.Uri | string): void;
+    export function sleep(ms: number): Promise<void>;
 }
 
 declare module 'y3-helper/editorTable/EXCEL' {
@@ -42,6 +44,7 @@ declare module 'y3-helper/editorTable/EXCEL' {
     export * from 'y3-helper/editorTable/EXCEL/attrType';
     export * from 'y3-helper/editorTable/EXCEL/importRule';
     export * from 'y3-helper/editorTable/EXCEL/excelExporter';
+    export function init(): void;
 }
 
 declare module 'y3-helper/editorTable/editorTable' {
@@ -65,6 +68,7 @@ declare module 'y3-helper/editorTable/editorTable' {
             type?: string;
             constructor(tableName: Table.NameCN, field: string);
     }
+    export function ready(): Promise<void>;
     type EditorData<N extends Table.NameCN> = N extends '单位' ? UnitData : N extends '声音' ? SoundData : N extends '技能' ? AbilityData : N extends '装饰物' ? DecorationData : N extends '可破坏物' ? DestructibleData : N extends '物品' ? ItemData : N extends '魔法效果' ? ModifierData : N extends '投射物' ? ProjectileData : N extends '科技' ? TechData : never;
     export class EditorObject<N extends Table.NameCN> {
             tableName: N;
@@ -400,6 +404,11 @@ declare module 'y3-helper/env' {
     }
     export const env: Env;
     export {};
+}
+
+declare module 'y3-helper/plugin' {
+    export function runAllPlugins(funcName: string): Promise<void>;
+    export function init(): Promise<void>;
 }
 
 declare module 'y3-helper/editorTable/EXCEL/fieldTypes' {
@@ -3046,10 +3055,18 @@ declare module 'y3-helper/tools/fs' {
     export function removeFile(uri: vscode.Uri | string, options?: DeleteOptions): Promise<boolean>;
     export function removeFile(uri: vscode.Uri | string, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
     export function dir(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
+    export function scan(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
     export function stat(uri: vscode.Uri | string, relativePath?: string): Promise<vscode.FileStat | undefined>;
-    export function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: {
+    export function isFile(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    export function isDirectory(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    export function isExists(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    interface CopyOptions {
             overwrite?: boolean;
-    }): Promise<boolean>;
+            recursive?: boolean;
+            nameMap?: string;
+            pattern?: RegExp;
+    }
+    export function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: CopyOptions): Promise<boolean>;
     export function isRelativePath(path: string): boolean;
     export function isAbsolutePath(path: string): boolean;
     export {};

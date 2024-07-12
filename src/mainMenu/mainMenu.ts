@@ -1,12 +1,13 @@
 import { env } from '../env';
 import * as vscode from 'vscode';
-import { TreeNode, TreeProvider } from '../treeNode';
+import { TreeNode, TreeProvider } from './treeNode';
 import { 功能 } from './pages/features';
 import { 环境 } from './pages/environments';
 import { 单位属性 } from './pages/unitAttrs';
 import { 玩家属性 } from './pages/playerAttrs';
 import { 自定义事件 } from './pages/events';
 import { 界面 } from './pages/ui';
+import { 插件 } from './pages/plugin';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
@@ -15,6 +16,7 @@ let mainNode = new TreeNode('主菜单', {
         new 玩家属性,
         new 界面,
         new 自定义事件,
+        new 插件,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {
             command: {
@@ -45,14 +47,36 @@ class MainMenu {
         });
     }
 
-    private async refresh() {
+    public async refresh(path?: string) {
         await env.mapReady();
         if (env.scriptUri) {
             this.view.message = undefined;
         } else {
             this.view.message = '未找到Y3地图，请重新选择Y3地图路径！';
         }
-        this.tree.refresh.fire(undefined);
+        if (path) {
+            let paths = path.split('/');
+            let node = mainNode;
+            for (let i = 0; i < paths.length; i++) {
+                if (node.childs === undefined) {
+                    return;
+                }
+                let found = false;
+                for (let child of node.childs) {
+                    if (child.label === paths[i]) {
+                        node = child;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    return;
+                }
+                this.tree.refresh.fire(node);
+            }
+        } else {
+            this.tree.refresh.fire(undefined);
+        }
     }
 
     async reload() {
@@ -67,5 +91,11 @@ export function init() {
         mainMenu.reload();
     } else {
         mainMenu = new MainMenu();
+    }
+}
+
+export function refresh(path?: string) {
+    if (mainMenu) {
+        mainMenu.refresh(path);
     }
 }

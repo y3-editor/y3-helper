@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as plugin from './plugin';
+import * as mainMenu from '../mainMenu';
 
 let scriptDir = 'y3-helper/plugin';
 
@@ -67,6 +68,23 @@ async function initPlugin() {
         return;
     }
     await vscode.commands.executeCommand('vscode.open', needOpen);
+    mainMenu.refresh('插件');
+}
+
+async function updatePlugin() {
+    await y3.env.mapReady();
+    if (!y3.env.scriptUri) {
+        return;
+    }
+    const templateDir = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
+    const targetDir = y3.uri(y3.env.scriptUri, scriptDir, 'y3-helper.d.ts');
+    let suc = await y3.fs.copy(templateDir, targetDir, {
+        overwrite: true,
+    });
+    if (suc) {
+        vscode.window.showInformationMessage('插件定义文件更新成功');
+        mainMenu.refresh('插件');
+    }
 }
 
 function updatePluginManager() {
@@ -118,6 +136,7 @@ export async function init() {
     });
 
     vscode.commands.registerCommand('y3-helper.initPlugin', initPlugin);
+    vscode.commands.registerCommand('y3-helper.updatePlugin', updatePlugin);
 
     vscode.commands.registerCommand('y3-helper.runPlugin', async (uri?: vscode.Uri, funcName?: string) => {
         if (!uri) {

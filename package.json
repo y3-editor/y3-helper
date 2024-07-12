@@ -343,8 +343,13 @@
                 "category": "Y3开发助手"
             },
             {
+                "command": "y3-helper.updatePlugin",
+                "title": "更新插件",
+                "category": "Y3开发助手"
+            },
+            {
                 "command": "y3-helper.runPlugin",
-                "title": "运行物编修改器脚本",
+                "title": "运行插件",
                 "category": "Y3开发助手"
             }
         ],
