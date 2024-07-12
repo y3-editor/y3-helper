@@ -4,6 +4,8 @@ export * from './types';
 export * from './CSV/CSVimporter';
 export * from './CSV/CSVeditor';
 import { test } from './EXCEL/test';
+import * as csv from './CSV';
+import * as excel from './EXCEL';
 import * as editorTable from './editorTable';
 import * as language from './language';
 import * as languageFeature from './languageFeature';
@@ -24,4 +26,6 @@ export function init() {
     treeView.init();
     languageFeature.init();
     editor.init();
+    csv.init();
+    excel.init();
 }
