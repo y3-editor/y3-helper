@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import * as vm from 'vm';
 import * as plugin from './plugin';
 
 let scriptDir = 'y3-helper/plugin';
@@ -11,20 +10,35 @@ class RunButtonProvider implements vscode.CodeLensProvider {
     private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
     onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
     public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[] | undefined> {
-        let plugin = await pluginManager?.findPlugin(document.uri);
-        if (!plugin) {
+        let pluginInstance = await pluginManager?.findPlugin(document.uri);
+        if (!pluginInstance) {
             return undefined;
         }
         let codeLens: vscode.CodeLens[] = [];
-        let infos = await plugin.getExports();
+        let infos = await pluginInstance.getExports();
         for (const name in infos) {
             const info = infos[name];
-            const position = document.positionAt(info.offset);
-            codeLens.push(new vscode.CodeLens(new vscode.Range(position, position), {
-                title: `$(debug-start)运行 ${name} 函数`,
+            codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
+                title: `$(debug-start)运行 "${name}"`,
                 command: 'y3-helper.runPlugin',
                 arguments: [document.uri, name],
             }));
+            if (name === 'onGame') {
+                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
+                    title: `使用《Y3开发助手》启动游戏时自动运行`,
+                    command: '',
+                }));
+            } else if (name === 'onEditor') {
+                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
+                    title: `使用《Y3开发助手》的“在编辑器中打开”时自动运行`,
+                    command: '',
+                }));
+            } else if (name === 'onSave') {
+                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
+                    title: `使用《Y3编辑器》保存地图后自动运行`,
+                    command: '',
+                }));
+            }
         }
         return codeLens;
     }
@@ -77,6 +91,13 @@ function initPluginManager() {
             });
         }
     });
+}
+
+export async function runAllPlugins(funcName: string) {
+    if (!pluginManager) {
+        return;
+    }
+    await pluginManager.runAll(funcName);
 }
 
 export async function init() {

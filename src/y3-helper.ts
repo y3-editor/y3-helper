@@ -7,6 +7,7 @@ export * as language from './editorTable/language';
 export * from './tools';
 export * as const from './constants';
 export { env } from './env';
+export * as plugin from './plugin';
 export let helper: vscode.ExtensionContext;
 
 /**

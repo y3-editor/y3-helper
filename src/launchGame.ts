@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { env } from './env';
 import { runShell } from './runShell';
+import * as y3 from 'y3-helper';
 
 export class GameLauncher {
 
@@ -16,6 +17,17 @@ export class GameLauncher {
         if (!editorExeUri) {
             vscode.window.showErrorMessage("未找到编辑器！");
             return false;
+        }
+        try {
+            await y3.plugin.runAllPlugins('onGame');
+        } catch (error) {
+            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
+                detail: String(error).replace(/Error: /, ''),
+                modal: true,
+            }, '仍要启动');
+            if (res !== '仍要启动') {
+                return false;
+            }
         }
         let args = [];
         args.push('type@editor_game');
