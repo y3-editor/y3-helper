@@ -23,17 +23,22 @@ function makeSandbox() {
 
 export async function runEditor(uri: vscode.Uri, funcName: string = 'main') {
     const file = await y3.fs.readFile(uri);
-    let content = file!.string;
-    content = content + `\n\nmodule.exports = ${funcName}`;
+    let needExports: string[] = [];
+    let content = file!.string.replaceAll(/export\s+(async\s+)function\s+([\w_]+)/g, (_, async, name) => {
+        needExports.push(name);
+        return `${async}function ${name}`;
+    });
+    content = content + '\nmodule.exports = { ' + needExports.join(', ') + ' };\n';
     let script = new vm.Script(content, {
         filename: uri.path,
     });
-    let func = script.runInNewContext(vm.createContext(makeSandbox()));
-    if (typeof func !== 'function') {
-        throw new Error('没有找到要执行的函数');
+    let exports = script.runInNewContext(vm.createContext(makeSandbox()));
+    if (typeof exports[funcName] !== 'function') {
+        throw new Error(`没有找到要执行的函数${funcName}`);
     }
-    await func();
-    y3.log.info(`执行 "${uri.path.split('/').pop()}" 成功！`);
+    await exports[funcName]();
+    const name = uri.path.split('/').pop()!.replace(/\.js$/, '');
+    y3.log.info(`执行 "${name}/${funcName}" 成功！`);
 }
 
 class RunButtonProvider implements vscode.CodeLensProvider {
@@ -41,7 +46,7 @@ class RunButtonProvider implements vscode.CodeLensProvider {
         let codeLens: vscode.CodeLens[] = [];
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i);
-            const name = line.text.match(/^async\s+function\s+([\w_]+)/)?.[1];
+            const name = line.text.match(/^export\s+(async\s+)function\s+([\w_]+)/)?.[2];
             if (name) {
                 codeLens.push(new vscode.CodeLens(new vscode.Range(i, 0, i, 0), {
                     title: `$(debug-start)运行 ${name} 函数`,
