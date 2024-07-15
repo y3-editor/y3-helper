@@ -6,9 +6,6 @@
         "target": "ES2022",
         "lib": [
             "ES2022"
-        ],
-        "paths": {
-            "y3-helper": ["./y3-helper"],
-        }
+        ]
     }
 }

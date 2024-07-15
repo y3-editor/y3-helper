@@ -7,7 +7,6 @@
 
 declare module 'y3-helper' {
     import * as vscode from 'vscode';
-    export { fs, log } from 'y3-helper/tools';
     export * as excel from 'y3-helper/editorTable/excel';
     export * as table from 'y3-helper/editorTable/editorTable';
     export * as language from 'y3-helper/editorTable/language';
@@ -40,16 +39,11 @@ declare module 'y3-helper' {
     export function sleep(ms: number): Promise<void>;
 }
 
-declare module 'y3-helper/tools' {
-    export { download } from 'y3-helper/tools/download';
-    export { log } from 'y3-helper/tools/log';
-    export * as fs from 'y3-helper/tools/fs';
-    export * as json from 'y3-helper/tools/json';
+declare module 'y3-helper/editorTable/excel' {
+    import * as vscode from 'vscode';
+    export function loadFile(uri: vscode.Uri, sheet?: number | string): Promise<(string | undefined)[][] | undefined>;
+    export function init(): void;
 }
-
-import * as vscode from 'vscode';
-export declare function loadFile(uri: vscode.Uri, sheet?: number | string): Promise<(string | undefined)[][] | undefined>;
-export declare function init(): void;
 
 declare module 'y3-helper/editorTable/editorTable' {
     import { Table } from "y3-helper/constants";
@@ -195,7 +189,7 @@ declare module 'y3-helper/editorTable/editorTable' {
         * 获取所有的对象（速度比较慢）
         * @returns 所有对象
         */
-    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">[]>;
+    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "声音" | "技能" | "装饰物" | "可破坏物" | "物品" | "魔法效果" | "投射物" | "科技">[]>;
     export function init(): void;
     export {};
 }
@@ -217,6 +211,13 @@ declare module 'y3-helper/editorTable/language' {
         * @param preferNumber 如果可能，将key转换为数字
         */
     export function keyOf(value: string | number, preferNumber?: boolean): string | number;
+}
+
+declare module 'y3-helper/tools' {
+    export { download } from 'y3-helper/tools/download';
+    export { log } from 'y3-helper/tools/log';
+    export * as fs from 'y3-helper/tools/fs';
+    export * as json from 'y3-helper/tools/json';
 }
 
 declare module 'y3-helper/constants' {
@@ -406,74 +407,6 @@ declare module 'y3-helper/env' {
 declare module 'y3-helper/plugin' {
     export function runAllPlugins(funcName: string): Promise<void>;
     export function init(): Promise<void>;
-}
-
-declare module 'y3-helper/tools/download' {
-    import * as https from 'https';
-    export function download(options: string | URL | https.RequestOptions): Promise<Buffer>;
-}
-
-declare module 'y3-helper/tools/log' {
-    import * as vscode from 'vscode';
-    let log: vscode.LogOutputChannel;
-    export { log };
-}
-
-declare module 'y3-helper/tools/fs' {
-    import * as vscode from 'vscode';
-    class File {
-            write(data: Uint8Array): this;
-            get buffer(): Buffer;
-            get string(): string;
-    }
-    export function readFile(uri: vscode.Uri | string, relativePath?: string): Promise<File | undefined>;
-    export function writeFile(uri: vscode.Uri | string, relativePath: string | undefined, data: string): Promise<boolean>;
-    export function writeFile(uri: vscode.Uri | string, data: string): Promise<boolean>;
-    interface DeleteOptions {
-            /**
-                * 递归删除文件夹
-                */
-            recursive?: boolean;
-            /**
-                * 尝试移动到回收站
-                */
-            useTrash?: boolean;
-    }
-    export function removeFile(uri: vscode.Uri | string, options?: DeleteOptions): Promise<boolean>;
-    export function removeFile(uri: vscode.Uri | string, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
-    export function dir(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
-    export function scan(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
-    export function stat(uri: vscode.Uri | string, relativePath?: string): Promise<vscode.FileStat | undefined>;
-    export function isFile(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
-    export function isDirectory(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
-    export function isExists(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
-    interface CopyOptions {
-            overwrite?: boolean;
-            recursive?: boolean;
-            nameMap?: string;
-            pattern?: RegExp;
-    }
-    export function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: CopyOptions): Promise<boolean>;
-    export function isRelativePath(path: string): boolean;
-    export function isAbsolutePath(path: string): boolean;
-    export {};
-}
-
-declare module 'y3-helper/tools/json' {
-    import * as jsonc from 'jsonc-parser';
-    export type Item = string | boolean | number | null | Object | Array;
-    export type Array = Item[];
-    export type Object = {
-        [key: string]: Item;
-    };
-    export class Json {
-        constructor(text: string);
-        get text(): string;
-        get data(): Object | undefined;
-        get tree(): jsonc.Node | undefined;
-        get(key: string): Item | undefined;
-        set(key: string, value: any): boolean;
-    }
 }
 
 declare module 'y3-helper/editor_meta/unit' {
@@ -2916,6 +2849,74 @@ declare module 'y3-helper/editor_meta/tech' {
                 * 最大等级
                 */
             max_lv: number;
+    }
+}
+
+declare module 'y3-helper/tools/download' {
+    import * as https from 'https';
+    export function download(options: string | URL | https.RequestOptions): Promise<Buffer>;
+}
+
+declare module 'y3-helper/tools/log' {
+    import * as vscode from 'vscode';
+    let log: vscode.LogOutputChannel;
+    export { log };
+}
+
+declare module 'y3-helper/tools/fs' {
+    import * as vscode from 'vscode';
+    class File {
+            write(data: Uint8Array): this;
+            get buffer(): Buffer;
+            get string(): string;
+    }
+    export function readFile(uri: vscode.Uri | string, relativePath?: string): Promise<File | undefined>;
+    export function writeFile(uri: vscode.Uri | string, relativePath: string | undefined, data: string): Promise<boolean>;
+    export function writeFile(uri: vscode.Uri | string, data: string): Promise<boolean>;
+    interface DeleteOptions {
+            /**
+                * 递归删除文件夹
+                */
+            recursive?: boolean;
+            /**
+                * 尝试移动到回收站
+                */
+            useTrash?: boolean;
+    }
+    export function removeFile(uri: vscode.Uri | string, options?: DeleteOptions): Promise<boolean>;
+    export function removeFile(uri: vscode.Uri | string, relativePath?: string, options?: DeleteOptions): Promise<boolean>;
+    export function dir(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
+    export function scan(uri: vscode.Uri | string, relativePath?: string): Promise<[string, vscode.FileType][]>;
+    export function stat(uri: vscode.Uri | string, relativePath?: string): Promise<vscode.FileStat | undefined>;
+    export function isFile(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    export function isDirectory(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    export function isExists(uri: vscode.Uri | string, relativePath?: string): Promise<boolean>;
+    interface CopyOptions {
+            overwrite?: boolean;
+            recursive?: boolean;
+            nameMap?: string;
+            pattern?: RegExp;
+    }
+    export function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: CopyOptions): Promise<boolean>;
+    export function isRelativePath(path: string): boolean;
+    export function isAbsolutePath(path: string): boolean;
+    export {};
+}
+
+declare module 'y3-helper/tools/json' {
+    import * as jsonc from 'jsonc-parser';
+    export type Item = string | boolean | number | null | Object | Array;
+    export type Array = Item[];
+    export type Object = {
+        [key: string]: Item;
+    };
+    export class Json {
+        constructor(text: string);
+        get text(): string;
+        get data(): Object | undefined;
+        get tree(): jsonc.Node | undefined;
+        get(key: string): Item | undefined;
+        set(key: string, value: any): boolean;
     }
 }
 
