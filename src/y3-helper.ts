@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { fs, log } from './tools';
 
-export * as excel from './editorTable/EXCEL';
+export * as excel from './editorTable/excel2';
 export * as table from './editorTable/editorTable';
 export * as language from './editorTable/language';
 export * from './tools';

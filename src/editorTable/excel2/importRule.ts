@@ -1,6 +1,6 @@
 import { INDEX } from "./attrType";
 import { Int, Str, Templete } from "./fieldTypes";
-import * as constants from "./../../constants";
+import * as constants from "../../constants";
 
 export class ImportRule {
     public editorTableType: constants.Table.NameCN;
