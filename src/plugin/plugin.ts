@@ -29,7 +29,7 @@ export class Plugin {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
             if (line.startsWith('export ')) {
-                lines[i] = line.replace(/export\s+(async\s+)function\s+([\w_\u10000-\uFFFFFFFF]+)/, (_, async, name) => {
+                lines[i] = line.replace(/export\s+(async\s+)?function\s+([\w_\u10000-\uFFFFFFFF]+)/, (_, async, name) => {
                     this.exports[name] = {
                         name,
                         async: async !== '',
