@@ -153,7 +153,7 @@ export async function init() {
         try {
             await pluginManager.run(uri, funcName ?? 'main');
         } catch (error) {
-            vscode.window.showErrorMessage(`运行物编脚本出错：${error}`);
+            vscode.window.showErrorMessage(`运行插件脚本出错：${error}`);
         }
     });
 

@@ -32,10 +32,10 @@ export class Plugin {
                 lines[i] = line.replace(/export\s+(async\s+)?function\s+([\w_\u10000-\uFFFFFFFF]+)/, (_, async, name) => {
                     this.exports[name] = {
                         name,
-                        async: async !== '',
+                        async: async !== undefined,
                         line: i,
                     };
-                    return `${async}function ${name}`;
+                    return `${async ?? ''}function ${name}`;
                 });
             }
         }
