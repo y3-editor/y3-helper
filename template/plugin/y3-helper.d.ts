@@ -7,7 +7,7 @@
 
 declare module 'y3-helper' {
     import * as vscode from 'vscode';
-    export * as excel from 'y3-helper/editorTable/EXCEL';
+    export * as excel from 'y3-helper/editorTable/excel';
     export * as table from 'y3-helper/editorTable/editorTable';
     export * as language from 'y3-helper/editorTable/language';
     export * from 'y3-helper/tools';
@@ -39,13 +39,9 @@ declare module 'y3-helper' {
     export function sleep(ms: number): Promise<void>;
 }
 
-declare module 'y3-helper/editorTable/EXCEL' {
-    export * from 'y3-helper/editorTable/EXCEL/fieldTypes';
-    export * from 'y3-helper/editorTable/EXCEL/attrType';
-    export * from 'y3-helper/editorTable/EXCEL/importRule';
-    export * from 'y3-helper/editorTable/EXCEL/excelExporter';
-    export function init(): void;
-}
+import * as vscode from 'vscode';
+export declare function loadFile(uri: vscode.Uri, sheet?: number | string): Promise<(string | undefined)[][] | undefined>;
+export declare function init(): void;
 
 declare module 'y3-helper/editorTable/editorTable' {
     import { Table } from "y3-helper/constants";
@@ -409,173 +405,6 @@ declare module 'y3-helper/env' {
 declare module 'y3-helper/plugin' {
     export function runAllPlugins(funcName: string): Promise<void>;
     export function init(): Promise<void>;
-}
-
-declare module 'y3-helper/editorTable/EXCEL/fieldTypes' {
-    export const enum FieldType {
-        Default = 0,
-        Int = 1,
-        Str = 2,
-        Bool = 3,
-        Float = 4,
-        RatiosInt = 5,
-        RatiosFloat = 6,
-        List = 7,
-        Templete = 8,
-        Tuple = 9,
-        EnumInt = 10,
-        EnumStr = 11,
-        Enum = 12
-    }
-    export class converter {
-        type: FieldType;
-        defaultValue: any;
-        constructor();
-        getDefault(): any;
-        getTypeDesc(): string;
-        getErrorStr(data: any): string;
-        inputConvert(data: any): any;
-        outputConvert(d: any): any;
-        static getInstance(): any;
-    }
-    export class IntKlass extends converter {
-        type: FieldType;
-        defaultValue: number;
-        constructor(defaultValue?: number | string);
-        getDefault(): number;
-        inputConvert(data: any): any;
-    }
-    export class StrKlass extends converter {
-        type: FieldType;
-        defaultValue: string;
-        constructor(defaultValue?: any);
-        getDefault(): string;
-        inputConvert(data: any): any;
-    }
-    export class BoolenKlass extends converter {
-        type: FieldType;
-        defaultValue: boolean;
-        constructor(defaultValue?: any);
-        getDefault(): boolean;
-        inputConvert(data: any): boolean | undefined;
-    }
-    export class FloatKlass extends converter {
-        type: FieldType;
-        defaultValue: number;
-        constructor(defaultValue?: any);
-        getDefault(): number;
-        inputConvert(data: any): any;
-    }
-    export class RatiosIntKlass extends converter {
-        type: FieldType;
-        defaultValue: number;
-        ratios: number;
-        constructor(ratios?: number, defaultValue?: any);
-        getDefault(): number;
-        inputConvert(data: any): any;
-    }
-    export class RatiosFloatKlass extends converter {
-        type: FieldType;
-        defaultValue: number;
-        ratios: number;
-        constructor(ratios?: number, defaultValue?: any);
-        getDefault(): number;
-        inputConvert(data: any): any;
-    }
-    export class ListKlass extends converter {
-        type: FieldType;
-        seperator: string;
-        ft: converter;
-        constructor(seperator?: string, filedType?: Function | converter);
-        getDefault(): [];
-        inputConvert(data: any): any[] | null | undefined;
-    }
-    export class TupleKlass extends converter {
-        type: FieldType;
-        seperator: string;
-        ftList: Function[] | converter[];
-        constructor(seperator: string, args: Function[] | converter[]);
-        inputConvert(data: any): any[];
-    }
-    export class EnumKlass extends converter {
-        type: FieldType;
-        enumMap: {
-            [key: string]: any;
-        };
-        constructor(map: {
-            [key: string]: any;
-        });
-        inputConvert(data: any): any;
-    }
-    export class TempleteKlass extends converter {
-        type: FieldType;
-        getDefault(): null;
-        inputConvert(data: any): any;
-    }
-    export function Int(value: any): IntKlass;
-    export function Float(value: any): FloatKlass;
-    export function Str(value: any): StrKlass;
-    export function Bool(value: any): BoolenKlass;
-    export function Templete(): TempleteKlass;
-    export function List(seperator: any, type: Function): ListKlass;
-    export function Tuple(seperator?: string, ...args: Function[] | converter[]): TupleKlass;
-    export function Enum(map: {}): EnumKlass;
-    export function RatiosInt(retios?: any, value?: any): RatiosIntKlass;
-    export function RatiosFloat(retios?: any, value?: any): RatiosFloatKlass;
-}
-
-declare module 'y3-helper/editorTable/EXCEL/attrType' {
-    export class AttrKlass {
-        constructor(name: any, desc?: string);
-        getString(): string;
-    }
-    export const NONE: AttrKlass;
-    export const INDEX: AttrKlass;
-    export const DEFAULT: AttrKlass;
-    export const IGNORE: AttrKlass;
-    export const REQUIRED: AttrKlass;
-    export const CONST: AttrKlass;
-    export const SKIPNULL: AttrKlass;
-    export function AS(outKey: string | number, asType: as): as;
-    export class as {
-        outKey: string | number;
-        asType: any;
-        constructor(outKey: string | number, asType: as);
-    }
-}
-
-declare module 'y3-helper/editorTable/EXCEL/importRule' {
-    import * as constants from "y3-helper/constants";
-    export class ImportRule {
-        editorTableType: constants.Table.NameCN;
-        excelRelativePath?: string;
-        sheet?: string;
-        fieldDefs: {
-            [key: string]: [string | string[] | number[], any, any];
-        };
-        filter: Function | undefined;
-        jumpHeader: number;
-        dataRehandle: Function | undefined;
-        constructor(editorTableType: constants.Table.NameCN, excelRelativePath?: string, sheetName?: string);
-        resetRule(editorTableType: constants.Table.NameCN, excelRelativePath?: string, sheetName?: string): void;
-        def(fieldName: string, filedKey: string | string[] | number[], fieldType: any, attrType: any): void;
-        templateBy(fieldName: string): void;
-        indexBy(fieldName: string): void;
-        startBy(jumpHeader: number): void;
-        copyRule(): ImportRule;
-        deepCopy(obj: any): any;
-    }
-}
-
-declare module 'y3-helper/editorTable/EXCEL/excelExporter' {
-    import { ImportRule } from 'y3-helper/editorTable/EXCEL/importRule';
-    export class excelExporter {
-        constructor();
-        excelExport(): Promise<void>;
-        getEditorTableData(): Promise<void>;
-        runRule(rule: ImportRule): Promise<void>;
-        getTmpJsDict(editorTableType: string, tmpID: string): Promise<any>;
-    }
 }
 
 declare module 'y3-helper/editor_meta/unit' {
