@@ -106,12 +106,19 @@ function updateMapSaveWatcher() {
         return;
     }
     watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(y3.env.mapUri, '*.gmp'));
-    watcher.onDidCreate(() => {
-        runAllPlugins('onSave');
-    });
-    watcher.onDidChange(() => {
-        runAllPlugins('onSave');
-    });
+    watcher.onDidCreate(onSave);
+    watcher.onDidChange(onSave);
+
+    let delay: NodeJS.Timeout | undefined;
+    function onSave() {
+        if (delay) {
+            clearTimeout(delay);
+        }
+        delay = setTimeout(() => {
+            delay = undefined;
+            runAllPlugins('onSave');
+        }, 1000);
+    }
 }
 
 export async function runAllPlugins(funcName: string) {
