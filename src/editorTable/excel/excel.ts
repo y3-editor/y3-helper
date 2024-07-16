@@ -33,11 +33,60 @@ export class Sheet {
         });
     }
 
+    private guessTableOffset(): string | undefined {
+        let rowPart: string | undefined;
+        let colPart: string | undefined;
+        let rowIndex = 0;
+        let colIndex = 0;
+        for (let i = 1; i <= this.sheet.columnCount; i++) {
+            const col = this.sheet.getColumn(i);
+            let count = 0;
+            for (let j = 1; j <= this.sheet.rowCount; j++) {
+                if (col.values[j]) {
+                    count++;
+                }
+            }
+            if (count * 2 > this.sheet.rowCount) {
+                colPart = col.letter;
+                colIndex = i;
+                break;
+            }
+        }
+        if (!colPart) {
+            return undefined;
+        }
+        for (let i = 1; i <= this.sheet.rowCount; i++) {
+            const row = this.sheet.getRow(i);
+            let count = 0;
+            for (let j = 1; j <= this.sheet.columnCount; j++) {
+                if ((row.values as [])[j]) {
+                    count++;
+                }
+            }
+            if (count * 2 > this.sheet.columnCount) {
+                rowPart = i.toString();
+                rowIndex = i;
+                break;
+            }
+        }
+        if (!rowPart) {
+            return undefined;
+        }
+        return colPart + rowPart;
+    }
+
     /**
-     * 已某个单元格为锚点，创建一个key-value的表格
+     * 已某个单元格为锚点，创建一个key-value的表格。
+     * 如果不提供参数，会自动猜测一个合适的位置。
      * @param offset 锚点位置
      */
-    public makeTable(offset: string) {
+    public makeTable(offset?: string) {
+        if (!offset) {
+            offset = this.guessTableOffset();
+            if (!offset) {
+                throw new Error('无法猜测出锚点位置，请手动指定锚点');
+            }
+        }
         const cell = this.sheet.getCell(offset);
         const row = cell.row as any as number;
         const col = cell.col as any as number;
@@ -79,17 +128,22 @@ export class Sheet {
 
 export class Excel {
     private workbook = new exceljs.Workbook();
+    private uri?: vscode.Uri;
 
     /**
      * 
      * @param fileUri 文件路径
      */
     async loadFile(fileUri: vscode.Uri): Promise<boolean> {
+        if (this.uri) {
+            return false;
+        }
         let file = await y3.fs.readFile(fileUri);
         if (!file) {
             return false;
         }
         await this.workbook.xlsx.load(file.buffer);
+        this.uri = fileUri;
         return true;
     }
 
