@@ -12,8 +12,14 @@ export async function loadFile(path: vscode.Uri | string, sheetName?: number | s
         path = vscode.Uri.parse(path);
     }
     const exc = new excel.Excel();
-    await exc.loadFile(path);
+    const suc = await exc.loadFile(path);
+    if (!suc) {
+        throw new Error('加载文件失败：' + path.toString());
+    }
     const sheet = exc.getSheet(sheetName ?? 1);
+    if (!sheet) {
+        throw new Error('找不到工作表：' + sheetName);
+    }
     return sheet;
 }
 

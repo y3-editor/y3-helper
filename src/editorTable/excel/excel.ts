@@ -1,5 +1,6 @@
 import * as exceljs from 'exceljs';
 import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 type Cells = Record<string, string>;
 
@@ -83,8 +84,13 @@ export class Excel {
      * 
      * @param fileUri 文件路径
      */
-    async loadFile(fileUri: vscode.Uri) {
-        await this.workbook.xlsx.readFile(fileUri.fsPath);
+    async loadFile(fileUri: vscode.Uri): Promise<boolean> {
+        let file = await y3.fs.readFile(fileUri);
+        if (!file) {
+            return false;
+        }
+        await this.workbook.xlsx.load(file.buffer);
+        return true;
     }
 
     private proxySheet: Record<number, Sheet> = {};
