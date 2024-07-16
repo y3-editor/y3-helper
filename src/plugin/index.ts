@@ -161,6 +161,10 @@ export async function init() {
             await pluginManager.run(uri, funcName ?? 'main');
         } catch (error) {
             vscode.window.showErrorMessage(`运行插件脚本出错：${error}`);
+            if (error instanceof Error) {
+                y3.log.error(error);
+                y3.log.show();
+            }
         }
     });
 

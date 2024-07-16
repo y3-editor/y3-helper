@@ -2,6 +2,7 @@
 // Dependencies for this module:
 //   ../../vscode
 //   ../../y3-helper
+//   ../../exceljs
 //   ../../https
 //   ../../jsonc-parser
 
@@ -37,11 +38,13 @@ declare module 'y3-helper' {
         */
     export function open(uri: vscode.Uri | string): void;
     export function sleep(ms: number): Promise<void>;
+    export function assert(exp: any, msg?: string): void;
 }
 
 declare module 'y3-helper/editorTable/excel' {
     import * as vscode from 'vscode';
-    export function loadFile(uri: vscode.Uri, sheet?: number | string): Promise<(string | undefined)[][] | undefined>;
+    import * as excel from 'y3-helper/editorTable/excel/excel';
+    export function loadFile(uri: vscode.Uri, sheetName?: number | string): Promise<excel.Sheet | undefined>;
     export function init(): void;
 }
 
@@ -189,7 +192,7 @@ declare module 'y3-helper/editorTable/editorTable' {
         * 获取所有的对象（速度比较慢）
         * @returns 所有对象
         */
-    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "声音" | "技能" | "装饰物" | "可破坏物" | "物品" | "魔法效果" | "投射物" | "科技">[]>;
+    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">[]>;
     export function init(): void;
     export {};
 }
@@ -407,6 +410,42 @@ declare module 'y3-helper/env' {
 declare module 'y3-helper/plugin' {
     export function runAllPlugins(funcName: string): Promise<void>;
     export function init(): Promise<void>;
+}
+
+declare module 'y3-helper/editorTable/excel/excel' {
+    import * as exceljs from 'exceljs';
+    import * as vscode from 'vscode';
+    type Upper = Uppercase<string>;
+    type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+    type CellKey = `${Upper}${Digit}`;
+    type Cells = Record<CellKey, string | undefined>;
+    export class Sheet {
+            constructor(sheet: exceljs.Worksheet);
+            /**
+                * 存放所有的单元格，使用 `sheet.cells['A1']` 来获取单元格的值
+                */
+            get cells(): Cells;
+            /**
+                * 获取指定单元格的值
+                * @param row 列号
+                * @param col 行号
+                * @returns 单元格的值
+                */
+            get(row: number | string, col: number | string): string | undefined;
+    }
+    export class Excel {
+            /**
+                *
+                * @param fileUri 文件路径
+                */
+            loadFile(fileUri: vscode.Uri): Promise<void>;
+            /**
+                * 获取指定的sheet
+                * @param indexOrName sheet的索引或名称
+                */
+            getSheet(indexOrName: number | string): Sheet | undefined;
+    }
+    export {};
 }
 
 declare module 'y3-helper/editor_meta/unit' {

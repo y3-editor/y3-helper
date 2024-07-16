@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { fs, log } from './tools';
 
-export { fs, log } from './tools';
 export * as excel from './editorTable/excel';
 export * as table from './editorTable/editorTable';
 export * as language from './editorTable/language';
@@ -60,4 +59,11 @@ export function open(uri: vscode.Uri | string) {
 
 export async function sleep(ms: number) {
     await new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function assert(exp: any, msg?: string) {
+    if (exp !== false && exp !== null && exp !== undefined) {
+        return;
+    }
+    throw new Error(msg ?? 'Assetion failed!');
 }
