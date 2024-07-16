@@ -70,7 +70,7 @@ export class Sheet {
                 if (typeof key === 'symbol') {
                     return {};
                 }
-                return target[key] ??= {};
+                return target[key] ?? {};
             },
         });
     }

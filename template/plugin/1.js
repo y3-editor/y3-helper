@@ -1,7 +1,7 @@
 let y3 = require('y3-helper')
 
-// 定义一个函数，然后点击运行函数按钮即可执行
-export async function example() {
+// 定义一个函数，然后点击运行按钮即可执行
+export async function 演示() {
     //1. 先来创建一个新的单位
     let unitTable = y3.table.openTable('单位') // 打开单位表
     
