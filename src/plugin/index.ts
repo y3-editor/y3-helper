@@ -3,8 +3,6 @@ import * as y3 from 'y3-helper';
 import * as plugin from './plugin';
 import * as mainMenu from '../mainMenu';
 
-let scriptDir = 'y3-helper/plugin';
-
 let pluginManager: plugin.PluginManager | undefined;
 
 class RunButtonProvider implements vscode.CodeLensProvider {
@@ -53,17 +51,16 @@ let runButtonProvider = new RunButtonProvider();
 
 async function initPlugin() {
     await y3.env.mapReady();
-    if (!y3.env.scriptUri) {
+    if (!y3.env.pluginUri) {
         return;
     }
     const templateDir = y3.extensionPath('template/plugin');
-    const targetDir = y3.uri(y3.env.scriptUri, scriptDir);
-    await y3.fs.copy(templateDir, targetDir, {
+    await y3.fs.copy(templateDir, y3.env.pluginUri, {
         overwrite: true,
         recursive: true,
         nameMap: 'listfile.json',
     });
-    const needOpen = y3.uri(targetDir, '1-使用代码修改物编.js');
+    const needOpen = y3.uri(y3.env.pluginUri, '1-使用代码修改物编.js');
     if (!await y3.fs.isFile(needOpen)) {
         return;
     }
@@ -73,11 +70,11 @@ async function initPlugin() {
 
 async function updatePlugin() {
     await y3.env.mapReady();
-    if (!y3.env.scriptUri) {
+    if (!y3.env.pluginUri) {
         return;
     }
     const templateUri = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
-    const targetUri = y3.uri(y3.env.scriptUri, scriptDir, 'y3-helper.d.ts');
+    const targetUri = y3.uri(y3.env.pluginUri, 'y3-helper.d.ts');
     let suc = await y3.fs.copy(templateUri, targetUri, {
         overwrite: true,
     });
@@ -90,10 +87,10 @@ async function updatePlugin() {
 
 function updatePluginManager() {
     pluginManager?.dispose();
-    if (!y3.env.scriptUri) {
+    if (!y3.env.pluginUri) {
         return;
     }
-    pluginManager = new plugin.PluginManager(y3.uri(y3.env.scriptUri, scriptDir));
+    pluginManager = new plugin.PluginManager(y3.env.pluginUri);
     pluginManager.onDidChange(() => {
         runButtonProvider.notifyChange();
     });

@@ -186,6 +186,7 @@ class Env {
     public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
+    public pluginUri?: vscode.Uri;
     public projectUri?: vscode.Uri;
     public editorTableUri?: vscode.Uri;// 物编数据
     public csvTableUri?: vscode.Uri;// CSV表格路径
@@ -281,6 +282,7 @@ class Env {
             this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
             this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
             this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
+            this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
             this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
             this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/editor_table/csv/");
             this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");

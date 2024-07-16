@@ -14,10 +14,10 @@ export class 插件 extends TreeNode {
                 new TreeNode('初始化', {
                     iconPath: new vscode.ThemeIcon('cloud-download'),
                     show: async () => {
-                        if (!y3.env.scriptUri) {
+                        if (!y3.env.pluginUri) {
                             return false;
                         }
-                        return !await y3.fs.isFile(y3.env.scriptUri, 'y3-helper/plugin/y3-helper.d.ts');
+                        return !await y3.fs.isFile(y3.env.pluginUri, 'y3-helper.d.ts');
                     },
                     command: {
                         command: 'y3-helper.initPlugin',
@@ -27,10 +27,10 @@ export class 插件 extends TreeNode {
                 new TreeNode('更新定义文件', {
                     iconPath: new vscode.ThemeIcon('sync'),
                     show: async () => {
-                        if (!y3.env.scriptUri) {
+                        if (!y3.env.pluginUri) {
                             return false;
                         }
-                        return await y3.fs.isFile(y3.env.scriptUri, 'y3-helper/plugin/y3-helper.d.ts');
+                        return await y3.fs.isFile(y3.env.pluginUri, 'y3-helper.d.ts');
                     },
                     command: {
                         command: 'y3-helper.updatePlugin',

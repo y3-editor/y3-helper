@@ -57,6 +57,17 @@ export function open(uri: vscode.Uri | string) {
     vscode.commands.executeCommand('vscode.open', uri);
 }
 
+/**
+ * 在Windows中打开文件
+ * @param uri 文件路径
+ */
+export function openInExplorer(uri: vscode.Uri | string) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.parse(uri);
+    }
+    vscode.commands.executeCommand('revealFileInOS', uri);
+}
+
 export async function sleep(ms: number) {
     await new Promise(resolve => setTimeout(resolve, ms));
 }

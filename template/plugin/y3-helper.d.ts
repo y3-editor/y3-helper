@@ -37,6 +37,11 @@ declare module 'y3-helper' {
         * @param uri 文件路径
         */
     export function open(uri: vscode.Uri | string): void;
+    /**
+        * 在Windows中打开文件
+        * @param uri 文件路径
+        */
+    export function openInExplorer(uri: vscode.Uri | string): void;
     export function sleep(ms: number): Promise<void>;
     export function assert(exp: any, msg?: string): void;
 }
@@ -198,7 +203,7 @@ declare module 'y3-helper/editorTable/editorTable' {
         * 获取所有的对象（速度比较慢）
         * @returns 所有对象
         */
-    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">[]>;
+    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "声音" | "技能" | "装饰物" | "可破坏物" | "物品" | "魔法效果" | "投射物" | "科技">[]>;
     export function init(): void;
     export {};
 }
@@ -394,6 +399,7 @@ declare module 'y3-helper/env' {
         mapUri?: vscode.Uri;
         scriptUri?: vscode.Uri;
         y3Uri?: vscode.Uri;
+        pluginUri?: vscode.Uri;
         projectUri?: vscode.Uri;
         editorTableUri?: vscode.Uri;
         csvTableUri?: vscode.Uri;
