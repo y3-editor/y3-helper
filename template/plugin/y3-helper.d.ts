@@ -44,7 +44,13 @@ declare module 'y3-helper' {
 declare module 'y3-helper/editorTable/excel' {
     import * as vscode from 'vscode';
     import * as excel from 'y3-helper/editorTable/excel/excel';
-    export function loadFile(uri: vscode.Uri, sheetName?: number | string): Promise<excel.Sheet | undefined>;
+    /**
+      * 加载excel文件
+      * @param path excel文件路径
+      * @param sheetName 工作表的名字或序号，默认为 `1`
+      * @returns
+      */
+    export function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<excel.Sheet | undefined>;
     export function init(): void;
 }
 
@@ -415,10 +421,8 @@ declare module 'y3-helper/plugin' {
 declare module 'y3-helper/editorTable/excel/excel' {
     import * as exceljs from 'exceljs';
     import * as vscode from 'vscode';
-    type Upper = Uppercase<string>;
-    type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-    type CellKey = `${Upper}${Digit}`;
-    type Cells = Record<CellKey, string | undefined>;
+    type Cells = Record<string, string>;
+    type Table = Record<string | number, Record<string, string>>;
     export class Sheet {
             constructor(sheet: exceljs.Worksheet);
             /**
@@ -426,12 +430,10 @@ declare module 'y3-helper/editorTable/excel/excel' {
                 */
             get cells(): Cells;
             /**
-                * 获取指定单元格的值
-                * @param row 列号
-                * @param col 行号
-                * @returns 单元格的值
+                * 已某个单元格为锚点，创建一个key-value的表格
+                * @param offset 锚点位置
                 */
-            get(row: number | string, col: number | string): string | undefined;
+            makeTable(offset: string): Table;
     }
     export class Excel {
             /**

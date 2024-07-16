@@ -1,10 +1,9 @@
 import * as exceljs from 'exceljs';
 import * as vscode from 'vscode';
 
-type Upper = Uppercase<string>;
-type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-type CellKey = `${Upper}${Digit}`;
-type Cells = Record<CellKey, string | undefined>;
+type Cells = Record<string, string>;
+
+type Table = Record<string | number, Record<string, string>>;
 
 export class Sheet {
     constructor(private sheet: exceljs.Worksheet) {
@@ -28,13 +27,50 @@ export class Sheet {
                 if (typeof key !== 'string') {
                     return undefined;
                 }
-                return this.sheet.findCell(key, undefined!)?.value?.toString();
+                return this.sheet.findCell(key, undefined!)?.toString() ?? '';
             },
-            has: (target, p) => {
-                if (typeof p !== 'string') {
-                    return false;
+        });
+    }
+
+    /**
+     * 已某个单元格为锚点，创建一个key-value的表格
+     * @param offset 锚点位置
+     */
+    public makeTable(offset: string) {
+        const cell = this.sheet.getCell(offset);
+        const row = cell.row as any as number;
+        const col = cell.col as any as number;
+        const titleRow = this.sheet.getRow(row);
+        const titles: string[] = [];
+        for (let c = col + 1; c <= this.sheet.columnCount; c++) {
+            const cell = titleRow.getCell(c);
+            const title = cell?.toString();
+            titles[c] = title ? title : (cell.address.match(/[A-Z]+/)?.[0] ?? c.toString());
+        }
+
+        let table: Table = {};
+        for (let r = row + 1; r <= this.sheet.rowCount; r++) {
+            const row = this.sheet.getRow(r);
+            const key = row.getCell(col)?.toString();
+            if (!key) {
+                continue;
+            }
+            table[key] = {};
+            for (let c = col + 1; c <= this.sheet.columnCount; c++) {
+                const title = titles[c];
+                table[key][title] = row.getCell(c)?.toString();
+            }
+        }
+
+        return new Proxy(table, {
+            set: () => {
+                throw new Error('这是只读表！');
+            },
+            get: (target, key) => {
+                if (typeof key === 'symbol') {
+                    return {};
                 }
-                return this.sheet.findCell(p, undefined!) !== undefined;
+                return target[key] ??= {};
             },
         });
     }

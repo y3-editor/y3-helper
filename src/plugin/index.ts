@@ -76,13 +76,14 @@ async function updatePlugin() {
     if (!y3.env.scriptUri) {
         return;
     }
-    const templateDir = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
-    const targetDir = y3.uri(y3.env.scriptUri, scriptDir, 'y3-helper.d.ts');
-    let suc = await y3.fs.copy(templateDir, targetDir, {
+    const templateUri = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
+    const targetUri = y3.uri(y3.env.scriptUri, scriptDir, 'y3-helper.d.ts');
+    let suc = await y3.fs.copy(templateUri, targetUri, {
         overwrite: true,
     });
     if (suc) {
         vscode.window.showInformationMessage('插件定义文件更新成功');
+        y3.open(targetUri);
         mainMenu.refresh('插件');
     }
 }
