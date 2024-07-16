@@ -72,30 +72,35 @@ export class Plugin {
     }
 
     public async run(funcName: string, sandbox: vm.Context) {
-        await this.parse();
-        
-        if (this.parseError) {
-            throw new Error(this.parseError);
-        }
-        if (!this.script) {
-            if (!this.fixedCode) {
-                this.parseError = '代码解析失败';
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `正在执行 “${this.name}/${funcName}”`,
+        }, async () => {
+            await this.parse();
+            
+            if (this.parseError) {
                 throw new Error(this.parseError);
             }
-            try {
-                this.script = new vm.Script(this.fixedCode, {
-                    filename: this.uri.path,
-                });
-            } catch (error) {
-                this.parseError = String(error);
-                throw new Error(this.parseError);
+            if (!this.script) {
+                if (!this.fixedCode) {
+                    this.parseError = '代码解析失败';
+                    throw new Error(this.parseError);
+                }
+                try {
+                    this.script = new vm.Script(this.fixedCode, {
+                        filename: this.uri.path,
+                    });
+                } catch (error) {
+                    this.parseError = String(error);
+                    throw new Error(this.parseError);
+                }
             }
-        }
-        let exports = this.script!.runInNewContext(sandbox);
-        if (typeof exports[funcName] !== 'function') {
-            throw new Error(`没有找到要执行的函数${funcName}`);
-        }
-        await exports[funcName]();
+            let exports = this.script!.runInNewContext(sandbox);
+            if (typeof exports[funcName] !== 'function') {
+                throw new Error(`没有找到要执行的函数${funcName}`);
+            }
+            await exports[funcName]();
+        });
     }
 }
 
@@ -222,26 +227,31 @@ export class PluginManager extends vscode.Disposable {
         return Object.values(this.plugins).sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    public async runAll(funcName: string) {
-        let plugins = await this.getAll();
-        let errors = [];
-        let count = 0;
-        for (const plugin of plugins) {
-            const infos = await plugin.getExports();
-            if (!infos[funcName]) {
-                continue;
+    public async runAll(funcName: string): Promise<number> {
+        return await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `正在执行所有插件的${funcName}函数`,
+        }, async () => {
+            let plugins = await this.getAll();
+            let errors = [];
+            let count = 0;
+            for (const plugin of plugins) {
+                const infos = await plugin.getExports();
+                if (!infos[funcName]) {
+                    continue;
+                }
+                try {
+                    await plugin.run(funcName, this.makeSandbox());
+                    count++;
+                } catch (error) {
+                    let errorMessage = String(error).replace(/Error: /, '');
+                    errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
+                }
             }
-            try {
-                await plugin.run(funcName, this.makeSandbox());
-                count++;
-            } catch (error) {
-                let errorMessage = String(error).replace(/Error: /, '');
-                errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
+            if (errors.length > 0) {
+                throw new Error(errors.join('\n'));
             }
-        }
-        if (errors.length > 0) {
-            throw new Error(errors.join('\n'));
-        }
-        return count;
+            return count;
+        });
     }
 }
