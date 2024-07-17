@@ -149,41 +149,55 @@ export class EditorObject<N extends Table.NameCN> {
         return value;
     }
 
-    private checkType(fieldInfo: FieldInfo, value: ItemShape) {
+    private checkType(fieldInfo: FieldInfo, value: ItemShape, convertType = false): ItemShape {
         if (!fieldInfo.type) {
             throw new Error(`未知字段类型:'${fieldInfo.field}'`);
         }
         switch (fieldInfo.type) {
             case 'PLocalizeText': {
+                if (convertType) {
+                    return value?.toString() ?? '';
+                }
                 if (typeof value !== 'string') {
                     throw new Error(`'${fieldInfo.field}'字段应为字符串`);
                 }
-                value = y3.language.keyOf(value, true);
-                break;
+                return value;
             }
             case 'PBool': {
+                if (convertType) {
+                    return !!value;
+                }
                 if (typeof value !== 'boolean') {
                     throw new Error(`'${fieldInfo.field}'字段应为布尔值`);
                 }
-                break;
+                return value;
             }
             case 'PFloat': {
-                if (typeof value !== 'number') {
+                if (convertType) {
+                    value = Number(value);
+                }
+                if (typeof value !== 'number' || isNaN(value)) {
                     throw new Error(`'${fieldInfo.field}'字段应为数字`);
                 }
-                break;
+                return value;
             }
             case 'PInt': {
+                if (convertType) {
+                    value = Number(value);
+                }
                 if (!Number.isSafeInteger(value)) {
                     throw new Error(`'${fieldInfo.field}'字段应为整数`);
                 }
-                break;
+                return value;
             }
             case 'PText': {
+                if (convertType) {
+                    return value?.toString() ?? '';
+                }
                 if (typeof value !== 'string') {
                     throw new Error(`'${fieldInfo.field}'字段应为字符串`);
                 }
-                break;
+                return value;
             }
         }
 
@@ -191,25 +205,32 @@ export class EditorObject<N extends Table.NameCN> {
             if (!Array.isArray(value)) {
                 throw new Error(`'${fieldInfo.field}'字段应为数组`);
             }
+            return value;
         }
         if (fieldInfo.type.endsWith('Formula')) {
             if (!Array.isArray(value)) {
                 throw new Error(`'${fieldInfo.field}'字段应为数组`);
             }
             for (let i = 0; i < value.length; i++) {
-                if (typeof value[i] !== 'string') {
+                let item = value[i];
+                if (convertType) {
+                    item = item?.toString() ?? '';
+                }
+                if (typeof item !== 'string') {
                     throw new Error(`'${fieldInfo.field}'字段的第${i}项应为字符串`);
                 }
             }
+            return value;
         }
+        return value;
     }
 
-    private set(key: string, value: ItemShape): boolean {
+    private set(key: string, value: ItemShape, convertType = false): boolean {
         let fieldInfo = this.getFieldInfo(key);
         if (!fieldInfo) {
             throw new Error(`未知字段:'${key}'`);
         }
-        this.checkType(fieldInfo, value);
+        value = this.checkType(fieldInfo, value, convertType);
         if (key === 'name' && typeof value === 'string') {
             this._name = value;
         }

@@ -78,7 +78,7 @@ export class Sheet {
     /**
      * 已某个单元格为锚点，创建一个key-value的表格。
      * 如果不提供参数，会自动猜测一个合适的位置。
-     * @param offset 锚点位置
+     * @param offset 锚点位置，如 `"B2"`
      */
     public makeTable(offset?: string) {
         if (!offset) {
@@ -92,23 +92,23 @@ export class Sheet {
         const col = cell.col as any as number;
         const titleRow = this.sheet.getRow(row);
         const titles: string[] = [];
-        for (let c = col + 1; c <= this.sheet.columnCount; c++) {
+        for (let c = col; c <= this.sheet.columnCount; c++) {
             const cell = titleRow.getCell(c);
-            const title = cell?.toString();
+            const title = cell.toString();
             titles[c] = title ? title : (cell.address.match(/[A-Z]+/)?.[0] ?? c.toString());
         }
 
         let table: Table = {};
         for (let r = row + 1; r <= this.sheet.rowCount; r++) {
             const row = this.sheet.getRow(r);
-            const key = row.getCell(col)?.toString();
+            const key = row.getCell(col).toString();
             if (!key) {
                 continue;
             }
             table[key] = {};
-            for (let c = col + 1; c <= this.sheet.columnCount; c++) {
+            for (let c = col; c <= this.sheet.columnCount; c++) {
                 const title = titles[c];
-                table[key][title] = row.getCell(c)?.toString();
+                table[key][title] = row.getCell(c).toString();
             }
         }
 
@@ -138,7 +138,8 @@ export class Excel {
         if (this.uri) {
             return false;
         }
-        let file = await y3.fs.readFile(fileUri);
+        let file = await y3.fs.readFile(fileUri)
+                ?? await y3.fs.readFile(vscode.Uri.parse(fileUri.toString() + '.xlsx'));
         if (!file) {
             return false;
         }

@@ -72,7 +72,7 @@ export class Plugin {
     }
 
     public async run(funcName: string, sandbox: vm.Context) {
-        vscode.window.withProgress({
+        await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `正在执行 “${this.name}/${funcName}”`,
         }, async () => {

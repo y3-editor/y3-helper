@@ -55,7 +55,7 @@ declare module 'y3-helper/editorTable/excel' {
       * @param sheetName 工作表的名字或序号，默认为 `1`
       * @returns
       */
-    export function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<excel.Sheet | undefined>;
+    export function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<excel.Sheet>;
     export function init(): void;
 }
 
@@ -203,7 +203,7 @@ declare module 'y3-helper/editorTable/editorTable' {
         * 获取所有的对象（速度比较慢）
         * @returns 所有对象
         */
-    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "声音" | "技能" | "装饰物" | "可破坏物" | "物品" | "魔法效果" | "投射物" | "科技">[]>;
+    export function getAllObjects(): Promise<y3.table.EditorObject<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">[]>;
     export function init(): void;
     export {};
 }
@@ -436,17 +436,18 @@ declare module 'y3-helper/editorTable/excel/excel' {
                 */
             get cells(): Cells;
             /**
-                * 已某个单元格为锚点，创建一个key-value的表格
+                * 已某个单元格为锚点，创建一个key-value的表格。
+                * 如果不提供参数，会自动猜测一个合适的位置。
                 * @param offset 锚点位置
                 */
-            makeTable(offset: string): Table;
+            makeTable(offset?: string): Table;
     }
     export class Excel {
             /**
                 *
                 * @param fileUri 文件路径
                 */
-            loadFile(fileUri: vscode.Uri): Promise<void>;
+            loadFile(fileUri: vscode.Uri): Promise<boolean>;
             /**
                 * 获取指定的sheet
                 * @param indexOrName sheet的索引或名称
