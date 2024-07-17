@@ -108,6 +108,7 @@ export class PluginManager extends vscode.Disposable {
     private _ready = false;
     private _disposables: vscode.Disposable[] = [];
     private _onDidChange = new vscode.EventEmitter<void>();
+    private _onDidRun = new vscode.EventEmitter<{plugin: Plugin, funcName: string}>();
 
     constructor(public dir: vscode.Uri) {
         super(() => {
@@ -160,6 +161,7 @@ export class PluginManager extends vscode.Disposable {
     }
 
     public onDidChange = this._onDidChange.event;
+    public onDidRun = this._onDidRun.event;
 
     private plugins: Record<string, Plugin> = {};
     private async loadPlugins() {
@@ -246,6 +248,8 @@ export class PluginManager extends vscode.Disposable {
                 } catch (error) {
                     let errorMessage = String(error).replace(/Error: /, '');
                     errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
+                } finally {
+                    this._onDidRun.fire({ plugin, funcName });
                 }
             }
             if (errors.length > 0) {

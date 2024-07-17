@@ -85,6 +85,8 @@ async function updatePlugin() {
     }
 }
 
+let _onDidRun = new vscode.EventEmitter<{ plugin: plugin.Plugin, funcName: string }>();
+
 function updatePluginManager() {
     pluginManager?.dispose();
     if (!y3.env.pluginUri) {
@@ -93,6 +95,9 @@ function updatePluginManager() {
     pluginManager = new plugin.PluginManager(y3.env.pluginUri);
     pluginManager.onDidChange(() => {
         runButtonProvider.notifyChange();
+    });
+    pluginManager.onDidRun((data) => {
+        _onDidRun.fire(data);
     });
 }
 
@@ -129,6 +134,8 @@ export async function runAllPlugins(funcName: string) {
         await y3.sleep(200);
     }
 }
+
+export let onDidRun = _onDidRun.event;
 
 export async function init() {
     await y3.env.mapReady();

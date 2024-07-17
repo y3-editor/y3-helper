@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
 import * as excel from './excel';
+import { Table } from '../../constants';
+import * as y3 from 'y3-helper';
+import { Rule } from './rule';
 
 let baseDir: vscode.Uri;
 
@@ -30,6 +33,28 @@ export function setBaseDir(path: vscode.Uri | string) {
         path = vscode.Uri.parse(path);
     }
     baseDir = path;
+}
+
+function getUri(path: vscode.Uri | string) {
+    if (path instanceof vscode.Uri) {
+        return path;
+    }
+    if (y3.fs.isAbsolutePath(path)) {
+        return y3.uri(path);
+    }
+    return y3.uri(baseDir, path);
+}
+
+export function rule(tableName: Table.NameCN, path: vscode.Uri | string, sheetName?: number | string) {
+    path = getUri(path);
+    const ruleInstance = new Rule(path);
+
+    let trg = y3.plugin.onDidRun(() => {
+        trg.dispose();
+        ruleInstance.apply();
+    });
+
+    return ruleInstance;
 }
 
 export function init() {
