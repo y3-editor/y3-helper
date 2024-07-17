@@ -113,6 +113,8 @@ export interface UnitData {
     fresnel_exp: number; // PFloat
     /**
      * 转向时移动速度系数
+     *
+     * 当单位转向时，移动速度会受到一定的影响。
      */
     speed_ratio_in_turn: number; // PFloat
     /**
@@ -161,6 +163,10 @@ export interface UnitData {
      * 这些科技，可以在单位身上研发、升级。
      */
     research_techs: any[]; // PExplorerList
+    /**
+     * 开启面向移动模式
+     */
+    enable_strict_facing_mode: boolean; // PBool
     /**
      * 最大技能资源
      *
@@ -308,9 +314,11 @@ export interface UnitData {
      */
     extra_dmg: number; // PFloat
     /**
-     * 转向补正
+     * 警戒范围(AI)
+     *
+     * 单位的警戒范围(AI)
      */
-    angle_tolerance: number; // PFloat
+    alarm_range: number; // PFloat
     /**
      * 出售获得资源
      *
@@ -744,6 +752,12 @@ export interface UnitData {
      */
     uid: string; // PText
     /**
+     * 允许移动的角度差
+     *
+     * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
+     */
+    angle_tolerance: number; // PFloat
+    /**
      * 移动类型
      *
      * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
@@ -761,12 +775,6 @@ export interface UnitData {
      * 单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方
      */
     cancel_alarm_range: number; // PFloat
-    /**
-     * 警戒范围(AI)
-     *
-     * 单位的警戒范围(AI)
-     */
-    alarm_range: number; // PFloat
     /**
      * 背包栏
      *

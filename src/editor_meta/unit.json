@@ -24,8 +24,9 @@
         "type": "PFloat"
     },
     "angle_tolerance": {
-        "desc": "转向补正",
+        "desc": "允许移动的角度差",
         "key": "angle_tolerance",
+        "tips": "当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。",
         "type": "PFloat"
     },
     "anim_state_name": {
@@ -388,6 +389,11 @@
         "key": "dynamic_collision_r",
         "tips": "碰撞动态半径，每50为1个标准格。",
         "type": "PFloat"
+    },
+    "enable_strict_facing_mode": {
+        "desc": "开启面向移动模式",
+        "key": "enable_strict_facing_mode",
+        "type": "PBool"
     },
     "enemy_mini_map_icon": {
         "desc": "敌方小地图头像",
@@ -928,6 +934,7 @@
     "speed_ratio_in_turn": {
         "desc": "转向时移动速度系数",
         "key": "speed_ratio_in_turn",
+        "tips": "当单位转向时，移动速度会受到一定的影响。",
         "type": "PFloat"
     },
     "standard_walk_rate": {
