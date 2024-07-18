@@ -506,6 +506,10 @@ declare module 'y3-helper/editorTable/excel/rule' {
                 */
             key?: string;
             /**
+                * 对象从哪个模板上继承。如果不提供，或是与`key`相同则使用默认模板。
+                */
+            template?: string;
+            /**
                 * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
                 */
             apply(): Promise<void>;

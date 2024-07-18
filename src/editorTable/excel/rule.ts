@@ -40,6 +40,11 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public key?: string;
 
     /**
+     * 对象从哪个模板上继承。如果不提供，或是与`key`相同则使用默认模板。
+     */
+    public template?: string;
+
+    /**
      * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
      */
     public async apply() {
@@ -55,14 +60,20 @@ export class Rule<N extends y3.const.Table.NameCN> {
             for (let firstCol in sheetTable) {
                 let row = sheetTable[firstCol];
                 let key = this.key ? this.getValue(row, this.key) : firstCol;
+                let template = this.template ? this.getValue(row, this.template) : undefined;
                 let objectKey = Number(key);
+                let templateKey: number | undefined = Number(template);
                 if (isNaN(objectKey)) {
                     throw new Error(`对象的 key(${this.key ?? '<第一列>'}) 不是数字：${key}`);
+                }
+                if (templateKey === objectKey || isNaN(templateKey)) {
+                    templateKey = undefined;
                 }
                 let editorObject = await editorTable.get(objectKey)
                                 ?? await editorTable.create({
                                     key: objectKey,
                                     overwrite: true,
+                                    copyFrom: templateKey,
                                 });
                 if (!editorObject) {
                     throw new Error(`创建对象失败：${objectKey}`);

@@ -266,7 +266,7 @@ export class EditorObject<N extends Table.NameCN> {
      * 获取对象的名称
      */
     public get name(): string {
-        if (!this._name) {
+        if (this._name === undefined) {
             let name = this.text?.match(/"name"\s*:\s*(\-?\d*)/);
             if (name && name[1]) {
                 let id = parseInt(name[1]);
@@ -282,7 +282,7 @@ export class EditorObject<N extends Table.NameCN> {
                 }
             }
         }
-        if (!this._name) {
+        if (this._name === undefined) {
             this._name = '<未知名称>';
         }
         return this._name;
@@ -448,7 +448,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
                 }
                 this._listCache.push(key);
             }
-            this._listCache.sort();
+            this._listCache.sort((a, b) => a - b);
         }
         this.resortList();
         return this._listCache;
@@ -630,7 +630,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         }
 
         this._listCache = Array.from(sets);
-        this._listCache.sort();
+        this._listCache.sort((a, b) => a - b);
     }
 
     @throttle(200)

@@ -80,7 +80,7 @@ export class Sheet {
      * 如果不提供参数，会自动猜测一个合适的位置。
      * @param offset 锚点位置，如 `"B2"`
      */
-    public makeTable(offset?: string) {
+    public makeTable(offset?: string): Table {
         if (!offset) {
             offset = this.guessTableOffset();
             if (!offset) {
