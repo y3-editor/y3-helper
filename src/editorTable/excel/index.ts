@@ -45,7 +45,7 @@ function getUri(path: vscode.Uri | string) {
     return y3.uri(baseDir, path);
 }
 
-export function rule(tableName: Table.NameCN, path: vscode.Uri | string, sheetName?: number | string) {
+export function rule<N extends Table.NameCN>(tableName: N, path: vscode.Uri | string, sheetName?: number | string) {
     path = getUri(path);
     const ruleInstance = new Rule(tableName, path, sheetName);
 

@@ -239,6 +239,7 @@ export class PluginManager extends vscode.Disposable {
         if (!plugin) {
             throw new Error('没有找到插件');
         }
+        y3.log.info(`开始运行插件 "${plugin.name}/${funcName}"`);
         await plugin.run(funcName, this.makeSandbox());
         y3.log.info(`运行插件 "${plugin.name}/${funcName}" 成功`);
     }
@@ -251,8 +252,9 @@ export class PluginManager extends vscode.Disposable {
     public async runAll(funcName: string): Promise<number> {
         return await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `正在执行所有插件的${funcName}函数`,
+            title: `正在执行所有插件的"${funcName}"函数`,
         }, async () => {
+            y3.log.info(`开始运行所有插件的"${funcName}"函数`);
             let plugins = await this.getAll();
             let errors = [];
             let count = 0;
@@ -272,6 +274,7 @@ export class PluginManager extends vscode.Disposable {
             if (errors.length > 0) {
                 throw new Error(errors.join('\n'));
             }
+            y3.log.info(`所有插件的"${funcName}"函数运行完成`);
             return count;
         });
     }

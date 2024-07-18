@@ -14,7 +14,15 @@ type RuleData<N extends y3.const.Table.NameCN> = {
 
 export class Rule<N extends y3.const.Table.NameCN> {
     public rule = this;
+
+    /**
+     * 用于转换字段的数据
+     */
     public as = as;
+
+    /**
+     * 描述字段从表里的哪些列获取数据。
+     */
     public data: RuleData<N> = {} as any;
 
     constructor(public tableName: N, public path: vscode.Uri, public sheetName?: number | string) {
@@ -27,6 +35,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
 
     /**
      * 对象的key在表格中的列名。如果不提供会使用第一列。
+     * 如果不存在会新建。
      */
     public key?: string;
 
@@ -34,9 +43,10 @@ export class Rule<N extends y3.const.Table.NameCN> {
      * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
      */
     public async apply() {
-        const fileName = this.path.path.match(/([^/\\]+)\.json$/)?.[1] ?? this.path.fsPath;
-        const ruleName = `${this.tableName} - ${fileName}/${this.sheetName ?? 1}`;
-        y3.log.info(`正在执行规则：${ruleName}`);
+        let fileName = this.path.path.match(/([^/\\]+)$/)?.[1] ?? this.path.fsPath;
+        fileName = fileName.replace(/\.[^.]+$/, '');
+        const ruleName = `${this.tableName}: ${fileName}/${this.sheetName ?? 1}`;
+        y3.log.info(`正在执行规则："${ruleName}"`);
         try {
             if (!this.key) {
                 throw new Error('必须先设置 rule.key');
@@ -52,10 +62,11 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 if (isNaN(objectKey)) {
                     throw new Error(`对象的 key(${this.key ?? firstCol}) 不是数字：${key}`);
                 }
-                let editorObject = await editorTable.create({
-                    key: objectKey,
-                    overwrite: true,
-                });
+                let editorObject = await editorTable.get(objectKey)
+                                ?? await editorTable.create({
+                                    key: objectKey,
+                                    overwrite: true,
+                                });
                 if (!editorObject) {
                     throw new Error(`创建对象失败：${objectKey}`);
                 }
@@ -63,12 +74,12 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 for (const field in this.rule.data) {
                     const col = this.rule.data[field];
                     let value = this.getValue(row, col);
-                    editorObject.data[field] = value;
+                    editorObject.set(field, value, true);
                 }
             }
         } catch (e) {
-            y3.log.error(`执行规则失败：${ruleName}\n${e}`);
-            vscode.window.showErrorMessage(`执行规则失败：${ruleName}\n${e}`);
+            y3.log.error(`执行规则失败："${ruleName}"\n${e}`);
+            vscode.window.showErrorMessage(`执行规则失败："${ruleName}"\n${e}`);
         }
     }
 

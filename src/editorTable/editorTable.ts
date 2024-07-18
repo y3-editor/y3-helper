@@ -225,7 +225,7 @@ export class EditorObject<N extends Table.NameCN> {
         return value;
     }
 
-    private set(key: string, value: ItemShape, convertType = false): boolean {
+    public set(key: string, value: ItemShape, convertType = false): boolean {
         let fieldInfo = this.getFieldInfo(key);
         if (!fieldInfo) {
             throw new Error(`未知字段:'${key}'`);

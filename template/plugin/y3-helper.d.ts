@@ -59,7 +59,7 @@ declare module 'y3-helper/editorTable/excel' {
       */
     export function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<excel.Sheet>;
     export function setBaseDir(path: vscode.Uri | string): void;
-    export function rule(tableName: Table.NameCN, path: vscode.Uri | string, sheetName?: number | string): Rule<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">;
+    export function rule<N extends Table.NameCN>(tableName: N, path: vscode.Uri | string, sheetName?: number | string): Rule<N>;
     export function init(): void;
 }
 
@@ -76,6 +76,15 @@ declare module 'y3-helper/editorTable/editorTable' {
     import { ModifierData } from "y3-helper/editor_meta/modifier";
     import { ProjectileData } from "y3-helper/editor_meta/projectile";
     import { TechData } from "y3-helper/editor_meta/tech";
+    type ItemShape = string | boolean | number | null | TupleShape | MapShape | ArrayShape;
+    type ArrayShape = ItemShape[];
+    type TupleShape = {
+            __tuple__: true;
+            items: ItemShape[];
+    };
+    type MapShape = {
+            [key: string]: any;
+    };
     export class FieldInfo {
             tableName: Table.NameCN;
             field: string;
@@ -98,6 +107,7 @@ declare module 'y3-helper/editorTable/editorTable' {
                 */
             get json(): y3.json.Json | undefined;
             get data(): EditorData<N>;
+            set(key: string, value: ItemShape, convertType?: boolean): boolean;
             /**
                 * 获取对象的名称
                 */
@@ -477,7 +487,13 @@ declare module 'y3-helper/editorTable/excel/rule' {
             path: vscode.Uri;
             sheetName?: string | number | undefined;
             rule: this;
+            /**
+                * 用于转换字段的数据
+                */
             as: {};
+            /**
+                * 描述字段从表里的哪些列获取数据。
+                */
             data: RuleData<N>;
             constructor(tableName: N, path: vscode.Uri, sheetName?: string | number | undefined);
             /**
@@ -486,6 +502,7 @@ declare module 'y3-helper/editorTable/excel/rule' {
             offset?: string;
             /**
                 * 对象的key在表格中的列名。如果不提供会使用第一列。
+                * 如果不存在会新建。
                 */
             key?: string;
             /**
