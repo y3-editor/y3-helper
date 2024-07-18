@@ -49,13 +49,17 @@ declare module 'y3-helper' {
 declare module 'y3-helper/editorTable/excel' {
     import * as vscode from 'vscode';
     import * as excel from 'y3-helper/editorTable/excel/excel';
+    import { Table } from 'y3-helper/constants';
+    import { Rule } from 'y3-helper/editorTable/excel/rule';
     /**
       * 加载excel文件
-      * @param path excel文件路径
+      * @param path excel文件路径，可以不写后缀，默认为 `.xlsx`
       * @param sheetName 工作表的名字或序号，默认为 `1`
       * @returns
       */
     export function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<excel.Sheet>;
+    export function setBaseDir(path: vscode.Uri | string): void;
+    export function rule(tableName: Table.NameCN, path: vscode.Uri | string, sheetName?: number | string): Rule<"单位" | "装饰物" | "物品" | "技能" | "魔法效果" | "投射物" | "科技" | "可破坏物" | "声音">;
     export function init(): void;
 }
 
@@ -81,7 +85,7 @@ declare module 'y3-helper/editorTable/editorTable' {
             constructor(tableName: Table.NameCN, field: string);
     }
     export function ready(): Promise<void>;
-    type EditorData<N extends Table.NameCN> = N extends '单位' ? UnitData : N extends '声音' ? SoundData : N extends '技能' ? AbilityData : N extends '装饰物' ? DecorationData : N extends '可破坏物' ? DestructibleData : N extends '物品' ? ItemData : N extends '魔法效果' ? ModifierData : N extends '投射物' ? ProjectileData : N extends '科技' ? TechData : never;
+    export type EditorData<N extends Table.NameCN> = N extends '单位' ? UnitData : N extends '声音' ? SoundData : N extends '技能' ? AbilityData : N extends '装饰物' ? DecorationData : N extends '可破坏物' ? DestructibleData : N extends '物品' ? ItemData : N extends '魔法效果' ? ModifierData : N extends '投射物' ? ProjectileData : N extends '科技' ? TechData : never;
     export class EditorObject<N extends Table.NameCN> {
             tableName: N;
             key: number;
@@ -421,6 +425,10 @@ declare module 'y3-helper/env' {
 
 declare module 'y3-helper/plugin' {
     export function runAllPlugins(funcName: string): Promise<void>;
+    export function onceDidRun(callback: (data: {
+        funcName: string;
+        result: any;
+    }) => void | Promise<void>): void;
     export function init(): Promise<void>;
 }
 
@@ -428,7 +436,7 @@ declare module 'y3-helper/editorTable/excel/excel' {
     import * as exceljs from 'exceljs';
     import * as vscode from 'vscode';
     type Cells = Record<string, string>;
-    type Table = Record<string | number, Record<string, string>>;
+    export type Table = Record<string | number, Record<string, string>>;
     export class Sheet {
             constructor(sheet: exceljs.Worksheet);
             /**
@@ -438,7 +446,7 @@ declare module 'y3-helper/editorTable/excel/excel' {
             /**
                 * 已某个单元格为锚点，创建一个key-value的表格。
                 * 如果不提供参数，会自动猜测一个合适的位置。
-                * @param offset 锚点位置
+                * @param offset 锚点位置，如 `"B2"`
                 */
             makeTable(offset?: string): Table;
     }
@@ -453,6 +461,37 @@ declare module 'y3-helper/editorTable/excel/excel' {
                 * @param indexOrName sheet的索引或名称
                 */
             getSheet(indexOrName: number | string): Sheet | undefined;
+    }
+    export {};
+}
+
+declare module 'y3-helper/editorTable/excel/rule' {
+    import * as vscode from 'vscode';
+    import * as y3 from 'y3-helper';
+    type As<T> = string | (() => T);
+    type RuleData<N extends y3.const.Table.NameCN> = {
+            [key in keyof y3.table.EditorData<N>]: As<y3.table.EditorData<N>[key]>;
+    };
+    export class Rule<N extends y3.const.Table.NameCN> {
+            tableName: N;
+            path: vscode.Uri;
+            sheetName?: string | number | undefined;
+            rule: this;
+            as: {};
+            data: RuleData<N>;
+            constructor(tableName: N, path: vscode.Uri, sheetName?: string | number | undefined);
+            /**
+                * 表格中的偏移量，如 `A1`、`B2` 等。如果不提供会尝试自动查找。
+                */
+            offset?: string;
+            /**
+                * 对象的key在表格中的列名。如果不提供会使用第一列。
+                */
+            key?: string;
+            /**
+                * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
+                */
+            apply(): Promise<void>;
     }
     export {};
 }
@@ -573,6 +612,8 @@ declare module 'y3-helper/editor_meta/unit' {
             fresnel_exp: number;
             /**
                 * 转向时移动速度系数
+                *
+                * 当单位转向时，移动速度会受到一定的影响。
                 */
             speed_ratio_in_turn: number;
             /**
@@ -621,6 +662,10 @@ declare module 'y3-helper/editor_meta/unit' {
                 * 这些科技，可以在单位身上研发、升级。
                 */
             research_techs: any[];
+            /**
+                * 开启面向移动模式
+                */
+            enable_strict_facing_mode: boolean;
             /**
                 * 最大技能资源
                 *
@@ -768,9 +813,11 @@ declare module 'y3-helper/editor_meta/unit' {
                 */
             extra_dmg: number;
             /**
-                * 转向补正
+                * 警戒范围(AI)
+                *
+                * 单位的警戒范围(AI)
                 */
-            angle_tolerance: number;
+            alarm_range: number;
             /**
                 * 出售获得资源
                 *
@@ -1204,6 +1251,12 @@ declare module 'y3-helper/editor_meta/unit' {
                 */
             uid: string;
             /**
+                * 允许移动的角度差
+                *
+                * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
+                */
+            angle_tolerance: number;
+            /**
                 * 移动类型
                 *
                 * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
@@ -1221,12 +1274,6 @@ declare module 'y3-helper/editor_meta/unit' {
                 * 单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方
                 */
             cancel_alarm_range: number;
-            /**
-                * 警戒范围(AI)
-                *
-                * 单位的警戒范围(AI)
-                */
-            alarm_range: number;
             /**
                 * 背包栏
                 *

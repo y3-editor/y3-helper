@@ -71,36 +71,57 @@ export class Plugin {
         return this.exports;
     }
 
+    public running = false;
+
     public async run(funcName: string, sandbox: vm.Context) {
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `正在执行 “${this.name}/${funcName}”`,
         }, async () => {
-            await this.parse();
-            
-            if (this.parseError) {
-                throw new Error(this.parseError);
-            }
-            if (!this.script) {
-                if (!this.fixedCode) {
-                    this.parseError = '代码解析失败';
+            try {
+                this.running = true;
+                await this.parse();
+                
+                if (this.parseError) {
                     throw new Error(this.parseError);
                 }
-                try {
-                    this.script = new vm.Script(this.fixedCode, {
-                        filename: this.uri.path,
-                    });
-                } catch (error) {
-                    this.parseError = String(error);
-                    throw new Error(this.parseError);
+                if (!this.script) {
+                    if (!this.fixedCode) {
+                        this.parseError = '代码解析失败';
+                        throw new Error(this.parseError);
+                    }
+                    try {
+                        this.script = new vm.Script(this.fixedCode, {
+                            filename: this.uri.path,
+                        });
+                    } catch (error) {
+                        this.parseError = String(error);
+                        throw new Error(this.parseError);
+                    }
                 }
+                let exports = this.script!.runInNewContext(sandbox);
+                if (typeof exports[funcName] !== 'function') {
+                    throw new Error(`没有找到要执行的函数${funcName}`);
+                }
+                let result = exports[funcName]();
+                await this.fireDidRun(funcName, result);
+                return result;
+            } finally {
+                this.running = false;
             }
-            let exports = this.script!.runInNewContext(sandbox);
-            if (typeof exports[funcName] !== 'function') {
-                throw new Error(`没有找到要执行的函数${funcName}`);
-            }
-            await exports[funcName]();
         });
+    }
+
+    private _onceDidRun: ((data: { funcName: string, result: any }) => void | Promise<void>)[] = [];
+    private async fireDidRun(funcName: string, result: any) {
+        for (const callback of this._onceDidRun) {
+            await callback({ funcName, result });
+        }
+        this._onceDidRun.length = 0;
+    }
+
+    public onceDidRun(callback: (data: { funcName: string, result: any }) => void | Promise<void>) {
+        this._onceDidRun.push(callback);
     }
 }
 
@@ -108,7 +129,6 @@ export class PluginManager extends vscode.Disposable {
     private _ready = false;
     private _disposables: vscode.Disposable[] = [];
     private _onDidChange = new vscode.EventEmitter<void>();
-    private _onDidRun = new vscode.EventEmitter<{plugin: Plugin, funcName: string}>();
 
     constructor(public dir: vscode.Uri) {
         super(() => {
@@ -161,9 +181,8 @@ export class PluginManager extends vscode.Disposable {
     }
 
     public onDidChange = this._onDidChange.event;
-    public onDidRun = this._onDidRun.event;
 
-    private plugins: Record<string, Plugin> = {};
+    public plugins: Record<string, Plugin> = {};
     private async loadPlugins() {
         this._ready = false;
         for (const [filename, fileType] of await y3.fs.scan(this.dir)) {
@@ -248,8 +267,6 @@ export class PluginManager extends vscode.Disposable {
                 } catch (error) {
                     let errorMessage = String(error).replace(/Error: /, '');
                     errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
-                } finally {
-                    this._onDidRun.fire({ plugin, funcName });
                 }
             }
             if (errors.length > 0) {

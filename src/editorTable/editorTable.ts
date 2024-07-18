@@ -69,7 +69,7 @@ export async function ready() {
         }
     }
 }
-type EditorData<N extends Table.NameCN>
+export type EditorData<N extends Table.NameCN>
     = N extends '单位' ? UnitData
     : N extends '声音' ? SoundData
     : N extends '技能' ? AbilityData

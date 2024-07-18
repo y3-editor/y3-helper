@@ -4,7 +4,7 @@ import * as y3 from 'y3-helper';
 
 type Cells = Record<string, string>;
 
-type Table = Record<string | number, Record<string, string>>;
+export type Table = Record<string | number, Record<string, string>>;
 
 export class Sheet {
     constructor(private sheet: exceljs.Worksheet) {

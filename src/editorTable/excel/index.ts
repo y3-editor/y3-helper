@@ -47,11 +47,10 @@ function getUri(path: vscode.Uri | string) {
 
 export function rule(tableName: Table.NameCN, path: vscode.Uri | string, sheetName?: number | string) {
     path = getUri(path);
-    const ruleInstance = new Rule(path);
+    const ruleInstance = new Rule(tableName, path, sheetName);
 
-    let trg = y3.plugin.onDidRun(() => {
-        trg.dispose();
-        ruleInstance.apply();
+    y3.plugin.onceDidRun(async () => {
+        await ruleInstance.apply();
     });
 
     return ruleInstance;
