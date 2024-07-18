@@ -48,19 +48,16 @@ export class Rule<N extends y3.const.Table.NameCN> {
         const ruleName = `${this.tableName}: ${fileName}/${this.sheetName ?? 1}`;
         y3.log.info(`正在执行规则："${ruleName}"`);
         try {
-            if (!this.key) {
-                throw new Error('必须先设置 rule.key');
-            }
             let sheet = await y3.excel.loadFile(this.path, this.sheetName);
             let sheetTable = sheet.makeTable();
             let editorTable = y3.table.openTable(this.tableName);
 
             for (let firstCol in sheetTable) {
                 let row = sheetTable[firstCol];
-                let key = this.getValue(row, this.key ?? firstCol);
+                let key = this.key ? this.getValue(row, this.key) : firstCol;
                 let objectKey = Number(key);
                 if (isNaN(objectKey)) {
-                    throw new Error(`对象的 key(${this.key ?? firstCol}) 不是数字：${key}`);
+                    throw new Error(`对象的 key(${this.key ?? '<第一列>'}) 不是数字：${key}`);
                 }
                 let editorObject = await editorTable.get(objectKey)
                                 ?? await editorTable.create({

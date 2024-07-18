@@ -30,7 +30,6 @@ export async function 生成规则() {
     y3.excel.setBaseDir(y3.env.pluginUri)
     let rule = y3.excel.rule('单位', '3-读取excel')
 
-    rule.key = '编号'
     rule.data.name = '名称'
     rule.data.attack_phy = '攻击'
     rule.data.hp_max = '血量'
