@@ -175,6 +175,9 @@ export class EditorObject<N extends Table.NameCN> {
             case 'PFloat': {
                 if (convertType) {
                     value = Number(value);
+                    if (isNaN(value)) {
+                        value = 0.0;
+                    }
                 }
                 if (typeof value !== 'number' || isNaN(value)) {
                     throw new Error(`'${fieldInfo.field}'字段应为数字`);
@@ -184,6 +187,9 @@ export class EditorObject<N extends Table.NameCN> {
             case 'PInt': {
                 if (convertType) {
                     value = Number(value);
+                    if (isNaN(value)) {
+                        value = 0;
+                    }
                 }
                 if (!Number.isSafeInteger(value)) {
                     throw new Error(`'${fieldInfo.field}'字段应为整数`);

@@ -13,12 +13,6 @@ export class 插件 extends TreeNode {
             childs: [
                 new TreeNode('初始化', {
                     iconPath: new vscode.ThemeIcon('cloud-download'),
-                    show: async () => {
-                        if (!y3.env.pluginUri) {
-                            return false;
-                        }
-                        return !await y3.fs.isFile(y3.env.pluginUri, 'y3-helper.d.ts');
-                    },
                     command: {
                         command: 'y3-helper.initPlugin',
                         title: '初始化插件',
@@ -36,7 +30,7 @@ export class 插件 extends TreeNode {
                         command: 'y3-helper.updatePlugin',
                         title: '更新插件定义文件',
                     },
-                })
+                }),
             ]
         });
     }
