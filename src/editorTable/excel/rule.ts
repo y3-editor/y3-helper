@@ -6,7 +6,7 @@ type ReaderLike<T> = {
 };
 
 type AsLike<T> = {
-    (value: any, source: T): T | undefined;
+    (content: any, source?: T): T | undefined;
 };
 
 function mergeObject(from: Record<string, any>, to: Record<string, any>) {
@@ -26,10 +26,11 @@ function mergeObject(from: Record<string, any>, to: Record<string, any>) {
 }
 
 class AsRule<T> {
-    constructor(private as: AsLike<T>) {}
+    constructor(private as?: As<T>) {}
 
-    public applyAs(content: any, source: T): T | undefined {
-        let value = this.as(content, source);
+    protected value: any;
+    applyAs(content: any, source?: T): T | undefined {
+        let value = this.as ? callAs(this.as, content, source) : content;
         if (
             value === undefined ||
             value === null ||
@@ -77,18 +78,56 @@ class AsRule<T> {
 }
 
 class ReaderRule<T> extends AsRule<T> {
-    constructor(private reader: ReaderLike<T>) {
-        super((value) => value);
+    constructor(private reader: ReaderLike<T>, as?: As<T>) {
+        super(as);
     }
 
-    public applyReader(row: Record<string, string>, source: T): T | undefined {
+    public applyReader(row: Record<string, string>, source?: T): T | undefined {
         return this.applyAs(this.reader(row), source);
     }
-
 }
 
-const as = {
+function callAs(as: As<any>, value: any, source?: any) {
+    if (as instanceof AsRule) {
+        return as.applyAs(value, source);
+    }
+    return as(value, source);
+}
 
+const braver = {
+    number: (value: any) => parseFloat(value),
+    split: (value: string, separator: string | RegExp, converter?: As<any>) => {
+        let array: any[] = value.split(separator);
+        if (converter) {
+            return array.map((item, index) => {
+                return callAs(converter, item, array[index]);
+            });
+        }
+        return array;
+    },
+} as const;
+
+const as = {
+    /**
+     * 将值视为数字。
+     * @param value 值
+     * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+     * @returns
+     */
+    number: (defaultValue?: number) => {
+        return new AsRule<number>(braver.number).default(defaultValue);
+    },
+    /**
+     * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+     * @param title 列标题
+     * @param separator 分割符
+     * @param converter 数组中的每一项还会调用此函数再转换一次
+     * @returns 
+     */
+    split: <T = string>(separator: string | RegExp, converter?: (value: string) => T) => {
+        let rule = new AsRule<T[]>((value) => braver.split(value, separator, converter));
+        return rule;
+    }
 } as const;
 
 const reader = {
@@ -106,7 +145,7 @@ const reader = {
      * @returns 
      */
     number: (title: string, defaultValue?: number) => {
-        return new ReaderRule<number>((row) => parseFloat(row[title])).default(defaultValue);
+        return new ReaderRule<number>((row) => braver.number(row[title])).default(defaultValue);
     },
     /**
      * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
@@ -120,11 +159,7 @@ const reader = {
             if (!row[title]) {
                 return undefined;
             }
-            let array: any[] = row[title].split(separator);
-            if (converter) {
-                return array.map(converter);
-            }
-            return array;
+            return braver.split(row[title], separator, converter);
         });
         return rule;
     }
@@ -132,15 +167,24 @@ const reader = {
 
 type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
 
+type As<T> = AsLike<T> | AsRule<T>;
+
+
 type EditorDataField<N extends y3.const.Table.NameCN> = keyof y3.table.EditorData<N>;
+type EditorDataFieldType<N extends y3.const.Table.NameCN, F extends EditorDataField<N>> = y3.table.EditorData<N>[F];
 
 type RuleData<N extends y3.const.Table.NameCN> = {
-    [key in EditorDataField<N>]: Reader<y3.table.EditorData<N>[key]>;
+    [key in EditorDataField<N>]: Reader<EditorDataFieldType<N, key>>;
+};
+
+type RuleField<N extends y3.const.Table.NameCN> = {
+    [key in EditorDataField<N>]: key;
 };
 
 type Action<N extends y3.const.Table.NameCN> = {
     field: keyof RuleData<N>,
-    reader: Reader<any>,
+    action: Reader<any>,
+    asRule?: AsRule<any>,
 };
 
 export class Rule<N extends y3.const.Table.NameCN> {
@@ -161,12 +205,14 @@ export class Rule<N extends y3.const.Table.NameCN> {
      */
     public data: RuleData<N> = new Proxy({}, {
         set: (target, key, value) => {
-            this._actions.push({ field: key as any, reader: value });
+            this._actions.push({ field: key as any, action: value });
             return false;
         },
-        get: (target, key) => {
+    }) as any;
+    public field: RuleField<N> = new Proxy({}, {
+        get (target, key) {
             return key;
-        },
+        }
     }) as any;
 
     constructor(public tableName: N, public path: vscode.Uri, public sheetName?: number | string) {
@@ -191,8 +237,11 @@ export class Rule<N extends y3.const.Table.NameCN> {
     /**
      * 定义一个根据excel字段的生成规则
      */
-    public def<T extends EditorDataField<N>>(title: string, field: T, as?: AsLike<T>) {
-
+    public def<F extends EditorDataField<N>>(title: string, field: F, as?: As<EditorDataFieldType<N, F>>) {
+        this._actions.push({
+            field,
+            action: new ReaderRule((row) => row[title] as any, as),
+        });
     }
 
     /**
@@ -210,8 +259,8 @@ export class Rule<N extends y3.const.Table.NameCN> {
 
             for (let firstCol in sheetTable) {
                 let row = sheetTable[firstCol];
-                let key = this.key ? this.getValue(row, this.key, undefined) : firstCol;
-                let template = this.template ? this.getValue(row, this.template, undefined) : undefined;
+                let key = this.key ? this.getValue(row, this.key) : firstCol;
+                let template = this.template ? this.getValue(row, this.template) : undefined;
                 let objectKey = Number(key);
                 let templateKey: number | undefined = Number(template);
                 if (isNaN(objectKey)) {
@@ -232,7 +281,10 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 }
 
                 for (const action of this.rule._actions) {
-                    let value = this.getValue(row, action.reader, editorObject.data[action.field]);
+                    let value = this.getValue(row, action.action, editorObject.data[action.field]);
+                    if (action.asRule) {
+                        value = callAs(action.asRule, value, editorObject.data[action.field]);
+                    }
                     if (value === undefined) {
                         continue;
                     }
@@ -245,7 +297,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
         }
     }
 
-    private getValue(row: Record<string, string>, value: Reader<any>, source: any): any {
+    private getValue(row: Record<string, string>, value: Reader<any>, source?: any): any {
         if (typeof value === 'string') {
             return row[value];
         }

@@ -478,12 +478,16 @@ declare module 'y3-helper/editorTable/excel/excel' {
 declare module 'y3-helper/editorTable/excel/rule' {
     import * as vscode from 'vscode';
     import * as y3 from 'y3-helper';
-    interface ReaderLike<T> {
+    type ReaderLike<T> = {
             (row: Record<string, string>): T | undefined;
-    }
-    class ReaderRule<T> {
-            constructor(callback: ReaderLike<T>);
-            call(row: Record<string, string>): T | undefined;
+    };
+    type AsLike<T> = {
+            (content: any, source?: T): T | undefined;
+    };
+    class AsRule<T> {
+            constructor(as?: As<T> | undefined);
+            protected value: any;
+            applyAs(content: any, source?: T): T | undefined;
             /**
                 * 如果值为 `undefined`，则使用此默认值。
                 * @param value 默认值。
@@ -497,9 +501,19 @@ declare module 'y3-helper/editorTable/excel/rule' {
                 */
             finally(callback: (value?: T) => T): this;
     }
+    class ReaderRule<T> extends AsRule<T> {
+            constructor(reader: ReaderLike<T>, as?: As<T>);
+            applyReader(row: Record<string, string>, source?: T): T | undefined;
+    }
     type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
+    type As<T> = AsLike<T> | AsRule<T>;
+    type EditorDataField<N extends y3.const.Table.NameCN> = keyof y3.table.EditorData<N>;
+    type EditorDataFieldType<N extends y3.const.Table.NameCN, F extends EditorDataField<N>> = y3.table.EditorData<N>[F];
     type RuleData<N extends y3.const.Table.NameCN> = {
-            [key in keyof y3.table.EditorData<N>]: Reader<y3.table.EditorData<N>[key]>;
+            [key in EditorDataField<N>]: Reader<EditorDataFieldType<N, key>>;
+    };
+    type RuleField<N extends y3.const.Table.NameCN> = {
+            [key in EditorDataField<N>]: key;
     };
     export class Rule<N extends y3.const.Table.NameCN> {
             tableName: N;
@@ -507,7 +521,7 @@ declare module 'y3-helper/editorTable/excel/rule' {
             sheetName?: string | number | undefined;
             rule: this;
             /**
-                * 用于转换字段的数据。
+                * excel的字段读取器。
                 */
             reader: {
                     /**
@@ -534,9 +548,30 @@ declare module 'y3-helper/editorTable/excel/rule' {
                     readonly split: <T_1 = string>(title: string, separator: string | RegExp, converter?: ((value: string) => T_1) | undefined) => ReaderRule<T_1[]>;
             };
             /**
+                * 数据转换器
+                */
+            as: {
+                    /**
+                        * 将值视为数字。
+                        * @param value 值
+                        * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+                        * @returns
+                        */
+                    readonly number: (defaultValue?: number | undefined) => AsRule<number>;
+                    /**
+                        * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+                        * @param title 列标题
+                        * @param separator 分割符
+                        * @param converter 数组中的每一项还会调用此函数再转换一次
+                        * @returns
+                        */
+                    readonly split: <T = string>(separator: string | RegExp, converter?: ((value: string) => T) | undefined) => AsRule<T[]>;
+            };
+            /**
                 * 描述字段从表里的哪些列获取数据。
                 */
             data: RuleData<N>;
+            field: RuleField<N>;
             constructor(tableName: N, path: vscode.Uri, sheetName?: string | number | undefined);
             /**
                 * 表格中的偏移量，如 `A1`、`B2` 等。如果不提供会尝试自动查找。
@@ -551,6 +586,10 @@ declare module 'y3-helper/editorTable/excel/rule' {
                 * 对象从哪个模板上继承。如果不提供，或是与`key`相同则使用默认模板。
                 */
             template?: string;
+            /**
+                * 定义一个根据excel字段的生成规则
+                */
+            def<F extends EditorDataField<N>>(title: string, field: F, as?: As<EditorDataFieldType<N, F>>): void;
             /**
                 * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
                 */
