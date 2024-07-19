@@ -1,10 +1,13 @@
-import * as excel from './excel';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
-interface ReaderLike<T> {
+type ReaderLike<T> = {
     (row: Record<string, string>): T | undefined;
-}
+};
+
+type AsLike<T> = {
+    (value: any, source: T): T | undefined;
+};
 
 function mergeObject(from: Record<string, any>, to: Record<string, any>) {
     for (let key in from) {
@@ -22,12 +25,11 @@ function mergeObject(from: Record<string, any>, to: Record<string, any>) {
     }
 }
 
-class ReaderRule<T> {
-    constructor(private callback: ReaderLike<T>) {
-    }
+class AsRule<T> {
+    constructor(private as: AsLike<T>) {}
 
-    public call(row: Record<string, string>): T | undefined {
-        let value = this.callback(row);
+    public applyAs(content: any, source: T): T | undefined {
+        let value = this.as(content, source);
         if (
             value === undefined ||
             value === null ||
@@ -50,7 +52,7 @@ class ReaderRule<T> {
         }
         return value;
     }
-
+    
     private _default?: T;
     /**
      * 如果值为 `undefined`，则使用此默认值。
@@ -73,6 +75,21 @@ class ReaderRule<T> {
         return this;
     }
 }
+
+class ReaderRule<T> extends AsRule<T> {
+    constructor(private reader: ReaderLike<T>) {
+        super((value) => value);
+    }
+
+    public applyReader(row: Record<string, string>, source: T): T | undefined {
+        return this.applyAs(this.reader(row), source);
+    }
+
+}
+
+const as = {
+
+} as const;
 
 const reader = {
     /**
@@ -115,8 +132,10 @@ const reader = {
 
 type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
 
+type EditorDataField<N extends y3.const.Table.NameCN> = keyof y3.table.EditorData<N>;
+
 type RuleData<N extends y3.const.Table.NameCN> = {
-    [key in keyof y3.table.EditorData<N>]: Reader<y3.table.EditorData<N>[key]>;
+    [key in EditorDataField<N>]: Reader<y3.table.EditorData<N>[key]>;
 };
 
 type Action<N extends y3.const.Table.NameCN> = {
@@ -128,9 +147,13 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public rule = this;
 
     /**
-     * 用于转换字段的数据。
+     * excel的字段读取器。
      */
     public reader = reader;
+    /**
+     * 数据转换器
+     */
+    public as = as;
 
     private _actions: Action<N>[] = [];
     /**
@@ -166,6 +189,13 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public template?: string;
 
     /**
+     * 定义一个根据excel字段的生成规则
+     */
+    public def<T extends EditorDataField<N>>(title: string, field: T, as?: AsLike<T>) {
+
+    }
+
+    /**
      * 立即执行规则。一般来说你不需要调用，会在当前插件执行完后自动调用。
      */
     public async apply() {
@@ -180,8 +210,8 @@ export class Rule<N extends y3.const.Table.NameCN> {
 
             for (let firstCol in sheetTable) {
                 let row = sheetTable[firstCol];
-                let key = this.key ? this.getValue(row, this.key) : firstCol;
-                let template = this.template ? this.getValue(row, this.template) : undefined;
+                let key = this.key ? this.getValue(row, this.key, undefined) : firstCol;
+                let template = this.template ? this.getValue(row, this.template, undefined) : undefined;
                 let objectKey = Number(key);
                 let templateKey: number | undefined = Number(template);
                 if (isNaN(objectKey)) {
@@ -202,7 +232,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 }
 
                 for (const action of this.rule._actions) {
-                    let value = this.getValue(row, action.reader);
+                    let value = this.getValue(row, action.reader, editorObject.data[action.field]);
                     if (value === undefined) {
                         continue;
                     }
@@ -215,7 +245,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
         }
     }
 
-    private getValue(row: Record<string, string>, value: Reader<any>): any {
+    private getValue(row: Record<string, string>, value: Reader<any>, source: any): any {
         if (typeof value === 'string') {
             return row[value];
         }
@@ -223,7 +253,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
             return value(row);
         }
         if (value instanceof ReaderRule) {
-            return value.call(row);
+            return value.applyReader(row, source);
         }
         throw new Error('未知的值类型: ' + String(value));
     }
