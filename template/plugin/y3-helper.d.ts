@@ -478,7 +478,27 @@ declare module 'y3-helper/editorTable/excel/excel' {
 declare module 'y3-helper/editorTable/excel/rule' {
     import * as vscode from 'vscode';
     import * as y3 from 'y3-helper';
-    type As<T> = string | (() => T);
+    interface AsLike<T> {
+            (row: Record<string, string>): T | undefined;
+    }
+    class AsRule<T> {
+            constructor(callback: AsLike<T>);
+            call(row: Record<string, string>): T | undefined;
+            /**
+                * 如果值为 `undefined`，则使用此默认值。
+                * @param value 默认值。
+                * @returns
+                */
+            default(value?: T): this;
+            /**
+                * 对数据进行最后的处理。
+                * @param callback 处理函数。
+                * @returns
+                */
+            finally(callback: (value?: T) => T): this;
+            getDefault(): T | undefined;
+    }
+    type As<T> = string | undefined | AsLike<T> | AsRule<T>;
     type RuleData<N extends y3.const.Table.NameCN> = {
             [key in keyof y3.table.EditorData<N>]: As<y3.table.EditorData<N>[key]>;
     };
@@ -488,9 +508,32 @@ declare module 'y3-helper/editorTable/excel/rule' {
             sheetName?: string | number | undefined;
             rule: this;
             /**
-                * 用于转换字段的数据
+                * 用于转换字段的数据。
                 */
-            as: {};
+            as: {
+                    /**
+                        * excel的每一行都会调用此回调哈数，你需要返回最终写入表中的值。
+                        * 返回 `undefined` 时表示不做修改（使用物编里原来的值）。
+                        * @param callback 一个回调函数，需要你返回最终写入表中的值。
+                        * @returns
+                        */
+                    readonly rule: <T>(callback: AsLike<T>) => AsRule<T>;
+                    /**
+                        * 将值视为数字。
+                        * @param title 列标题
+                        * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+                        * @returns
+                        */
+                    readonly number: (title: string, defaultValue?: number | undefined) => AsRule<number>;
+                    /**
+                        * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+                        * @param title 列标题
+                        * @param separator 分割符
+                        * @param converter 数组中的每一项还会调用此函数再转换一次
+                        * @returns
+                        */
+                    readonly split: <T_1 = string>(title: string, separator: string | RegExp, converter?: ((value: string) => T_1) | undefined) => AsRule<T_1[]>;
+            };
             /**
                 * 描述字段从表里的哪些列获取数据。
                 */

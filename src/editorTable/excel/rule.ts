@@ -2,12 +2,118 @@ import * as excel from './excel';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
-const as = {
-    custom: (value: any, defaultValue: any) => {
-    }
-};
+interface AsLike<T> {
+    (row: Record<string, string>): T | undefined;
+}
 
-type As<T> = string | (() => T);
+function mergeObject(from: Record<string, any>, to: Record<string, any>) {
+    for (let key in from) {
+        if (typeof from[key] === 'object' && from[key] !== null ) {
+            if (to[key] === undefined) {
+                to[key] = {};
+            }
+            if (to[key] === null || typeof to[key] !== 'object') {
+                continue;
+            }
+            mergeObject(from[key], to[key]);
+        } else {
+            to[key] ??= from[key];
+        }
+    }
+}
+
+class AsRule<T> {
+    constructor(private callback: AsLike<T>) {
+    }
+
+    public call(row: Record<string, string>): T | undefined {
+        let value = this.callback(row);
+        if (
+            value === undefined ||
+            value === null ||
+            value === '' ||
+            (typeof value === 'number' && isNaN(value))
+        ) {
+            value = this._default;
+        }
+        if (
+            typeof this._default === 'object' &&
+            typeof value === 'object' &&
+            this._default !== value &&
+            this._default !== null &&
+            value !== null
+        ) {
+            mergeObject(this._default, value);
+        }
+        if (this._finally) {
+            value = this._finally(value);
+        }
+        return value;
+    }
+
+    private _default?: T;
+    /**
+     * 如果值为 `undefined`，则使用此默认值。
+     * @param value 默认值。
+     * @returns 
+     */
+    public default(value?: T) {
+        this._default = value;
+        return this;
+    }
+
+    private _finally?: (value?: T) => T;
+    /**
+     * 对数据进行最后的处理。
+     * @param callback 处理函数。
+     * @returns 
+     */
+    public finally(callback: (value?: T) => T) {
+        this._finally = callback;
+        return this;
+    }
+}
+
+const as = {
+    /**
+     * excel的每一行都会调用此回调哈数，你需要返回最终写入表中的值。
+     * 返回 `undefined` 时表示不做修改（使用物编里原来的值）。
+     * @param callback 一个回调函数，需要你返回最终写入表中的值。
+     * @returns 
+     */
+    rule: <T>(callback: AsLike<T>): AsRule<T> => new AsRule(callback),
+    /**
+     * 将值视为数字。
+     * @param title 列标题
+     * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+     * @returns 
+     */
+    number: (title: string, defaultValue?: number) => {
+        return new AsRule<number>((row) => parseFloat(row[title])).default(defaultValue);
+    },
+    /**
+     * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+     * @param title 列标题
+     * @param separator 分割符
+     * @param converter 数组中的每一项还会调用此函数再转换一次
+     * @returns 
+     */
+    split: <T = string>(title: string, separator: string | RegExp, converter?: (value: string) => T) => {
+        let rule = new AsRule<T[]>((row) => {
+            if (!row[title]) {
+                return undefined;
+            }
+            let array: any[] = row[title].split(separator);
+            if (converter) {
+                return array.map(converter);
+            }
+            return array;
+        });
+        return rule;
+    }
+} as const;
+
+type As<T> = string | undefined | AsLike<T> | AsRule<T>;
 
 type RuleData<N extends y3.const.Table.NameCN> = {
     [key in keyof y3.table.EditorData<N>]: As<y3.table.EditorData<N>[key]>;
@@ -17,7 +123,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public rule = this;
 
     /**
-     * 用于转换字段的数据。传入空字符串被视为 `undefined`。
+     * 用于转换字段的数据。
      */
     public as = as;
 
@@ -84,6 +190,9 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 for (const field in this.rule.data) {
                     const col = this.rule.data[field];
                     let value = this.getValue(row, col);
+                    if (value === undefined) {
+                        continue;
+                    }
                     editorObject.set(field, value, true);
                 }
             }
@@ -97,6 +206,12 @@ export class Rule<N extends y3.const.Table.NameCN> {
         if (typeof value === 'string') {
             return row[value];
         }
-        return '';
+        if (typeof value === 'function') {
+            return value(row);
+        }
+        if (value instanceof AsRule) {
+            return value.call(row);
+        }
+        throw new Error('未知的值类型: ' + String(value));
     }
 }
