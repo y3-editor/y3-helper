@@ -489,7 +489,7 @@ declare module 'y3-helper/editorTable/excel/rule' {
         * @param content excel中的值
         * @param source 物编中的值。如果你用def修改过，这里会传入修改后的值（用于多个项目修改同一个值）。
         */
-    type AsLike<T> = (content: any, source?: T) => T | undefined;
+    type AsLike<T> = (content: string, source?: T) => T | undefined;
     class AsRule<T> {
             constructor(as?: As<T> | undefined);
             protected value: any;
