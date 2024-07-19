@@ -3,5 +3,8 @@
     "2.js":   "2-自动执行的脚本.js",
     "3.js":   "3-读取excel.js",
     "4.js":   "4-excel生成物编.js",
-    "3.xlsx": "3-读取excel.xlsx"
+    "5.js":   "5-excel生成物编·极.js",
+
+    "3.xlsx": "3-读取excel.xlsx",
+    "5.xlsx": "5-excel生成物编·极.xlsx"
 }
