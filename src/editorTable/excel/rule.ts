@@ -2,7 +2,7 @@ import * as excel from './excel';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
-interface AsLike<T> {
+interface ReaderLike<T> {
     (row: Record<string, string>): T | undefined;
 }
 
@@ -22,8 +22,8 @@ function mergeObject(from: Record<string, any>, to: Record<string, any>) {
     }
 }
 
-class AsRule<T> {
-    constructor(private callback: AsLike<T>) {
+class ReaderRule<T> {
+    constructor(private callback: ReaderLike<T>) {
     }
 
     public call(row: Record<string, string>): T | undefined {
@@ -74,14 +74,14 @@ class AsRule<T> {
     }
 }
 
-const as = {
+const reader = {
     /**
      * excel的每一行都会调用此回调哈数，你需要返回最终写入表中的值。
      * 返回 `undefined` 时表示不做修改（使用物编里原来的值）。
      * @param callback 一个回调函数，需要你返回最终写入表中的值。
      * @returns 
      */
-    rule: <T>(callback: AsLike<T>): AsRule<T> => new AsRule(callback),
+    rule: <T>(callback: ReaderLike<T>): ReaderRule<T> => new ReaderRule(callback),
     /**
      * 将值视为数字。
      * @param title 列标题
@@ -89,7 +89,7 @@ const as = {
      * @returns 
      */
     number: (title: string, defaultValue?: number) => {
-        return new AsRule<number>((row) => parseFloat(row[title])).default(defaultValue);
+        return new ReaderRule<number>((row) => parseFloat(row[title])).default(defaultValue);
     },
     /**
      * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
@@ -99,7 +99,7 @@ const as = {
      * @returns 
      */
     split: <T = string>(title: string, separator: string | RegExp, converter?: (value: string) => T) => {
-        let rule = new AsRule<T[]>((row) => {
+        let rule = new ReaderRule<T[]>((row) => {
             if (!row[title]) {
                 return undefined;
             }
@@ -113,10 +113,15 @@ const as = {
     }
 } as const;
 
-type As<T> = string | undefined | AsLike<T> | AsRule<T>;
+type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
 
 type RuleData<N extends y3.const.Table.NameCN> = {
-    [key in keyof y3.table.EditorData<N>]: As<y3.table.EditorData<N>[key]>;
+    [key in keyof y3.table.EditorData<N>]: Reader<y3.table.EditorData<N>[key]>;
+};
+
+type Action<N extends y3.const.Table.NameCN> = {
+    field: keyof RuleData<N>,
+    reader: Reader<any>,
 };
 
 export class Rule<N extends y3.const.Table.NameCN> {
@@ -125,12 +130,21 @@ export class Rule<N extends y3.const.Table.NameCN> {
     /**
      * 用于转换字段的数据。
      */
-    public as = as;
+    public reader = reader;
 
+    private _actions: Action<N>[] = [];
     /**
      * 描述字段从表里的哪些列获取数据。
      */
-    public data: RuleData<N> = {} as any;
+    public data: RuleData<N> = new Proxy({}, {
+        set: (target, key, value) => {
+            this._actions.push({ field: key as any, reader: value });
+            return false;
+        },
+        get: (target, key) => {
+            return key;
+        },
+    }) as any;
 
     constructor(public tableName: N, public path: vscode.Uri, public sheetName?: number | string) {
     }
@@ -187,13 +201,12 @@ export class Rule<N extends y3.const.Table.NameCN> {
                     throw new Error(`创建对象失败：${objectKey}`);
                 }
 
-                for (const field in this.rule.data) {
-                    const col = this.rule.data[field];
-                    let value = this.getValue(row, col);
+                for (const action of this.rule._actions) {
+                    let value = this.getValue(row, action.reader);
                     if (value === undefined) {
                         continue;
                     }
-                    editorObject.set(field, value, true);
+                    editorObject.set(action.field as string, value, true);
                 }
             }
         } catch (e) {
@@ -202,14 +215,14 @@ export class Rule<N extends y3.const.Table.NameCN> {
         }
     }
 
-    private getValue(row: Record<string, string>, value: As<any>): any {
+    private getValue(row: Record<string, string>, value: Reader<any>): any {
         if (typeof value === 'string') {
             return row[value];
         }
         if (typeof value === 'function') {
             return value(row);
         }
-        if (value instanceof AsRule) {
+        if (value instanceof ReaderRule) {
             return value.call(row);
         }
         throw new Error('未知的值类型: ' + String(value));
