@@ -1,13 +1,19 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
-type ReaderLike<T> = {
-    (row: Record<string, string>): T | undefined;
-};
+/**
+ * 读取excel中的值。
+ * @param row excel中的一行数据
+ * @returns 返回需要写入表中的值。
+ */
+type ReaderLike<T> = (row: Record<string, string>) => T | undefined;
 
-type AsLike<T> = {
-    (content: any, source?: T): T | undefined;
-};
+/**
+ * 对数据进行处理。
+ * @param content excel中的值
+ * @param source 物编中的值。如果你用def修改过，这里会传入修改后的值（用于多个项目修改同一个值）。
+ */
+type AsLike<T> = (content: any, source?: T) => T | undefined;
 
 function mergeObject(from: Record<string, any>, to: Record<string, any>) {
     for (let key in from) {
@@ -236,6 +242,9 @@ export class Rule<N extends y3.const.Table.NameCN> {
 
     /**
      * 定义一个根据excel字段的生成规则
+     * @param title excel中的列标题
+     * @param field 物编中的字段
+     * @param as 数据转换器
      */
     public def<F extends EditorDataField<N>>(title: string, field: F, as?: As<EditorDataFieldType<N, F>>) {
         this._actions.push({
