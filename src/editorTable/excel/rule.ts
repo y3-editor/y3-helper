@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
 const as = {
-
+    custom: (value: any, defaultValue: any) => {
+    }
 };
 
 type As<T> = string | (() => T);
@@ -16,7 +17,7 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public rule = this;
 
     /**
-     * 用于转换字段的数据
+     * 用于转换字段的数据。传入空字符串被视为 `undefined`。
      */
     public as = as;
 
@@ -66,9 +67,10 @@ export class Rule<N extends y3.const.Table.NameCN> {
                 if (isNaN(objectKey)) {
                     throw new Error(`对象的 key(${this.key ?? '<第一列>'}) 不是数字：${key}`);
                 }
-                if (templateKey === objectKey || isNaN(templateKey)) {
+                if (templateKey === objectKey || !templateKey) {
                     templateKey = undefined;
                 }
+
                 let editorObject = await editorTable.get(objectKey)
                                 ?? await editorTable.create({
                                     key: objectKey,
