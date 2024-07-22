@@ -6,3 +6,6 @@
 **/*.map
 .github/**
 tmp/**
+src/**
+!src/**/*.json
+**/*.log
