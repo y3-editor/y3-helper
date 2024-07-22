@@ -34,7 +34,7 @@ export function init(context: vscode.ExtensionContext) {
         if (!env.scriptUri) {
             return;
         }
-        tools.fs.writeFile(env.scriptUri, 'log/debugger_path.lua', `return [[${debuggerContext.extensionUri.fsPath}]]`);
+        tools.fs.writeFile(env.scriptUri, '.log/debugger_path.lua', `return [[${debuggerContext.extensionUri.fsPath}]]`);
     }
 
     update_debugger_path();

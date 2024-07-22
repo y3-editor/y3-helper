@@ -76,7 +76,7 @@ export class 功能 extends TreeNode {
                         node.command = {
                             command: 'vscode.open',
                             title: '查看日志',
-                            arguments: [vscode.Uri.joinPath(env.scriptUri!, 'log/lua_player01.log')]
+                            arguments: [vscode.Uri.joinPath(env.scriptUri!, '.log/lua_player01.log')]
                         };
                     },
                 }),

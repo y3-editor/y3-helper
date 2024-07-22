@@ -8,8 +8,8 @@ let os = require('os')
 
 export async function onGame() {
     y3.print('启动游戏！')
-    // 在你的Lua代码里加入 `require 'log.onGame'` 试试看
-    y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'log/onGame.lua'), `
+    // 在你的Lua代码里加入 `require 'y3-helper.plugin.onGame'` 试试看
+    y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'y3-helper/plugin/onGame.lua'), `
 print('运行者：${os.userInfo().username}，运行时间：${new Date().toLocaleString()}')
 `)
 }
@@ -28,8 +28,8 @@ export async function onEditor() {
 
 export async function onSave() {
     y3.print('保存地图！')
-    // 在你的Lua代码里加入 `require 'log.onSave'` 试试看
-    y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'log/onSave.lua'), `
+    // 在你的Lua代码里加入 `require 'y3-helper.plugin.onSave'` 试试看
+    y3.fs.writeFile(y3.uri(y3.env.scriptUri, 'y3-helper/plugin/onSave.lua'), `
 print('保存者：${os.userInfo().username}，保存时间：${new Date().toLocaleString()}')
 `)
 }

@@ -139,7 +139,7 @@ class Helper {
                 }
 
                 // 初始化配置
-                await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, 'log'));
+                await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, '.log'));
                 let copySource = vscode.Uri.joinPath(y3Uri, '演示/项目配置');
                 for await (const entry of await vscode.workspace.fs.readDirectory(copySource)) {
                     try {
