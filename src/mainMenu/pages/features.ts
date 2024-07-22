@@ -1,6 +1,7 @@
 import { env } from "../../env";
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 export class 功能 extends TreeNode {
     constructor() {
@@ -19,20 +20,12 @@ export class 功能 extends TreeNode {
                     },
                     update: async (node) => {
                         node.iconPath = new vscode.ThemeIcon('cloud-download');
-                        try {
-                            let stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(env.y3Uri!, '.git'));
-                            if (stat.type === vscode.FileType.Directory) {
-                                node.iconPath = new vscode.ThemeIcon('check');
-                            }
-                        } catch {}
+                        if (await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'))) {
+                            node.iconPath = new vscode.ThemeIcon('check');
+                        }
                     },
                     show: async () => {
-                        try {
-                            await vscode.workspace.fs.stat(vscode.Uri.joinPath(env.y3Uri!, '.git'));
-                            return false;
-                        } catch {
-                            return true;
-                        }
+                        return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'));
                     }
                 }),
                 new TreeNode('启动游戏', {
