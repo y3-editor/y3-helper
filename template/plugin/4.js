@@ -11,7 +11,7 @@ export async function 生成物编() {
     for (let key in table) {
         let data = table[key]
         let unitTable = y3.table.openTable('单位')
-        // 获取或创建单位
+        // 先获取单位，如果不存在则创建
         let unit = await unitTable.get(Number(key))
                 || await unitTable.create({
                     key: Number(key),
