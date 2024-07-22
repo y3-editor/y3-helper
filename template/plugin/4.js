@@ -11,10 +11,12 @@ export async function 生成物编() {
     for (let key in table) {
         let data = table[key]
         let unitTable = y3.table.openTable('单位')
-        let unit = await unitTable.create({
-            key: Number(key),
-            overwrite: true,
-        })
+        // 获取或创建单位
+        let unit = await unitTable.get(Number(key))
+                || await unitTable.create({
+                    key: Number(key),
+                    overwrite: true,
+                })
 
         unit.data.name       = data['名称']
         unit.data.attack_phy = Number(data['攻击'])

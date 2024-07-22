@@ -241,6 +241,11 @@ export class Rule<N extends y3.const.Table.NameCN> {
     public template?: string;
 
     /**
+     * 是否强制创建对象。默认情况下会优先使用已有对象，保留对象已有的数据。
+     */
+    public overwrite?: boolean;
+
+    /**
      * 定义一个根据excel字段的生成规则
      * @param title excel中的列标题
      * @param field 物编中的字段
@@ -279,8 +284,8 @@ export class Rule<N extends y3.const.Table.NameCN> {
                     templateKey = undefined;
                 }
 
-                let editorObject = await editorTable.get(objectKey)
-                                ?? await editorTable.create({
+                let editorObject = this.overwrite ? undefined : await editorTable.get(objectKey);
+                editorObject ??= await editorTable.create({
                                     key: objectKey,
                                     overwrite: true,
                                     copyFrom: templateKey,
