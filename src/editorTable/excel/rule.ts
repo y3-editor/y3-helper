@@ -101,7 +101,12 @@ function callAs(as: As<any>, value: any, source?: any) {
 }
 
 const braver = {
-    number: (value: any) => parseFloat(value),
+    boolean: (value: string) => {
+        if (value === undefined || value === null || value === '') {
+            return undefined;
+        }
+        return !!value;
+    },
     split: (value: string, separator: string | RegExp, converter?: As<any>) => {
         let array: any[] = value.split(separator);
         if (converter) {
@@ -121,7 +126,25 @@ const as = {
      * @returns
      */
     number: (defaultValue?: number) => {
-        return new AsRule<number>(braver.number).default(defaultValue);
+        return new AsRule<number>(parseFloat).default(defaultValue);
+    },
+    /**
+     * 将值视为字符串。
+     * @param value 值
+     * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+     * @returns
+     */
+    string: (defaultValue?: string) => {
+        return new AsRule<string>((value) => value).default(defaultValue);
+    },
+    /**
+     * 将值视为布尔值。
+     * @param value 值
+     * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+     * @returns
+     */
+    boolean: (defaultValue?: boolean) => {
+        return new AsRule<boolean>(braver.boolean).default(defaultValue);
     },
     /**
      * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
@@ -151,7 +174,26 @@ const reader = {
      * @returns 
      */
     number: (title: string, defaultValue?: number) => {
-        return new ReaderRule<number>((row) => braver.number(row[title])).default(defaultValue);
+        return new ReaderRule<number>((row) => parseFloat(row[title])).default(defaultValue);
+    },
+    /**
+     * 将值视为布尔值。
+     * @param title 列标题
+     * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+     * @returns 
+     */
+    boolean: (title: string, defaultValue?: boolean) => {
+        return new ReaderRule<boolean>((row) => braver.boolean(row[title])).default(defaultValue);
+    },
+    /**
+     * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+     * @param title 列标题
+     * @param separator 分割符
+     * @param converter 数组中的每一项还会调用此函数再转换一次
+     * @returns 
+     */
+    string: (title: string, defaultValue?: string) => {
+        return new ReaderRule<string>((row) => row[title]).default(defaultValue);
     },
     /**
      * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
