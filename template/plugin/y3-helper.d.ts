@@ -446,7 +446,9 @@ declare module 'y3-helper/editorTable/excel/excel' {
     import * as exceljs from 'exceljs';
     import * as vscode from 'vscode';
     type Cells = Record<string, string>;
-    export type Table = Record<string | number, Record<string, string>>;
+    type TableKey = string | number;
+    export type Table = Record<TableKey, Record<string, string>>;
+    export type MultiTable = Record<TableKey, Record<string, string[]>>;
     export class Sheet {
             constructor(sheet: exceljs.Worksheet);
             /**
@@ -459,6 +461,13 @@ declare module 'y3-helper/editorTable/excel/excel' {
                 * @param offset 锚点位置，如 `"B2"`
                 */
             makeTable(offset?: string): Table;
+            /**
+                * 已某个单元格为锚点，创建一个key-value[]的多维表格。
+                * 与 `makeTable` 不同，可以一个对象可以保存多行的数据。
+                * 如果不提供参数，会自动猜测一个合适的位置。
+                * @param offset 锚点位置，如 `"B2"`
+                */
+            makeMultiTable(offset?: string): MultiTable;
     }
     export class Excel {
             /**
@@ -545,6 +554,21 @@ declare module 'y3-helper/editorTable/excel/rule' {
                         */
                     readonly number: (title: string, defaultValue?: number | undefined) => ReaderRule<number>;
                     /**
+                        * 将值视为布尔值。
+                        * @param title 列标题
+                        * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+                        * @returns
+                        */
+                    readonly boolean: (title: string, defaultValue?: boolean | undefined) => ReaderRule<boolean>;
+                    /**
+                        * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
+                        * @param title 列标题
+                        * @param separator 分割符
+                        * @param converter 数组中的每一项还会调用此函数再转换一次
+                        * @returns
+                        */
+                    readonly string: (title: string, defaultValue?: string | undefined) => ReaderRule<string>;
+                    /**
                         * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
                         * @param title 列标题
                         * @param separator 分割符
@@ -564,6 +588,20 @@ declare module 'y3-helper/editorTable/excel/rule' {
                         * @returns
                         */
                     readonly number: (defaultValue?: number | undefined) => AsRule<number>;
+                    /**
+                        * 将值视为字符串。
+                        * @param value 值
+                        * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+                        * @returns
+                        */
+                    readonly string: (defaultValue?: string | undefined) => AsRule<string>;
+                    /**
+                        * 将值视为布尔值。
+                        * @param value 值
+                        * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
+                        * @returns
+                        */
+                    readonly boolean: (defaultValue?: boolean | undefined) => AsRule<boolean>;
                     /**
                         * 将值视为数组。如果设置了 `default`，则会用默认值填充数组。
                         * @param title 列标题
@@ -592,6 +630,10 @@ declare module 'y3-helper/editorTable/excel/rule' {
                 * 对象从哪个模板上继承。如果不提供，或是与`key`相同则使用默认模板。
                 */
             template?: string;
+            /**
+                * 是否强制创建对象。默认情况下会优先使用已有对象，保留对象已有的数据。
+                */
+            overwrite?: boolean;
             /**
                 * 定义一个根据excel字段的生成规则
                 * @param title excel中的列标题

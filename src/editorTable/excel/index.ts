@@ -13,9 +13,7 @@ let baseDir: vscode.Uri;
  * @returns 
  */
 export async function loadFile(path: vscode.Uri | string, sheetName?: number | string) {
-    if (typeof path === 'string') {
-        path = vscode.Uri.parse(path);
-    }
+    path = getUri(path);
     const exc = new excel.Excel();
     const suc = await exc.loadFile(path);
     if (!suc) {

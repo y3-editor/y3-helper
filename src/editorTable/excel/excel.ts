@@ -3,8 +3,9 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
 type Cells = Record<string, string>;
-
-export type Table = Record<string | number, Record<string, string>>;
+type TableKey = string | number;
+export type Table = Record<TableKey, Record<string, string>>;
+export type MultiTable = Record<TableKey, Record<string, string[]>>;
 
 export class Sheet {
     constructor(private sheet: exceljs.Worksheet) {
@@ -46,7 +47,7 @@ export class Sheet {
                     count++;
                 }
             }
-            if (count * 2 > this.sheet.rowCount) {
+            if (count * 4 > this.sheet.rowCount) {
                 colPart = col.letter;
                 colIndex = i;
                 break;
@@ -110,6 +111,68 @@ export class Sheet {
                 const title = titles[c];
                 table[key][title] = row.getCell(c).toString();
             }
+        }
+
+        return new Proxy(table, {
+            set: () => {
+                throw new Error('这是只读表！');
+            },
+            get: (target, key) => {
+                if (typeof key === 'symbol') {
+                    return {};
+                }
+                return target[key] ?? {};
+            },
+        });
+    }
+
+    
+    /**
+     * 已某个单元格为锚点，创建一个key-value[]的多维表格。
+     * 与 `makeTable` 不同，可以一个对象可以保存多行的数据。
+     * 如果不提供参数，会自动猜测一个合适的位置。
+     * @param offset 锚点位置，如 `"B2"`
+     */
+    public makeMultiTable(offset?: string): MultiTable {
+        if (!offset) {
+            offset = this.guessTableOffset();
+            if (!offset) {
+                throw new Error('无法猜测出锚点位置，请手动指定锚点');
+            }
+        }
+        const cell = this.sheet.getCell(offset);
+        const row = cell.row as any as number;
+        const col = cell.col as any as number;
+        const titleRow = this.sheet.getRow(row);
+        const titles: string[] = [];
+        for (let c = col; c <= this.sheet.columnCount; c++) {
+            const cell = titleRow.getCell(c);
+            const title = cell.toString();
+            titles[c] = title ? title : (cell.address.match(/[A-Z]+/)?.[0] ?? c.toString());
+        }
+
+        let table: MultiTable = {};
+        let current: Record<string, string[]> | undefined;
+
+        const mergeIntoCurrent = (row: exceljs.Row) => {
+            if (!current) {
+                return;
+            }
+            for (let c = col; c <= this.sheet.columnCount; c++) {
+                const title = titles[c];
+                current[title] ??= [];
+                current[title].push(row.getCell(c).toString());
+            }
+        };
+
+        for (let r = row + 1; r <= this.sheet.rowCount; r++) {
+            const row = this.sheet.getRow(r);
+            const key = row.getCell(col).toString();
+            if (key) {
+                current = {};
+                table[key] = current;
+            }
+            mergeIntoCurrent(row);
         }
 
         return new Proxy(table, {
