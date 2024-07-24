@@ -501,6 +501,7 @@
         "@vscode/test-electron": "^2.3.6",
         "eslint": "^8.57.0",
         "glob": "^10.3.10",
-        "mocha": "^10.2.0"
+        "mocha": "^10.2.0",
+        "dts-bundle-generator": "^9.5.1"
     }
 }

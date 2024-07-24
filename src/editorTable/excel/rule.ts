@@ -230,24 +230,24 @@ type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
 type As<T> = AsLike<T> | AsRule<T>;
 
 
-type EditorDataField<N extends y3.const.Table.NameCN> = keyof y3.table.EditorData<N>;
-type EditorDataFieldType<N extends y3.const.Table.NameCN, F extends EditorDataField<N>> = y3.table.EditorData<N>[F];
+type EditorDataField<N extends y3.consts.Table.NameCN> = keyof y3.table.EditorData<N>;
+type EditorDataFieldType<N extends y3.consts.Table.NameCN, F extends EditorDataField<N>> = y3.table.EditorData<N>[F];
 
-type RuleData<N extends y3.const.Table.NameCN> = {
+type RuleData<N extends y3.consts.Table.NameCN> = {
     [key in EditorDataField<N>]: Reader<EditorDataFieldType<N, key>>;
 };
 
-type RuleField<N extends y3.const.Table.NameCN> = {
+type RuleField<N extends y3.consts.Table.NameCN> = {
     [key in EditorDataField<N>]: key;
 };
 
-type Action<N extends y3.const.Table.NameCN> = {
+type Action<N extends y3.consts.Table.NameCN> = {
     field: keyof RuleData<N>,
     action: Reader<any>,
     asRule?: AsRule<any>,
 };
 
-export class Rule<N extends y3.const.Table.NameCN> {
+export class Rule<N extends y3.consts.Table.NameCN> {
     public rule = this;
 
     /**

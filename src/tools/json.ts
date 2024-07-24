@@ -14,9 +14,9 @@ const editOptions = {
     },
 };
 
-export type Item = string | boolean | number | null | Object | Array;
-export type Array = Item[];
-export type Object = { [key: string]: Item };
+export type Item = string | boolean | number | null | JObject | JArray;
+export type JArray = Item[];
+export type JObject = { [key: string]: Item };
 
 export class Json {
     private _text: string;
@@ -29,7 +29,7 @@ export class Json {
         return this._text;
     }
 
-    private _data?: Object | null;
+    private _data?: JObject | null;
     public get data() {
         if (this._data === undefined) {
             this._data = jsonc.parse(this.text, undefined, parseOptions) ?? null;
