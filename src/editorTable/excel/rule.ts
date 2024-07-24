@@ -129,6 +129,12 @@ const as = {
         return new AsRule<number>(parseFloat).default(defaultValue);
     },
     /**
+     * 将值视为整数
+     */
+    integer: (defaultValue?: number) => {
+        return new AsRule<number>(parseInt).default(defaultValue);
+    },
+    /**
      * 将值视为字符串。
      * @param value 值
      * @param defaultValue 默认值，如果不传表示不做修改（使用物编里原来的值）。
@@ -175,6 +181,12 @@ const reader = {
      */
     number: (title: string, defaultValue?: number) => {
         return new ReaderRule<number>((row) => parseFloat(row[title])).default(defaultValue);
+    },
+    /**
+     * 将值视为整数。
+     */
+    integer: (title: string, defaultValue?: number) => {
+        return new ReaderRule<number>((row) => parseInt(row[title])).default(defaultValue);
     },
     /**
      * 将值视为布尔值。
