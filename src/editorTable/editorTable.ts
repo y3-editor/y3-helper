@@ -3,16 +3,8 @@ import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
-import { UnitData } from "../editor_meta/unit";
-import { SoundData } from "../editor_meta/sound";
-import { AbilityData } from "../editor_meta/ability";
-import { DecorationData } from "../editor_meta/decoration";
-import { DestructibleData } from "../editor_meta/destructible";
-import { ItemData } from "../editor_meta/item";
-import { ModifierData } from "../editor_meta/modifier";
-import { ProjectileData } from "../editor_meta/projectile";
-import { TechData } from "../editor_meta/tech";
-
+import { EditorData, valueOnGet, valueOnSet } from "./editorData";
+export { EditorData } from "./editorData";
 
 const template_dir = 'template\\json_template';
 const meta_dir = 'src\\editor_meta';
@@ -69,18 +61,6 @@ export async function ready() {
         }
     }
 }
-export type EditorData<N extends Table.NameCN>
-    = N extends '单位' ? UnitData
-    : N extends '声音' ? SoundData
-    : N extends '技能' ? AbilityData
-    : N extends '装饰物' ? DecorationData
-    : N extends '可破坏物' ? DestructibleData
-    : N extends '物品' ? ItemData
-    : N extends '魔法效果' ? ModifierData
-    : N extends '投射物' ? ProjectileData
-    : N extends '科技' ? TechData
-    : never;
-
 export class EditorObject<N extends Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
@@ -141,93 +121,7 @@ export class EditorObject<N extends Table.NameCN> {
             return undefined;
         }
         let value = this.deserialize(raw);
-        if (fieldInfo.type === 'PLocalizeText') {
-            if (typeof value === 'number' || typeof value === 'string') {
-                value = y3.language.get(value) ?? value;
-            }
-        }
-        return value;
-    }
-
-    private checkType(fieldInfo: FieldInfo, value: ItemShape, convertType = false): ItemShape {
-        if (!fieldInfo.type) {
-            throw new Error(`未知字段类型:'${fieldInfo.field}'`);
-        }
-        switch (fieldInfo.type) {
-            case 'PLocalizeText': {
-                if (convertType) {
-                    return value?.toString() ?? '';
-                }
-                if (typeof value !== 'string') {
-                    throw new Error(`'${fieldInfo.field}'字段应为字符串`);
-                }
-                return value;
-            }
-            case 'PBool': {
-                if (convertType) {
-                    return !!value;
-                }
-                if (typeof value !== 'boolean') {
-                    throw new Error(`'${fieldInfo.field}'字段应为布尔值`);
-                }
-                return value;
-            }
-            case 'PFloat': {
-                if (convertType) {
-                    value = Number(value);
-                    if (isNaN(value)) {
-                        value = 0.0;
-                    }
-                }
-                if (typeof value !== 'number' || isNaN(value)) {
-                    throw new Error(`'${fieldInfo.field}'字段应为数字`);
-                }
-                return value;
-            }
-            case 'PInt': {
-                if (convertType) {
-                    value = Number(value);
-                    if (isNaN(value)) {
-                        value = 0;
-                    }
-                }
-                if (!Number.isSafeInteger(value)) {
-                    throw new Error(`'${fieldInfo.field}'字段应为整数`);
-                }
-                return value;
-            }
-            case 'PText': {
-                if (convertType) {
-                    return value?.toString() ?? '';
-                }
-                if (typeof value !== 'string') {
-                    throw new Error(`'${fieldInfo.field}'字段应为字符串`);
-                }
-                return value;
-            }
-        }
-
-        if (fieldInfo.type.endsWith('List')) {
-            if (!Array.isArray(value)) {
-                throw new Error(`'${fieldInfo.field}'字段应为数组`);
-            }
-            return value;
-        }
-        if (fieldInfo.type.endsWith('Formula')) {
-            if (!Array.isArray(value)) {
-                throw new Error(`'${fieldInfo.field}'字段应为数组`);
-            }
-            for (let i = 0; i < value.length; i++) {
-                let item = value[i];
-                if (convertType) {
-                    item = item?.toString() ?? '';
-                }
-                if (typeof item !== 'string') {
-                    throw new Error(`'${fieldInfo.field}'字段的第${i}项应为字符串`);
-                }
-            }
-            return value;
-        }
+        value = valueOnGet(fieldInfo, value);
         return value;
     }
 
@@ -236,13 +130,10 @@ export class EditorObject<N extends Table.NameCN> {
         if (!fieldInfo) {
             throw new Error(`未知字段:'${key}'`);
         }
-        value = this.checkType(fieldInfo, value, convertType);
         if (key === 'name' && typeof value === 'string') {
             this._name = value;
         }
-        if (fieldInfo.type === 'PLocalizeText') {
-            value = y3.language.keyOf(value as string, true);
-        }
+        value = valueOnSet(fieldInfo, value, convertType);
         let raw = this.serialize(value);
         return this.rawSet(key, raw);
     }
