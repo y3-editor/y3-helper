@@ -133,7 +133,7 @@ export class EditorObject<N extends Table.NameCN> {
         if (key === 'name' && typeof value === 'string') {
             this._name = value;
         }
-        value = valueOnSet(fieldInfo, value, convertType);
+        value = valueOnSet(fieldInfo, value, this.rawGet(key), convertType);
         let raw = this.serialize(value);
         return this.rawSet(key, raw);
     }

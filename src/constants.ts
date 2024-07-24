@@ -108,6 +108,18 @@ export namespace Table {
             100039: "技能类型",
             100263: "运动器",
         } as const,
+        etype: {
+            0: "字符串",
+            1: "整数",
+            2: "实数",
+            4: "布尔",
+        } as const,
+        type: {
+            0: "字符串",
+            1: "实数",
+            2: "整数",
+            3: "布尔",
+        }
     } as const;
 
     export type Path = keyof typeof path.toCN;

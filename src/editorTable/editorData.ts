@@ -36,6 +36,81 @@ interface FieldInfo {
     type?: string;
 }
 
+interface KVShape {
+    annotation: string,
+    desc: string,
+    etype: keyof typeof Table.type.etype,
+    key: string,
+    prop_cls: "PText"|"PBool"|"PFloat"|"PInt",
+    remark: string,
+    show_in_attr: boolean,
+    sort: number,
+    type: keyof typeof Table.type.type,
+    value: string|number|boolean,
+}
+
+function fromKV(kvMap: Record<string, KVShape>): Record<string, string|number|boolean> {
+    let result: Record<string, string|number|boolean> = {};
+    // 按照 sort 字段的值排序，然后将重新组成 { K: V.value } 的形式
+    let kvList = Object.values(kvMap).sort((a, b) => a.sort - b.sort);
+    for (let kv of kvList) {
+        result[kv.key] = kv.value;
+    }
+    return result;
+}
+
+function toKV(kv: Record<string, string|number|boolean>, raw: Record<string, KVShape>): Record<string, KVShape> {
+    let result: Record<string, KVShape> = {};
+    let sort = 0;
+    for (let key in kv) {
+        let value = kv[key];
+        let rawKV = raw[key];
+        if (rawKV) {
+            result[key] = {
+                ...rawKV,
+                value,
+            };
+            sort = Math.max(sort, rawKV.sort);
+        } else {
+            let etype, type, prop_cls;
+            if (typeof value === 'string') {
+                etype = 0;
+                type = 0;
+                prop_cls = 'PText';
+            } else if (typeof value === 'number') {
+                if (Number.isInteger(value)) {
+                    etype = 1;
+                    type = 2;
+                    prop_cls = 'PInt';
+                } else {
+                    etype = 2;
+                    type = 1;
+                    prop_cls = 'PFloat';
+                }
+            } else if (typeof value === 'boolean') {
+                etype = 4;
+                type = 3;
+                prop_cls = 'PBool';
+            } else {
+                continue;
+            }
+            result[key] = {
+                annotation: '',
+                desc: '',
+                etype: etype as any,
+                key,
+                prop_cls: prop_cls as any,
+                remark: '',
+                show_in_attr: false,
+                sort: ++sort,
+                type: type as any,
+                value,
+            };
+        }
+    }
+    return result;
+}
+
 function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = false) {
     if (!fieldInfo.type) {
         throw new Error(`未知字段类型:'${fieldInfo.field}'`);
@@ -119,6 +194,9 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
 }
 
 export function valueOnGet(fieldInfo: FieldInfo, value: any) {
+    if (fieldInfo.field === 'kv') {
+        value = fromKV(value);
+    }
     if (fieldInfo.type === 'PLocalizeText') {
         if (typeof value === 'number' || typeof value === 'string') {
             value = y3.language.get(value) ?? value;
@@ -127,7 +205,10 @@ export function valueOnGet(fieldInfo: FieldInfo, value: any) {
     return value;
 }
 
-export function valueOnSet(fieldInfo: FieldInfo, value: any, convertType = false) {
+export function valueOnSet(fieldInfo: FieldInfo, value: any, raw: any, convertType = false) {
+    if (fieldInfo.field === 'kv') {
+        value = toKV(value, raw);
+    }
     value = checkAndConvertType(fieldInfo, value, convertType);
     if (fieldInfo.type === 'PLocalizeText') {
         value = y3.language.keyOf(value as string, true);
