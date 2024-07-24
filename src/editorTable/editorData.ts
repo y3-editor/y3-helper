@@ -11,6 +11,9 @@ import { TechData as Tech } from "../editor_meta/tech";
 import * as y3 from 'y3-helper';
 
 interface CommonPatch {
+    /**
+     * 存放自定义的键值对。新增值只能为字符串、数字或布尔值。
+     */
     kv: Record<string, string|number|boolean>;
 }
 

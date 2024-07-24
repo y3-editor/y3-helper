@@ -2798,6 +2798,9 @@ export interface TechData {
 	max_lv: number;
 }
 export interface CommonPatch {
+	/**
+	 * 存放自定义的键值对。新增值只能为字符串、数字或布尔值。
+	 */
 	kv: Record<string, string | number | boolean>;
 }
 export type Data<T> = Omit<T, keyof CommonPatch> & CommonPatch;

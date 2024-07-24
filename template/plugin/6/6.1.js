@@ -1,17 +1,41 @@
 let y3 = require('y3-helper')
 
-export async function 多维表() {
-    y3.excel.setBaseDir(y3.env.pluginUri)
+export async function 保存() {
+    let unit = await y3.table.openTable('单位').create({
+        name: '演示单位2',
+        key: 11038,
+        overwrite: true,
+    })
 
-    let excel = await y3.excel.loadFile('6-更多的演示/6.1-多维表')
-    let table = excel.makeMultiTable()
+    unit.data.kv = {
+        '演示字符串': 'abc',
+        '演示整数': 123,
+        '演示实数': 123.456,
+        '演示布尔': true,
+    }
 
-    y3.assert(table['风暴之锤']['字段1'][0] === '伤害')
-    y3.assert(table['风暴之锤']['字段1'][1] === '100|200|300')
+    y3.print('保存完成！')
+}
 
-    y3.assert(table['雷霆一击']['编号'][0] === '1002')
+export async function 读取() {
+    let unit = await y3.table.openTable('单位').get(11038)
 
-    y3.assert(table['重击']['名字'][0] === '重击')
+    y3.assert(unit.data.kv['演示字符串'] === 'abc')
+    y3.assert(unit.data.kv['演示整数'] === 123)
+    y3.assert(unit.data.kv['演示实数'] === 123.456)
+    y3.assert(unit.data.kv['演示布尔'] === true)
 
-    y3.print('多维表读取成功！')
+    y3.print('读取完成！')
+}
+
+export async function 增加() {
+    let unit = await y3.table.openTable('单位').get(11038)
+
+    unit.data.kv['新增字符串1'] = '这种写法无效！'
+
+    let kv = unit.data.kv
+    kv['新增字符串2'] = '必须要重新赋值才能成功写入！'
+    unit.data.kv = kv
+
+    y3.print('新增完成！')
 }
