@@ -4,6 +4,7 @@ import { env } from '../env';
 import { PlayerAttrs } from './playerAttrs';
 import { CustomEvents } from './customEvents';
 import { UI } from './ui';
+import { UIAnim } from './uiAnim';
 
 let path = 'y3-helper/meta';
 
@@ -31,31 +32,23 @@ class InitBuilder extends BaseBuilder {
         }
         return codes.join('\r\n') + '\r\n';
     }
+
+    public addChild(builder: any, fileName: string) {
+        let instance = new builder(path + '/' + fileName);
+        this.addFile(instance);
+        instance.onDidChange(() => {
+            this.update();
+        });
+
+    }
 }
 
 export function init() {
     let initBuilder = new InitBuilder(path + '/init.lua');
 
-    let unitAttrs = new UnitAttrs(path + '/unitAttrs.lua');
-    let playerAttrs = new PlayerAttrs(path + '/playerAttrs.lua');
-    let customEvents = new CustomEvents(path + '/customEvents.lua');
-    let ui = new UI(path + '/ui.lua');
-
-    initBuilder.addFile(unitAttrs);
-    initBuilder.addFile(playerAttrs);
-    initBuilder.addFile(customEvents);
-    initBuilder.addFile(ui);
-
-    unitAttrs.onDidChange(() => {
-        initBuilder.update();
-    });
-    playerAttrs.onDidChange(() => {
-        initBuilder.update();
-    });
-    customEvents.onDidChange(() => {
-        initBuilder.update();
-    });
-    ui.onDidChange(() => {
-        initBuilder.update();
-    });
+    initBuilder.addChild(UnitAttrs, 'unitAttrs.lua');
+    initBuilder.addChild(PlayerAttrs, 'playerAttrs.lua');
+    initBuilder.addChild(CustomEvents, 'customEvents.lua');
+    initBuilder.addChild(UI, 'ui.lua');
+    initBuilder.addChild(UIAnim, 'uiAnim.lua');
 }
