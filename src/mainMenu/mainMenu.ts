@@ -7,6 +7,7 @@ import { 单位属性 } from './pages/unitAttrs';
 import { 玩家属性 } from './pages/playerAttrs';
 import { 自定义事件 } from './pages/events';
 import { 界面 } from './pages/ui';
+import { 时间轴动画 } from './pages/uiAnim';
 import { 插件 } from './pages/plugin';
 
 let mainNode = new TreeNode('主菜单', {
@@ -16,6 +17,7 @@ let mainNode = new TreeNode('主菜单', {
         new 玩家属性,
         new 界面,
         new 自定义事件,
+        new 时间轴动画,
         new 插件,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {

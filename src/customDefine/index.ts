@@ -3,6 +3,7 @@ import { UnitAttrs } from "./unitAttrs";
 import { EditorTables } from "./editorTables";
 import { Events } from "./event";
 import { UI } from "./ui";
+import { UIAnim } from "./uiAnim";
 
 export const define = {
     单位属性: new UnitAttrs,
@@ -14,4 +15,5 @@ export const define = {
     魔法效果类型: new EditorTables("modifierall"),
     投射物类型: new EditorTables("projectileall"),
     界面: new UI,
+    时间轴动画: new UIAnim,
 };

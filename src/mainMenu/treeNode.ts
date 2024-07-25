@@ -6,6 +6,7 @@ export interface TreeNodeOptional {
     collapsibleState?: typeof vscode.TreeItem.prototype.collapsibleState;
     description?: typeof vscode.TreeItem.prototype.description;
     contextValue?: typeof vscode.TreeItem.prototype.contextValue;
+    tooltip?: typeof vscode.TreeItem.prototype.tooltip;
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
     show?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
@@ -30,6 +31,7 @@ export class TreeNode extends vscode.TreeItem {
             this.update = optional.update;
             this.show = optional.show ?? true;
             this.collapsibleState = optional.collapsibleState;
+            this.tooltip = optional.tooltip;
             this.data = optional.data;
         }
         this.updateChilds();
