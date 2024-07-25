@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 export type Cells = Record<string, string>;
 export type TableKey = string | number;
 export type Table = Record<TableKey, Record<string, string>>;
-export type MultiTable = Record<TableKey, Record<string, string[]>>;
+export type MultiTable = Record<TableKey, Record<string, string>[]>;
 declare class Sheet {
 	private sheet;
 	constructor(sheet: exceljs.Worksheet);

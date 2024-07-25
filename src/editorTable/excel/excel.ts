@@ -5,7 +5,7 @@ import * as y3 from 'y3-helper';
 type Cells = Record<string, string>;
 type TableKey = string | number;
 export type Table = Record<TableKey, Record<string, string>>;
-export type MultiTable = Record<TableKey, Record<string, string[]>>;
+export type MultiTable = Record<TableKey, Record<string, string>[]>;
 
 export class Sheet {
     constructor(private sheet: exceljs.Worksheet) {
@@ -152,16 +152,17 @@ export class Sheet {
         }
 
         let table: MultiTable = {};
-        let current: Record<string, string[]> | undefined;
+        let current: Record<string, string>[] | undefined;
 
         const mergeIntoCurrent = (row: exceljs.Row) => {
             if (!current) {
                 return;
             }
+            let record: Record<string, string> = {};
+            current.push(record);
             for (let c = col; c <= this.sheet.columnCount; c++) {
                 const title = titles[c];
-                current[title] ??= [];
-                current[title].push(row.getCell(c).toString());
+                record[title] = row.getCell(c).toString();
             }
         };
 
@@ -169,7 +170,7 @@ export class Sheet {
             const row = this.sheet.getRow(r);
             const key = row.getCell(col).toString();
             if (key) {
-                current = {};
+                current = [];
                 table[key] = current;
             }
             mergeIntoCurrent(row);
