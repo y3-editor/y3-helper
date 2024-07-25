@@ -80,8 +80,9 @@ export class Sheet {
      * 已某个单元格为锚点，创建一个key-value的表格。
      * 如果不提供参数，会自动猜测一个合适的位置。
      * @param offset 锚点位置，如 `"B2"`
+     * @param skip 标题下额外跳过的行数（可能是标题的描述）
      */
-    public makeTable(offset?: string): Table {
+    public makeTable(offset?: string, skip?: number): Table {
         if (!offset) {
             offset = this.guessTableOffset();
             if (!offset) {
@@ -100,7 +101,7 @@ export class Sheet {
         }
 
         let table: Table = {};
-        for (let r = row + 1; r <= this.sheet.rowCount; r++) {
+        for (let r = row + 1 + (skip ?? 0); r <= this.sheet.rowCount; r++) {
             const row = this.sheet.getRow(r);
             const key = row.getCell(col).toString();
             if (!key) {
@@ -132,8 +133,9 @@ export class Sheet {
      * 与 `makeTable` 不同，可以一个对象可以保存多行的数据。
      * 如果不提供参数，会自动猜测一个合适的位置。
      * @param offset 锚点位置，如 `"B2"`
+     * @param skip 标题下额外跳过的行数（可能是标题的描述）
      */
-    public makeMultiTable(offset?: string): MultiTable {
+    public makeMultiTable(offset?: string, skip?: number): MultiTable {
         if (!offset) {
             offset = this.guessTableOffset();
             if (!offset) {
@@ -166,7 +168,7 @@ export class Sheet {
             }
         };
 
-        for (let r = row + 1; r <= this.sheet.rowCount; r++) {
+        for (let r = row + 1 + (skip ?? 0); r <= this.sheet.rowCount; r++) {
             const row = this.sheet.getRow(r);
             const key = row.getCell(col).toString();
             if (key) {

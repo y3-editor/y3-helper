@@ -23,15 +23,17 @@ declare class Sheet {
 	 * 已某个单元格为锚点，创建一个key-value的表格。
 	 * 如果不提供参数，会自动猜测一个合适的位置。
 	 * @param offset 锚点位置，如 `"B2"`
+	 * @param skip 标题下额外跳过的行数（可能是标题的描述）
 	 */
-	makeTable(offset?: string): Table;
+	makeTable(offset?: string, skip?: number): Table;
 	/**
 	 * 已某个单元格为锚点，创建一个key-value[]的多维表格。
 	 * 与 `makeTable` 不同，可以一个对象可以保存多行的数据。
 	 * 如果不提供参数，会自动猜测一个合适的位置。
 	 * @param offset 锚点位置，如 `"B2"`
+	 * @param skip 标题下额外跳过的行数（可能是标题的描述）
 	 */
-	makeMultiTable(offset?: string): MultiTable;
+	makeMultiTable(offset?: string, skip?: number): MultiTable;
 }
 declare namespace Table$1 {
 	const path: {
@@ -196,23 +198,24 @@ declare namespace Template {
 		};
 	};
 }
+export type Row = Record<string, string>;
 /**
  * 读取excel中的值。
- * @param row excel中的一行数据
+ * @param rows excel中的每个对象的数据。
  * @returns 返回需要写入表中的值。
  */
-export type ReaderLike<T> = (row: Record<string, string>) => T | undefined;
+export type ReaderFunc<T> = (...rows: Row[]) => NoInfer<T> | undefined;
 /**
  * 对数据进行处理。
  * @param content excel中的值
  * @param source 物编中的值。如果你用def修改过，这里会传入修改后的值（用于多个项目修改同一个值）。
  */
-export type AsLike<T> = (content: string, source?: T) => T | undefined;
+export type AsFunc<T> = (content: string, source?: T, ...extraContents: string[]) => NoInfer<T> | undefined;
 declare class AsRule<T> {
 	private as?;
 	constructor(as?: As<T> | undefined);
 	protected value: any;
-	applyAs(content: any, source?: T): T | undefined;
+	applyAs(content: any, source?: T, ...extraContents: any[]): T | undefined;
 	private _default?;
 	/**
 	 * 如果值为 `undefined`，则使用此默认值。
@@ -230,11 +233,11 @@ declare class AsRule<T> {
 }
 declare class ReaderRule<T> extends AsRule<T> {
 	private reader;
-	constructor(reader: ReaderLike<T>, as?: As<T>);
-	applyReader(row: Record<string, string>, source?: T): T | undefined;
+	constructor(reader: ReaderFunc<T>, as?: As<T>);
+	applyReader(rows: Row | Row[], source?: T): T | undefined;
 }
-export type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
-export type As<T> = AsLike<T> | AsRule<T>;
+export type Reader<T> = string | undefined | ReaderFunc<T> | ReaderRule<T>;
+export type As<T> = AsFunc<T> | AsRule<T>;
 export type EditorDataField<N extends y3.consts.Table.NameCN> = keyof y3.table.EditorData<N>;
 export type EditorDataFieldType<N extends y3.consts.Table.NameCN, F extends EditorDataField<N>> = y3.table.EditorData<N>[F];
 export type RuleData<N extends y3.consts.Table.NameCN> = {
@@ -253,12 +256,12 @@ declare class Rule<N extends y3.consts.Table.NameCN> {
 	 */
 	reader: {
 		/**
-		 * excel的每一行都会调用此回调哈数，你需要返回最终写入表中的值。
+		 * excel的每一个对象都会调用此回调哈数，你需要返回最终写入表中的值。
 		 * 返回 `undefined` 时表示不做修改（使用物编里原来的值）。
 		 * @param callback 一个回调函数，需要你返回最终写入表中的值。
 		 * @returns
 		 */
-		readonly rule: <T>(callback: ReaderLike<T>) => ReaderRule<T>;
+		readonly rule: <T>(callback: ReaderFunc<T>) => ReaderRule<T>;
 		/**
 		 * 将值视为数字。
 		 * @param title 列标题
@@ -344,6 +347,10 @@ declare class Rule<N extends y3.consts.Table.NameCN> {
 	 */
 	offset?: string;
 	/**
+	 * 要跳过多少行。如果标题下一行是描述，可以将此设置为 `1`。
+	 */
+	skip?: number;
+	/**
 	 * 对象的key在表格中的列名。如果不提供会使用第一列。
 	 * 如果不存在会新建。
 	 */
@@ -356,6 +363,10 @@ declare class Rule<N extends y3.consts.Table.NameCN> {
 	 * 是否强制创建对象。默认情况下会优先使用已有对象，保留对象已有的数据。
 	 */
 	overwrite?: boolean;
+	/**
+	 * 是否是多维表。
+	 */
+	multi?: boolean;
 	/**
 	 * 定义一个根据excel字段的生成规则
 	 * @param title excel中的列标题
@@ -2797,11 +2808,12 @@ export interface TechData {
 	 */
 	max_lv: number;
 }
+export type KV = Record<string, string | number | boolean>;
 export interface CommonPatch {
 	/**
 	 * 存放自定义的键值对。新增值只能为字符串、数字或布尔值。
 	 */
-	kv: Record<string, string | number | boolean>;
+	kv: KV;
 }
 export type Data<T> = Omit<T, keyof CommonPatch> & CommonPatch;
 export type EditorData<N extends Table$1.NameCN> = N extends "\u5355\u4F4D" ? Data<UnitData> : N extends "\u58F0\u97F3" ? Data<SoundData> : N extends "\u6280\u80FD" ? Data<AbilityData> : N extends "\u88C5\u9970\u7269" ? Data<DecorationData> : N extends "\u53EF\u7834\u574F\u7269" ? Data<DestructibleData> : N extends "\u7269\u54C1" ? Data<ItemData> : N extends "\u9B54\u6CD5\u6548\u679C" ? Data<ModifierData> : N extends "\u6295\u5C04\u7269" ? Data<ProjectileData> : N extends "\u79D1\u6280" ? Data<TechData> : never;

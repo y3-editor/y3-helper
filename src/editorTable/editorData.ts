@@ -10,11 +10,13 @@ import { ProjectileData as Projectile } from "../editor_meta/projectile";
 import { TechData as Tech } from "../editor_meta/tech";
 import * as y3 from 'y3-helper';
 
+type KV = Record<string, string|number|boolean>;
+
 interface CommonPatch {
     /**
      * 存放自定义的键值对。新增值只能为字符串、数字或布尔值。
      */
-    kv: Record<string, string|number|boolean>;
+    kv: KV;
 }
 
 type Data<T> = Omit<T, keyof CommonPatch> & CommonPatch;
@@ -52,7 +54,7 @@ interface KVShape {
     value: string|number|boolean,
 }
 
-function fromKV(kvMap: Record<string, KVShape>): Record<string, string|number|boolean> {
+function fromKV(kvMap: Record<string, KVShape>): KV {
     let result: Record<string, string|number|boolean> = {};
     // 按照 sort 字段的值排序，然后将重新组成 { K: V.value } 的形式
     let kvList = Object.values(kvMap).sort((a, b) => a.sort - b.sort);
@@ -62,18 +64,16 @@ function fromKV(kvMap: Record<string, KVShape>): Record<string, string|number|bo
     return result;
 }
 
-function toKV(kv: Record<string, string|number|boolean>, raw: Record<string, KVShape>): Record<string, KVShape> {
-    let result: Record<string, KVShape> = {};
+function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
+    let result: Record<string, KVShape> = { ...raw };
     let sort = 0;
-    for (let key in kv) {
-        let value = kv[key];
-        let rawKV = raw[key];
-        if (rawKV) {
+    for (let [key, value] of Object.entries(kv)) {
+        if (key in result) {
             result[key] = {
-                ...rawKV,
+                ...result[key],
                 value,
             };
-            sort = Math.max(sort, rawKV.sort);
+            sort = Math.max(sort, result[key].sort);
         } else {
             let etype, type, prop_cls;
             if (typeof value === 'string') {

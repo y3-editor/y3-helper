@@ -1,19 +1,21 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
+type Row = Record<string, string>;
+
 /**
  * 读取excel中的值。
- * @param row excel中的一行数据
+ * @param rows excel中的每个对象的数据。
  * @returns 返回需要写入表中的值。
  */
-type ReaderLike<T> = (row: Record<string, string>) => T | undefined;
+type ReaderFunc<T> = (...rows: Row[]) => NoInfer<T> | undefined;
 
 /**
  * 对数据进行处理。
  * @param content excel中的值
  * @param source 物编中的值。如果你用def修改过，这里会传入修改后的值（用于多个项目修改同一个值）。
  */
-type AsLike<T> = (content: string, source?: T) => T | undefined;
+type AsFunc<T> = (content: string, source?: T, ...extraContents: string[]) => NoInfer<T> | undefined;
 
 function mergeObject(from: Record<string, any>, to: Record<string, any>) {
     for (let key in from) {
@@ -35,8 +37,8 @@ class AsRule<T> {
     constructor(private as?: As<T>) {}
 
     protected value: any;
-    applyAs(content: any, source?: T): T | undefined {
-        let value = this.as ? callAs(this.as, content, source) : content;
+    applyAs(content: any, source?: T, ...extraContents: any[]): T | undefined {
+        let value = this.as ? callAs(this.as, content, source, ...extraContents) : content;
         if (
             value === undefined ||
             value === null ||
@@ -84,20 +86,24 @@ class AsRule<T> {
 }
 
 class ReaderRule<T> extends AsRule<T> {
-    constructor(private reader: ReaderLike<T>, as?: As<T>) {
+    constructor(private reader: ReaderFunc<T>, as?: As<T>) {
         super(as);
     }
 
-    public applyReader(row: Record<string, string>, source?: T): T | undefined {
-        return this.applyAs(this.reader(row), source);
+    public applyReader(rows: Row | Row[], source?: T): T | undefined {
+        if (Array.isArray(rows)) {
+            return this.applyAs(this.reader(...rows), source, ...rows.slice(1));
+        } else {
+            return this.applyAs(this.reader(rows), source);
+        }
     }
 }
 
-function callAs(as: As<any>, value: any, source?: any) {
+function callAs(as: As<any>, value: any, source?: any, ...extraValues: any[]) {
     if (as instanceof AsRule) {
-        return as.applyAs(value, source);
+        return as.applyAs(value, source, ...extraValues);
     }
-    return as(value, source);
+    return as(value, source, ...extraValues);
 }
 
 const braver = {
@@ -162,17 +168,17 @@ const as = {
     split: <T = string>(separator: string | RegExp, converter?: (value: string) => T) => {
         let rule = new AsRule<T[]>((value) => braver.split(value, separator, converter));
         return rule;
-    }
+    },
 } as const;
 
 const reader = {
     /**
-     * excel的每一行都会调用此回调哈数，你需要返回最终写入表中的值。
+     * excel的每一个对象都会调用此回调哈数，你需要返回最终写入表中的值。
      * 返回 `undefined` 时表示不做修改（使用物编里原来的值）。
      * @param callback 一个回调函数，需要你返回最终写入表中的值。
      * @returns 
      */
-    rule: <T>(callback: ReaderLike<T>): ReaderRule<T> => new ReaderRule(callback),
+    rule: <T>(callback: ReaderFunc<T>): ReaderRule<T> => new ReaderRule(callback),
     /**
      * 将值视为数字。
      * @param title 列标题
@@ -225,9 +231,9 @@ const reader = {
     }
 } as const;
 
-type Reader<T> = string | undefined | ReaderLike<T> | ReaderRule<T>;
+type Reader<T> = string | undefined | ReaderFunc<T> | ReaderRule<T>;
 
-type As<T> = AsLike<T> | AsRule<T>;
+type As<T> = AsFunc<T> | AsRule<T>;
 
 
 type EditorDataField<N extends y3.consts.Table.NameCN> = keyof y3.table.EditorData<N>;
@@ -284,6 +290,11 @@ export class Rule<N extends y3.consts.Table.NameCN> {
     public offset?: string;
 
     /**
+     * 要跳过多少行。如果标题下一行是描述，可以将此设置为 `1`。
+     */
+    public skip?: number;
+
+    /**
      * 对象的key在表格中的列名。如果不提供会使用第一列。
      * 如果不存在会新建。
      */
@@ -298,6 +309,11 @@ export class Rule<N extends y3.consts.Table.NameCN> {
      * 是否强制创建对象。默认情况下会优先使用已有对象，保留对象已有的数据。
      */
     public overwrite?: boolean;
+
+    /**
+     * 是否是多维表。
+     */
+    public multi?: boolean;
 
     /**
      * 定义一个根据excel字段的生成规则
@@ -317,18 +333,17 @@ export class Rule<N extends y3.consts.Table.NameCN> {
      */
     public async apply() {
         let fileName = this.path.path.match(/([^/\\]+)$/)?.[1] ?? this.path.fsPath;
-        fileName = fileName.replace(/\.[^.]+$/, '');
-        const ruleName = `${this.tableName}: ${fileName}/${this.sheetName ?? 1}`;
+        const ruleName = `${this.tableName}: ${fileName}@${this.sheetName ?? 1}`;
         y3.log.info(`正在执行规则："${ruleName}"`);
         try {
             let sheet = await y3.excel.loadFile(this.path, this.sheetName);
-            let sheetTable = sheet.makeTable();
+            let sheetTable = this.multi ? sheet.makeMultiTable(this.offset, this.skip) : sheet.makeTable(this.offset, this.skip);
             let editorTable = y3.table.openTable(this.tableName);
 
             for (let firstCol in sheetTable) {
-                let row = sheetTable[firstCol];
-                let key = this.key ? this.getValue(row, this.key) : firstCol;
-                let template = this.template ? this.getValue(row, this.template) : undefined;
+                let rows = sheetTable[firstCol];
+                let key = this.key ? this.getValue(rows, this.key) : firstCol;
+                let template = this.template ? this.getValue(rows, this.template) : undefined;
                 let objectKey = Number(key);
                 let templateKey: number | undefined = Number(template);
                 if (isNaN(objectKey)) {
@@ -349,7 +364,7 @@ export class Rule<N extends y3.consts.Table.NameCN> {
                 }
 
                 for (const action of this.rule._actions) {
-                    let value = this.getValue(row, action.action, editorObject.data[action.field]);
+                    let value = this.getValue(rows, action.action, editorObject.data[action.field]);
                     if (action.asRule) {
                         value = callAs(action.asRule, value, editorObject.data[action.field]);
                     }
@@ -360,20 +375,25 @@ export class Rule<N extends y3.consts.Table.NameCN> {
                 }
             }
         } catch (e) {
-            y3.log.error(`执行规则失败："${ruleName}"\n${e}`);
+            y3.log.error(`执行规则失败："${ruleName}"\n${(e as Error)?.stack}`);
             vscode.window.showErrorMessage(`执行规则失败："${ruleName}"\n${e}`);
         }
     }
 
-    private getValue(row: Record<string, string>, value: Reader<any>, source?: any): any {
+    private getValue(rows: Row | Row[], value: Reader<any>, source?: any): any {
+        let firstRow = Array.isArray(rows) ? rows[0] : rows;
         if (typeof value === 'string') {
-            return row[value];
+            return firstRow[value];
         }
         if (typeof value === 'function') {
-            return value(row);
+            if (Array.isArray(rows)) {
+                return value(...rows);
+            } else {
+                return value(rows);
+            }
         }
         if (value instanceof ReaderRule) {
-            return value.applyReader(row, source);
+            return value.applyReader(rows, source);
         }
         throw new Error('未知的值类型: ' + String(value));
     }
