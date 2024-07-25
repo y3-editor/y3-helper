@@ -175,10 +175,10 @@ export async function init() {
         y3.log.show();
         try {
             await pluginManager.run(uri, funcName ?? 'main');
-        } catch (error) {
+        } catch (error: any) {
             vscode.window.showErrorMessage(`运行插件脚本出错：${error}`);
-            if (error instanceof Error) {
-                y3.log.error(error);
+            if (error.stack) {
+                y3.log.error(error.stack);
                 y3.log.show();
             }
         }

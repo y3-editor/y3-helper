@@ -18,7 +18,11 @@ export async function 保存() {
 }
 
 export async function 读取() {
-    let unit = await y3.table.openTable('单位').get(11038)
+    let unit = await y3.table.openTable('单位').create({
+        name: '演示单位2',
+        key: 11038,
+        overwrite: true,
+    })
 
     y3.assert(unit.data.kv['演示字符串'] === 'abc')
     y3.assert(unit.data.kv['演示整数'] === 123)
@@ -29,7 +33,11 @@ export async function 读取() {
 }
 
 export async function 增加() {
-    let unit = await y3.table.openTable('单位').get(11038)
+    let unit = await y3.table.openTable('单位').create({
+        name: '演示单位2',
+        key: 11038,
+        overwrite: true,
+    })
 
     unit.data.kv['新增字符串1'] = '这种写法无效！'
 
