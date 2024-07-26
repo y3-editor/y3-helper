@@ -80,3 +80,12 @@ export class Json {
         this._patch = undefined;
     }
 }
+
+/**
+ * 解析json文本，支持注释和尾随逗号
+ * @param text json文本
+ * @returns 
+ */
+export function parse(text: string) {
+    return jsonc.parse(text, undefined, parseOptions);
+}

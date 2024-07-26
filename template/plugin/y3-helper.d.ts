@@ -3030,6 +3030,13 @@ declare class Json {
 	set(key: string, value: any): boolean;
 	private applyPatch;
 }
+declare function parse(text: string): any;
+declare const encodeOptions: {
+	readonly newline: "\n";
+	readonly indent: "    ";
+	readonly depth: 0;
+};
+declare function encode(jsObject: any, options?: Partial<typeof encodeOptions>): string;
 export type EditorVersion = "1.0" | "2.0" | "unknown";
 declare class Env {
 	private envChangeEmitter;
@@ -3109,8 +3116,8 @@ export declare function openInExplorer(uri: vscode.Uri | string): void;
 export declare function sleep(ms: number): Promise<void>;
 export declare function assert(exp: any, msg?: string): void;
 
-declare namespace json {
-	export { Item, JArray, JObject, Json };
+declare namespace lua {
+	export { encode };
 }
 declare namespace plugin {
 	export { init$3 as init, onceDidRun, runAllPlugins };
@@ -3127,11 +3134,14 @@ declare namespace language {
 declare namespace fs {
 	export { copy, dir, isAbsolutePath, isDirectory, isExists, isFile, isRelativePath, readFile, removeFile, scan, stat, writeFile };
 }
+declare namespace json {
+	export { Item, JArray, JObject, Json, parse };
+}
 declare namespace consts {
 	export { CSV, Table$1 as Table, Template };
 }
 declare namespace y3 {
-	export { consts, excel, fs, json, language, plugin, table };
+	export { consts, excel, fs, json, language, lua, plugin, table };
 }
 
 export {
@@ -3140,6 +3150,7 @@ export {
 	fs,
 	json,
 	language,
+	lua,
 	plugin,
 	table,
 };
