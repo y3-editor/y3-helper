@@ -201,13 +201,19 @@ export class PluginManager extends vscode.Disposable {
         }
     }
 
+    private static requireCache: Record<string, any> = {
+        'y3-helper': y3,
+        'os': require('os'),
+        'path': require('path'),
+        'fs': require('fs'),
+        'util': require('util'),
+        'vscode': vscode,
+    };
+
     private makeSandbox() {
         const sandBox = {
             require: (name: string) => {
-                if (name === 'y3-helper') {
-                    return y3;
-                }
-                return require(name);
+                return PluginManager.requireCache[name] ?? require(name);
             },
             module: { exports: {} },
         };

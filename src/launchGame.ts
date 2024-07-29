@@ -17,6 +17,7 @@ export class GameLauncher {
             }
             return true;
         }
+        return true;
     }
 
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
