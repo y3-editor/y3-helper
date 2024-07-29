@@ -15,6 +15,7 @@ export class GameLauncher {
             if (res !== '仍要启动') {
                 return false;
             }
+            return true;
         }
     }
 
@@ -33,7 +34,10 @@ export class GameLauncher {
         }
 
         await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(env.scriptUri!, '.log'));
-        await this.runPlugin();
+        let suc = await this.runPlugin();
+        if (!suc) {
+            return false;
+        }
 
         let args = [];
         args.push('type@editor_game');
