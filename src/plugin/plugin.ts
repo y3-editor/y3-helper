@@ -207,6 +207,7 @@ export class PluginManager extends vscode.Disposable {
         'path': require('path'),
         'fs': require('fs'),
         'util': require('util'),
+        'child_process': require('child_process'),
         'vscode': vscode,
     };
 
