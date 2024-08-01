@@ -220,7 +220,7 @@ export class Excel {
      * 获取指定的sheet
      * @param indexOrName sheet的索引或名称
      */
-    public getSheet(indexOrName: number | string) {
+    public getSheet(indexOrName?: number | string) {
         const sheet = this.workbook.getWorksheet(indexOrName);
         if (!sheet) {
             return undefined;

@@ -19,7 +19,7 @@ export async function loadFile(path: vscode.Uri | string, sheetName?: number | s
     if (!suc) {
         throw new Error('Excel打开失败：' + path.fsPath);
     }
-    const sheet = exc.getSheet(sheetName ?? 1);
+    const sheet = exc.getSheet(sheetName);
     if (!sheet) {
         throw new Error('找不到工作表：' + sheetName);
     }
