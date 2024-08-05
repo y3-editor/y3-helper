@@ -57,6 +57,9 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
     }
 
     updateItem(item: TreeItem, data: getTreeNodeResponse) {
+        if (typeof data.name === 'string') {
+            item.label = data.name;
+        }
         if (typeof data.desc === 'string') {
             item.description = data.desc;
         }
