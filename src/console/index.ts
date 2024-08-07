@@ -105,7 +105,7 @@ function registerAllMethods() {
         hasValidateInput?: boolean; // 是否有 validateInput 回调
     }
 
-    registerMethod('showInput', async (client, params: ShowInputParams) => {
+    registerMethod('showInputBox', async (client, params: ShowInputParams) => {
         let result = await vscode.window.showInputBox({
             title: params.title,
             value: params.value,
