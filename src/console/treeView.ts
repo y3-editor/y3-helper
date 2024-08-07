@@ -3,6 +3,7 @@ import { Client } from './client';
 
 class TreeItem extends vscode.TreeItem {
     childs?: number[];
+    needRefresh = false;
 
     constructor(readonly uid: number, name: string) {
         super(name);
@@ -18,22 +19,24 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
 
     itemMap = new Map<number, TreeItem>();
 
-    async getTreeItem(id: number): Promise<TreeItem> {
-        let data = await this.manager.requestGetTreeNode(id);
+    getTreeItem(id: number): Promise<TreeItem> | TreeItem {
         let item = this.getItem(id);
-        if (item) {
-            if (data) {
-                this.updateItem(item, data);
-            }
+        if (item?.needRefresh === false) {
             return item;
         }
-        if (!data) {
-            return new TreeItem(id, 'Loading...');
-        }
-        return this.createItem(id, data);
+        return (async () => {
+            let data = await this.manager.requestGetTreeNode(id);
+            if (item) {
+                this.updateItem(item, data ?? {});
+                item.needRefresh = false;
+                return item;
+            }
+            item = this.createItem(id, data ?? {});
+            return item;
+        })();
     }
 
-    async getChildren(id: number | undefined): Promise<number[]> {
+    getChildren(id: number | undefined): Promise<number[]> | number[] {
         if (id === undefined) {
             return this.manager.treeViews.map(view => view.root);
         }
@@ -44,19 +47,18 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         if (item.childs) {
             return item.childs;
         }
-        let childs = await this.manager.requestGetChildTreeNodes(id);
-        item.childs = childs;
-        if (!childs) {
-            return [];
-        }
-        return childs;
+        return (async () => {
+            let childs = await this.manager.requestGetChildTreeNodes(id);
+            item.childs = childs;
+            return childs ?? [];
+        })();
     }
 
     getItem(id: number) {
         return this.itemMap.get(id);
     }
 
-    updateItem(item: TreeItem, data: getTreeNodeResponse) {
+    updateItem(item: TreeItem, data: TreeNodeInfo) {
         if (typeof data.name === 'string') {
             item.label = data.name;
         }
@@ -85,9 +87,9 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         }
     }
 
-    createItem(id: number, data: getTreeNodeResponse) {
+    createItem(id: number, data: TreeNodeInfo) {
         this.removeItem(id);
-        let item = new TreeItem(id, data.name);
+        let item = new TreeItem(id, data?.name ?? 'Loading...');
         this.itemMap.set(id, item);
         this.updateItem(item, data);
         return item;
@@ -106,11 +108,14 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         }
     }
 
-    refresh(id: number | undefined) {
-        if (id !== undefined) {
-            let node = this.itemMap.get(id);
-            if (node) {
-                node.childs = undefined;
+    refresh(id: number | undefined, fullRefresh = false) {
+        if (fullRefresh) {
+            if (id !== undefined) {
+                let item = this.itemMap.get(id);
+                if (item) {
+                    item.childs = undefined;
+                    item.needRefresh = true;
+                }
             }
         }
 
@@ -128,8 +133,8 @@ export class TreeView {
     ) {}
 }
 
-interface getTreeNodeResponse {
-    name: string;
+export interface TreeNodeInfo {
+    name?: string;
     desc?: string;
     tip?: string;
     icon?: string;
@@ -179,7 +184,7 @@ export class TreeViewManager extends vscode.Disposable {
     readonly treeOrder = new Map<string, number>();
 
     // 从客户端中获取节点信息
-    async requestGetTreeNode(id: number): Promise<getTreeNodeResponse|undefined> {
+    async requestGetTreeNode(id: number): Promise<TreeNodeInfo|undefined> {
         return await this.client.request('getTreeNode', { id });
     }
 
@@ -213,6 +218,15 @@ export class TreeViewManager extends vscode.Disposable {
     }
 
     refreshTreeNode(id: number) {
+        this.treeDataProvider.refresh(id, true);
+    }
+
+    updateTreeNode(id: number, info: TreeNodeInfo) {
+        let item = this.treeDataProvider.getItem(id);
+        if (!item) {
+            return;
+        }
+        this.treeDataProvider.updateItem(item, info);
         this.treeDataProvider.refresh(id);
     }
 

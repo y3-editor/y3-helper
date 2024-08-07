@@ -6,6 +6,7 @@ import { registerMethod } from './client';
 import * as debug from '../debug';
 import * as vscode from 'vscode';
 import * as terminal from './terminal';
+import * as treeView from './treeView';
 
 function setPort(port: number) {
     if (!env.scriptUri) {
@@ -61,12 +62,17 @@ function registerAllMethods() {
         client.treeViewManager.removeTreeView(params.id);
     });
 
-    interface refreshTreeNodeParams {
+    interface refreshTreeNodeParams extends treeView.TreeNodeInfo {
         id: number;
+        complete?: boolean;
     }
 
     registerMethod('refreshTreeNode', async (client, params: refreshTreeNodeParams) => {
-        client.treeViewManager.refreshTreeNode(params.id);
+        if (params.complete) {
+            client.treeViewManager.updateTreeNode(params.id, params);
+        } else {
+            client.treeViewManager.refreshTreeNode(params.id);
+        }
     });
 
     interface CommandParams {
