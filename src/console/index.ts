@@ -92,6 +92,38 @@ function registerAllMethods() {
     registerMethod('prepareForRestart', async (client, params: PrepareForRestartParams) => {
         debug.prepareForRestart(params.debugger);
     });
+
+    interface ShowInputParams {
+        id: number; // 唯一ID
+        title?: string; // 标题
+        value?: string; // 初始值
+        valueSelection?: [number, number]; // 初始选中的文本范围(光标位置，第一个字符前为0)
+        prompt?: string; // 提示
+        placeHolder?: string; // 占位符
+        password?: boolean; // 是否是密码框
+        ignoreFocusOut?: boolean; // 是否在失去焦点时关闭
+        hasValidateInput?: boolean; // 是否有 validateInput 回调
+    }
+
+    registerMethod('showInput', async (client, params: ShowInputParams) => {
+        let result = await vscode.window.showInputBox({
+            title: params.title,
+            value: params.value,
+            valueSelection: params.valueSelection,
+            prompt: params.prompt,
+            placeHolder: params.placeHolder,
+            password: params.password,
+            ignoreFocusOut: params.ignoreFocusOut,
+            validateInput: params.hasValidateInput ? async (value) => {
+                let err = await client.request('inputBoxValidate', {
+                    id: params.id,
+                    input: value,
+                });
+                return err;
+            } : undefined,
+        });
+        return result;
+    });
 }
 
 export function init() {
