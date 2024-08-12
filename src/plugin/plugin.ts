@@ -226,7 +226,7 @@ export class PluginManager extends vscode.Disposable {
     }
 
     public getName(uri: vscode.Uri) {
-        if (!uri.path.startsWith(this.dir.path)) {
+        if (!uri.path.toLocaleLowerCase().startsWith(this.dir.path.toLocaleLowerCase())) {
             return undefined;
         }
         return uri.path.slice(this.dir.path.length + 1).replace(/\.js$/, '');
