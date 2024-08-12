@@ -59,17 +59,13 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
     }
 
     updateItem(item: TreeItem, data: TreeNodeInfo) {
-        if (typeof data.name === 'string') {
-            item.label = data.name;
-        }
-        if (typeof data.desc === 'string') {
-            item.description = data.desc;
-        }
-        if (typeof data.tip === 'string') {
-            item.tooltip = data.tip;
-        }
+        item.label = data.name;
+        item.description = data.desc;
+        item.tooltip = data.tip;
         if (typeof data.icon === 'string') {
             item.iconPath = new vscode.ThemeIcon(data.icon);
+        } else {
+            item.iconPath = undefined;
         }
         if (data.hasChilds) {
             if (this.manager.treeViews.find(view => view.root === item.uid)) {
