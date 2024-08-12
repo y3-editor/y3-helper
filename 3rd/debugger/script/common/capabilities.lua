@@ -57,7 +57,7 @@ return {
             description = 'Error raised by `lua_error`.',
         },
         {
-            default = false,
+            default = true,
             filter = 'lua',
             label = 'Caught Errors By Lua',
             supportsCondition = true,
