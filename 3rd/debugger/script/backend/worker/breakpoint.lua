@@ -355,6 +355,9 @@ function m.hitExceptionBreakpoint(flags, level, error)
     for _, flag in ipairs(flags) do
         local bp = exceptionFilters[flag]
         if bp then
+            if type(error) == 'string' and error:match('^<ignore>:') then
+                goto continue
+            end
             if not bp.condition then
                 return bp
             end
@@ -363,6 +366,7 @@ function m.hitExceptionBreakpoint(flags, level, error)
                 return bp
             end
         end
+        ::continue::
     end
 end
 
