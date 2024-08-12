@@ -62,6 +62,13 @@ class TreeDataProvider implements vscode.TreeDataProvider<number> {
         item.label = data.name;
         item.description = data.desc;
         item.tooltip = data.tip;
+        if (data.check === true) {
+            item.checkboxState = vscode.TreeItemCheckboxState.Checked;
+        } else if (data.check === false) {
+            item.checkboxState = vscode.TreeItemCheckboxState.Unchecked;
+        } else {
+            item.checkboxState = undefined;
+        }
         if (typeof data.icon === 'string') {
             item.iconPath = new vscode.ThemeIcon(data.icon);
         } else {
@@ -134,6 +141,7 @@ export interface TreeNodeInfo {
     desc?: string;
     tip?: string;
     icon?: string;
+    check?: boolean;
     hasChilds?: boolean;
     canClick?: boolean;
 }
@@ -168,6 +176,14 @@ export class TreeViewManager extends vscode.Disposable {
             let item = this.treeDataProvider.itemMap.get(e.element);
             if (item && item.childs) {
                 this.notifyChangeTreeNodeVisible(item.childs, false);
+            }
+        });
+        this.view.onDidChangeCheckboxState(e => {
+            for (const [id, state] of e.items) {
+                this.client.notify('changeTreeNodeCheckBox', {
+                    id,
+                    checked: state === vscode.TreeItemCheckboxState.Checked,
+                });
             }
         });
         vscode.commands.executeCommand('y3-helper.custom.focus');
