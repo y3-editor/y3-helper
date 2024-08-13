@@ -45,6 +45,8 @@
     y3.game:event('玩家-发送指定消息', 'Link Start', function (trg, data)
         y3.develop.helper.init(11037)
     end)
+    -- 允许在平台中执行本地代码
+    y3.config.code.enable_local = true
     ```
 2. 在VSCode的设置中将 `Y3-Helper.ServerPort` 改为上述相同的端口号 `11037`
 3. 重启VSCode，确保插件应用了新的端口号
@@ -70,6 +72,5 @@
 2. `git clone` 或其他方式下载本插件项目源码
 3. 使用VSCode打开项目文件夹
 4. 在终端中使用 `npm install` 命令，安装相关依赖
-5. 在终端中使用 `npm install -g typescript` 命令以支持tsc
-6. 按下 `ctrl+shift+B` 启动实时编译
-7. 按F5启动新的VSCode窗口测试代码
+5. 按下 `ctrl+shift+B` 启动实时编译
+6. 按F5启动新的VSCode窗口测试代码
