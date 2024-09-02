@@ -31,7 +31,7 @@ export abstract class BaseBuilder {
         if (code) {
             this.updateExists(await tools.fs.writeFile(env.scriptUri, this.path, code));
         } else {
-            tools.fs.removeFile(env.scriptUri, this.path);
+            // tools.fs.removeFile(env.scriptUri, this.path);
             this.updateExists(false);
         }
     }
