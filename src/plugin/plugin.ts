@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as vm from 'vm';
+import * as path from 'path';
 import { queue, throttle } from '../utility/decorators';
+
+declare const __non_webpack_require__: NodeRequire | undefined;
+const rawRequire = __non_webpack_require__ ?? require;
 
 interface ExportInfo {
     name: string;
@@ -212,9 +216,40 @@ export class PluginManager extends vscode.Disposable {
     };
 
     private makeSandbox() {
+        function getCallerFilePath() {
+            const originalPrepareStackTrace = Error.prepareStackTrace;
+            try {
+                const err = new Error();
+                Error.prepareStackTrace = (err, stack) => stack;
+                const stack = err.stack as unknown as NodeJS.CallSite[];
+                Error.prepareStackTrace = originalPrepareStackTrace;
+        
+                if (stack && stack.length > 2) {
+                    const caller = stack[2];
+                    let fileName = caller.getFileName();
+                    if (!fileName) {
+                        return null;
+                    }
+                    fileName = fileName.replace(/^\/(?=[a-zA-Z]:)/, '');
+                    return fileName;
+                }
+            } catch (e) {
+                // Handle error if needed
+            } finally {
+                Error.prepareStackTrace = originalPrepareStackTrace;
+            }
+            return null;
+        }
+
         const sandBox = {
             require: (name: string) => {
-                return PluginManager.requireCache[name] ?? require(name);
+                if (name.startsWith('./') || name.startsWith('../')) {
+                    let filePath = getCallerFilePath();
+                    let fileDir = path.dirname(filePath!);
+                    const resolvedPath = rawRequire.resolve(name, { paths: [fileDir] });
+                    return rawRequire(resolvedPath);
+                }
+                return PluginManager.requireCache[name] ?? rawRequire(name);
             },
             module: { exports: {} },
         };
