@@ -31,15 +31,14 @@ class Helper {
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
-                env.reload();
                 tools.log.info('配置已更新，已重新加载环境');
+                await env.updateEditor();
             }
         });
     }
 
     private registerCommonCommands() {
         vscode.commands.registerCommand('y3-helper.selectAnotherMap', async () => {
-            env.reload();
             await env.updateMap(false, true);
             if (!vscode.workspace.workspaceFolders?.some((folder) => folder.uri.fsPath === env.scriptUri?.fsPath)) {
                 vscode.commands.executeCommand('vscode.openFolder', env.scriptUri);
@@ -264,7 +263,6 @@ class Helper {
         this.registerCommonCommands();
 
         setTimeout(() => {
-            env.reload();
             this.checkNewProject();
             mainMenu.init();
             metaBuilder.init();

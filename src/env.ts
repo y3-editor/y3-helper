@@ -304,13 +304,6 @@ class Env {
         }
         await this.updateMap(true, askUser);
     }
-
-    public reload() {
-        this.mapUri = undefined;
-        this.editorUri = undefined;
-        this.fireOnDidReload();
-        this.initTableTypeToCSVfolderPath();//重新载入要导入的CSV表格的相对路径
-    }
 }
 
 export const env = new Env();
