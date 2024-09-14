@@ -13,11 +13,16 @@ import { 插件 } from './pages/plugin';
 let mainNode = new TreeNode('主菜单', {
     childs: [
         new 功能,
-        new 单位属性,
-        new 玩家属性,
         new 界面,
-        new 自定义事件,
-        new 时间轴动画,
+        new TreeNode('枚举', {
+            iconPath: new vscode.ThemeIcon('list-tree'),
+            childs: [
+                new 单位属性,
+                new 玩家属性,
+                new 自定义事件,
+                new 时间轴动画,
+            ]
+        }),
         new 插件,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {
