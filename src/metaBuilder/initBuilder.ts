@@ -5,6 +5,8 @@ import { PlayerAttrs } from './playerAttrs';
 import { CustomEvents } from './customEvents';
 import { UI } from './ui';
 import { UIAnim } from './uiAnim';
+import { JumpWord } from './jumpword';
+import { Font } from './font';
 
 let path = 'y3-helper/meta';
 
@@ -51,4 +53,6 @@ export function init() {
     initBuilder.addChild(CustomEvents, 'customEvents.lua');
     initBuilder.addChild(UI, 'ui.lua');
     initBuilder.addChild(UIAnim, 'uiAnim.lua');
+    initBuilder.addChild(JumpWord, 'jumpword.lua');
+    initBuilder.addChild(Font, 'font.lua');
 }
