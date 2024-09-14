@@ -9,6 +9,8 @@ import { 自定义事件 } from './pages/events';
 import { 界面 } from './pages/ui';
 import { 时间轴动画 } from './pages/uiAnim';
 import { 插件 } from './pages/plugin';
+import { 跳字 } from './pages/jumpword';
+import { 字体 } from './pages/font';
 
 let mainNode = new TreeNode('主菜单', {
     childs: [
@@ -21,6 +23,8 @@ let mainNode = new TreeNode('主菜单', {
                 new 玩家属性,
                 new 自定义事件,
                 new 时间轴动画,
+                new 跳字,
+                new 字体,
             ]
         }),
         new 插件,
