@@ -132,13 +132,13 @@ const as = {
      * @returns
      */
     number: (defaultValue?: number) => {
-        return new AsRule<number>(parseFloat).default(defaultValue);
+        return new AsRule<number>((value) => parseFloat(value)).default(defaultValue);
     },
     /**
      * 将值视为整数
      */
     integer: (defaultValue?: number) => {
-        return new AsRule<number>(parseInt).default(defaultValue);
+        return new AsRule<number>((value) => parseInt(value)).default(defaultValue);
     },
     /**
      * 将值视为字符串。
