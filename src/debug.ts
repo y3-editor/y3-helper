@@ -25,6 +25,7 @@ export function init(context: vscode.ExtensionContext) {
         logPath:                        context.logPath,
         extensionMode:                  context.extensionMode,
         extension:                      context.extension,
+        languageModelAccessInformation: context.languageModelAccessInformation,
     };
 
     let debug = require('../' + debuggerPath + '/js/extension.js');
