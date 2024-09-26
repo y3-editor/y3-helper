@@ -196,7 +196,9 @@ class Helper {
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
                 let suc = await gameLauncher.launch({
-                    "lua_wait_debugger": true,
+                    luaArgs: {
+                        "lua_wait_debugger": true,
+                    },
                 });
                 if (!suc) {
                     return;

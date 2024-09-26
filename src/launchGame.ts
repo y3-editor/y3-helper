@@ -3,6 +3,11 @@ import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 
+interface LaunchOptions {
+    luaArgs?: {[key: string]: string|number|boolean};
+    multi?: number[];
+}
+
 export class GameLauncher {
     private async runPlugin() {
         try {
@@ -20,7 +25,7 @@ export class GameLauncher {
         return true;
     }
 
-    public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
+    public async launch(options?: LaunchOptions): Promise<boolean> {
         await env.editorReady(true);
         await env.mapReady(true);
         let projectUri = env.projectUri;
@@ -42,13 +47,18 @@ export class GameLauncher {
 
         let args = [];
         args.push('type@editor_game');
-        args.push('subtype@editor_game');
+        if (options?.multi) {
+            args.push('subtype@editor_multi_game');
+            args.push('role_ids@' + options.multi.join('#'));
+        } else {
+            args.push('subtype@editor_game');
+        }
         args.push('release@true');
         args.push('editor_map_path@' + projectUri.fsPath);
         args.push('lua_dummy@sp ce');
-        if (luaArgs) {
-            for (let key in luaArgs) {
-                args.push(key + "@" + luaArgs[key].toString());
+        if (options?.luaArgs) {
+            for (let key in options.luaArgs) {
+                args.push(key + "@" + options.luaArgs[key].toString());
             }
         }
         await runShell(
