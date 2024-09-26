@@ -8,7 +8,7 @@
         "url": "https://github.com/y3-editor/y3-helper"
     },
     "engines": {
-        "vscode": "^1.83.0"
+        "vscode": "^1.90.0"
     },
     "categories": [
         "Other"
@@ -517,7 +517,7 @@
         "@types/module-alias": "^2.0.4",
         "@types/node": "^18.19.18",
         "@types/uuid": "^9.0.8",
-        "@types/vscode": "^1.83.0",
+        "@types/vscode": "^1.90.0",
         "@types/winreg": "^1.2.34",
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",
