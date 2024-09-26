@@ -62,7 +62,7 @@ export class GameLauncher {
             }
         }
         if (options?.multi) {
-            vscode.window.showInformationMessage("正在已多开模式启动，若看到“错误码54”，请手动启动编辑器登录一次再使用此功能");
+            vscode.window.showInformationMessage("正在以多开模式启动，若无法启动或看到“错误码：54”，请手动启动编辑器登录（并选择30天免登录）再使用此功能");
         }
         let code = await runShell(
             "启动游戏",

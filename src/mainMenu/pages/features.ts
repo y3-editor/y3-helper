@@ -82,7 +82,7 @@ export class 功能 extends TreeNode {
                     },
                 }),
                 new TreeNode('多开模式', {
-                    tooltip: '需要再编辑器中登录后才可使用，否则会看到“错误码：54”',
+                    tooltip: '请手动启动编辑器登录（并选择30天免登录）再使用此功能',
                     checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
                     onDidChangeCheckboxState(state) {
                         config.multiMode = state === vscode.TreeItemCheckboxState.Checked;

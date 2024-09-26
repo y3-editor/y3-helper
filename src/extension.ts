@@ -184,7 +184,9 @@ class Helper {
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
-                await gameLauncher.launch();
+                await gameLauncher.launch({
+                    multi: config.multiMode ? config.multiPlayers.sort() : undefined,
+                });
             });
         });
     }
