@@ -10,11 +10,11 @@ export async function runShell(title: string, command: string, args: string[], c
             cwd: cwd.fsPath,
         } : undefined),
     ));
-    await new Promise<void>((resolve) => {
-        let disposable = vscode.tasks.onDidEndTask((taskEndEvent) => {
-            if (task === taskEndEvent.execution) {
+    return await new Promise<number | undefined>((resolve) => {
+        let disposable = vscode.tasks.onDidEndTaskProcess((taskProcess) => {
+            if (task === taskProcess.execution) {
                 disposable.dispose();
-                resolve();
+                resolve(taskProcess.exitCode);
             };
         });
     });

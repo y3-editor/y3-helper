@@ -7,6 +7,8 @@ export interface TreeNodeOptional {
     description?: typeof vscode.TreeItem.prototype.description;
     contextValue?: typeof vscode.TreeItem.prototype.contextValue;
     tooltip?: typeof vscode.TreeItem.prototype.tooltip;
+    checkboxState?: typeof vscode.TreeItem.prototype.checkboxState;
+    onDidChangeCheckboxState?: (state: vscode.TreeItemCheckboxState) => void;
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
     show?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
@@ -18,6 +20,7 @@ export class TreeNode extends vscode.TreeItem {
     parent?: TreeNode;
     show?: TreeNodeOptional["show"] = true;
     update?: TreeNodeOptional["update"];
+    onDidChangeCheckboxState?: TreeNodeOptional["onDidChangeCheckboxState"];
     data?: any;
     tree?: TreeProvider;
     constructor(label: string, optional?: TreeNodeOptional) {
@@ -33,6 +36,8 @@ export class TreeNode extends vscode.TreeItem {
             this.collapsibleState = optional.collapsibleState;
             this.tooltip = optional.tooltip;
             this.data = optional.data;
+            this.checkboxState = optional.checkboxState;
+            this.onDidChangeCheckboxState = optional.onDidChangeCheckboxState;
         }
         this.updateChilds();
     }

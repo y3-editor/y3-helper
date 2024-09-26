@@ -20,6 +20,7 @@ import { EditorLauncher } from './launchEditor';
 import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
+import { config } from './config';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -199,6 +200,7 @@ class Helper {
                     luaArgs: {
                         "lua_wait_debugger": true,
                     },
+                    multi: config.multiMode ? config.multiPlayers.sort() : undefined,
                 });
                 if (!suc) {
                     return;

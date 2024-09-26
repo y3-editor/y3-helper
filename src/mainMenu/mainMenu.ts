@@ -17,7 +17,10 @@ let mainNode = new TreeNode('主菜单', {
         new 功能,
         new 界面,
         new TreeNode('枚举', {
-            iconPath: new vscode.ThemeIcon('list-tree'),
+            iconPath: new vscode.ThemeIcon('list-tree'),show: async () => {
+                await env.mapReady();
+                return env.mapUri !== undefined;
+            },
             childs: [
                 new 单位属性,
                 new 玩家属性,
@@ -47,10 +50,16 @@ class MainMenu {
         this.tree = new TreeProvider(mainNode);
         this.view = vscode.window.createTreeView('y3-helper.mainMenu', {
             treeDataProvider: this.tree,
+            manageCheckboxStateManually: true,
         });
         this.view.onDidChangeVisibility(async (e) => {
             if (e.visible) {
                 this.refresh();
+            }
+        });
+        this.view.onDidChangeCheckboxState(async (e) => {
+            for (let [item, state] of e.items) {
+                item.onDidChangeCheckboxState?.(state);
             }
         });
         env.onDidChange(() => {

@@ -61,7 +61,10 @@ export class GameLauncher {
                 args.push(key + "@" + options.luaArgs[key].toString());
             }
         }
-        await runShell(
+        if (options?.multi) {
+            vscode.window.showInformationMessage("正在已多开模式启动，若看到“错误码54”，请手动启动编辑器登录一次再使用此功能");
+        }
+        let code = await runShell(
             "启动游戏",
             editorExeUri.fsPath,
             [
@@ -76,6 +79,10 @@ export class GameLauncher {
             ],
             vscode.Uri.joinPath(editorExeUri, "..")
         );
+        if (code !== 0) {
+            vscode.window.showErrorMessage("启动游戏失败！");
+            return false;
+        }
         return true;
     }
 }

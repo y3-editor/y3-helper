@@ -2,6 +2,7 @@ import { env } from "../../env";
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
+import { config } from "../../config";
 
 export class 功能 extends TreeNode {
     constructor() {
@@ -80,6 +81,33 @@ export class 功能 extends TreeNode {
                         };
                     },
                 }),
+                new TreeNode('多开模式', {
+                    tooltip: '需要再编辑器中登录后才可使用，否则会看到“错误码：54”',
+                    checkboxState: vscode.TreeItemCheckboxState.Unchecked,
+                    onDidChangeCheckboxState(state) {
+                        config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
+                    },
+                    childs: Array.from({ length: 8 }, (_, i) => {
+                        const id = i + 1;
+                        return new TreeNode(`玩家${id}`, {
+                            checkboxState: config.multiPlayers.includes(id)
+                                ? vscode.TreeItemCheckboxState.Checked
+                                : vscode.TreeItemCheckboxState.Unchecked,
+                            onDidChangeCheckboxState(state) {
+                                if (state === vscode.TreeItemCheckboxState.Checked) {
+                                    if (!config.multiPlayers.includes(id)) {
+                                        config.multiPlayers.push(id);
+                                    }
+                                } else {
+                                    const index = config.multiPlayers.indexOf(id);
+                                    if (index !== -1) {
+                                        config.multiPlayers.splice(index, 1);
+                                    }
+                                }
+                            }
+                        });
+                    }),
+                })
             ]
         });
     }
