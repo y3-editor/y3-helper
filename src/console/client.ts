@@ -34,25 +34,40 @@ export function registerRequest(method: string, handler: ResponseHandler) {
     requests.set(method, handler);
 }
 
+class Buttons extends vscode.Disposable {
+    private buttons: vscode.StatusBarItem[] = [];
+
+    constructor() {
+        super(() => {
+            for (let button of this.buttons) {
+                button.dispose();
+            }
+        });
+
+        let rd = this.addButton('🍉重载Lua');
+        rd.tooltip = '省的你输入 `.rd`';
+        rd.command = 'y3-helper.reloadLua';
+    }
+
+    addButton(text: string) {
+        let button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        button.text = text;
+        button.show();
+        this.buttons.push(button);
+        return button;
+    }
+}
+
 export class Client extends vscode.Disposable {
     static allClients: Client[] = [];
 
-    static button?: vscode.StatusBarItem;
+    static button?: Buttons;
 
     static updateButton() {
         if (this.allClients.length > 0) {
-            if (!this.button) {
-                this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-                this.button.text = '🍉重载Lua';
-                this.button.tooltip = '省的你输入 `.rd`';
-                this.button.command = 'y3-helper.reloadLua';
-                this.button.show();
-            }
+            this.button ??= new Buttons();
         } else {
-            if (this.button) {
-                this.button.dispose();
-                this.button = undefined;
-            }
+            this.button?.dispose();
         }
     }
 
