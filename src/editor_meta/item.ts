@@ -4,7 +4,7 @@ export interface ItemData {
      */
     uid: string; // PText
     /**
-     * 掉落后时间到期消失
+     * 未拾取时间到期消失
      */
     delete_on_discard: boolean; // PBool
     /**

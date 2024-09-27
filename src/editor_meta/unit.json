@@ -169,6 +169,11 @@
         "tips": "对当前物体模型的缩放倍数，用于调整模型大小。",
         "type": "PFloat"
     },
+    "build_ignore_dyn_collision": {
+        "desc": "建造时忽略动态碰撞",
+        "key": "build_ignore_dyn_collision",
+        "type": "PBool"
+    },
     "build_res_cost_list": {
         "desc": "资源消耗",
         "key": "build_res_cost_list",
@@ -252,6 +257,7 @@
         "type": "PAst"
     },
     "collision_radius_2": {
+        "desc": "动态碰撞半径",
         "key": "collision_radius_2",
         "type": "PFloat"
     },
@@ -385,10 +391,15 @@
         "type": "PExplorerList"
     },
     "dynamic_collision_r": {
-        "desc": "碰撞半径",
+        "desc": "寻路碰撞网格边长",
         "key": "dynamic_collision_r",
         "tips": "碰撞动态半径，每50为1个标准格。",
         "type": "PFloat"
+    },
+    "enable_item_slots": {
+        "desc": "开启物品背包栏",
+        "key": "enable_item_slots",
+        "type": "PBool"
     },
     "enable_strict_facing_mode": {
         "desc": "开启面向移动模式",
@@ -507,6 +518,18 @@
         "desc": "生命恢复",
         "key": "hp_rec_grow",
         "tips": "单位的每秒生命恢复数值",
+        "type": "PFloat"
+    },
+    "hp_rec_percent": {
+        "desc": "百分比生命恢复",
+        "key": "hp_rec_percent",
+        "tips": "单位的每秒生命恢复百分比数值",
+        "type": "PFloat"
+    },
+    "hp_rec_percent_grow": {
+        "desc": "百分比生命恢复",
+        "key": "hp_rec_percent_grow",
+        "tips": "单位的每秒生命恢复百分比数值",
         "type": "PFloat"
     },
     "icon": {
@@ -727,7 +750,7 @@
     "ori_bits": {
         "desc": "单位状态",
         "key": "ori_bits",
-        "tips": "进入游戏时，为单位附加的初始状态",
+        "tips": "进入游戏时,为单位附加的初始状态\n状态会记录层数，初始为1层。每次添加/移除状态会增加/减少一层。",
         "type": "PCheckBoxBit"
     },
     "ori_speed": {
@@ -747,6 +770,11 @@
         "key": "passive_ability_list",
         "tips": "隐藏技能，放在这类技能位中的技能将不会被显示在游戏中。",
         "type": "PExplorerList"
+    },
+    "path_finding_external_size": {
+        "desc": "寻路碰撞额外范围",
+        "key": "path_finding_external_size",
+        "type": "PInt"
     },
     "pene_mag": {
         "desc": "法术穿透",
@@ -982,6 +1010,11 @@
         "key": "tags",
         "tips": "用于对物体的分类处理。为单位贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：杀死所有拥有XX标签的单位",
         "type": "PList"
+    },
+    "tower_hatred_duration": {
+        "desc": "防御塔仇恨持续时间",
+        "key": "tower_hatred_duration",
+        "type": "PFloat"
     },
     "type": {
         "desc": "单位分类",

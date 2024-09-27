@@ -79,6 +79,16 @@
         "key": "ability_stack_cd",
         "type": "PAbilityFormula"
     },
+    "ability_stage_config": {
+        "desc": "技能阶段配置",
+        "key": "ability_stage_config",
+        "type": "PEnum"
+    },
+    "ability_timeline_resource": {
+        "desc": "技能绑定动画轨",
+        "key": "ability_timeline_resource",
+        "type": "PAnimResource"
+    },
     "arrow_length": {
         "desc": "长度",
         "key": "arrow_length",
@@ -312,7 +322,7 @@
     "is_immediate": {
         "desc": "立刻施法",
         "key": "is_immediate",
-        "type": "PBool"
+        "type": "PEnum"
     },
     "is_meele": {
         "desc": "近战",

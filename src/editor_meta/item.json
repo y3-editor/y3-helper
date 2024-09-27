@@ -61,7 +61,7 @@
         "type": "PInt"
     },
     "delete_on_discard": {
-        "desc": "掉落后时间到期消失",
+        "desc": "未拾取时间到期消失",
         "key": "delete_on_discard",
         "type": "PBool"
     },

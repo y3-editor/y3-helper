@@ -1,5 +1,9 @@
 export interface AbilityData {
     /**
+     * 技能阶段配置
+     */
+    ability_stage_config: any; // PEnum
+    /**
      * 物品
      */
     type_priority_item: number; // PInt
@@ -42,7 +46,7 @@ export interface AbilityData {
     /**
      * 立刻施法
      */
-    is_immediate: boolean; // PBool
+    is_immediate: any; // PEnum
     /**
      * 宽度
      */
@@ -96,6 +100,10 @@ export interface AbilityData {
      */
     sound_event_list: any[]; // PSoundList
     /**
+     * 玩家自定义
+     */
+    kv: any; // PAst
+    /**
      * 移动会对技能产生影响
      */
     influenced_by_move: boolean; // PBool
@@ -104,17 +112,17 @@ export interface AbilityData {
      */
     can_cast_when_hp_insufficient: boolean; // PBool
     /**
-     * 玩家自定义
+     * 自动拾取
      */
-    kv: any; // PAst
+    auto_pick: boolean; // PBool
     /**
      * 英雄
      */
     type_priority_hero: number; // PInt
     /**
-     * 自动拾取
+     * 施法开始
      */
-    auto_pick: boolean; // PBool
+    ability_cast_point: number; // PFloat
     /**
      * 消耗生命值施放
      */
@@ -132,25 +140,27 @@ export interface AbilityData {
      */
     player_props_cost: any[]; // PResList
     /**
-     * 可以缓存
+     * 前置条件
+     *
+     * 训练、购买、建造该单位的前置条件
      */
-    can_cache: boolean; // PBool
-    /**
-     * 名称
-     */
-    name: string; // PLocalizeText
-    /**
-     * 技能消耗
-     */
-    ability_cost: string[]; // PAbilityFormula
+    precondition_list: any[]; // PreconditionList
     /**
      * 采集动画
      */
     collection_animation: string; // PText
     /**
+     * 技能消耗
+     */
+    ability_cost: string[]; // PAbilityFormula
+    /**
      * 击中音效
      */
     hit_sound_effect: any[]; // PList
+    /**
+     * 结束音效
+     */
+    end_sound_effect: any[]; // PList
     /**
      * 技能释放类型
      */
@@ -164,15 +174,13 @@ export interface AbilityData {
      */
     ability_stack_cd: string[]; // PAbilityFormula
     /**
-     * 结束音效
+     * 建筑
      */
-    end_sound_effect: any[]; // PList
+    type_priority_building: number; // PInt
     /**
-     * 前置条件
-     *
-     * 训练、购买、建造该单位的前置条件
+     * 施法打断范围
      */
-    precondition_list: any[]; // PreconditionList
+    ability_break_cast_range: string[]; // PAbilityFormula
     /**
      * 生物
      */
@@ -186,21 +194,21 @@ export interface AbilityData {
      */
     ability_damage: string[]; // PAbilityFormula
     /**
-     * 角度
+     * 攻击范围预览
      */
-    sector_angle: string[]; // PAbilityFormula
+    show_building_attack_range: boolean; // PBool
     /**
      * 是否转身
      */
     need_turn_to_target: boolean; // PBool
     /**
-     * 攻击范围预览
+     * 前摇音效
      */
-    show_building_attack_range: boolean; // PBool
+    ps_sound_effect: any[]; // PList
     /**
-     * 建造方式
+     * 角度
      */
-    ability_build_subtype: any; // PEnum
+    sector_angle: string[]; // PAbilityFormula
     /**
      * 显示准备倒计时
      */
@@ -222,10 +230,6 @@ export interface AbilityData {
      */
     build_list: any[]; // PExplorerList
     /**
-     * 前摇音效
-     */
-    ps_sound_effect: any[]; // PList
-    /**
      * 结束特效
      */
     end_sfx_list: any[]; // PList
@@ -234,21 +238,25 @@ export interface AbilityData {
      */
     bs_sfx_list: any[]; // PList
     /**
+     * 名称
+     */
+    name: string; // PLocalizeText
+    /**
      * 循环播放动画
      */
     collection_animation_loop: boolean; // PBool
     /**
-     * 建筑
+     * 建造角度
      */
-    type_priority_building: number; // PInt
+    build_rotate: number; // PFloat
     /**
      * 己方
      */
     camp_priority_self: number; // PInt
     /**
-     * 建造角度
+     * 建造方式
      */
-    build_rotate: number; // PFloat
+    ability_build_subtype: any; // PEnum
     /**
      * 特殊筛选
      */
@@ -310,25 +318,25 @@ export interface AbilityData {
      */
     ability_cast_range: string[]; // PAbilityFormula
     /**
-     * 施法打断范围
+     * 可以缓存
      */
-    ability_break_cast_range: string[]; // PAbilityFormula
+    can_cache: boolean; // PBool
     /**
      * 中立
      */
     camp_priority_neutral: number; // PInt
     /**
-     * 允许学习等级
-     */
-    required_level: any; // PRequiredLevel
-    /**
      * 指示器类型
      */
     sight_type: any; // PEnum
     /**
-     * 施法完成
+     * 技能绑定动画轨
      */
-    ability_bw_point: number; // PFloat
+    ability_timeline_resource: any; // PAnimResource
+    /**
+     * 允许学习等级
+     */
+    required_level: any; // PRequiredLevel
     /**
      * 技能影响范围
      */
@@ -346,13 +354,13 @@ export interface AbilityData {
      */
     can_interrupt_others: boolean; // PBool
     /**
-     * 施法开始
-     */
-    ability_cast_point: number; // PFloat
-    /**
      * 施法出手
      */
     ability_channel_time: number; // PFloat
+    /**
+     * 施法完成
+     */
+    ability_bw_point: number; // PFloat
     /**
      * 技能最大等级
      */
