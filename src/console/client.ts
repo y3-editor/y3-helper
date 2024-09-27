@@ -36,34 +36,57 @@ export function registerRequest(method: string, handler: ResponseHandler) {
 
 export class Client extends vscode.Disposable {
     static allClients: Client[] = [];
+
+    static button?: vscode.StatusBarItem;
+
+    static updateButton() {
+        if (this.allClients.length > 0) {
+            if (!this.button) {
+                this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+                this.button.text = '🍉重载Lua';
+                this.button.tooltip = '省的你输入 `.rd`';
+                this.button.command = 'y3-helper.reloadLua';
+                this.button.show();
+            }
+        } else {
+            if (this.button) {
+                this.button.dispose();
+                this.button = undefined;
+            }
+        }
+    }
+
     constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
             this.closeAllRequests();
-            this.terminal.dispose();
-            this.button.dispose();
+            this.terminal?.dispose();
             this.treeViewManager.dispose();
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
+            Client.updateButton();
         });
-        this.terminal = new Terminal(async (data) => {
+        Client.allClients.push(this);
+        Client.updateButton();
+
+        this.createTerminal('Y3控制台');
+    }
+
+    public name = '默认客户端';
+
+    private createTerminal(name: string) {
+        this.terminal?.dispose();
+        this.terminal = new Terminal(name, async (data) => {
             // 如果提交的数据只有空格，就忽略掉
             if (data.trim() === '') {
                 return;
             }
             this.notify('command', { data: data });
         });
-
-        this.button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.button.text = '🍉重载Lua';
-        this.button.tooltip = '省的你输入 `.rd`';
-        this.button.command = 'y3-helper.reloadLua';
-        this.button.show();
-        Client.allClients.push(this);
+        this.terminal.multiMode = this.multiMode;
     }
 
     readonly treeViewManager = new TreeViewManager(this);
 
-    private terminal: Terminal;
-    private button: vscode.StatusBarItem;
+    private terminal?: Terminal;
 
     private printBuffer: string[] | undefined;
     print(msg: string) {
@@ -72,7 +95,7 @@ export class Client extends vscode.Disposable {
             return;
         }
         this.printBuffer = [];
-        this.terminal.print(msg).then(() => {
+        this.terminal?.print(msg).then(() => {
             let buffer = this.printBuffer;
             this.printBuffer = undefined;
             if (buffer!.length > 0) {
@@ -83,11 +106,25 @@ export class Client extends vscode.Disposable {
     }
 
     disableInput() {
-        this.terminal.disableInput();
+        this.terminal?.disableInput();
     }
 
     enableInput() {
-        this.terminal.enableInput();
+        this.terminal?.enableInput();
+    }
+
+    setName(name: string) {
+        this.name = name;
+        this.createTerminal(name);
+    }
+
+    private multiMode = false;
+
+    setMultiMode(res: boolean) {
+        this.multiMode = res;
+        if (this.terminal) {
+            this.terminal.multiMode = this.multiMode;
+        }
     }
 
     async recv(obj: Request | Notify | Response) {
@@ -180,7 +217,7 @@ export class Client extends vscode.Disposable {
 }
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
-    let terminal = new Terminal(async (obj) => {
+    let terminal = new Terminal('测试客户端', async (obj) => {
         // await new Promise((resolve) => {
         //    setTimeout(resolve, 2000);
         // });

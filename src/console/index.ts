@@ -124,6 +124,21 @@ function registerAllMethods() {
         });
         return result;
     });
+
+    interface UpdatePlayerParams {
+        name: string;
+        id: number;
+        multiMode?: boolean;
+    }
+
+    registerMethod('updatePlayer', async (client, params: UpdatePlayerParams) => {
+        client.setName(`${params.name}【${params.id}】`);
+        if (params.multiMode) {
+            client.setMultiMode(true);
+        } else {
+            client.setMultiMode(false);
+        }
+    });
 }
 
 export function init() {

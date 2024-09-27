@@ -287,8 +287,10 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         this.write(`\x1B[${row};${col}H`);
     }
 
+    public startSymbol = `${COLOR.GREEN}>${COLOR.RESET}`;
+
     private async newStart() {
-        this.write(`${COLOR.GREEN}>${COLOR.RESET}`);
+        this.write(this.startSymbol);
         this.undoStack.splice(0);
         this.undoIndex = 0;
         this.historyIndex = 0;
@@ -362,7 +364,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         // 恢复用户的输入
         let [newRow, newCol] = await this.requestCursorPos();
         this.headPos[0] = newRow;
-        this.write(`${COLOR.GREEN}>${COLOR.RESET}`);
+        this.write(this.startSymbol);
         this.refreshLineWithoutUndo(this.inputedData, this.curOffset);
     }
 
@@ -400,7 +402,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 export class Terminal extends vscode.Disposable {
     private pseudoterminal: Pseudoterminal;
     private terminal: vscode.Terminal;
-    constructor(onApply: (data: string) => Promise<void>) {
+    constructor(public name: string, onApply: (data: string) => Promise<void>) {
         super(() => {
             this.terminal.dispose();
         });
@@ -409,11 +411,28 @@ export class Terminal extends vscode.Disposable {
             await onApply(data);
             this.enableInput();
         });
+        this.updateStartSymbol();
         this.terminal = vscode.window.createTerminal({
-           name: 'Y3助手控制台',
+           name: `Y3控制台 - ${name}`,
            pty: this.pseudoterminal,
         });
         this.terminal.show();
+    }
+
+    private _multiMode = false;
+    set multiMode(res: boolean) {
+        this._multiMode = res;
+        this.updateStartSymbol();
+    }
+
+    get multiMode() {
+        return this._multiMode;
+    }
+
+    private updateStartSymbol() {
+        this.pseudoterminal.startSymbol = this._multiMode
+            ? `${COLOR.GREEN}${this.name}>${COLOR.RESET}`
+            : `${COLOR.GREEN}>${COLOR.RESET}`;
     }
 
     async print(msg: string) {

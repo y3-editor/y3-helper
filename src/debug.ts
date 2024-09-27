@@ -81,7 +81,7 @@ export async function attach(): Promise<boolean> {
             return vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
                 "type": "y3lua",
                 "request": "attach",
-                "name": `💡附加[${id}]`,
+                "name": `💡附加【${id}】`,
                 "address": `127.0.0.1:${port}`,
                 "outputCapture": [],
                 "stopOnEntry": false,
