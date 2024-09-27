@@ -198,10 +198,21 @@ class Helper {
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
+
+                let luaArgs: {[key: string]: string} = {};
+                if (config.multiMode) {
+                    luaArgs['lua_multi_mode'] = 'true';
+                    luaArgs['lua_multi_wait_debugger'] = 'true';
+                    if (config.multiPlayers.length === 0) {
+                        vscode.window.showErrorMessage('请至少选择一个玩家才能启动游戏！');
+                        return;
+                    }
+                } else {
+                    luaArgs['lua_wait_debugger'] = 'true';
+                }
+
                 let suc = await gameLauncher.launch({
-                    luaArgs: {
-                        "lua_wait_debugger": true,
-                    },
+                    luaArgs: luaArgs,
                     multi: config.multiMode ? config.multiPlayers.sort() : undefined,
                 });
                 if (!suc) {

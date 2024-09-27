@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { env } from './env';
 import * as tools from './tools';
+import { config } from './config';
 
 const debuggerPath = '3rd/debugger';
 
@@ -69,21 +70,38 @@ export function init(context: vscode.ExtensionContext) {
     });
 }
 
-export async function attach() {
-    let session = vscode.debug.activeDebugSession;
-    if (session?.type === 'y3lua') {
-        vscode.debug.stopDebugging(session);
+export async function attach(): Promise<boolean> {
+    vscode.debug.stopDebugging();
+    if (config.multiMode) {
+        if (config.multiPlayers.length === 0) {
+            return false;
+        }
+        let sessions = config.multiPlayers.map((id) => {
+            const port = 12399 - id;
+            return vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
+                "type": "y3lua",
+                "request": "attach",
+                "name": `💡附加[${id}]`,
+                "address": `127.0.0.1:${port}`,
+                "outputCapture": [],
+                "stopOnEntry": false,
+                "sourceCoding": "utf8",
+            });
+        });
+        let results = await Promise.all(sessions);
+        return results.every((suc) => suc);
+    } else {
+        let suc = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
+            "type": "y3lua",
+            "request": "attach",
+            "name": "💡附加",
+            "address": "127.0.0.1:12399",
+            "outputCapture": [],
+            "stopOnEntry": false,
+            "sourceCoding": "utf8",
+        });
+        return suc;
     }
-    let suc = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
-        "type": "y3lua",
-        "request": "attach",
-        "name": "💡附加",
-        "address": "127.0.0.1:12399",
-        "outputCapture": [],
-        "stopOnEntry": false,
-        "sourceCoding": "utf8",
-    });
-    return suc;
 }
 
 export async function prepareForRestart(needDebugger?: boolean) {

@@ -4,7 +4,7 @@ import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 
 interface LaunchOptions {
-    luaArgs?: {[key: string]: string|number|boolean};
+    luaArgs?: {[key: string]: string};
     multi?: number[];
 }
 
@@ -58,7 +58,7 @@ export class GameLauncher {
         args.push('lua_dummy@sp ce');
         if (options?.luaArgs) {
             for (let key in options.luaArgs) {
-                args.push(key + "@" + options.luaArgs[key].toString());
+                args.push(key + "@" + options.luaArgs[key]);
             }
         }
         if (options?.multi) {
