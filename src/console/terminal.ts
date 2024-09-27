@@ -68,7 +68,7 @@ class Pseudoterminal implements vscode.Pseudoterminal {
         });
     }
 
-    private historyStack: string[] = [];
+    public historyStack: string[] = [];
     private historyIndex: number = 0;
     private inputedBeforeHitEnter: string = '';
 
@@ -413,7 +413,7 @@ export class Terminal extends vscode.Disposable {
         });
         this.updateStartSymbol();
         this.terminal = vscode.window.createTerminal({
-           name: `Y3控制台 - ${name}`,
+           name: `Y3: ${name}`,
            pty: this.pseudoterminal,
         });
         this.terminal.show();
@@ -445,5 +445,13 @@ export class Terminal extends vscode.Disposable {
 
     enableInput() {
         this.pseudoterminal.enableInput();
+    }
+
+    getHistoryStack() {
+        return this.pseudoterminal.historyStack;
+    }
+
+    setHistoryStack(stack: string[]) {
+        this.pseudoterminal.historyStack = stack;
     }
 }

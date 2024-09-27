@@ -71,10 +71,15 @@ export class Client extends vscode.Disposable {
         }
     }
 
+    static terminalHistory: { [name: string]: string[]} = {};
+
     constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
             this.closeAllRequests();
-            this.terminal?.dispose();
+            if (this.terminal) {
+                Client.terminalHistory[this.name] = this.terminal.getHistoryStack();
+                this.terminal.dispose();
+            }
             this.treeViewManager.dispose();
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
             Client.updateButton();
@@ -88,6 +93,7 @@ export class Client extends vscode.Disposable {
     public name = '默认客户端';
 
     private createTerminal(name: string) {
+        Client.terminalHistory[name] ??= [];
         this.terminal?.dispose();
         this.terminal = new Terminal(name, async (data) => {
             // 如果提交的数据只有空格，就忽略掉
@@ -97,6 +103,7 @@ export class Client extends vscode.Disposable {
             this.notify('command', { data: data });
         });
         this.terminal.multiMode = this.multiMode;
+        this.terminal.setHistoryStack(Client.terminalHistory[this.name] ?? []);
     }
 
     readonly treeViewManager = new TreeViewManager(this);
