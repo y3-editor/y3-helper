@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as tools from "../tools";
 import { Terminal } from "./terminal";
 import { TreeViewManager } from "./treeView";
+import * as y3 from "y3-helper";
 
 type RequestHandler = (client: Client, params: any) => Promise<any>;
 type ResponseHandler = (result: any) => void;
@@ -106,8 +107,6 @@ export class Client extends vscode.Disposable {
         this.terminal.setHistoryStack(Client.terminalHistory[this.name] ?? []);
     }
 
-    readonly treeViewManager = new TreeViewManager(this);
-
     private terminal?: Terminal;
 
     private printBuffer: string[] | undefined;
@@ -135,9 +134,14 @@ export class Client extends vscode.Disposable {
         this.terminal?.enableInput();
     }
 
+    private didUpdateName = new vscode.EventEmitter<string>();
+    readonly onDidUpdateName = this.didUpdateName.event;
+
     setName(name: string) {
+        y3.log.info(`客户端【${this.name}】名称更改为：${name}`);
         this.name = name;
         this.createTerminal(name);
+        this.didUpdateName.fire(name);
     }
 
     private multiMode = false;
@@ -148,6 +152,8 @@ export class Client extends vscode.Disposable {
             this.terminal.multiMode = this.multiMode;
         }
     }
+
+    readonly treeViewManager = new TreeViewManager(this);
 
     async recv(obj: Request | Notify | Response) {
         if ('method' in obj) {

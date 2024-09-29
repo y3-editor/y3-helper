@@ -150,47 +150,48 @@ export class TreeViewManager extends vscode.Disposable {
     static nextID = 0;
     static allManagers = new Map<number, TreeViewManager>();
 
-    readonly id = TreeViewManager.nextID++;
-    constructor(private client: Client) {
-        super(() => {
-            this.view.dispose();
-            TreeViewManager.allManagers.delete(this.id);
-        });
-
-        TreeViewManager.allManagers.set(this.id, this);
-        this.treeDataProvider = new TreeDataProvider(this);
-
-        this.view = vscode.window.createTreeView('y3-helper.custom', {
-            treeDataProvider: this.treeDataProvider,
-            showCollapseAll: true,
-        });
-        this.view.onDidExpandElement(e => {
-            this.notifyChangeTreeNodeExpanded(e.element, true);
-            let item = this.treeDataProvider.itemMap.get(e.element);
-            if (item && item.childs) {
-                this.notifyChangeTreeNodeVisible(item.childs, true);
-            }
-        });
-        this.view.onDidCollapseElement(e => {
-            this.notifyChangeTreeNodeExpanded(e.element, false);
-            let item = this.treeDataProvider.itemMap.get(e.element);
-            if (item && item.childs) {
-                this.notifyChangeTreeNodeVisible(item.childs, false);
-            }
-        });
-        this.view.onDidChangeCheckboxState(e => {
-            for (const [id, state] of e.items) {
-                this.client.notify('changeTreeNodeCheckBox', {
-                    id,
-                    checked: state === vscode.TreeItemCheckboxState.Checked,
-                });
-            }
-        });
-        vscode.commands.executeCommand('y3-helper.custom.focus');
+    static addManager(manager: TreeViewManager) {
+        this.allManagers.set(manager.id, manager);
+        if (!this.currentManager) {
+            manager.show();
+        }
+        this.didChange.fire(manager);
     }
 
-    private view: vscode.TreeView<number>;
-    readonly treeDataProvider: TreeDataProvider;
+    static removeManager(manager: TreeViewManager) {
+        this.allManagers.delete(manager.id);
+        manager.dispose();
+        if (manager === this.currentManager) {
+            this.currentManager = undefined;
+            this.allManagers.values().next().value?.show();
+        }
+        this.didChange.fire(manager);
+    }
+
+    private static didChange = new vscode.EventEmitter<TreeViewManager>();
+
+    static onDidChange = TreeViewManager.didChange.event;
+
+    static currentManager?: TreeViewManager;
+
+    readonly id = TreeViewManager.nextID++;
+    constructor(public client: Client) {
+        let disposed = false;
+        super(async () => {
+            if (disposed) {
+                return;
+            }
+            disposed = true;
+            await this.view?.dispose();
+            TreeViewManager.removeManager(this);
+        });
+
+        TreeViewManager.addManager(this);
+    }
+
+    private treeDataProvider = new TreeDataProvider(this);
+
+    private view?: vscode.TreeView<number>;
 
     readonly treeViews = new Array<TreeView>();
     readonly treeOrder = new Map<string, number>();
@@ -253,6 +254,41 @@ export class TreeViewManager extends vscode.Disposable {
     notifyChangeTreeNodeExpanded(id: number, expanded: boolean) {
         this.client.notify('changeTreeNodeExpanded', { id, expanded });
     }
+
+    async show() {
+        if (this === TreeViewManager.currentManager) {
+            return;
+        } else {
+            await TreeViewManager.currentManager?.view?.dispose();
+            TreeViewManager.currentManager = this;
+        }
+        this.view = vscode.window.createTreeView('y3-helper.custom', {
+            treeDataProvider: this.treeDataProvider,
+            showCollapseAll: true,
+        });
+        this.view.onDidExpandElement(e => {
+            this.notifyChangeTreeNodeExpanded(e.element, true);
+            let item = this.treeDataProvider.itemMap.get(e.element);
+            if (item && item.childs) {
+                this.notifyChangeTreeNodeVisible(item.childs, true);
+            }
+        });
+        this.view.onDidCollapseElement(e => {
+            this.notifyChangeTreeNodeExpanded(e.element, false);
+            let item = this.treeDataProvider.itemMap.get(e.element);
+            if (item && item.childs) {
+                this.notifyChangeTreeNodeVisible(item.childs, false);
+            }
+        });
+        this.view.onDidChangeCheckboxState(e => {
+            for (const [id, state] of e.items) {
+                this.client.notify('changeTreeNodeCheckBox', {
+                    id,
+                    checked: state === vscode.TreeItemCheckboxState.Checked,
+                });
+            }
+        });
+    }
 }
 
 vscode.commands.registerCommand('y3-helper.custom.treeViewClick', async (managerID, itemUID) => {
@@ -261,4 +297,12 @@ vscode.commands.registerCommand('y3-helper.custom.treeViewClick', async (manager
         return;
     }
     manager.notifyClickTreeNode(itemUID);
+});
+
+vscode.commands.registerCommand('y3-helper.custom.show', async (managerID) => {
+    let manager = TreeViewManager.allManagers.get(managerID);
+    if (!manager) {
+        return;
+    }
+    manager.show();
 });

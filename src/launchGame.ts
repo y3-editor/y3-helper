@@ -64,18 +64,18 @@ export class GameLauncher {
         if (options?.multi) {
             vscode.window.showInformationMessage("正在以多开模式启动，若无法启动或看到“错误码：54”，请手动启动编辑器登录（并选择30天免登录）再使用此功能");
         }
+
         let code = await runShell(
             "启动游戏",
             editorExeUri.fsPath,
             [
-                "--dx11",
-                "--console",
-                "--luaconsole",
+                '--dx11',
                 "--start=Python",
                 "--python-args=" + args.join(","),
                 "--plugin-config=Plugins-PyQt",
                 //"--python-builtin-path=E:/up1-uat/src/Server/server/engine",
                 //"--python-debug=1",
+                ...(options?.multi ? [] : ['--console', '--luaconsole']),
             ],
             vscode.Uri.joinPath(editorExeUri, "..")
         );

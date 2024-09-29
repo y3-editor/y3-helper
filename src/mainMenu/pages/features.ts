@@ -3,6 +3,7 @@ import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { config } from "../../config";
+import { TreeViewManager } from "../../console/treeView";
 
 export class 功能 extends TreeNode {
     constructor() {
@@ -107,7 +108,35 @@ export class 功能 extends TreeNode {
                             }
                         });
                     }),
-                })
+                }),
+                (() => {
+                    let node = new TreeNode('切换自定义视图', {
+                        iconPath: new vscode.ThemeIcon('window'),
+                        show: () => {
+                            return TreeViewManager.allManagers.size >= 2;
+                        },
+                        update: async (node) => {
+                            node.childs = Array.from(TreeViewManager.allManagers.values(), manager => {
+                                let child = new TreeNode(manager.client.name, {
+                                    command: {
+                                        command: 'y3-helper.custom.show',
+                                        title: '切换自定义视图',
+                                        arguments: [manager.id],
+                                    },
+                                });
+                                manager.client.onDidUpdateName(name => {
+                                    child.label = name;
+                                    child.refresh();
+                                });
+                                return child;
+                            });
+                        },
+                    });
+                    TreeViewManager.onDidChange(() => {
+                        this.refresh();
+                    });
+                    return node;
+                })()
             ]
         });
     }
