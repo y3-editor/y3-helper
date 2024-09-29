@@ -87,10 +87,11 @@ function registerAllMethods() {
 
     interface PrepareForRestartParams {
         debugger?: boolean;
+        id?: number;
     }
 
     registerMethod('prepareForRestart', async (client, params: PrepareForRestartParams) => {
-        debug.prepareForRestart(params.debugger);
+        debug.prepareForRestart(params.debugger, params.id);
     });
 
     interface ShowInputParams {

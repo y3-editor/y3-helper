@@ -97,6 +97,7 @@ function findDebugSession(id?: number) {
 }
 
 async function attachForOnePlayer(id?: number) {
+    y3.log.info(`正在启动调试器(${getName(id)})`);
     const port = 12399 - (id ?? 0);
     let suc = vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
         "type": "y3lua",
@@ -110,31 +111,12 @@ async function attachForOnePlayer(id?: number) {
     return suc;
 }
 
-async function reconnectOrAttach(id?: number): Promise<boolean> {
-    let session = findDebugSession(id);
-
-    if (session) {
-        prepareReconnect(session, 10000);
-        return true;
-    }
-
-    // 等待2秒，避免直接附加到当前的游戏中
-    await y3.sleep(2000);
-    await attachForOnePlayer(id);
-    // 但还是有一定几率会附加到当前的游戏中，
-    // 因此发现很快又断开后，再次附加
-    session = findDebugSession(id);
-    if (!session) {
-        return false;
-    }
-    prepareReconnect(session, 10000);
-    return true;
-}
-
 function prepareReconnect(session: vscode.DebugSession, timeout: number) {
+    y3.log.info(`准备重连调试器(${session.name})`);
     let trg = vscode.debug.onDidTerminateDebugSession((e) => {
         if (e === session) {
             trg.dispose();
+            y3.log.info(`正在重连调试器(${session.name})`);
             vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), session.configuration);
         }
     });
@@ -157,29 +139,30 @@ export async function attach(): Promise<boolean> {
     }
 }
 
-export async function prepareForRestart(needDebugger?: boolean) {
+export async function prepareForRestart(needDebugger?: boolean, id?: number) {
     if (needDebugger === false) {
         return;
     }
+    let session = findDebugSession(id);
     // 如果没有传入参数，则重启当前的活动调试器
     if (needDebugger === undefined) {
-        if (debugSessions.length === 0) {
+        if (!session) {
             return;
         }
-        for (const session of debugSessions) {
-            prepareReconnect(session, 10000);
-        }
-        return;
+    }if (session) {
+        prepareReconnect(session, 10000);
+        return true;
     }
-    // 重启当前的活动提示器，并且补齐缺少的调试器
-    if (config.multiMode) {
-        if (config.multiPlayers.length === 0) {
-            return;
-        }
-        let results = await Promise.all(config.multiPlayers.map((id) => reconnectOrAttach(id)));
-        return results.every((suc) => suc);
-    } else {
-        let suc = await reconnectOrAttach();
-        return suc;
+
+    // 等待2秒，避免直接附加到当前的游戏中
+    await y3.sleep(2000);
+    await attachForOnePlayer(id);
+    // 但还是有一定几率会附加到当前的游戏中，
+    // 因此发现很快又断开后，再次附加
+    session = findDebugSession(id);
+    if (!session) {
+        return false;
     }
+    prepareReconnect(session, 10000);
+    return true;
 }
