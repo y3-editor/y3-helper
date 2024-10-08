@@ -53,9 +53,9 @@ export class GameLauncher {
             args.push('role_ids@' + options.multi.join('#'));
             args.push('editor_map_path@' + projectUri.fsPath);
         } else {
-            args.push('type@client');
-            args.push('subtype@local_battle');
-            args.push('path@' + projectUri.fsPath);
+            args.push('type@editor_game');
+            args.push('subtype@editor_game');
+            args.push('editor_map_path@' + projectUri.fsPath);
         }
         args.push('release@true');
         args.push('lua_dummy@sp ce');
