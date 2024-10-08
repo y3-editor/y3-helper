@@ -47,15 +47,15 @@ export class GameLauncher {
         }
 
         let args = [];
-        args.push('type@editor_game');
+        args.push('type@client');
         if (options?.multi) {
             args.push('subtype@editor_multi_game');
             args.push('role_ids@' + options.multi.join('#'));
         } else {
-            args.push('subtype@editor_game');
+            args.push('subtype@local_battle');
         }
         args.push('release@true');
-        args.push('editor_map_path@' + projectUri.fsPath);
+        args.push('path@' + projectUri.fsPath);
         args.push('lua_dummy@sp ce');
         if (options?.luaArgs) {
             for (let key in options.luaArgs) {
