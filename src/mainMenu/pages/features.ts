@@ -82,87 +82,87 @@ export class 功能 extends TreeNode {
                         };
                     },
                 }),
-                (() => {
-                    let node = new TreeNode('多开模式', {
-                        tooltip: '请手动启动编辑器登录（并选择30天免登录）再使用此功能',
-                        checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
-                        onDidChangeCheckboxState(state) {
-                            config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
-                        },
-                        childs: Array.from({ length: 8 }, (_, i) => {
-                            const id = i + 1;
-                            return new TreeNode(`玩家${id}`, {
-                                checkboxState: config.multiPlayers.includes(id)
-                                    ? vscode.TreeItemCheckboxState.Checked
-                                    : vscode.TreeItemCheckboxState.Unchecked,
-                                description: config.debugPlayers.includes(id)
-                                    ? '启用调试器'
-                                    : undefined,
-                                command: {
-                                    title: '切换调试',
-                                    command: 'y3-helper.debug.toggle',
-                                    arguments: [id],
-                                },
-                                tooltip: '点击此处可以切换是否附加调试此玩家。所有调试的玩家会共用断点，所以不应该附加太多调试器。',
-                                onDidChangeCheckboxState(state) {
-                                    if (state === vscode.TreeItemCheckboxState.Checked) {
-                                        if (!config.multiPlayers.includes(id)) {
-                                            config.multiPlayers.push(id);
-                                        }
-                                    } else {
-                                        const index = config.multiPlayers.indexOf(id);
-                                        if (index !== -1) {
-                                            config.multiPlayers.splice(index, 1);
-                                        }
-                                    }
-                                },
-                                update: async (node) => {
-                                    node.description = config.debugPlayers.includes(id)
-                                        ? '启用调试器'
-                                        : undefined;
-                                },
-                            });
-                        }),
-                    });
-                    vscode.commands.registerCommand('y3-helper.debug.toggle', async (id: number) => {
-                        const index = config.debugPlayers.indexOf(id);
-                        if (index === -1) {
-                            config.debugPlayers.push(id);
-                        } else {
-                            config.debugPlayers.splice(index, 1);
-                        }
-                        node.childs?.[id-1].refresh();
-                    });
-                    return node;
-                })(),
-                (() => {
-                    let node = new TreeNode('切换自定义视图', {
-                        iconPath: new vscode.ThemeIcon('window'),
-                        show: () => {
-                            return TreeViewManager.allManagers.size >= 2;
-                        },
-                        update: async (node) => {
-                            node.childs = Array.from(TreeViewManager.allManagers.values(), manager => {
-                                let child = new TreeNode(manager.client.name, {
-                                    command: {
-                                        command: 'y3-helper.custom.show',
-                                        title: '切换自定义视图',
-                                        arguments: [manager.id],
-                                    },
-                                });
-                                manager.client.onDidUpdateName(name => {
-                                    child.label = name;
-                                    child.refresh();
-                                });
-                                return child;
-                            });
-                        },
-                    });
-                    TreeViewManager.onDidChange(() => {
-                        this.refresh();
-                    });
-                    return node;
-                })()
+                // (() => {
+                //     let node = new TreeNode('多开模式', {
+                //         tooltip: '请手动启动编辑器登录（并选择30天免登录）再使用此功能',
+                //         checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+                //         onDidChangeCheckboxState(state) {
+                //             config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
+                //         },
+                //         childs: Array.from({ length: 8 }, (_, i) => {
+                //             const id = i + 1;
+                //             return new TreeNode(`玩家${id}`, {
+                //                 checkboxState: config.multiPlayers.includes(id)
+                //                     ? vscode.TreeItemCheckboxState.Checked
+                //                     : vscode.TreeItemCheckboxState.Unchecked,
+                //                 description: config.debugPlayers.includes(id)
+                //                     ? '启用调试器'
+                //                     : undefined,
+                //                 command: {
+                //                     title: '切换调试',
+                //                     command: 'y3-helper.debug.toggle',
+                //                     arguments: [id],
+                //                 },
+                //                 tooltip: '点击此处可以切换是否附加调试此玩家。所有调试的玩家会共用断点，所以不应该附加太多调试器。',
+                //                 onDidChangeCheckboxState(state) {
+                //                     if (state === vscode.TreeItemCheckboxState.Checked) {
+                //                         if (!config.multiPlayers.includes(id)) {
+                //                             config.multiPlayers.push(id);
+                //                         }
+                //                     } else {
+                //                         const index = config.multiPlayers.indexOf(id);
+                //                         if (index !== -1) {
+                //                             config.multiPlayers.splice(index, 1);
+                //                         }
+                //                     }
+                //                 },
+                //                 update: async (node) => {
+                //                     node.description = config.debugPlayers.includes(id)
+                //                         ? '启用调试器'
+                //                         : undefined;
+                //                 },
+                //             });
+                //         }),
+                //     });
+                //     vscode.commands.registerCommand('y3-helper.debug.toggle', async (id: number) => {
+                //         const index = config.debugPlayers.indexOf(id);
+                //         if (index === -1) {
+                //             config.debugPlayers.push(id);
+                //         } else {
+                //             config.debugPlayers.splice(index, 1);
+                //         }
+                //         node.childs?.[id-1].refresh();
+                //     });
+                //     return node;
+                // })(),
+                // (() => {
+                //     let node = new TreeNode('切换自定义视图', {
+                //         iconPath: new vscode.ThemeIcon('window'),
+                //         show: () => {
+                //             return TreeViewManager.allManagers.size >= 2;
+                //         },
+                //         update: async (node) => {
+                //             node.childs = Array.from(TreeViewManager.allManagers.values(), manager => {
+                //                 let child = new TreeNode(manager.client.name, {
+                //                     command: {
+                //                         command: 'y3-helper.custom.show',
+                //                         title: '切换自定义视图',
+                //                         arguments: [manager.id],
+                //                     },
+                //                 });
+                //                 manager.client.onDidUpdateName(name => {
+                //                     child.label = name;
+                //                     child.refresh();
+                //                 });
+                //                 return child;
+                //             });
+                //         },
+                //     });
+                //     TreeViewManager.onDidChange(() => {
+                //         this.refresh();
+                //     });
+                //     return node;
+                // })()
             ]
         });
     }
