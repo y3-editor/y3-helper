@@ -203,7 +203,7 @@ class Helper {
                 if (config.multiMode) {
                     luaArgs['lua_multi_mode'] = 'true';
                     luaArgs['lua_multi_wait_debugger'] = 'true';
-                    luaArgs['lua_multi_debug_players'] = config.multiPlayers.sort().join('#');
+                    luaArgs['lua_multi_debug_players'] = config.debugPlayers.sort().join('#');
                     if (config.multiPlayers.length === 0) {
                         vscode.window.showErrorMessage('请至少选择一个玩家才能启动游戏！');
                         return;
