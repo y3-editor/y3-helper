@@ -69,6 +69,7 @@ export class Client extends vscode.Disposable {
             this.button ??= new Buttons();
         } else {
             this.button?.dispose();
+            this.button = undefined;
         }
     }
 
