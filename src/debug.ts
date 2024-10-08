@@ -131,7 +131,10 @@ export async function attach(): Promise<boolean> {
         if (config.multiPlayers.length === 0) {
             return false;
         }
-        let results = await Promise.all(config.multiPlayers.map((id) => attachForOnePlayer(id)));
+        let results = await Promise.all(config.multiPlayers
+            . filter((id) => config.debugPlayers.includes(id))
+            . map((id) => attachForOnePlayer(id))
+        );
         return results.every((suc) => suc);
     } else {
         let suc = await attachForOnePlayer();

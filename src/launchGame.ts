@@ -6,6 +6,7 @@ import * as y3 from 'y3-helper';
 interface LaunchOptions {
     luaArgs?: {[key: string]: string};
     multi?: number[];
+    debugPlayers?: number[];
 }
 
 export class GameLauncher {
