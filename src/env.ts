@@ -24,13 +24,13 @@ class Env {
         });
         let editorPath = await new Promise<string|undefined>((resolve, reject) => {
             regKey.get(winreg.DEFAULT_VALUE, (err, item) => {
-                if (err) {
+                if (err || !item) {
                     resolve(undefined);
                 }
                 resolve(item.value);
             });
         });
-        if (!editorPath) {
+        if (typeof editorPath !== 'string') {
             return undefined;
         }
         return vscode.Uri.file(editorPath);
@@ -58,9 +58,13 @@ class Env {
         }
 
         // 再看看注册表里有没有
-        let editorUri = await this.searchEditorUriByReg();
-        if (editorUri) {
-            return editorUri;
+        try {
+            let editorUri = await this.searchEditorUriByReg();
+            if (editorUri) {
+                return editorUri;
+            }
+        } catch (error) {
+            tools.log.error(String(error));
         }
 
         // 如果没有，则询问用户
