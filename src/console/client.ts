@@ -106,6 +106,7 @@ export class Client extends vscode.Disposable {
         });
         this.terminal.multiMode = this.multiMode;
         this.terminal.setHistoryStack(Client.terminalHistory[this.name] ?? []);
+        this.applyPrintBuffer();
     }
 
     private terminal?: Terminal;
@@ -118,13 +119,18 @@ export class Client extends vscode.Disposable {
         }
         this.printBuffer = [];
         this.terminal?.print(msg).then(() => {
+            this.applyPrintBuffer();
+        });
+    }
+    private applyPrintBuffer() {
+        if (this.printBuffer) {
             let buffer = this.printBuffer;
             this.printBuffer = undefined;
-            if (buffer!.length > 0) {
-                let merged = buffer!.join('\n');
+            if (buffer.length > 0) {
+                let merged = buffer.join('\n');
                 this.print(merged);
             }
-        });
+        }
     }
 
     disableInput() {
