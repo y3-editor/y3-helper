@@ -20,16 +20,23 @@ type EventArg = {
     desc: string;
 };
 
+export type Folder = {
+    name: string;
+    childs: { [key: string]: Event | Folder };
+};
+
 export class Events extends BaseDefine {
     constructor() {
         super();
 
         this.onDidChange(() => {
             this._eventsCache = undefined;
+            this._folderCache = undefined;
         });
     }
 
     private _eventsCache?: Event[];
+    private _folderCache?: Folder;
 
     get watchPattern() {
         if (!env.mapUri) {
@@ -104,9 +111,38 @@ export class Events extends BaseDefine {
     }
 
     public async getEvents() {
-        if (!this._eventsCache) {
-            this._eventsCache = await this.loadEvents();
+        return this._eventsCache ??= await this.loadEvents();
+    }
+
+    private async loadEventsFolder() {
+        let root: Folder = {
+            name: '<root>',
+            childs: {},
+        };
+
+        let events = await this.getEvents();
+
+        function getFolder(fullPath: string[]) {
+            let folder = root;
+            for (const path of fullPath) {
+                folder.childs[path] ??= {
+                    name: path,
+                    childs: {},
+                };
+                folder = folder.childs[path] as Folder;
+            }
+            return folder;
         }
-        return this._eventsCache;
+
+        for (const event of events) {
+            let folder = getFolder(event.path);
+            folder.childs[event.name] = event;
+        }
+
+        return root;
+    }
+
+    public async getEventsFolder() {
+        return this._folderCache ??= await this.loadEventsFolder();
     }
 }

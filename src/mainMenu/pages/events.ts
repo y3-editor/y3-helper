@@ -2,33 +2,82 @@ import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
+import * as Events from "../../customDefine/event";
 
 export class 自定义事件 extends TreeNode {
     constructor() {
+        let mode = 'list';
         super('自定义事件', {
             iconPath: new vscode.ThemeIcon('group-by-ref-type'),
+
+            command: {
+                command: 'y3-helper.changeEventMode',
+                title: '切换显示模式',
+            },
+
             show: async () => {
                 await env.mapReady();
                 return env.projectUri !== undefined;
             },
 
             update: async (node) => {
-                node.childs = (await define.自定义事件.getEvents()).map(event => {
-                    let args = event.args.map(arg => arg.name);
-                    return new TreeNode(event.name, {
-                        iconPath: new vscode.ThemeIcon('symbol-event'),
-                        description: `${event.id.toString()}(${args.join(',')})`,
-                        contextValue: '自定义事件',
-                        data: event.id,
-                        childs: event.args.map(arg => new TreeNode(arg.name, {
-                            description: `${arg.desc}(${arg.luaType})`,
-                        })),
+                node.description = mode === 'list'
+                                ? '平铺模式（点击切换）'
+                                : '文件夹模式（点击切换）';
+                if (mode === 'list') {
+                    node.childs = (await define.自定义事件.getEvents()).map(event => {
+                        let args = event.args.map(arg => arg.name);
+                        return new TreeNode(event.name, {
+                            iconPath: new vscode.ThemeIcon('symbol-event'),
+                            description: `${event.id.toString()}(${args.join(',')})`,
+                            contextValue: '自定义事件',
+                            data: event.id,
+                            childs: args.length > 0 ? event.args.map(arg => new TreeNode(arg.name, {
+                                description: `${arg.desc}(${arg.luaType})`,
+                            })) : undefined,
+                        });
                     });
-                });
+                }
+                if (mode === 'tree') {
+                    function makeChilds(folder: Events.Folder) {
+                        return Object.entries(folder.childs).map(([name, event]) => {
+                            if ('childs' in event) {
+                                return new TreeNode(name, {
+                                    iconPath: new vscode.ThemeIcon('folder'),
+                                    update: async (node) => {
+                                        node.childs = makeChilds(event);
+                                    }
+                                });
+                            } else {
+                                let args = event.args.map(arg => arg.name);
+                                return new TreeNode(name, {
+                                    iconPath: new vscode.ThemeIcon('symbol-event'),
+                                    description: `${event.id.toString()}(${args.join(',')})`,
+                                    contextValue: '自定义事件',
+                                    data: event.id,
+                                    childs: args.length > 0 ? event.args.map(arg => new TreeNode(arg.name, {
+                                        description: `${arg.desc}(${arg.luaType})`,
+                                    })) : undefined,
+                                });
+                            }
+                        });
+                    }
+
+                    node.childs = makeChilds(await define.自定义事件.getEventsFolder());
+                }
             },
         });
 
         define.自定义事件.onDidChange(() => {
+            this.refresh();
+        });
+
+        vscode.commands.registerCommand('y3-helper.changeEventMode', () => {
+            if (mode === 'list') {
+                mode = 'tree';
+            } else {
+                mode = 'list';
+            }
             this.refresh();
         });
     }
