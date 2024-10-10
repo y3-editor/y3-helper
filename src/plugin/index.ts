@@ -148,6 +148,10 @@ export function onceDidRun(callback: (data: { funcName: string, result: any }) =
     plugin?.onceDidRun(callback);
 }
 
+export function getManager() {
+    return pluginManager;
+}
+
 export async function init() {
     await y3.env.mapReady();
 

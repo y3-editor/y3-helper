@@ -52,12 +52,17 @@
             "view/item/context": [
                 {
                     "command": "y3-helper.openFile",
-                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
                     "group": "navigation"
                 },
                 {
                     "command": "y3-helper.revealInFileExplorer",
                     "when": "view == y3-helper.editorTableView",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.openPlugin",
+                    "when": "viewItem == 插件",
                     "group": "navigation"
                 },
                 {
@@ -372,6 +377,12 @@
             {
                 "command": "y3-helper.runPlugin",
                 "title": "运行插件",
+                "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.openPlugin",
+                "title": "打开插件",
+                "enablement": "viewItem == 插件",
                 "category": "Y3开发助手"
             }
         ],
