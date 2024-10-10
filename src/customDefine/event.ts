@@ -10,6 +10,7 @@ type Event = {
     name: string;
     id: number;
     args: EventArg[];
+    path: string[];
 };
 
 type EventArg = {
@@ -51,16 +52,34 @@ export class Events extends BaseDefine {
             if (typeof json !== 'object') {
                 return events;
             }
+
             // 自定义单位属性
-            if (Array.isArray(json.group_info)) {
-                for (let item of json.group_info) {
-                    let id = item.items?.[0];
-                    let name = item.items?.[1];
-                    if (id && name) {
-                        events.push({name, id: id, args: []});
+            function lookInto(folder: any[], path: string[]) {
+                if (!Array.isArray(folder)) {
+                    return;
+                }
+                for (let item of folder) {
+                    if (typeof item !== 'object') {
+                        continue;
+                    }
+                    if (Array.isArray(item.items)) {
+                        let id = item.items[0];
+                        let name = item.items[1];
+                        if (id && name) {
+                            events.push({
+                                name,
+                                id,
+                                args: [],
+                                path,
+                            });
+                        }
+                    } else {
+                        lookInto(item.group, [...path, item.name]);
                     }
                 }
             }
+            lookInto(json.group_info, []);
+
             for (const event of events) {
                 let conf = json.conf?.[event.id.toString()];
                 if (!conf) {
