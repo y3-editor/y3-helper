@@ -62,7 +62,10 @@ export class 插件 extends TreeNode {
                                 let exports = await plugin.getExports();
                                 node.childs = Object.values(exports).map(exp => new TreeNode(exp.name, {
                                     iconPath: new vscode.ThemeIcon('run'),
-                                    description: '点击运行',
+                                    description: exp.name === 'onGame' ? '启动游戏时运行'
+                                               : exp.name === 'onSave' ? '保存地图时运行'
+                                               : exp.name === 'onEditor' ? '用编辑器打开时运行'
+                                               : '点击运行',
                                     command: {
                                         command: 'y3-helper.runPlugin',
                                         title: exp.name,
