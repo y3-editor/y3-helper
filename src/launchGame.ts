@@ -7,6 +7,7 @@ interface LaunchOptions {
     luaArgs?: {[key: string]: string};
     multi?: number[];
     debugPlayers?: number[];
+    tracy?: boolean;
 }
 
 export class GameLauncher {
@@ -86,6 +87,11 @@ export class GameLauncher {
             vscode.window.showErrorMessage("启动游戏失败！");
             return false;
         }
+
+        if (options?.tracy) {
+            await y3.tracy.launch();
+        }
+
         return true;
     }
 }

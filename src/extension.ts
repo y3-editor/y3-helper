@@ -179,13 +179,21 @@ class Helper {
 
     private registerCommandOfLaunchGame() {
         vscode.commands.registerCommand('y3-helper.launchGame', async () => {
+            let luaArgs: Record<string, string> = {};
+
+            if (config.tracy) {
+                luaArgs['lua_tracy'] = 'true';
+            }
+
             await vscode.window.withProgress({
                 title: '正在启动游戏...',
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
                 await gameLauncher.launch({
+                    luaArgs: luaArgs,
                     multi: config.multiMode ? config.multiPlayers.sort() : undefined,
+                    tracy: config.tracy,
                 });
             });
         });
@@ -199,7 +207,7 @@ class Helper {
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
 
-                let luaArgs: {[key: string]: string} = {};
+                let luaArgs: Record<string, string> = {};
                 if (config.multiMode) {
                     luaArgs['lua_multi_mode'] = 'true';
                     luaArgs['lua_multi_wait_debugger'] = 'true';
@@ -212,9 +220,14 @@ class Helper {
                     luaArgs['lua_wait_debugger'] = 'true';
                 }
 
+                if (config.tracy) {
+                    luaArgs['lua_tracy'] = 'true';
+                }
+
                 let suc = await gameLauncher.launch({
                     luaArgs: luaArgs,
                     multi: config.multiMode ? config.multiPlayers.sort() : undefined,
+                    tracy: config.tracy,
                 });
                 if (!suc) {
                     return;

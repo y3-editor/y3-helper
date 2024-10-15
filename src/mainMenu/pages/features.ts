@@ -7,7 +7,7 @@ import { TreeViewManager } from "../../console/treeView";
 
 function 多开模式() {
     let node = new TreeNode('多开模式', {
-        description: '12月4号版本更新后可用',
+        description: '12月4号编辑器更新后可用',
         tooltip: '请手动启动编辑器登录（并选择30天免登录）再使用此功能',
         checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
         onDidChangeCheckboxState(state) {
@@ -56,6 +56,18 @@ function 多开模式() {
             config.debugPlayers.splice(index, 1);
         }
         node.childs?.[id-1].refresh();
+    });
+    return node;
+}
+
+function 启用tracy() {
+    let node = new TreeNode('启用tracy', {
+        description: '下次编辑器更新后可用',
+        tooltip: '对Lua进行性能分析，但是会大幅影响运行效率',
+        checkboxState: config.tracy ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+        onDidChangeCheckboxState(state) {
+            config.tracy = state === vscode.TreeItemCheckboxState.Checked;
+        },
     });
     return node;
 }
@@ -166,6 +178,7 @@ export class 功能 extends TreeNode {
                     },
                 }),
                 多开模式(),
+                启用tracy(),
                 切换自定义视图(),
             ]
         });
