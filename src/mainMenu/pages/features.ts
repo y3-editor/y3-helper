@@ -60,8 +60,8 @@ function 多开模式() {
     return node;
 }
 
-function 启用tracy() {
-    let node = new TreeNode('启用tracy', {
+function 启用Tracy() {
+    let node = new TreeNode('启用Tracy', {
         description: '下次编辑器更新后可用',
         tooltip: '对Lua进行性能分析，但是会大幅影响运行效率',
         checkboxState: config.tracy ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
@@ -178,7 +178,7 @@ export class 功能 extends TreeNode {
                     },
                 }),
                 多开模式(),
-                启用tracy(),
+                启用Tracy(),
                 切换自定义视图(),
             ]
         });

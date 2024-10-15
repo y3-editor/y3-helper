@@ -140,6 +140,10 @@ function registerAllMethods() {
             client.setMultiMode(false);
         }
     });
+
+    registerMethod('createTracy', async (client) => {
+        await tools.tracy.launch();
+    });
 }
 
 export function init() {
