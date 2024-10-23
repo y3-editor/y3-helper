@@ -62,7 +62,6 @@ function 多开模式() {
 
 function 启用Tracy() {
     let node = new TreeNode('启用Tracy', {
-        description: '下次编辑器更新后可用',
         tooltip: '对Lua进行性能分析，但是会大幅影响运行效率',
         checkboxState: config.tracy ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
         onDidChangeCheckboxState(state) {
