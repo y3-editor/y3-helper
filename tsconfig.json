@@ -11,10 +11,10 @@
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"module": "Node16",
-		"target": "ES2023",
+		"target": "ES2022",
 		"outDir": "out",
 		"lib": [
-			"ES2023"
+			"ES2022"
 		],
 		"sourceMap": true,
 		"rootDir": "src",
