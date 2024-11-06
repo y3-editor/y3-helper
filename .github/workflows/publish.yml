@@ -19,6 +19,11 @@ jobs:
         with:
           ref: main
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
       - name: Compile Client
         shell: bash
         run: |
