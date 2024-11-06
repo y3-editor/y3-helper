@@ -387,7 +387,7 @@ class Env {
         await this.updateEditor(askUser);
     }
 
-    private updateCurrentMap(map: Map) {
+    public updateCurrentMap(map: Map) {
         if (this.currentMap === map) {
             return;
         }

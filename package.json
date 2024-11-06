@@ -384,6 +384,11 @@
                 "title": "打开插件",
                 "enablement": "viewItem == 插件",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.changeMap",
+                "title": "切换地图",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {
