@@ -10,11 +10,11 @@
 	],
 	"compilerOptions": {
 		"esModuleInterop": true,
-		"module": "Node16",
-		"target": "ES2022",
+		"module": "NodeNext",
+		"target": "ESNext",
 		"outDir": "out",
 		"lib": [
-			"ES2022"
+			"ESNext"
 		],
 		"sourceMap": true,
 		"rootDir": "src",

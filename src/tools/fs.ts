@@ -46,7 +46,7 @@ export async function writeFile(uri: vscode.Uri | string, ...args: any[]) {
         data = args[1];
     }
     try {
-        await vscode.workspace.fs.writeFile(uri, Buffer.from(data));
+        await vscode.workspace.fs.writeFile(uri, new Uint8Array(Buffer.from(data)));
         return true;
     } catch {
         return false;

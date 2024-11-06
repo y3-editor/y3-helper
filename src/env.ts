@@ -5,9 +5,67 @@ import path from 'path';
 import * as tools from './tools';
 import { Template } from './constants';
 import { isPathValid } from './utility';
-import { throttle, queue } from './utility/decorators';
+import { queue } from './utility/decorators';
+import * as y3 from 'y3-helper';
+import * as jsonc from 'jsonc-parser';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
+
+class Map {
+    id: bigint = 0n;
+    constructor(public name: string, public uri: vscode.Uri) {}
+
+    async start() {
+        let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
+        if (!headerMap) {
+            return;
+        }
+        let headerMapJson = jsonc.parseTree(headerMap.string);
+        if (!headerMapJson) {
+            return;
+        }
+        let idNode = jsonc.findNodeAtLocation(headerMapJson, ['id']);
+        if (!idNode) {
+            return;
+        }
+        this.id = BigInt(headerMap.string.slice(idNode.offset, idNode.offset + idNode.length));
+    }
+}
+
+class Project {
+    constructor(public uri: vscode.Uri) {}
+
+    entryMapId: bigint = 0n;
+    maps: Map[] = [];
+    entryMap?: Map;
+    async start() {
+        let projectFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.project'));
+        if (!projectFile) {
+            return;
+        }
+        let headerProject = jsonc.parseTree(projectFile.string);
+        if (!headerProject) {
+            return;
+        }
+        let entryMapIdNode = jsonc.findNodeAtLocation(headerProject, ['entry_map', 'id']);
+        if (!entryMapIdNode) {
+            return;
+        }
+
+        this.entryMapId = BigInt(projectFile.string.slice(entryMapIdNode.offset, entryMapIdNode.offset + entryMapIdNode.length));
+
+        let started: Promise<any>[] = [];
+        for (const [mapName] of await y3.fs.dir(this.uri, 'maps')) {
+            let map = new Map(mapName, vscode.Uri.joinPath(this.uri, 'maps', mapName));
+            this.maps.push(map);
+            started.push(map.start());
+        }
+
+        await Promise.all(started);
+
+        this.entryMap = this.maps.find(map => map.id === this.entryMapId);
+    }
+}
 
 class Env {
     private envChangeEmitter = new vscode.EventEmitter<void>();
@@ -134,7 +192,7 @@ class Env {
         return mapFolder;
     }
 
-    private async searchProjectPath(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
+    private async searchMapUri(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
         // 先直接搜索打开的工作目录
         if (search) {
             if (vscode.workspace.workspaceFolders) {
@@ -176,6 +234,58 @@ class Env {
         return undefined;
     }
 
+    private async searchProjectByFolder(folder: vscode.Uri): Promise<vscode.Uri | undefined> {
+        let currentUri = folder;
+        for (let i = 0; i < 20; i++) {
+            if (await y3.fs.isExists(vscode.Uri.joinPath(currentUri, 'header.project'))) {
+                return currentUri;
+            }
+            let parentUri = vscode.Uri.joinPath(currentUri, '..');
+            if (parentUri.fsPath === currentUri.fsPath) {
+                break;
+            }
+            currentUri = parentUri;
+        }
+        return undefined;
+    }
+
+    private async searchProject(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
+        // 先直接搜索打开的工作目录
+        if (search) {
+            if (vscode.workspace.workspaceFolders) {
+                for (const folder of vscode.workspace.workspaceFolders) {
+                    let result = await this.searchProjectByFolder(folder.uri);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (askUser) {
+            // 如果没有，则询问用户
+            let selectedFolders = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false, // 竟然不能同时选择文件和文件夹
+                canSelectMany: false,
+                openLabel: '选择Y3地图路径',
+                filters: {
+                    '地图': ['map', 'project']
+                }
+            });
+    
+            let selectedFolder = selectedFolders?.[0];
+            if (!selectedFolder) {
+                return undefined;
+            }
+    
+            if ((await vscode.workspace.fs.stat(selectedFolder)).type === vscode.FileType.File) {
+                selectedFolder = vscode.Uri.joinPath(selectedFolder, '..');
+            };
+            return await this.searchProjectByFolder(selectedFolder);
+        }
+    }
+
     private getEditorExeUri(): vscode.Uri | undefined {
         if (!this.editorUri) {
             return undefined;
@@ -196,6 +306,8 @@ class Env {
     public csvTableUri?: vscode.Uri;// CSV表格路径
     public excelUri?: vscode.Uri;// excel表格路径
     public ruleUri?: vscode.Uri;// rule路径
+    public project?: Project;
+    public currentMap?: Map;
 
 
 
@@ -275,24 +387,20 @@ class Env {
         await this.updateEditor(askUser);
     }
 
-    @queue()
-    public async updateMap(search: boolean, askUser: boolean) {
-        let mapUri = await this.searchProjectPath(search, askUser);
-        if (!mapUri) {
+    private updateCurrentMap(map: Map) {
+        if (this.currentMap === map) {
             return;
         }
-        this.mapUri = mapUri;
-        if (this.mapUri) {
-            this.projectUri = vscode.Uri.joinPath(this.mapUri, '../..');
-            this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
-            this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
-            this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
-            this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-            this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/editor_table/csv/");
-            this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
-            this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
-            this.initTableTypeToCSVfolderPath();
-        }
+        this.currentMap = map;
+        this.mapUri = map.uri;
+        this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
+        this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
+        this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
+        this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
+        this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/editor_table/csv/");
+        this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
+        this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
+        this.initTableTypeToCSVfolderPath();
         tools.log.info(`mapUri: ${this.mapUri}`);
         tools.log.info(`projectUri: ${this.projectUri}`);
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);
@@ -302,8 +410,31 @@ class Env {
     }
 
     @queue()
+    public async updateMap(search: boolean, askUser: boolean) {
+        let projectUri = await this.searchProject(search, askUser);
+        if (!projectUri) {
+            return;
+        }
+        this.projectUri = projectUri;
+        this.project = new Project(projectUri);
+        await this.project.start();
+        if (!this.project.entryMap) {
+            return;
+        }
+        let mapUri = await this.searchMapUri(search, askUser);
+        if (!mapUri) {
+            this.updateCurrentMap(this.project.entryMap);
+        } else {
+            let map = this.project.maps.find(map => map.uri.fsPath === mapUri.fsPath);
+            if (map) {
+                this.updateCurrentMap(map);
+            }
+        }
+    }
+
+    @queue()
     public async mapReady(askUser = false) {
-        if (this.mapUri) {
+        if (this.projectUri) {
             return;
         }
         await this.updateMap(true, askUser);
