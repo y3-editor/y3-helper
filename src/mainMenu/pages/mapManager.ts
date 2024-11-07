@@ -1,4 +1,4 @@
-import { TreeNode } from "../treeNode";
+import { TreeNode, ViewInVSCode } from "../treeNode";
 import * as vscode from 'vscode';
 import { env } from "../../env";
 
@@ -22,7 +22,16 @@ export class 地图管理 extends TreeNode {
                             arguments: [map.name],
                         }
                     });
-                });
+                }) ?? [];
+                node.childs.push(new TreeNode('------------------', {
+                    tooltip: '我只是一个分割线',
+                }));
+                if (env.scriptUri) {
+                    let openScriptFolder = new ViewInVSCode(env.scriptUri, '打开脚本目录');
+                    openScriptFolder.description = currentMap?.name;
+                    openScriptFolder.tooltip = '会重启VSCode窗口';
+                    node.childs.push(openScriptFolder);
+                }
             },
         });
 

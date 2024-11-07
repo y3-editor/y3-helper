@@ -69,8 +69,8 @@ export class ViewInExplorerNode extends TreeNode {
 }
 
 export class ViewInVSCode extends TreeNode {
-    constructor(uri: vscode.Uri) {
-        super('在VSCode中打开', {
+    constructor(uri: vscode.Uri, titile?: string) {
+        super(titile ?? '在VSCode中打开', {
             command: {
                 command: "vscode.openFolder",
                 title: '在当前VSCode中打开',
@@ -80,7 +80,7 @@ export class ViewInVSCode extends TreeNode {
             },
             iconPath: new vscode.ThemeIcon('window'),
             update: (node) => {
-                if (uri.toString() === vscode.workspace.workspaceFolders?.[0].uri.toString()) {
+                if (vscode.workspace.workspaceFolders?.find(folder => folder.uri.toString() === uri.toString())) {
                     node.iconPath = new vscode.ThemeIcon('error');
                 }
             },
