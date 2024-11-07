@@ -132,6 +132,10 @@ class TreeViewProvider extends vscode.Disposable implements vscode.TreeDataProvi
         this._onDidChange.fire(node);
     }
 
+    public flush() {
+        this.dirNodes = undefined;
+    }
+
     @throttle(100)
     public refreshAll() {
         this.refresh(undefined);
@@ -145,7 +149,7 @@ class TreeView extends vscode.Disposable {
         });
         this.disposables.push(this.provider = new TreeViewProvider());
 
-        this.disposables.push(this.treeView = vscode.window.createTreeView('y3-helper.editorTableView', {
+        this.disposables.push(vscode.window.createTreeView('y3-helper.editorTableView', {
             treeDataProvider: this.provider,
             showCollapseAll: true,
         }));
@@ -254,11 +258,11 @@ class TreeView extends vscode.Disposable {
 
     async refresh() {
         await env.mapReady();
+        this.provider.flush();
         this.provider.refresh();
     }
 
     private provider: TreeViewProvider;
-    private treeView: vscode.TreeView<TreeNode>;
     private disposables: vscode.Disposable[] = [];
 
     private async createObject(tableName: Table.NameCN, defaultName: string, copyFrom?: number) {
