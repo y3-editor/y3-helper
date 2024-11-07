@@ -1,5 +1,4 @@
 import { Table } from "../constants";
-import { env } from "../env";
 import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
@@ -66,7 +65,7 @@ export class EditorObject<N extends Table.NameCN> {
     private _name?: string;
     public text?: string;
     public uri?: vscode.Uri;
-    constructor(public tableName: N, public key: number) {}
+    constructor(private manager: EditorManager, public tableName: N, public key: number) {}
 
     toString() {
         return `{物编对象|${this.name}|${this.tableName}-${this.key}}`;
@@ -190,7 +189,7 @@ export class EditorObject<N extends Table.NameCN> {
     }
 
     public getFieldInfo(field: string) {
-        let table = openTable(this.tableName);
+        let table = this.manager.openTable(this.tableName);
         return table.getFieldInfo(field);
     }
 
@@ -242,24 +241,6 @@ export class EditorObject<N extends Table.NameCN> {
     }
 }
 
-async function loadObject<N extends Table.NameCN>(tableName: N, key: number) {
-    let table = openTable(tableName);
-    let uri = table.getUri(key);
-    let file = await y3.fs.readFile(uri);
-    if (!file) {
-        return null;
-    }
-    await ready();
-    try {
-        let obj = new EditorObject(tableName, key);
-        obj.uri = uri;
-        obj.text = file.string;
-        return obj;
-    } catch {
-        return null;
-    }
-}
-
 interface CreateOptions<N extends Table.NameCN> {
     /**
      * 新对象的名称，如果不填则使用默认名称
@@ -284,15 +265,15 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     public nameEN;
     private _objectCache: { [key: number]: EditorObject<N> | null | undefined } = {};
     private watcher?: vscode.FileSystemWatcher;
-    constructor(public name: N) {
+    constructor(private manager: EditorManager, public name: N) {
         super(() => {
             this.watcher?.dispose();
         });
-        if (!env.editorTableUri) {
+        if (!manager.rootUri) {
             throw new Error('未选择地图路径');
         }
         this.nameEN = Table.name.fromCN[name];
-        this.uri = vscode.Uri.joinPath(env.editorTableUri, Table.path.fromCN[name]);
+        this.uri = vscode.Uri.joinPath(manager.rootUri, Table.path.fromCN[name]);
     }
 
     toString() {
@@ -306,7 +287,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
      */
     public async get(key: number): Promise<EditorObject<N> | undefined> {
         if (this._objectCache[key] === undefined) {
-            this._objectCache[key] = await loadObject<N>(this.name, key);
+            this._objectCache[key] = await this.manager.loadObject<N>(this.name, key);
         }
         return this._objectCache[key] ?? undefined;
     }
@@ -442,7 +423,7 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
         json.set('key', key);
         json.set('_ref_', key);
 
-        let obj = new EditorObject(this.name, key);
+        let obj = new EditorObject(this.manager, this.name, key);
         obj.uri = this.getUri(key);
         obj.text = json.text;
 
@@ -567,25 +548,12 @@ export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
     }
 }
 
-let editorTables: { [key: string]: any } = {};
-
-/**
- * 打开物编表
- * @param tableName 哪种表
- * @returns 表对象
- */
-export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
-    let table = editorTables[tableName]
-            ?? (editorTables[tableName] = new EditorTable(tableName));
-    return table;
-}
-
 /**
  * 根据文件名获取文件对应的key
  * @param fileName 文件名
  * @returns 文件名对应的key
  */
-export function getFileKey(fileName: string): number | undefined {
+function getFileKey(fileName: string): number | undefined {
     if (!fileName.toLowerCase().endsWith('.json')) {
         return;
     }
@@ -627,19 +595,54 @@ export async function getObject(uri: vscode.Uri | string): Promise<EditorObject<
     if (!file) {
         return;
     }
-    const obj = new EditorObject(nameCN, key);
-    obj.uri = uri;
-    obj.text = file.string;
+    let map = y3.env.project?.findMapByUri(uri);
+    if (!map) {
+        return;
+    }
+    const obj = await map.editorTable.loadObject(nameCN, key) ?? undefined;
     return obj;
 }
 
-class Manager {
+export class EditorManager {
+    constructor(public rootUri: vscode.Uri) {}
+
+    editorTables: Record<string, any> = {};
+
+    async loadObject<N extends Table.NameCN>(tableName: N, key: number) {
+        let table = this.openTable(tableName);
+        let uri = table.getUri(key);
+        let file = await y3.fs.readFile(uri);
+        if (!file) {
+            return null;
+        }
+        await ready();
+        try {
+            let obj = new EditorObject(this, tableName, key);
+            obj.uri = uri;
+            obj.text = file.string;
+            return obj;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * 打开物编表
+     * @param tableName 哪种表
+     * @returns 表对象
+     */
+    openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
+        let table = this.editorTables[tableName]
+                ?? (this.editorTables[tableName] = new EditorTable(this, tableName));
+        return table;
+    }
+
     @queue()
     async getAllObjects() {
         let allObjects: EditorObject<Table.NameCN>[] = [];
         let promises: Promise<any>[] = [];
         for (const tableName in Table.name.fromCN) {
-            const table = openTable(tableName as Table.NameCN);
+            const table = this.openTable(tableName as Table.NameCN);
             table.getList().then((list) => {
                 for (const key of list) {
                     let promise = table.get(key).then((obj) => obj && allObjects.push(obj));
@@ -653,15 +656,17 @@ class Manager {
     }
 }
 
-const ManagerInstance = new Manager();
-
 /**
- * 获取所有的对象（速度比较慢）
- * @returns 所有对象
+ * 打开物编表
+ * @param tableName 哪种表
+ * @returns 表对象
  */
-export async function getAllObjects() {
-    return await ManagerInstance.getAllObjects();
+export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
+    let map = y3.env.currentMap!;
+    return map.editorTable.openTable(tableName);
 }
 
-export function init() {
+export async function getAllObjects() {
+    let map = y3.env.currentMap!;
+    return await map.editorTable.getAllObjects();
 }

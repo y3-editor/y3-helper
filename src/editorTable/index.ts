@@ -5,11 +5,9 @@ export * from './CSV/CSVimporter';
 export * from './CSV/CSVeditor';
 import * as csv from './CSV';
 import * as excel from './excel';
-import * as editorTable from './editorTable';
 import * as language from './language';
 import * as languageFeature from './languageFeature';
 import * as treeView from './treeView';
-import * as y3 from 'y3-helper';
 
 class Item implements vscode.QuickPickItem {
     constructor(public label: string) {}
@@ -31,7 +29,6 @@ vscode.commands.registerCommand('y3-helper.testExcel', async () => {
 });
 
 export function init() {
-    editorTable.init();
     language.init();
     treeView.init();
     languageFeature.init();

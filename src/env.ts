@@ -8,12 +8,16 @@ import { isPathValid } from './utility';
 import { queue } from './utility/decorators';
 import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
+import { EditorManager } from './editorTable/editorTable';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 class Map {
     id: bigint = 0n;
-    constructor(public name: string, public uri: vscode.Uri) {}
+    editorTable: EditorManager;
+    constructor(public name: string, public uri: vscode.Uri) {
+        this.editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
+    }
 
     async start() {
         let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
@@ -64,6 +68,10 @@ class Project {
         await Promise.all(started);
 
         this.entryMap = this.maps.find(map => map.id === this.entryMapId);
+    }
+
+    findMapByUri(uri: vscode.Uri) {
+        return this.maps.find(map => uri.toString().startsWith(map.uri.toString()));
     }
 }
 
