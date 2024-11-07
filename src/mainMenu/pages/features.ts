@@ -179,7 +179,7 @@ export class 功能 extends TreeNode {
                         };
                     },
                 }),
-                多开模式(),
+                //多开模式(),
                 启用Tracy(),
                 切换自定义视图(),
             ]

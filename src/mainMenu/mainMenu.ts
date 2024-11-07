@@ -52,7 +52,8 @@ class MainMenu {
         this.tree = new TreeProvider(mainNode);
         this.view = vscode.window.createTreeView('y3-helper.mainMenu', {
             treeDataProvider: this.tree,
-            manageCheckboxStateManually: true,
+            // 先绕过 VSCode 1.95.0 的 bug
+            //manageCheckboxStateManually: true,
         });
         this.view.onDidChangeVisibility(async (e) => {
             if (e.visible) {
