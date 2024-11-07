@@ -15,8 +15,10 @@ type EditorVersion = '1.0' | '2.0' | 'unknown';
 class Map {
     id: bigint = 0n;
     editorTable: EditorManager;
+    scriptUri: vscode.Uri;
     constructor(public name: string, public uri: vscode.Uri) {
         this.editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
+        this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
     }
 
     async start() {
@@ -382,6 +384,7 @@ class Env {
             return;
         }
         this.projectUri = projectUri;
+        this.globalScriptUri = vscode.Uri.joinPath(this.projectUri, 'global_script');
         this.project = new Project(projectUri);
         await this.project.start();
         if (!this.project.entryMap) {
