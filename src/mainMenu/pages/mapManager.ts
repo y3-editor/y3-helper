@@ -2,6 +2,17 @@ import { TreeNode, ViewInVSCode } from "../treeNode";
 import * as vscode from 'vscode';
 import { env } from "../../env";
 
+export async function isGlobalScriptEnabled() {
+    if (!env.globalScriptUri) {
+        return false;
+    }
+    let rcUri = vscode.Uri.joinPath(env.globalScriptUri, '.luarc.json');
+}
+
+export function enableGlobalScript() {
+    
+}
+
 export class 地图管理 extends TreeNode {
     constructor() {
         super('地图管理', {
@@ -26,6 +37,12 @@ export class 地图管理 extends TreeNode {
                 node.childs.push(new TreeNode('------------------', {
                     tooltip: '我只是一个分割线',
                 }));
+                // node.childs.push(new TreeNode('启用全局脚本', {
+                //     command: {
+                //         command: 'y3-helper.enableGlobalScript',
+                //         title: '启用全局脚本',
+                //     },
+                // }));
                 if (env.scriptUri) {
                     let openScriptFolder = new ViewInVSCode(env.scriptUri, '打开脚本目录');
                     openScriptFolder.description = currentMap?.name;

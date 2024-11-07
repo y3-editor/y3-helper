@@ -389,6 +389,11 @@
                 "command": "y3-helper.changeMap",
                 "title": "切换地图",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.enableGlobalScript",
+                "title": "启用全局脚本",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {
