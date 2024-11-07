@@ -200,48 +200,6 @@ class Env {
         return mapFolder;
     }
 
-    private async searchMapUri(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
-        // 先直接搜索打开的工作目录
-        if (search) {
-            if (vscode.workspace.workspaceFolders) {
-                for (const folder of vscode.workspace.workspaceFolders) {
-                    let mapFolder = await this.searchMapFolderBySelectedUri(folder.uri);
-                    if (mapFolder) {
-                        return mapFolder;
-                    }
-                }
-            }
-        }
-
-        if (askUser) {
-            // 如果没有，则询问用户
-            let selectedFolders = await vscode.window.showOpenDialog({
-                canSelectFiles: true,
-                canSelectFolders: false, // 竟然不能同时选择文件和文件夹
-                canSelectMany: false,
-                openLabel: '选择Y3地图路径',
-                filters: {
-                    '地图': ['map', 'project']
-                }
-            });
-    
-            let selectedFolder = selectedFolders?.[0];
-            if (!selectedFolder) {
-                return undefined;
-            }
-    
-            if ((await vscode.workspace.fs.stat(selectedFolder)).type === vscode.FileType.File) {
-                selectedFolder = vscode.Uri.joinPath(selectedFolder, '..');
-            };
-            let mapFolder = await this.searchMapFolderBySelectedUri(selectedFolder);
-            if (mapFolder) {
-                return mapFolder;
-            }
-        }
-
-        return undefined;
-    }
-
     private async searchProjectByFolder(folder: vscode.Uri): Promise<vscode.Uri | undefined> {
         let currentUri = folder;
         for (let i = 0; i < 20; i++) {
@@ -257,14 +215,14 @@ class Env {
         return undefined;
     }
 
-    private async searchProject(search: boolean, askUser: boolean): Promise<vscode.Uri | undefined> {
+    private async searchProject(search: boolean, askUser: boolean): Promise<[vscode.Uri, vscode.Uri] | undefined> {
         // 先直接搜索打开的工作目录
         if (search) {
             if (vscode.workspace.workspaceFolders) {
                 for (const folder of vscode.workspace.workspaceFolders) {
                     let result = await this.searchProjectByFolder(folder.uri);
                     if (result) {
-                        return result;
+                        return [result, folder.uri];
                     }
                 }
             }
@@ -282,15 +240,14 @@ class Env {
                 }
             });
     
-            let selectedFolder = selectedFolders?.[0];
-            if (!selectedFolder) {
+            let selectedFile = selectedFolders?.[0];
+            if (!selectedFile) {
                 return undefined;
             }
-    
-            if ((await vscode.workspace.fs.stat(selectedFolder)).type === vscode.FileType.File) {
-                selectedFolder = vscode.Uri.joinPath(selectedFolder, '..');
-            };
-            return await this.searchProjectByFolder(selectedFolder);
+
+            let selectedFolder = vscode.Uri.joinPath(selectedFile, '..');
+            let projectUri = await this.searchProjectByFolder(selectedFolder);
+            return projectUri ? [projectUri, selectedFolder] : undefined;
         }
     }
 
@@ -307,6 +264,7 @@ class Env {
     public editorExeUri?: vscode.Uri;
     public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;
+    public globalScriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
     public pluginUri?: vscode.Uri;
     public projectUri?: vscode.Uri;
@@ -419,7 +377,7 @@ class Env {
 
     @queue()
     public async updateMap(search: boolean, askUser: boolean) {
-        let projectUri = await this.searchProject(search, askUser);
+        let [projectUri, mapUri] = await this.searchProject(search, askUser) ?? [];
         if (!projectUri) {
             return;
         }
@@ -429,14 +387,13 @@ class Env {
         if (!this.project.entryMap) {
             return;
         }
-        let mapUri = await this.searchMapUri(search, askUser);
-        if (!mapUri) {
-            this.updateCurrentMap(this.project.entryMap);
+        let map = mapUri
+            ? this.project.maps.find(map => mapUri!.toString().startsWith(map.uri.toString()))
+            : undefined;
+        if (map) {
+            this.updateCurrentMap(map);
         } else {
-            let map = this.project.maps.find(map => map.uri.fsPath === mapUri.fsPath);
-            if (map) {
-                this.updateCurrentMap(map);
-            }
+            this.updateCurrentMap(this.project.entryMap);
         }
     }
 
