@@ -60,7 +60,7 @@ export async function ready() {
         }
     }
 }
-export class EditorObject<N extends Table.NameCN> {
+export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
     public text?: string;
@@ -577,7 +577,7 @@ function getFileKey(fileName: string): number | undefined {
  * @param uri 文件路径
  * @returns 对象
 */
-export async function getObject(uri: vscode.Uri | string): Promise<EditorObject<Table.NameCN> | undefined> {
+export async function getObject(uri: vscode.Uri | string): Promise<EditorObject | undefined> {
     if (typeof uri === 'string') {
         uri = vscode.Uri.file(uri);
     }
@@ -632,27 +632,72 @@ export class EditorManager {
      * @returns 表对象
      */
     openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
-        let table = this.editorTables[tableName]
-                ?? (this.editorTables[tableName] = new EditorTable(this, tableName));
-        return table;
+        if (!this.editorTables[tableName]) {
+            let table = new EditorTable(this, tableName);
+            this.editorTables[tableName] = table;
+            table.onDidChange(() => {
+                this.flushCache();
+            });
+        }
+        return this.editorTables[tableName];
+    }
+
+    private _allObjects?: EditorObject[];
+    private _allObjectsMap?: Record<number, EditorObject[]>;
+    private _cacheVersion = 0;
+    private flushCache() {
+        this._cacheVersion++;
+        this._allObjects = undefined;
+        this._allObjectsMap = undefined;
     }
 
     @queue()
     async getAllObjects() {
-        let allObjects: EditorObject<Table.NameCN>[] = [];
-        let promises: Promise<any>[] = [];
-        for (const tableName in Table.name.fromCN) {
-            const table = this.openTable(tableName as Table.NameCN);
-            table.getList().then((list) => {
-                for (const key of list) {
-                    let promise = table.get(key).then((obj) => obj && allObjects.push(obj));
-                    promises.push(promise);
-                }
-            });
+        if (this._allObjects) {
+            return this._allObjects;
         }
-        await Promise.allSettled(promises);
+        let allObjects: EditorObject[];
+        while (true) {
+            let version = this._cacheVersion;
+            allObjects = [];
+            let promises1: Promise<any>[] = [];
+            let promises2: Promise<any>[] = [];
+            for (const tableName in Table.name.fromCN) {
+                const table = this.openTable(tableName as Table.NameCN);
+                promises1.push(table.getList().then((list) => {
+                    for (const key of list) {
+                        let promise = table.get(key).then((obj) => obj && allObjects.push(obj));
+                        promises2.push(promise);
+                    }
+                }));
+            }
+            await Promise.allSettled(promises1);
+            await Promise.allSettled(promises2);
+            if (version === this._cacheVersion) {
+                break;
+            }
+        }
         allObjects.sort((a, b) => a.key - b.key);
+        this._allObjects = allObjects;
         return allObjects;
+    }
+
+    @queue()
+    async getObjectsByKey(key: number): Promise<EditorObject[]> {
+        if (!this._allObjectsMap) {
+            let allObjects = await this.getAllObjects();
+            let map: Record<number, EditorObject[]> = {};
+            this._allObjectsMap = map;
+            for (const obj of allObjects) {
+                if (!map[obj.key]) {
+                    map[obj.key] = [obj];
+                } else {
+                    map[obj.key].push(obj);
+                }
+            }
+        }
+        let result = this._allObjectsMap[key];
+        return result ?? [];
     }
 }
 
@@ -669,4 +714,12 @@ export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> 
 export async function getAllObjects() {
     let map = y3.env.currentMap!;
     return await map.editorTable.getAllObjects();
+}
+
+/**
+ * 根据key获取对象
+ */
+export async function getObjectsByKey(key: number): Promise<EditorObject[]> {
+    let map = y3.env.currentMap!;
+    return await map.editorTable.getObjectsByKey(key);
 }

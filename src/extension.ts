@@ -22,6 +22,7 @@ import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
 import { config } from './config';
 import * as globalScript from './globalScript';
+import * as luaLanguage from './luaLanguage';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -303,6 +304,7 @@ class Helper {
             editorTable.init();
             plugin.init();
             globalScript.init();
+            luaLanguage.init();
         }, 100);
     }
 }
