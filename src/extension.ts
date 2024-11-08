@@ -21,7 +21,7 @@ import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
 import { config } from './config';
-import * as watcher from './watcher';
+import * as globalScript from './globalScript';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -302,7 +302,7 @@ class Helper {
             console.init();
             editorTable.init();
             plugin.init();
-            watcher.init();
+            globalScript.init();
         }, 100);
     }
 }

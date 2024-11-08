@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
-import { isGlobalScriptEnabled } from "./mapManager";
+import * as globalScript from '../../globalScript';
 
 function 多开模式() {
     let node = new TreeNode('多开模式', {
@@ -123,7 +123,7 @@ export class 功能 extends TreeNode {
                     },
                     show: async () => {
                         return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'))
-                            && !await isGlobalScriptEnabled();
+                            && !await globalScript.isEnabled();
                     }
                 }),
                 new TreeNode('启动游戏', {
