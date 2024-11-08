@@ -8,6 +8,11 @@ export class 地图管理 extends TreeNode {
         super('地图管理', {
             iconPath: new vscode.ThemeIcon('repo-clone'),
 
+            show: async () => {
+                await y3.env.mapReady();
+                return y3.env.scriptUri !== undefined;
+            },
+
             update: async (node) => {
                 await y3.env.mapReady();
                 let entryMap = y3.env.project?.entryMap;
@@ -50,7 +55,7 @@ export class 地图管理 extends TreeNode {
                         ? vscode.TreeItemCheckboxState.Checked
                         : vscode.TreeItemCheckboxState.Unchecked,
                     onDidChangeCheckboxState: async (state) => {
-                        y3.helper.globalState.update('openGlobalScript', state === vscode.TreeItemCheckboxState.Checked);
+                        await y3.helper.globalState.update('openGlobalScript', state === vscode.TreeItemCheckboxState.Checked);
                         await globalScript.openGlobalScript();
                     },
                 }));
