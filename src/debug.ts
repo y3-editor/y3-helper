@@ -58,7 +58,7 @@ export function init(context: vscode.ExtensionContext) {
     attach.command = 'y3-helper.attach';
 
     function update_items() {
-        if (vscode.workspace.getConfiguration('Y3-Helper').get('ShowStatusBarItem')) {
+        if (vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('ShowStatusBarItem')) {
             launch.show();
             attach.show();
         } else {

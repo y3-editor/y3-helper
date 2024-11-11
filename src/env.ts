@@ -120,7 +120,7 @@ class Env {
 
     private async searchEditorUri(askUser = false): Promise<vscode.Uri | undefined> {
         // 先看看设置里有没有
-        let editorPath: string|undefined = vscode.workspace.getConfiguration('Y3-Helper').get('EditorPath');
+        let editorPath: string|undefined = vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('EditorPath');
         if (editorPath && await this.isValidEditorPath(editorPath)) {
             return vscode.Uri.file(editorPath);
         }
@@ -149,7 +149,7 @@ class Env {
                 return undefined;
             }
             if (await this.isValidEditorPath(selectedExe.fsPath)) {
-                await vscode.workspace.getConfiguration('Y3-Helper').update('EditorPath', selectedExe.fsPath);
+                await vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).update('EditorPath', selectedExe.fsPath);
                 return selectedExe;
             }
         }
@@ -314,7 +314,7 @@ class Env {
      * 从插件配置中更新物编数据类型对应的CSV文件保存地址
      */
     private initTableTypeToCSVfolderPath(): void {
-        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath');
+        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath', vscode.workspace.workspaceFolders?.[0]);
         //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
         for (const [key, value] of Object.entries(Template.path.csv)) {
             this._tableTypeToCSVfolderPath[key] = csvPathConfig[key] ?? value;

@@ -406,13 +406,15 @@
                     "type": "string",
                     "default": "",
                     "ignoreSync": true,
-                    "pattern": "(^.*[\\\\/]Editor.exe$)|(^$)"
+                    "pattern": "(^.*[\\\\/]Editor.exe$)|(^$)",
+                    "scope": "resource"
                 },
                 "Y3-Helper.ShowStatusBarItem": {
                     "title": "显示状态栏按钮",
                     "description": "在状态栏中显示“启动”和“附加”按钮",
                     "type": "boolean",
-                    "default": true
+                    "default": true,
+                    "scope": "resource"
                 },
                 "Y3-Helper.ServerPort": {
                     "title": "客户端连接端口",
@@ -420,7 +422,8 @@
                     "type": "number",
                     "default": 0,
                     "minimum": 0,
-                    "maximum": 65535
+                    "maximum": 65535,
+                    "scope": "resource"
                 }
             }
         },

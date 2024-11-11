@@ -149,7 +149,7 @@ function registerAllMethods() {
 export function init() {
     registerAllMethods();
 
-    let port: number | undefined = vscode.workspace.getConfiguration('Y3-Helper').get('ServerPort');
+    let port: number | undefined = vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('ServerPort');
     if (port === 0 || typeof port !== 'number') {
         port = randomInt(10000, 65535);
     }
