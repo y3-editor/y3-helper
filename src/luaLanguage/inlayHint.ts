@@ -12,7 +12,11 @@ export class InlayHintProvider implements vscode.InlayHintsProvider {
         let match;
         while (match = reg.exec(text)) {
             let start = document.positionAt(startOffset + match.index + match[0].length);
-            let objects = await y3.table.getObjectsByKey(Number(match[0]));
+            let key = Number(match[0]);
+            if (key <= 10000) {
+                continue;
+            }
+            let objects = await y3.table.getObjectsByKey(key);
             if (token.isCancellationRequested) {
                 throw new vscode.CancellationError();
             }
