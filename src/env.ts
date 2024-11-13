@@ -271,29 +271,10 @@ class Env {
     public pluginUri?: vscode.Uri;
     public projectUri?: vscode.Uri;
     public editorTableUri?: vscode.Uri;// 物编数据
-    public csvTableUri?: vscode.Uri;// CSV表格路径
     public excelUri?: vscode.Uri;// excel表格路径
     public ruleUri?: vscode.Uri;// rule路径
     public project?: Project;
     public currentMap?: Map;
-
-
-
-    // public get excelTablePath() {
-    //     let relativePath: string | undefined = vscode.workspace.getConfiguration('Y3-Helper').get<string>('editorTablceDataExcelFolder');
-    //     if (relativePath && this.scriptUri) {
-    //         let res: vscode.Uri = vscode.Uri.joinPath(this.scriptUri, relativePath);
-    //         return res;
-    //     }
-    //     vscode.window.showErrorMessage("指定的editorTablceDataExcelFolder不存在，请检查插件设置");
-    //     return undefined;
-    // }
-
-    // 实际情况下各类型物编数据CSV文件的相对路径 （相对于工程项目的script文件）
-    private _tableTypeToCSVfolderPath: { [key: string]: string } = {};
-    public get tableTypeToCSVfolderPath(): { [key: string]: string }{
-        return this._tableTypeToCSVfolderPath;
-    }
 
     private _editorTablePath: string = "";
     
@@ -308,17 +289,6 @@ class Env {
             this._editorTablePath = "";
         }
         return this._editorTablePath;
-    }
-
-    /**
-     * 从插件配置中更新物编数据类型对应的CSV文件保存地址
-     */
-    private initTableTypeToCSVfolderPath(): void {
-        let csvPathConfig: any = vscode.workspace.getConfiguration('Y3-Helper.CSVPath', vscode.workspace.workspaceFolders?.[0]);
-        //console.log(vscode.workspace.getConfiguration('Y3-Helper.CSVPath').unit);
-        for (const [key, value] of Object.entries(Template.path.csv)) {
-            this._tableTypeToCSVfolderPath[key] = csvPathConfig[key] ?? value;
-        }
     }
 
     private _timer?: NodeJS.Timeout;
@@ -365,10 +335,8 @@ class Env {
         this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
         this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
         this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
-        this.csvTableUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/editor_table/csv/");
         this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
         this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
-        this.initTableTypeToCSVfolderPath();
         tools.log.info(`mapUri: ${this.mapUri}`);
         tools.log.info(`projectUri: ${this.projectUri}`);
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);

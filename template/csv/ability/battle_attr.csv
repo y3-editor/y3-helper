@@ -1,3 +1,0 @@
-key,uid,name,ability_cast_range,ability_cost,ability_damage,ability_damage_range,ability_hp_cost,ability_max_stack_count,ability_stack_cd,build_list,build_rotate,can_autocast_when_attack_target,can_cast_when_hp_insufficient,can_cost_hp,cold_down_time,cost_hp_can_die,influenced_by_cd_reduce,is_autocast,player_props_cost
-ID,UID,名称,释放范围,技能消耗,技能伤害值,技能影响范围,生命值消耗,最大充能数,充能时间,建造单位,建造角度,攻击命令触发自动施法,生命不足能否施放,消耗生命值施放,冷却时间,消耗生命是否致死,技能受冷却影响,自动施法,玩家属性消耗
-134265579,134265579,这是一个技能,"(""14.114514"")","(""5"")","(""5"")","(""0.0"")","(""0"")","(""0"")","(""0"")",(),0,False,False,False,"(""5"")",False,True,False,[]

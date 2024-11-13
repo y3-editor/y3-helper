@@ -1,3 +1,0 @@
-key,uid,name,base_color_mod,base_tint_color,body_size,effect_list,fresnel_color,fresnel_emissive_color_strength,fresnel_exp,icon,item_billboard_type,material_alpha,material_change,material_color,material_color_intensity,model,model_opacity,use_base_tint_color,use_fresnel,use_virtual_light
-ID,UID,名称,材质颜色叠加类型,基础材质变色,尺寸,特效列表,菲涅尔颜色,菲涅尔强度,菲涅尔指数,图标,名称显示方式,不透明度,材质变化,材质变化颜色,材质变色强度,模型,模型不透明度,是否启用基础材质变色,启用菲涅尔效果,启用补光效果
-134257216,134257216,这是一个物品,1,"[255, 255, 255, 0.5]",0.4,{},"[255, 0, 0, 1]",0,1,106543,1,1,0,"[255, 255, 255]",1,204059,1,False,False,

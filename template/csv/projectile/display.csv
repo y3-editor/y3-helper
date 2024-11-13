@@ -1,3 +1,0 @@
-key,uid,name,async_effect,effect_destroy_way_is_immediately,effect_foes,effect_friend,icon,max_duration,sfx_loop
-ID,UID,名称,区分敌我特效显示,是否立即移除表现,敌方特效,特效配置,图标,最大持续时间,是否循环播放
-134233724,134233724,这是一个投射物,False,False,,,100000,60,False

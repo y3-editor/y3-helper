@@ -1,3 +1,0 @@
-key,uid,name,trigger,alive_height_box_data,dead_height_box_data,description,destroy_delay,destroy_on_die,hp_max,is_ability_target,is_attacked,is_selected,passable,suffix,tags
-ID,UID,名称,触发器,code_alive_height_box_data,code_dead_height_box_data,描述,死亡销毁延迟,死亡时销毁,生命值,可被作为技能目标,可被攻击,可被选中,是否可通行,编辑器后缀,物品标签
-201359127,201359127,这是一个可破坏物,201359127,,,这是一个可破坏物,5,True,500,True,True,True,True,,()

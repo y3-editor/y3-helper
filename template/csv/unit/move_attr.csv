@@ -1,3 +1,0 @@
-key,uid,name,angle_tolerance,collision_points,dynamic_collision_r,move_channel,move_limitation,move_type,rotate_speed,speed_ratio_in_turn,standard_walk_rate
-ID,UID,名称,转向补正,碰撞格点,碰撞半径,移动类型,可移动通道,移动类型,转身速度,转向时移动速度系数,移动动画播放速率系数
-134274912,134274912,这是一个单位,1,(),0.55,1,1,40,15,0.6,36

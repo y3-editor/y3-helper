@@ -1,3 +1,0 @@
-key,uid,name,alarm_range,can_flee,cancel_alarm_range,counterattack_range,default_behaviour_type,keep_target,rescue_finish_return,rescue_seeker_distance,rescue_seeker_interval,rescue_seeker_type,rescuer_type
-ID,UID,名称,警戒范围(AI),无法反击时会逃跑,取消警戒范围(AI),允许反击范围,默认行为,无法移动时仍然保持目标,救援后返回,求救距离,求救间隔,求救类型,救援类型
-134274912,134274912,这是一个单位,7.0,False,10.0,11.0,caution,True,False,3.0,5.0,0,2

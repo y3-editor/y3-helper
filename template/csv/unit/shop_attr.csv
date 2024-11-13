@@ -1,3 +1,0 @@
-key,uid,name,buy_res_list,init_stock,is_shop,max_stock,refresh_interval,sell_list,sell_res_list,shop_camp_args,shop_range,shop_sell_type,start_rft
-ID,UID,名称,购买所需资源,初始库存,是否做为商店,最大库存,库存恢复间隔,出售列表,出售获得资源,code_shop_camp_args,商店范围,code_shop_sell_type,购买开始时间
-134274912,134274912,这是一个单位,(),5,False,5,1.0,[],(),3,10.0,0,1.0

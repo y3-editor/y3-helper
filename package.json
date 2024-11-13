@@ -189,26 +189,6 @@
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.importEditorTableDataFromCSV",
-                "title": "导入物编数据（CSV）",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.importEditorTableDataFromExcel",
-                "title": "导入物编数据（Excel）",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.generateAllTemplateCSV",
-                "title": "生成物编模板（CSV）",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.generateExcelTemplate",
-                "title": "生成物编模板（Excel）",
-                "category": "Y3开发助手"
-            },
-            {
                 "command": "y3-helper.editorTableView.refresh",
                 "title": "刷新物编数据",
                 "shortTitle": "刷新",
@@ -246,29 +226,9 @@
                 "category": "Y3开发助手"
             },
             {
-                "command": "y3-helper.addNewDataInCSV",
-                "title": "添加新物编数据到CSV表格中",
-                "category": "Y3开发助手"
-            },
-            {
                 "command": "y3-helper.copyFromEditorTableItem",
                 "title": "复制为新的对象",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.addUIDandNameToCSVfromProject",
-                "title": "添加项目中已有的物编数据的UID和名称到CSV表格中",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.modifyUIDinCSV",
-                "title": "修改CSV表格中的物编项目的UID",
-                "category": "Y3开发助手"
-            },
-            {
-                "command": "y3-helper.modifyNameInCSV",
-                "title": "修改CSV表格中的物编项目的名称",
                 "category": "Y3开发助手"
             },
             {
@@ -463,9 +423,7 @@
         "feasibility_test": "node ./out/test/feasibility.test.js"
     },
     "dependencies": {
-        "csv-parser": "^3.0.0",
         "exceljs": "^4.4.0",
-        "fast-csv": "^5.0.1",
         "fast-xml-parser": "^4.3.5",
         "fs-extra": "^11.2.0",
         "iconv-lite": "^0.6.3",
