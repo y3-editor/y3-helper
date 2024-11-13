@@ -3,7 +3,6 @@ import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
 import * as tools from './tools';
-import { Template } from './constants';
 import { isPathValid } from './utility';
 import { queue } from './utility/decorators';
 import * as y3 from 'y3-helper';

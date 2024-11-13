@@ -72,7 +72,7 @@ export async function sleep(ms: number) {
     await new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export function assert(exp: any, msg?: string) {
+export function assert(exp: any, msg?: string): asserts exp {
     if (exp !== false && exp !== null && exp !== undefined) {
         return;
     }

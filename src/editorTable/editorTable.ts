@@ -120,7 +120,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             return undefined;
         }
         let value = this.deserialize(raw);
-        value = valueOnGet(fieldInfo, value);
+        value = valueOnGet(fieldInfo, value, this.key);
         return value;
     }
 
@@ -132,7 +132,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (key === 'name' && typeof value === 'string') {
             this._name = value;
         }
-        value = valueOnSet(fieldInfo, value, this.rawGet(key), convertType);
+        value = valueOnSet(fieldInfo, value, this.rawGet(key), convertType, this.key);
         let raw = this.serialize(value);
         return this.rawSet(key, raw);
     }

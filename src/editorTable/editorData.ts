@@ -9,6 +9,7 @@ import { ModifierData as Modifier } from "../editor_meta/modifier";
 import { ProjectileData as Projectile } from "../editor_meta/projectile";
 import { TechData as Tech } from "../editor_meta/tech";
 import * as y3 from 'y3-helper';
+import { hash } from "../utility";
 
 type KV = Record<string, string|number|boolean>;
 
@@ -196,9 +197,19 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
     return value;
 }
 
-export function valueOnGet(fieldInfo: FieldInfo, value: any) {
+export function valueOnGet(fieldInfo: FieldInfo, value: any, objectKey?: number) {
     if (fieldInfo.field === 'kv') {
         value = fromKV(value);
+    }
+    if (fieldInfo.field === 'name' && objectKey !== undefined) {
+        const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_name`;
+        const hashKey = hash(key);
+        return y3.language.get(hashKey);
+    }
+    if (fieldInfo.field === 'description' && objectKey !== undefined) {
+        const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_description`;
+        const hashKey = hash(key);
+        return y3.language.get(hashKey);
     }
     if (fieldInfo.type === 'PLocalizeText') {
         if (typeof value === 'number' || typeof value === 'string') {
@@ -208,9 +219,21 @@ export function valueOnGet(fieldInfo: FieldInfo, value: any) {
     return value;
 }
 
-export function valueOnSet(fieldInfo: FieldInfo, value: any, raw: any, convertType = false) {
+export function valueOnSet(fieldInfo: FieldInfo, value: any, raw: any, convertType = false, objectKey?: number) {
     if (fieldInfo.field === 'kv') {
         value = toKV(value, raw);
+    }
+    if (fieldInfo.field === 'name' && objectKey !== undefined) {
+        const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_name`;
+        const hashKey = hash(key);
+        y3.language.set(hashKey, value);
+        return hashKey;
+    }
+    if (fieldInfo.field === 'description' && objectKey !== undefined) {
+        const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_description`;
+        const hashKey = hash(key);
+        y3.language.set(hashKey, value);
+        return hashKey;
     }
     value = checkAndConvertType(fieldInfo, value, convertType);
     if (fieldInfo.type === 'PLocalizeText') {
