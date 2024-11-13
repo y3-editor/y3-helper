@@ -155,6 +155,7 @@ class TreeView extends vscode.Disposable {
         }));
 
         env.onDidChange(() => this.refresh());
+        y3.language.onDidChange(() => this.refresh());
 
         // 刷新按钮
         this.disposables.push(vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => this.provider.refresh()));

@@ -18,6 +18,9 @@ class Map {
     constructor(public name: string, public uri: vscode.Uri) {
         this.editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
         this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
+        y3.language.onDidChange(() => {
+            this.editorTable.flushName();
+        });
     }
 
     async start() {

@@ -4,6 +4,8 @@ import * as y3 from 'y3-helper';
 import { hash } from '../utility';
 import { throttle } from '../utility/decorators';
 
+const onDidChangeEmitter = new vscode.EventEmitter<void>();
+
 class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
     public mapUri?: vscode.Uri;
@@ -44,6 +46,7 @@ class Language extends vscode.Disposable {
             }
         } finally {
             this._mapReady = true;
+            onDidChangeEmitter.fire();
         }
     }
 
@@ -173,4 +176,8 @@ export function keyOf(value: string | number, preferNumber?: boolean): string | 
         return parseInt(key);
     }
     return key;
+}
+
+export function onDidChange(listener: () => void) {
+    return onDidChangeEmitter.event(listener);
 }

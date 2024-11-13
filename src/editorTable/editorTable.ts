@@ -239,6 +239,10 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         }
         throw new Error('不支持的数据类型:' + typeof item);
     }
+
+    flushName() {
+        this._name = undefined;
+    }
 }
 
 interface CreateOptions<N extends Table.NameCN> {
@@ -606,7 +610,7 @@ export async function getObject(uri: vscode.Uri | string): Promise<EditorObject 
 export class EditorManager {
     constructor(public rootUri: vscode.Uri) {}
 
-    editorTables: Record<string, any> = {};
+    editorTables: Map<Table.NameCN, EditorTable<Table.NameCN>> = new Map();
 
     async loadObject<N extends Table.NameCN>(tableName: N, key: number) {
         let table = this.openTable(tableName);
@@ -632,14 +636,14 @@ export class EditorManager {
      * @returns 表对象
      */
     openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
-        if (!this.editorTables[tableName]) {
+        if (!this.editorTables.has(tableName)) {
             let table = new EditorTable(this, tableName);
-            this.editorTables[tableName] = table;
+            this.editorTables.set(tableName, table);
             table.onDidChange(() => {
                 this.flushCache();
             });
         }
-        return this.editorTables[tableName];
+        return this.editorTables.get(tableName) as EditorTable<N>;
     }
 
     private _allObjects?: EditorObject[];
@@ -698,6 +702,15 @@ export class EditorManager {
         }
         let result = this._allObjectsMap[key];
         return result ?? [];
+    }
+
+    flushName() {
+        for (const table of this.editorTables.values()) {
+            for (const key of table.fetchList() ?? []) {
+                let obj = table.fetch(key);
+                obj?.flushName();
+            }
+        }
     }
 }
 
