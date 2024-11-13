@@ -61,6 +61,11 @@
         "key": "name",
         "type": "PLocalizeText"
     },
+    "poolable": {
+        "desc": "开启对象池",
+        "key": "poolable",
+        "type": "PBool"
+    },
     "sfx_loop": {
         "desc": "是否循环播放",
         "key": "sfx_loop",

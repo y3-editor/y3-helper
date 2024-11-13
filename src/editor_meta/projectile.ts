@@ -26,15 +26,17 @@ export interface ProjectileData {
      */
     tags: any[]; // PList
     /**
-     * 移动类型
-     *
-     * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
+     * 是否循环播放
      */
-    move_channel: any; // PEnum
+    sfx_loop: boolean; // PBool
     /**
      * 图标
      */
     icon: any; // PResource
+    /**
+     * 开启对象池
+     */
+    poolable: boolean; // PBool
     /**
      * 是否立即移除表现
      */
@@ -44,9 +46,11 @@ export interface ProjectileData {
      */
     sound_event_list: any[]; // PSoundList
     /**
-     * 是否循环播放
+     * 移动类型
+     *
+     * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
      */
-    sfx_loop: boolean; // PBool
+    move_channel: any; // PEnum
     /**
      * 最大持续时间
      */

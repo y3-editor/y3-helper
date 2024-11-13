@@ -765,6 +765,16 @@
         "tips": "单位每秒移动的距离。",
         "type": "PFloat"
     },
+    "outline_pass_color": {
+        "desc": "描边色值（RGB）",
+        "key": "outline_pass_color",
+        "type": "PVector3"
+    },
+    "outline_pass_width": {
+        "desc": "描边厚度",
+        "key": "outline_pass_width",
+        "type": "PFloat"
+    },
     "passive_ability_list": {
         "desc": "隐藏技能",
         "key": "passive_ability_list",
@@ -834,6 +844,11 @@
         "key": "pkg_slot_size",
         "tips": "单位的背包栏格数",
         "type": "PInt"
+    },
+    "poolable": {
+        "desc": "开启对象池",
+        "key": "poolable",
+        "type": "PBool"
     },
     "precondition_list": {
         "desc": "前置条件",
