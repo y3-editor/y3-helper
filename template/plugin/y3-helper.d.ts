@@ -3,6 +3,7 @@
 import * as exceljs from 'exceljs';
 import * as https from 'https';
 import * as jsonc from 'jsonc-parser';
+import * as vm from 'vm';
 import * as vscode from 'vscode';
 
 export type Cells = Record<string, string>;
@@ -160,43 +161,6 @@ declare namespace Table$1 {
 	type NameEN = keyof typeof name.toCN;
 	type NameCN = keyof typeof name.fromCN;
 	type TypeID = keyof typeof type.toLuaType;
-}
-declare namespace CSV {
-	const type: {
-		readonly toPath: {
-			readonly unit: "editorunit";
-			readonly sound: "soundall";
-			readonly ability: "abilityall";
-			readonly model: "editormodel";
-			readonly decoration: "editordecoration";
-			readonly destructible: "editordestructible";
-			readonly effect: "editoreffect";
-			readonly icon: "editoricon";
-			readonly item: "editoritem";
-			readonly physics_object: "editorphysicsobject";
-			readonly physics_object_logic: "editorphysicsobjectlogic";
-			readonly modifier: "modifierall";
-			readonly projectile: "projectileall";
-			readonly store: "storeall";
-			readonly technology: "technologyall";
-		};
-	};
-	type Type = keyof typeof type.toPath;
-}
-declare namespace Template {
-	const path: {
-		csv: {
-			readonly unit: "./y3-helper/editor_table/csv/\u5355\u4F4D";
-			readonly decoration: "./y3-helper/editor_table/csv/\u88C5\u9970\u7269";
-			readonly item: "./y3-helper/editor_table/csv/\u7269\u54C1";
-			readonly ability: "./y3-helper/editor_table/csv/\u6280\u80FD";
-			readonly modifier: "./y3-helper/editor_table/csv/\u9B54\u6CD5\u6548\u679C";
-			readonly projectile: "./y3-helper/editor_table/csv/\u6295\u5C04\u7269";
-			readonly technology: "./y3-helper/editor_table/csv/\u79D1\u6280";
-			readonly destructible: "./y3-helper/editor_table/csv/\u53EF\u7834\u574F\u7269";
-			readonly sound: "./y3-helper/editor_table/csv/\u58F0\u97F3";
-		};
-	};
 }
 export type Row = Record<string, string>;
 /**
@@ -442,6 +406,10 @@ export interface UnitData {
 	 */
 	icon: any;
 	/**
+	 * 开启对象池
+	 */
+	poolable: boolean;
+	/**
 	 * 初始库存
 	 *
 	 * 单位作为商品的初始库存
@@ -536,7 +504,8 @@ export interface UnitData {
 	/**
 	 * 单位状态
 	 *
-	 * 进入游戏时，为单位附加的初始状态
+	 * 进入游戏时,为单位附加的初始状态
+状态会记录层数，初始为1层。每次添加/移除状态会增加/减少一层。
 	 */
 	ori_bits: any;
 	/**
@@ -664,11 +633,11 @@ export interface UnitData {
 	 */
 	armor_type: any;
 	/**
-	 * 物理吸血(%)
+	 * 是否在小地图显示
 	 *
-	 * 造成物理伤害后可以恢复自身生命值
+	 * 单位是否会在小地图上显示出来
 	 */
-	vampire_phy: number;
+	is_mini_map_show: boolean;
 	/**
 	 * 简易普攻
 	 */
@@ -732,6 +701,10 @@ export interface UnitData {
 	 */
 	billboard_scale_y: number;
 	/**
+	 * 物理主控行走速度
+	 */
+	cc_walk_speed: number;
+	/**
 	 * 死亡
 	 *
 	 * 死亡状态下会播放的动画
@@ -743,6 +716,10 @@ export interface UnitData {
 	 * 用于对物体的分类处理。为单位贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：杀死所有拥有XX标签的单位
 	 */
 	tags: any[];
+	/**
+	 * nil
+	 */
+	height_offset: number;
 	/**
 	 * 被治疗效果提升(%)
 	 *
@@ -756,17 +733,21 @@ export interface UnitData {
 	 */
 	view_type: any;
 	/**
+	 * 物理主控跳跃高度
+	 */
+	cc_jump_height: number;
+	/**
 	 * 暴击伤害(%)
 	 *
 	 * 发生暴击时，造成的暴击伤害倍数
 	 */
 	critical_dmg: number;
 	/**
-	 * 强制显示在小地图
+	 * 默认状态
 	 *
-	 * 勾选后单位将强制显示在小地图上，无视战争阴影
+	 * 默认状态下会播放的动画
 	 */
-	force_show_on_mini_map: boolean;
+	idle_anim: string;
 	/**
 	 * 圆盘阴影大小
 	 */
@@ -778,9 +759,33 @@ export interface UnitData {
 	 */
 	attack_phy_grow: number;
 	/**
-	 * nil
+	 * 描述
+	 *
+	 * 单位的介绍说明，用在编辑器内和游戏内的Tips显示上
+	 */
+	description: string;
+	/**
+	 * 动态碰撞半径
 	 */
 	collision_radius_2: number;
+	/**
+	 * 血条样式
+	 *
+	 * 该单位在游戏内的血条样式
+	 */
+	blood_bar: any;
+	/**
+	 * 单位血条高度偏移
+	 */
+	billboard_height_offset: number;
+	/**
+	 * 物理
+	 */
+	physics_composite: any;
+	/**
+	 * 是否开启描边
+	 */
+	is_open_outline_pass: boolean;
 	/**
 	 * 死亡后是否销毁单位
 	 *
@@ -788,13 +793,13 @@ export interface UnitData {
 	 */
 	destroy_after_die: boolean;
 	/**
-	 * 物理主控行走速度
+	 * 菲涅尔颜色
 	 */
-	cc_walk_speed: number;
+	fresnel_color: any;
 	/**
-	 * 玩家颜色缩放
+	 * 启用菲涅尔效果
 	 */
-	role_color_scale: number;
+	use_fresnel: boolean;
 	/**
 	 * 最大技能资源
 	 *
@@ -814,21 +819,17 @@ export interface UnitData {
 	 */
 	pene_phy_ratio_grow: number;
 	/**
-	 * 物理主控跳跃高度
+	 * 是否应用玩家颜色光圈
 	 */
-	cc_jump_height: number;
+	is_apply_role_color: boolean;
 	/**
-	 * 名称
-	 *
-	 * 当前单位的名称
+	 * 寻路碰撞额外范围
 	 */
-	name: string;
+	path_finding_external_size: number;
 	/**
-	 * 描述
-	 *
-	 * 单位的介绍说明，用在编辑器内和游戏内的Tips显示上
+	 * 碰撞格点
 	 */
-	description: string;
+	collision_points: any;
 	/**
 	 * 扇形视野夜晚夹角
 	 *
@@ -836,9 +837,9 @@ export interface UnitData {
 	 */
 	vision_sector_angle_night: number;
 	/**
-	 * 是否敌友方显示不同头像
+	 * 玩家颜色缩放
 	 */
-	separate_enemy_icon: boolean;
+	role_color_scale: number;
 	/**
 	 * 单位状态列表
 	 */
@@ -870,15 +871,13 @@ export interface UnitData {
 	 */
 	hp_max: number;
 	/**
-	 * 物理
+	 * 单位初始状态
 	 */
-	physics_composite: any;
+	state_init: any;
 	/**
-	 * 法术吸血(%)
-	 *
-	 * 造成法术伤害后可以恢复自身生命值
+	 * 声音事件列表
 	 */
-	vampire_mag: number;
+	sound_event_list: any[];
 	/**
 	 * 法术穿透(%)
 	 *
@@ -894,17 +893,19 @@ export interface UnitData {
 	 */
 	shop_camp_args: any;
 	/**
-	 * 菲涅尔颜色
+	 * 玩家自定义
 	 */
-	fresnel_color: any;
+	kv: any;
 	/**
-	 * 启用菲涅尔效果
+	 * 救援类型
 	 */
-	use_fresnel: boolean;
+	rescuer_type: any;
 	/**
-	 * 碰撞格点
+	 * 法术吸血(%)
+	 *
+	 * 造成法术伤害后可以恢复自身生命值
 	 */
-	collision_points: any;
+	vampire_mag: number;
 	/**
 	 * nil
 	 */
@@ -918,13 +919,15 @@ export interface UnitData {
 	 */
 	anim_state_name: string;
 	/**
-	 * 是否应用玩家颜色光圈
+	 * 建造时忽略动态碰撞
 	 */
-	is_apply_role_color: boolean;
+	build_ignore_dyn_collision: boolean;
 	/**
-	 * 单位初始状态
+	 * 资源消耗
+	 *
+	 * 单位作为建筑时建造会消耗的资源
 	 */
-	state_init: any;
+	build_res_cost_list: any[];
 	/**
 	 * 扇形视野白天夹角
 	 *
@@ -950,17 +953,21 @@ export interface UnitData {
 	 */
 	vision_true: number;
 	/**
-	 * 声音事件列表
+	 * 是否敌友方显示不同头像
 	 */
-	sound_event_list: any[];
+	separate_enemy_icon: boolean;
 	/**
-	 * 救援类型
+	 * 物理吸血(%)
+	 *
+	 * 造成物理伤害后可以恢复自身生命值
 	 */
-	rescuer_type: any;
+	vampire_phy_grow: number;
 	/**
-	 * 玩家自定义
+	 * 应用科技
+	 *
+	 * 单位的可应用科技（会受到该科技的影响）
 	 */
-	kv: any;
+	affect_techs: any[];
 	/**
 	 * 真实视野
 	 *
@@ -968,17 +975,15 @@ export interface UnitData {
 	 */
 	vision_true_grow: number;
 	/**
-	 * 无法移动时仍然保持目标
+	 * 百分比生命恢复
 	 *
-	 * 该字段未勾选时，在目标移动出自身的警戒范围后，且自身不能移动时，会立即开始寻找一个新的攻击目标。多用于定点守卫。
+	 * 单位的每秒生命恢复百分比数值
 	 */
-	keep_target: boolean;
+	hp_rec_percent: number;
 	/**
-	 * 所有伤害加成(%)
-	 *
-	 * 百分比提高造成的伤害
+	 * 出售阵营类型
 	 */
-	extra_dmg_grow: number;
+	shop_sell_type: any;
 	/**
 	 * 物理穿透
 	 *
@@ -992,15 +997,15 @@ export interface UnitData {
 	 */
 	hit_rate_grow: number;
 	/**
-	 * 是否开启描边
+	 * 商店
 	 */
-	is_open_outline_pass: boolean;
+	shop_edit: any;
 	/**
-	 * 被治疗效果加成(%)
+	 * 头顶名称字体
 	 *
-	 * 提高接受治疗时受到的治疗效果
+	 * 在单位头顶显示的文字字体
 	 */
-	healing_effect: number;
+	billboard_name_font: any;
 	/**
 	 * 可移动通道
 	 *
@@ -1008,9 +1013,11 @@ export interface UnitData {
 	 */
 	move_limitation: any;
 	/**
-	 * nil
+	 * 是否做为商店
+	 *
+	 * 开启后单位可以作为商店编辑出售的物品
 	 */
-	height_offset: number;
+	is_shop: boolean;
 	/**
 	 * 悬浮信息显示内容
 	 */
@@ -1028,21 +1035,21 @@ export interface UnitData {
 	 */
 	has_mp: boolean;
 	/**
-	 * 资源消耗
+	 * 购买所需资源
 	 *
-	 * 单位作为建筑时建造会消耗的资源
+	 * 单位作为商品的购买所需资源
 	 */
-	build_res_cost_list: any[];
+	buy_res_list: any[];
 	/**
-	 * 应用科技
+	 * 攻击范围
+	 */
+	attack_range: number;
+	/**
+	 * 库存恢复间隔
 	 *
-	 * 单位的可应用科技（会受到该科技的影响）
+	 * 单位作为商品的库存恢复间隔
 	 */
-	affect_techs: any[];
-	/**
-	 * 出售阵营类型
-	 */
-	shop_sell_type: any;
+	refresh_interval: number;
 	/**
 	 * 夜晚视野
 	 *
@@ -1056,9 +1063,9 @@ export interface UnitData {
 	 */
 	bar_slot_size: number;
 	/**
-	 * 商店
+	 * 编辑简易普攻
 	 */
-	shop_edit: any;
+	jump_to_display: any;
 	/**
 	 * 通用技能
 	 *
@@ -1066,17 +1073,17 @@ export interface UnitData {
 	 */
 	common_ability_list: any[];
 	/**
-	 * 是否做为商店
+	 * 普通攻击
 	 *
-	 * 开启后单位可以作为商店编辑出售的物品
+	 * 单位的普通攻击，唯一，单位对目标普通攻击时释放的技能
 	 */
-	is_shop: boolean;
+	common_atk: any;
 	/**
-	 * 购买所需资源
+	 * 允许移动的角度差
 	 *
-	 * 单位作为商品的购买所需资源
+	 * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
 	 */
-	buy_res_list: any[];
+	angle_tolerance: number;
 	/**
 	 * 编辑器后缀
 	 *
@@ -1090,17 +1097,17 @@ export interface UnitData {
 	 */
 	collision_box_turning_enable: boolean;
 	/**
-	 * 冷却缩减(%)
+	 * 移动类型
 	 *
-	 * 单位技能进入cd时减少部分冷却时间
+	 * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
 	 */
-	cd_reduce_grow: number;
+	move_channel: any;
 	/**
-	 * 库存恢复间隔
+	 * 掉落物品
 	 *
-	 * 单位作为商品的库存恢复间隔
+	 * 单位死亡后会掉落的物品
 	 */
-	refresh_interval: number;
+	drop_items_tuple: any[];
 	/**
 	 * 是否显示血条刻度
 	 *
@@ -1118,44 +1125,6 @@ export interface UnitData {
 	 */
 	rescue_seeker_type: any;
 	/**
-	 * 编辑简易普攻
-	 */
-	jump_to_display: any;
-	/**
-	 * 普通攻击
-	 *
-	 * 单位的普通攻击，唯一，单位对目标普通攻击时释放的技能
-	 */
-	common_atk: any;
-	/**
-	 * 法术防御力
-	 *
-	 * 单位的法术防御力
-	 */
-	defense_mag: number;
-	/**
-	 * UID
-	 */
-	uid: string;
-	/**
-	 * 允许移动的角度差
-	 *
-	 * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
-	 */
-	angle_tolerance: number;
-	/**
-	 * 移动类型
-	 *
-	 * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
-	 */
-	move_channel: any;
-	/**
-	 * 掉落物品
-	 *
-	 * 单位死亡后会掉落的物品
-	 */
-	drop_items_tuple: any[];
-	/**
 	 * 取消警戒范围(AI)
 	 *
 	 * 单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方
@@ -1168,15 +1137,35 @@ export interface UnitData {
 	 */
 	pkg_slot_size: number;
 	/**
-	 * 力量
+	 * 法术防御力
 	 *
-	 * 力量
+	 * 单位的法术防御力
 	 */
-	strength_grow: number;
+	defense_mag: number;
 	/**
-	 * 最大平衡角度
+	 * UID
 	 */
-	max_balance_angle: number;
+	uid: string;
+	/**
+	 * 防御塔仇恨持续时间
+	 */
+	tower_hatred_duration: number;
+	/**
+	 * 开启物品背包栏
+	 */
+	enable_item_slots: boolean;
+	/**
+	 * 所有伤害加成(%)
+	 *
+	 * 百分比提高造成的伤害
+	 */
+	extra_dmg_grow: number;
+	/**
+	 * 暴击率(%)
+	 *
+	 * 单位普通攻击有概率造成额外伤害
+	 */
+	critical_chance: number;
 	/**
 	 * 经验
 	 *
@@ -1184,23 +1173,39 @@ export interface UnitData {
 	 */
 	reward_exp: number;
 	/**
-	 * 救援后返回
-	 */
-	rescue_finish_return: boolean;
-	/**
 	 * 预览血量
 	 */
 	preview_billboard_health_value: number;
 	/**
-	 * 单位血条高度偏移
+	 * 最大平衡角度
 	 */
-	billboard_height_offset: number;
+	max_balance_angle: number;
 	/**
 	 * 离地高度
 	 *
 	 * 单位的离地高度
 	 */
 	model_height: number;
+	/**
+	 * 救援后返回
+	 */
+	rescue_finish_return: boolean;
+	/**
+	 * 百分比生命恢复
+	 *
+	 * 单位的每秒生命恢复百分比数值
+	 */
+	hp_rec_percent_grow: number;
+	/**
+	 * 移动动画播放速率系数
+	 *
+	 * 单位移动时动画的播放速度
+	 */
+	standard_walk_rate: number;
+	/**
+	 * nil
+	 */
+	vision_sector_angle_night_grow: number;
 	/**
 	 * 前置条件
 	 *
@@ -1218,15 +1223,13 @@ export interface UnitData {
 	 */
 	attack_interval: number;
 	/**
-	 * 移动动画播放速率系数
-	 *
-	 * 单位移动时动画的播放速度
+	 * 描边色值（RGB）
 	 */
-	standard_walk_rate: number;
+	outline_pass_color: any;
 	/**
 	 * nil
 	 */
-	vision_sector_angle_night_grow: number;
+	vision_sector_angle_day_grow: number;
 	/**
 	 * 力量
 	 *
@@ -1236,11 +1239,13 @@ export interface UnitData {
 	/**
 	 * nil
 	 */
-	vision_sector_angle_day_grow: number;
-	/**
-	 * nil
-	 */
 	vision_sector_night_grow: number;
+	/**
+	 * 夜晚视野
+	 *
+	 * 单位在夜晚可以看到（驱散战争迷雾）的范围
+	 */
+	vision_night_grow: number;
 	/**
 	 * 白天视野
 	 *
@@ -1248,7 +1253,7 @@ export interface UnitData {
 	 */
 	vision_rng: number;
 	/**
-	 * 碰撞半径
+	 * 寻路碰撞网格边长
 	 *
 	 * 碰撞动态半径，每50为1个标准格。
 	 */
@@ -1268,11 +1273,11 @@ export interface UnitData {
 	 */
 	fresnel_emissive_color_strength: number;
 	/**
-	 * 物理吸血(%)
+	 * 冷却缩减(%)
 	 *
-	 * 造成物理伤害后可以恢复自身生命值
+	 * 单位技能进入cd时减少部分冷却时间
 	 */
-	vampire_phy_grow: number;
+	cd_reduce_grow: number;
 	/**
 	 * 物理防御力
 	 *
@@ -1300,21 +1305,21 @@ export interface UnitData {
 	 */
 	base_tint_color: any;
 	/**
-	 * 血条样式
+	 * 强制显示在小地图
 	 *
-	 * 该单位在游戏内的血条样式
+	 * 勾选后单位将强制显示在小地图上，无视战争阴影
 	 */
-	blood_bar: any;
+	force_show_on_mini_map: boolean;
 	/**
 	 * 材质颜色叠加类型
 	 */
 	base_color_mod: any;
 	/**
-	 * 模型
+	 * 被治疗效果加成(%)
 	 *
-	 * 当前单位所使用的的模型
+	 * 提高接受治疗时受到的治疗效果
 	 */
-	model: any;
+	heal_effect: number;
 	/**
 	 * 建造时间（秒）
 	 */
@@ -1332,23 +1337,23 @@ export interface UnitData {
 	 */
 	mp_key: string;
 	/**
-	 * 是否在小地图显示
+	 * 冷却缩减(%)
 	 *
-	 * 单位是否会在小地图上显示出来
+	 * 单位技能进入cd时减少部分冷却时间
 	 */
-	is_mini_map_show: boolean;
+	cd_reduce: number;
 	/**
-	 * 暴击率(%)
+	 * 无法移动时仍然保持目标
 	 *
-	 * 单位普通攻击有概率造成额外伤害
+	 * 该字段未勾选时，在目标移动出自身的警戒范围后，且自身不能移动时，会立即开始寻找一个新的攻击目标。多用于定点守卫。
 	 */
-	critical_chance: number;
+	keep_target: boolean;
 	/**
-	 * 默认状态
+	 * 名称
 	 *
-	 * 默认状态下会播放的动画
+	 * 当前单位的名称
 	 */
-	idle_anim: string;
+	name: string;
 	/**
 	 * 无法反击时会逃跑
 	 *
@@ -1370,11 +1375,9 @@ export interface UnitData {
 	 */
 	walk_anim: string;
 	/**
-	 * 冷却缩减(%)
-	 *
-	 * 单位技能进入cd时减少部分冷却时间
+	 * 描边厚度
 	 */
-	cd_reduce: number;
+	outline_pass_width: number;
 	/**
 	 * 求救间隔
 	 */
@@ -1384,17 +1387,17 @@ export interface UnitData {
 	 */
 	enemy_mini_map_icon: any;
 	/**
-	 * 夜晚视野
+	 * 力量
 	 *
-	 * 单位在夜晚可以看到（驱散战争迷雾）的范围
+	 * 力量
 	 */
-	vision_night_grow: number;
+	strength_grow: number;
 	/**
-	 * 被治疗效果加成(%)
+	 * 物理吸血(%)
 	 *
-	 * 提高接受治疗时受到的治疗效果
+	 * 造成物理伤害后可以恢复自身生命值
 	 */
-	heal_effect: number;
+	vampire_phy: number;
 	/**
 	 * 攻击速度(%)
 	 *
@@ -1408,21 +1411,23 @@ export interface UnitData {
 	 */
 	vision_sector_night: number;
 	/**
+	 * 被治疗效果加成(%)
+	 *
+	 * 提高接受治疗时受到的治疗效果
+	 */
+	healing_effect: number;
+	/**
+	 * 模型
+	 *
+	 * 当前单位所使用的的模型
+	 */
+	model: any;
+	/**
 	 * 智力
 	 *
 	 * 智力
 	 */
 	intelligence: number;
-	/**
-	 * 攻击范围
-	 */
-	attack_range: number;
-	/**
-	 * 扇形视野白天半径
-	 *
-	 * 单位在白天拥有的扇形视野半径。
-	 */
-	vision_sector_rng: number;
 	/**
 	 * 法术吸血(%)
 	 *
@@ -1436,21 +1441,21 @@ export interface UnitData {
 	 */
 	max_stock: number;
 	/**
-	 * 躲避率(%)
+	 * 扇形视野白天半径
 	 *
-	 * 单位躲避其他单位普通攻击的概率
+	 * 单位在白天拥有的扇形视野半径。
 	 */
-	dodge_rate_grow: number;
+	vision_sector_rng: number;
 	/**
 	 * 允许反击范围
 	 */
 	counterattack_range: number;
 	/**
-	 * 头顶名称字体
+	 * 躲避率(%)
 	 *
-	 * 在单位头顶显示的文字字体
+	 * 单位躲避其他单位普通攻击的概率
 	 */
-	billboard_name_font: any;
+	dodge_rate_grow: number;
 	/**
 	 * 是否启用基础材质变色
 	 */
@@ -1550,6 +1555,10 @@ export interface SoundData {
 }
 export interface AbilityData {
 	/**
+	 * 技能阶段配置
+	 */
+	ability_stage_config: any;
+	/**
 	 * 物品
 	 */
 	type_priority_item: number;
@@ -1592,7 +1601,7 @@ export interface AbilityData {
 	/**
 	 * 立刻施法
 	 */
-	is_immediate: boolean;
+	is_immediate: any;
 	/**
 	 * 宽度
 	 */
@@ -1646,6 +1655,10 @@ export interface AbilityData {
 	 */
 	sound_event_list: any[];
 	/**
+	 * 玩家自定义
+	 */
+	kv: any;
+	/**
 	 * 移动会对技能产生影响
 	 */
 	influenced_by_move: boolean;
@@ -1654,17 +1667,17 @@ export interface AbilityData {
 	 */
 	can_cast_when_hp_insufficient: boolean;
 	/**
-	 * 玩家自定义
+	 * 自动拾取
 	 */
-	kv: any;
+	auto_pick: boolean;
 	/**
 	 * 英雄
 	 */
 	type_priority_hero: number;
 	/**
-	 * 自动拾取
+	 * 施法开始
 	 */
-	auto_pick: boolean;
+	ability_cast_point: number;
 	/**
 	 * 消耗生命值施放
 	 */
@@ -1682,25 +1695,27 @@ export interface AbilityData {
 	 */
 	player_props_cost: any[];
 	/**
-	 * 可以缓存
+	 * 前置条件
+	 *
+	 * 训练、购买、建造该单位的前置条件
 	 */
-	can_cache: boolean;
-	/**
-	 * 名称
-	 */
-	name: string;
-	/**
-	 * 技能消耗
-	 */
-	ability_cost: string[];
+	precondition_list: any[];
 	/**
 	 * 采集动画
 	 */
 	collection_animation: string;
 	/**
+	 * 技能消耗
+	 */
+	ability_cost: string[];
+	/**
 	 * 击中音效
 	 */
 	hit_sound_effect: any[];
+	/**
+	 * 结束音效
+	 */
+	end_sound_effect: any[];
 	/**
 	 * 技能释放类型
 	 */
@@ -1714,15 +1729,13 @@ export interface AbilityData {
 	 */
 	ability_stack_cd: string[];
 	/**
-	 * 结束音效
+	 * 建筑
 	 */
-	end_sound_effect: any[];
+	type_priority_building: number;
 	/**
-	 * 前置条件
-	 *
-	 * 训练、购买、建造该单位的前置条件
+	 * 施法打断范围
 	 */
-	precondition_list: any[];
+	ability_break_cast_range: string[];
 	/**
 	 * 生物
 	 */
@@ -1736,21 +1749,21 @@ export interface AbilityData {
 	 */
 	ability_damage: string[];
 	/**
-	 * 角度
+	 * 攻击范围预览
 	 */
-	sector_angle: string[];
+	show_building_attack_range: boolean;
 	/**
 	 * 是否转身
 	 */
 	need_turn_to_target: boolean;
 	/**
-	 * 攻击范围预览
+	 * 前摇音效
 	 */
-	show_building_attack_range: boolean;
+	ps_sound_effect: any[];
 	/**
-	 * 建造方式
+	 * 角度
 	 */
-	ability_build_subtype: any;
+	sector_angle: string[];
 	/**
 	 * 显示准备倒计时
 	 */
@@ -1772,10 +1785,6 @@ export interface AbilityData {
 	 */
 	build_list: any[];
 	/**
-	 * 前摇音效
-	 */
-	ps_sound_effect: any[];
-	/**
 	 * 结束特效
 	 */
 	end_sfx_list: any[];
@@ -1784,21 +1793,25 @@ export interface AbilityData {
 	 */
 	bs_sfx_list: any[];
 	/**
+	 * 名称
+	 */
+	name: string;
+	/**
 	 * 循环播放动画
 	 */
 	collection_animation_loop: boolean;
 	/**
-	 * 建筑
+	 * 建造角度
 	 */
-	type_priority_building: number;
+	build_rotate: number;
 	/**
 	 * 己方
 	 */
 	camp_priority_self: number;
 	/**
-	 * 建造角度
+	 * 建造方式
 	 */
-	build_rotate: number;
+	ability_build_subtype: any;
 	/**
 	 * 特殊筛选
 	 */
@@ -1860,25 +1873,25 @@ export interface AbilityData {
 	 */
 	ability_cast_range: string[];
 	/**
-	 * 施法打断范围
+	 * 可以缓存
 	 */
-	ability_break_cast_range: string[];
+	can_cache: boolean;
 	/**
 	 * 中立
 	 */
 	camp_priority_neutral: number;
 	/**
-	 * 允许学习等级
-	 */
-	required_level: any;
-	/**
 	 * 指示器类型
 	 */
 	sight_type: any;
 	/**
-	 * 施法完成
+	 * 技能绑定动画轨
 	 */
-	ability_bw_point: number;
+	ability_timeline_resource: any;
+	/**
+	 * 允许学习等级
+	 */
+	required_level: any;
 	/**
 	 * 技能影响范围
 	 */
@@ -1896,13 +1909,13 @@ export interface AbilityData {
 	 */
 	can_interrupt_others: boolean;
 	/**
-	 * 施法开始
-	 */
-	ability_cast_point: number;
-	/**
 	 * 施法出手
 	 */
 	ability_channel_time: number;
+	/**
+	 * 施法完成
+	 */
+	ability_bw_point: number;
 	/**
 	 * 技能最大等级
 	 */
@@ -2278,7 +2291,7 @@ export interface ItemData {
 	 */
 	uid: string;
 	/**
-	 * 掉落后时间到期消失
+	 * 未拾取时间到期消失
 	 */
 	delete_on_discard: boolean;
 	/**
@@ -2712,15 +2725,17 @@ export interface ProjectileData {
 	 */
 	tags: any[];
 	/**
-	 * 移动类型
-	 *
-	 * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
+	 * 是否循环播放
 	 */
-	move_channel: any;
+	sfx_loop: boolean;
 	/**
 	 * 图标
 	 */
 	icon: any;
+	/**
+	 * 开启对象池
+	 */
+	poolable: boolean;
 	/**
 	 * 是否立即移除表现
 	 */
@@ -2730,9 +2745,11 @@ export interface ProjectileData {
 	 */
 	sound_event_list: any[];
 	/**
-	 * 是否循环播放
+	 * 移动类型
+	 *
+	 * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
 	 */
-	sfx_loop: boolean;
+	move_channel: any;
 	/**
 	 * 最大持续时间
 	 */
@@ -2835,14 +2852,15 @@ declare class FieldInfo {
 	constructor(tableName: Table$1.NameCN, field: string);
 }
 declare function ready(): Promise<void>;
-declare class EditorObject<N extends Table$1.NameCN> {
+declare class EditorObject<N extends Table$1.NameCN = Table$1.NameCN> {
+	private manager;
 	tableName: N;
 	key: number;
 	private _json?;
 	private _name?;
 	text?: string;
 	uri?: vscode.Uri;
-	constructor(tableName: N, key: number);
+	constructor(manager: EditorManager, tableName: N, key: number);
 	toString(): string;
 	/**
 	 * 获取对象的json数据语法树
@@ -2887,6 +2905,7 @@ export interface CreateOptions<N extends Table$1.NameCN> {
 	overwrite?: boolean;
 }
 declare class EditorTable<N extends Table$1.NameCN> extends vscode.Disposable {
+	private manager;
 	name: N;
 	uri: vscode.Uri;
 	nameEN: {
@@ -2902,7 +2921,7 @@ declare class EditorTable<N extends Table$1.NameCN> extends vscode.Disposable {
 	}[N];
 	private _objectCache;
 	private watcher?;
-	constructor(name: N);
+	constructor(manager: EditorManager, name: N);
 	toString(): string;
 	/**
 	 * 获取具体的对象
@@ -2958,12 +2977,29 @@ declare class EditorTable<N extends Table$1.NameCN> extends vscode.Disposable {
 	private initWatcher;
 	onDidChange(callback: () => void): vscode.Disposable;
 }
+declare function getObject(uri: vscode.Uri | string): Promise<EditorObject | undefined>;
+declare class EditorManager {
+	rootUri: vscode.Uri;
+	constructor(rootUri: vscode.Uri);
+	editorTables: Record<string, any>;
+	loadObject<N extends Table$1.NameCN>(tableName: N, key: number): Promise<y3.table.EditorObject<N> | null>;
+	/**
+	 * 打开物编表
+	 * @param tableName 哪种表
+	 * @returns 表对象
+	 */
+	openTable<N extends Table$1.NameCN>(tableName: N): EditorTable<N>;
+	private _allObjects?;
+	private _allObjectsMap?;
+	private _cacheVersion;
+	private flushCache;
+	getAllObjects(): Promise<y3.table.EditorObject<"\u5355\u4F4D" | "\u58F0\u97F3" | "\u6280\u80FD" | "\u88C5\u9970\u7269" | "\u53EF\u7834\u574F\u7269" | "\u7269\u54C1" | "\u9B54\u6CD5\u6548\u679C" | "\u6295\u5C04\u7269" | "\u79D1\u6280">[]>;
+	getObjectsByKey(key: number): Promise<EditorObject[]>;
+}
 declare function openTable<N extends Table$1.NameCN>(tableName: N): EditorTable<N>;
-declare function getFileKey(fileName: string): number | undefined;
-declare function getObject(uri: vscode.Uri | string): Promise<EditorObject<Table$1.NameCN> | undefined>;
 declare function getAllObjects(): Promise<y3.table.EditorObject<"\u5355\u4F4D" | "\u58F0\u97F3" | "\u6280\u80FD" | "\u88C5\u9970\u7269" | "\u53EF\u7834\u574F\u7269" | "\u7269\u54C1" | "\u9B54\u6CD5\u6548\u679C" | "\u6295\u5C04\u7269" | "\u79D1\u6280">[]>;
+declare function getObjectsByKey(key: number): Promise<EditorObject[]>;
 declare function init$1(): void;
-declare function init$2(): void;
 declare function ready$1(): Promise<void>;
 declare function get(key: string | number): string | undefined;
 declare function set(key: string | number, value: string): Promise<void>;
@@ -3037,7 +3073,26 @@ declare const encodeOptions: {
 	readonly depth: 0;
 };
 declare function encode(jsObject: any, options?: Partial<typeof encodeOptions>): string;
+declare function launch(): Promise<boolean>;
 export type EditorVersion = "1.0" | "2.0" | "unknown";
+declare class Map$1 {
+	name: string;
+	uri: vscode.Uri;
+	id: bigint;
+	editorTable: EditorManager;
+	scriptUri: vscode.Uri;
+	constructor(name: string, uri: vscode.Uri);
+	start(): Promise<void>;
+}
+declare class Project {
+	uri: vscode.Uri;
+	constructor(uri: vscode.Uri);
+	entryMapId: bigint;
+	maps: Map$1[];
+	entryMap?: Map$1;
+	start(): Promise<void>;
+	findMapByUri(uri: vscode.Uri): Map$1 | undefined;
+}
 declare class Env {
 	private envChangeEmitter;
 	onDidChange: vscode.Event<void>;
@@ -3047,45 +3102,87 @@ declare class Env {
 	private getEditorVersion;
 	private searchMapPathInProject;
 	private searchMapFolderBySelectedUri;
-	private searchProjectPath;
+	private searchProjectByFolder;
+	private searchProject;
 	private getEditorExeUri;
 	editorVersion: EditorVersion;
 	editorUri?: vscode.Uri;
 	editorExeUri?: vscode.Uri;
 	mapUri?: vscode.Uri;
 	scriptUri?: vscode.Uri;
+	globalScriptUri?: vscode.Uri;
 	y3Uri?: vscode.Uri;
 	pluginUri?: vscode.Uri;
 	projectUri?: vscode.Uri;
 	editorTableUri?: vscode.Uri;
-	csvTableUri?: vscode.Uri;
 	excelUri?: vscode.Uri;
 	ruleUri?: vscode.Uri;
-	private _tableTypeToCSVfolderPath;
-	get tableTypeToCSVfolderPath(): {
-		[key: string]: string;
-	};
+	project?: Project;
+	currentMap?: Map$1;
 	private _editorTablePath;
 	get editorTablePath(): string;
-	/**
-	 * 从插件配置中更新物编数据类型对应的CSV文件保存地址
-	 */
-	private initTableTypeToCSVfolderPath;
 	private _timer?;
 	private fireOnDidReload;
 	updateEditor(askUser?: boolean): Promise<void>;
 	editorReady(askUser?: boolean): Promise<void>;
+	updateCurrentMap(map: Map$1): void;
 	updateMap(search: boolean, askUser: boolean): Promise<void>;
 	mapReady(askUser?: boolean): Promise<void>;
-	reload(): void;
 }
 export declare const env: Env;
+export interface ExportInfo {
+	name: string;
+	async: boolean;
+	line: number;
+}
+declare class Plugin {
+	uri: vscode.Uri;
+	name: string;
+	private rawCode?;
+	private fixedCode?;
+	private script?;
+	private parseError?;
+	private exports;
+	constructor(uri: vscode.Uri, name: string);
+	setCode(code: string): void;
+	reload(): Promise<void>;
+	private parse;
+	getExports(): Promise<Record<string, ExportInfo>>;
+	running: boolean;
+	run(funcName: string, sandbox: vm.Context): Promise<void>;
+	private _onceDidRun;
+	private fireDidRun;
+	onceDidRun(callback: (data: {
+		funcName: string;
+		result: any;
+	}) => void | Promise<void>): void;
+}
+declare class PluginManager extends vscode.Disposable {
+	dir: vscode.Uri;
+	private _ready;
+	private _disposables;
+	private _onDidChange;
+	constructor(dir: vscode.Uri);
+	private notifyChange;
+	onDidChange: vscode.Event<void>;
+	plugins: Record<string, Plugin>;
+	private loadPlugins;
+	private ready;
+	private static requireCache;
+	private makeSandbox;
+	getName(uri: vscode.Uri): string | undefined;
+	findPlugin(uri: vscode.Uri): Promise<Plugin | undefined>;
+	run(uri: vscode.Uri, funcName: string): Promise<void>;
+	getAll(): Promise<Plugin[]>;
+	runAll(funcName: string): Promise<number>;
+}
 declare function runAllPlugins(funcName: string): Promise<void>;
 declare function onceDidRun(callback: (data: {
 	funcName: string;
 	result: any;
 }) => void | Promise<void>): void;
-declare function init$3(): Promise<void>;
+declare function getManager(): PluginManager | undefined;
+declare function init$2(): Promise<void>;
 export declare let helper: vscode.ExtensionContext;
 /**
  * 拼接路径为 Uri
@@ -3114,22 +3211,22 @@ export declare function open(uri: vscode.Uri | string): void;
  */
 export declare function openInExplorer(uri: vscode.Uri | string): void;
 export declare function sleep(ms: number): Promise<void>;
-export declare function assert(exp: any, msg?: string): void;
+export declare function assert(exp: any, msg?: string): asserts exp;
 
-declare namespace lua {
-	export { encode };
+declare namespace tracy {
+	export { launch };
 }
 declare namespace plugin {
-	export { init$3 as init, onceDidRun, runAllPlugins };
+	export { getManager, init$2 as init, onceDidRun, runAllPlugins };
 }
 declare namespace excel {
 	export { init, loadFile, rule, setBaseDir };
 }
 declare namespace table {
-	export { EditorData, EditorObject, EditorTable, FieldInfo, getAllObjects, getFileKey, getObject, init$1 as init, openTable, ready };
+	export { EditorData, EditorManager, EditorObject, EditorTable, FieldInfo, getAllObjects, getObject, getObjectsByKey, openTable, ready };
 }
 declare namespace language {
-	export { get, init$2 as init, keyOf, ready$1 as ready, set };
+	export { get, init$1 as init, keyOf, ready$1 as ready, set };
 }
 declare namespace fs {
 	export { copy, dir, isAbsolutePath, isDirectory, isExists, isFile, isRelativePath, readFile, removeFile, scan, stat, writeFile };
@@ -3137,11 +3234,14 @@ declare namespace fs {
 declare namespace json {
 	export { Item, JArray, JObject, Json, parse };
 }
+declare namespace lua {
+	export { encode };
+}
 declare namespace consts {
-	export { CSV, Table$1 as Table, Template };
+	export { Table$1 as Table };
 }
 declare namespace y3 {
-	export { consts, excel, fs, json, language, lua, plugin, table };
+	export { consts, excel, fs, json, language, lua, plugin, table, tracy };
 }
 
 export {
@@ -3153,6 +3253,7 @@ export {
 	lua,
 	plugin,
 	table,
+	tracy,
 };
 
 export {};
