@@ -98,6 +98,9 @@ export async function enable() {
     // 遍历所有地图，修改luarc文件
     for (const map of y3.env.project!.maps) {
         let rcUri = vscode.Uri.joinPath(map.uri, 'script/.luarc.json');
+        if (!await y3.fs.isExists(rcUri)) {
+            await y3.fs.copy(vscode.Uri.joinPath(globalY3Uri, '演示/项目配置/.luarc.json'), rcUri);
+        }
         await rcAddGlobalPath(rcUri);
     }
     // 生成全局的luarc文件
