@@ -1,5 +1,6 @@
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
+import * as y3 from 'y3-helper';
 
 const template =
 `---@class ECAHelper
@@ -25,13 +26,13 @@ export class CustomEvents extends BaseBuilder {
         return template
             .replace('%{FIELDS}', events.map(event => {
                 let args = event.args.map((arg, index) => {
-                    return `, v${index + 1}: ${arg.luaType}`;
+                    return `, ${y3.lua.getValidName(arg.name)}: ${arg.luaType}`;
                 });
                 return `---@field call fun(name: '${event.name}'${args.join('')})`;
             }).join('\r\n'))
             .replace('%{IMPLS}', events.map(event => {
                 let args = event.args.map((arg, index) => {
-                    return `, v${index + 1}`;
+                    return `, ${y3.lua.getValidName(arg.name)}`;
                 });
                 return `---@diagnostic disable-next-line: invisible
 y3.eca.register_custom_event_impl('${event.name}', function (_${args.join('')})
@@ -44,9 +45,9 @@ ${event.args.map((arg, index) => {
         arg.luaType === "string" ||
         arg.luaType === "table"
     ) {
-        return `        ['${arg.name}'] = v${index + 1}`;
+        return `        ['${arg.name}'] = ${y3.lua.getValidName(arg.name)}`;
     } else {
-        return `        ['${arg.name}'] = y3.py_converter.lua_to_py_by_lua_type('${arg.luaType}', v${index + 1})`;
+        return `        ['${arg.name}'] = y3.py_converter.lua_to_py_by_lua_type('${arg.luaType}', ${y3.lua.getValidName(arg.name)})`;
     }
 }).join(',\r\n')}
     })

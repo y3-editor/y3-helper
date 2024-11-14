@@ -178,7 +178,44 @@ class Encoder {
     }
 }
 
+export const keywords = new Set([
+    'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function',
+    'goto', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then', 'true',
+    'until', 'while'
+]);
 
+let validNameCache: Record<string, string> = {};
+let validNameBackCache: Record<string, string> = {};
+
+export function getValidName(name: string): string {
+    if (!validNameCache[name]) {
+        let luaName = name;
+        // 如果第一位是数字，前面加上下划线
+        if (luaName[0] >= '0' && luaName[0] <= '9') {
+            luaName = '_' + luaName;
+        }
+        // 把特殊符号替换成下划线
+        luaName = luaName.replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/g, '_');
+        // 如果是关键字，后面加上下划线
+        if (keywords.has(luaName)) {
+          luaName = luaName + "_";
+        }
+        if (name === '') {
+            luaName = '_';
+        }
+        // 如果发生了碰撞，寻找一个不重复的名字
+        if (validNameBackCache[luaName]) {
+            let i = 1;
+            while (validNameBackCache[luaName + i]) {
+                i++;
+            }
+            luaName += i;
+        }
+        validNameCache[name] = luaName;
+        validNameBackCache[luaName] = name;
+    }
+    return validNameCache[name];
+}
 
 export function encode(jsObject: any, options?: Partial<typeof encodeOptions>) {
     let encoder = new Encoder();
