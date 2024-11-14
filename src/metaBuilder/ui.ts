@@ -2,12 +2,14 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
 const template =
-`---@enum(key, partial) y3.Const.SceneUI
-local SceneUI = {
-%{UI_ENUMS}
-}
+`y3.const.SceneUI = y3.const.SceneUI or {}
 
-y3.util.tableMerge(y3.const.SceneUI or {}, SceneUI)
+%{UI_ENUMS}
+
+---@enum(key, partial) y3.Const.SceneUI
+local SceneUI = {
+%{META_UI_ENUMS}
+}
 `;
 
 export class UI extends BaseBuilder {
@@ -26,6 +28,8 @@ export class UI extends BaseBuilder {
             return;
         }
         return template.replace('%{UI_ENUMS}', sceneUIs.map(sceneUI => {
+            return `y3.const.SceneUI["${sceneUI.name}"] = "${sceneUI.uid}"`;
+        }).join('\r\n')).replace('%{META_UI_ENUMS}', sceneUIs.map(sceneUI => {
             return `    ["${sceneUI.name}"] = "${sceneUI.uid}",`;
         }).join('\r\n'));
     }

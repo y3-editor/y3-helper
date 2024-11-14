@@ -3,7 +3,7 @@ import { BaseBuilder } from './baseBuilder';
 import { EditorTables } from "../customDefine/editorTables";
 
 const template =
-    `---@enum(key, partial) y3.Const.%{NAME}
+`---@enum(key, partial) y3.Const.%{NAME}
 local %{NAME} = {
 %{ATTR_ENUMS}
 }

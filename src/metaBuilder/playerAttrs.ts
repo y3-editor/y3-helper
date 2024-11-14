@@ -2,12 +2,14 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
 const template =
-`---@enum(key, partial) y3.Const.PlayerAttr
-local PlayerAttr = {
-%{ATTR_ENUMS}
-}
+`y3.const.PlayerAttr = y3.const.PlayerAttr or {}
 
-y3.util.tableMerge(y3.const.PlayerAttr or {}, PlayerAttr)
+%{ATTR_ENUMS}
+
+---@enum(key, partial) y3.Const.PlayerAttr
+local PlayerAttr = {
+%{META_ATTR_ENUMS}
+}
 `;
 
 export class PlayerAttrs extends BaseBuilder {
@@ -25,6 +27,8 @@ export class PlayerAttrs extends BaseBuilder {
             return;
         }
         return template.replace('%{ATTR_ENUMS}', attrs.map(attr => {
+            return `y3.const.PlayerAttr["${attr.name}"] = "${attr.key}"`;
+        }).join('\r\n')).replace('%{META_ATTR_ENUMS}', attrs.map(attr => {
             return `    ["${attr.name}"] = "${attr.key}",`;
         }).join('\r\n'));
     }

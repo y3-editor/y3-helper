@@ -2,12 +2,14 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
 const template =
-`---@enum(key, partial) y3.Const.FloatTextType
-local fonts = {
-%{FONTS}
-}
+`y3.const.FloatTextType = y3.const.FloatTextType or {}
 
-y3.util.tableMerge(y3.const.FloatTextType or {}, fonts)
+%{FONTS}
+
+---@enum(key, partial) y3.Const.FloatTextType
+local FloatTextType = {
+%{META_FONTS}
+}
 `;
 
 
@@ -26,6 +28,8 @@ export class Font extends BaseBuilder {
             return;
         }
         return template.replace('%{FONTS}', datas.map(data => {
+            return `y3.const.FloatTextType["${data.name}"] = "${data.uid}"`;
+        }).join('\r\n')).replace('%{META_FONTS}', datas.map(data => {
             return `    ["${data.name}"] = "${data.uid}",`;
         }).join('\r\n'));
     }

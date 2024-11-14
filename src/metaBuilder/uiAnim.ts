@@ -2,12 +2,14 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
 const template =
-`---@enum(key, partial) y3.Const.UIAnimKey
-local UIAnimKey = {
-%{UI_ANIM_KEYS}
-}
+`y3.const.UIAnimKey = y3.const.UIAnimKey or {}
 
-y3.util.tableMerge(y3.const.UIAnimKey or {}, UIAnimKey)
+%{UI_ANIM_KEYS}
+
+---@enum(key, partial) y3.Const.UIAnimKey
+local UIAnimKey = {
+%{META_UI_ANIM_KEYS}
+}
 `;
 
 
@@ -26,6 +28,8 @@ export class UIAnim extends BaseBuilder {
             return;
         }
         return template.replace('%{UI_ANIM_KEYS}', anims.map(anim => {
+            return `y3.const.UIAnimKey["${anim.name}"] = "${anim.uid}"`;
+        }).join('\r\n')).replace('%{META_UI_ANIM_KEYS}', anims.map(anim => {
             return `    ["${anim.name}"] = "${anim.uid}",`;
         }).join('\r\n'));
     }
