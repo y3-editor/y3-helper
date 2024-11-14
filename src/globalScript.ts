@@ -125,10 +125,13 @@ async function updateRC() {
     if (!await isEnabled()) {
         return;
     }
-    if (!y3.env.scriptUri) {
+    if (!y3.env.scriptUri || !y3.env.globalScriptUri) {
         return;
     }
     let rcUri = vscode.Uri.joinPath(y3.env.scriptUri, '.luarc.json');
+    if (!await y3.fs.isExists(rcUri)) {
+        await y3.fs.copy(vscode.Uri.joinPath(y3.env.globalScriptUri, 'y3/演示/项目配置/.luarc.json'), rcUri);
+    }
     await rcAddGlobalPath(rcUri);
 }
 
