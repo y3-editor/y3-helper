@@ -7,6 +7,7 @@ import { UI } from './ui';
 import { UIAnim } from './uiAnim';
 import { JumpWord } from './jumpword';
 import { Font } from './font';
+import { Objects } from './objects';
 
 let path = 'y3-helper/meta';
 
@@ -55,4 +56,5 @@ export function init() {
     initBuilder.addChild(UIAnim, 'uiAnim.lua');
     initBuilder.addChild(JumpWord, 'jumpword.lua');
     initBuilder.addChild(Font, 'font.lua');
+    //initBuilder.addChild(Objects, 'objects.lua');
 }

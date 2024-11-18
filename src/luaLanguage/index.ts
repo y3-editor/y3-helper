@@ -9,7 +9,7 @@ class LanguageServer {
         vscode.languages.registerHoverProvider('lua', new HoverProvider());
         vscode.languages.registerInlayHintsProvider('lua', new InlayHintProvider());
         vscode.languages.registerDefinitionProvider('lua', new DefinitionProvider());
-        vscode.languages.registerCompletionItemProvider('lua', new CompletionProvider(), ...'0123456789');
+        //vscode.languages.registerCompletionItemProvider('lua', new CompletionProvider(), ...'0123456789');
     }
 }
 

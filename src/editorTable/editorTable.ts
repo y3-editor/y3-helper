@@ -264,7 +264,7 @@ interface CreateOptions<N extends Table.NameCN> {
     overwrite?: boolean,
 }
 
-export class EditorTable<N extends Table.NameCN> extends vscode.Disposable {
+export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.Disposable {
     public uri;
     public nameEN;
     private _objectCache: { [key: number]: EditorObject<N> | null | undefined } = {};
