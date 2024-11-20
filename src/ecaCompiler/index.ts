@@ -1,13 +1,7 @@
-import * as compiler from './compiler';
+import { Compiler } from './compiler';
+import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-
-async function fullCompileOne(inUri: vscode.Uri, outUri: vscode.Uri) {
-    let c = new compiler.Compiler();
-    let eca = await c.compile(inUri);
-    let content = eca.make();
-    await y3.fs.writeFile(outUri, content);
-}
 
 export function init() {
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
@@ -24,6 +18,8 @@ export function init() {
             progress.report({
                 message: '正在搜索触发器文件...',
             });
+            let formatter = new Formatter();
+            let compiler = new Compiler();
             let inTriggerDir = y3.uri(y3.env.mapUri!, 'global_trigger/trigger');
             let scanResult = await y3.fs.scan(inTriggerDir, undefined, () => {
                 if (token.isCancellationRequested) {
@@ -44,7 +40,12 @@ export function init() {
                 progress.report({
                     message: `正在编译触发器文件(${i}/${fileNames.length})...`,
                 });
-                await fullCompileOne(y3.uri(inTriggerDir, fileNames[i]), y3.uri(outTriggerDir, fileNames[i].replace('.json', '.lua')));
+
+                let inUri = y3.uri(inTriggerDir, fileNames[i]);
+                let outUri = y3.uri(outTriggerDir, fileNames[i].replace('.json', '.lua'));
+                let eca = await compiler.compile(inUri);
+                let content = eca.make(formatter);
+                await y3.fs.writeFile(outUri, content);
             }
         });
         vscode.window.showInformationMessage('编译完成');

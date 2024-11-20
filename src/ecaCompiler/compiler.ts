@@ -1,5 +1,6 @@
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
+import { Formatter } from './formatter';
 
 export class Event {
     constructor(private json: y3.json.JObject) { }
@@ -15,25 +16,40 @@ export class Action {
         }
     }
 
-    make(): string {
-        return `${this.name}(${this.args.map((arg) => arg.make()).join(', ')})`;
+    make(formatter: Formatter): string {
+        return formatter.formatCall(this.name, this.args.map((arg) => arg.make(formatter)));
     }
 }
 
 export class Exp {
     name: string;
     type: number;
-    args: Exp[] = [];
+    kind: 'call' | 'value' = 'call';
+    args?: Exp[];
+    value?: string | number | boolean;
     constructor(private json: y3.json.JObject) {
-        this.name = json.sub_type as string;
         this.type = json.arg_type as number;
-        for (let arg of json.args_list as y3.json.JObject[]) {
-            this.args.push(new Exp(arg));
+        if (typeof json.sub_type === 'string') {
+            this.name = json.sub_type as string;
+            this.args = [];
+            for (let arg of json.args_list as y3.json.JObject[]) {
+                this.args.push(new Exp(arg));
+            }
+        } else if (json.sub_type === 1) {
+            this.kind = 'value';
+            this.name = '$' + String(json.arg_type);
+            this.value = (json.args_list as [any])[0];
+        } else {
+            throw new Error('Unknown sub_type: ' + json.sub_type);
         }
     }
 
-    make(): string {
-        return `${this.name}(${this.args.map((arg) => arg.make()).join(', ')})`;
+    make(formatter: Formatter): string {
+        if (this.kind === 'value') {
+            return `_${this.type}(${y3.lua.encode(this.value)})`;
+        } else {
+            return `${this.name}(${this.args!.map((arg) => arg.make(formatter)).join(', ')})`;
+        }
     }
 }
 
@@ -51,12 +67,12 @@ export class ECA {
         }
     }
 
-    private makeActionPart(): string {
-        return this.actions.map((action) => action.make()).join('\n    ');
+    private makeActionPart(formatter: Formatter): string {
+        return this.actions.map((action) => action.make(formatter)).join('\r\n');
     }
 
-    make(): string {
-        return this.makeActionPart();
+    make(formatter: Formatter): string {
+        return this.makeActionPart(formatter);
     }
 }
 
