@@ -195,7 +195,7 @@ export function getValidName(name: string): string {
             luaName = '_' + luaName;
         }
         // 把特殊符号替换成下划线
-        luaName = luaName.replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/g, '_');
+        luaName = luaName.replace(/[\x00-\x08\x0B-\x2F\x3A-\x40\x5B-\x60\x7B-\x9F]/g, '_');
         // 如果是关键字，后面加上下划线
         if (keywords.has(luaName)) {
           luaName = luaName + "_";
