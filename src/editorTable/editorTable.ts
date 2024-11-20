@@ -725,7 +725,11 @@ export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> 
 }
 
 export async function getAllObjects() {
-    let map = y3.env.currentMap!;
+    let map = y3.env.currentMap;
+    while (!map || !map.editorTable) {
+        await y3.sleep(100);
+        map = y3.env.currentMap;
+    }
     return await map.editorTable.getAllObjects();
 }
 
