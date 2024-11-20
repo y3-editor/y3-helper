@@ -733,6 +733,10 @@ export async function getAllObjects() {
  * 根据key获取对象
  */
 export async function getObjectsByKey(key: number): Promise<EditorObject[]> {
-    let map = y3.env.currentMap!;
+    let map = y3.env.currentMap;
+    while (!map || !map.editorTable) {
+        await y3.sleep(100);
+        map = y3.env.currentMap;
+    }
     return await map.editorTable.getObjectsByKey(key);
 }
