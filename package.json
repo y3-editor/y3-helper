@@ -354,6 +354,11 @@
                 "command": "y3-helper.enableGlobalScript",
                 "title": "启用全局脚本",
                 "category": "Y3开发助手"
+            },
+            {
+                "command": "y3-helper.compileECA",
+                "title": "编译ECA",
+                "category": "Y3开发助手"
             }
         ],
         "configuration": {

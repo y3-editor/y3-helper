@@ -100,7 +100,7 @@ export async function dir(uri: vscode.Uri | string, relativePath?: string) {
     }
 }
 
-export async function scan(uri: vscode.Uri | string, relativePath?: string) {
+export async function scan(uri: vscode.Uri | string, relativePath?: string, partail?: (result: [string, vscode.FileType][]) => void) {
     if (typeof uri === 'string') {
         uri = vscode.Uri.file(uri);
     }
@@ -115,6 +115,7 @@ export async function scan(uri: vscode.Uri | string, relativePath?: string) {
         for (const [name, fileType] of files) {
             let fullPath = path ? `${path}/${name}` : name;
             result.push([fullPath, fileType]);
+            partail?.(result);
             if (fileType === vscode.FileType.Directory) {
                 await doScan(uri, fullPath);
             }
