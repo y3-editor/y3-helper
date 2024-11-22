@@ -6,34 +6,26 @@ export class Event {
     constructor(private json: y3.json.JObject) { }
 }
 
-export class Action {
-    name: string;
-    args: Exp[] = [];
-    constructor(private json: y3.json.JObject) {
-        this.name = json.action_type as string;
-        for (let arg of json.args_list as y3.json.JObject[]) {
-            this.args.push(new Exp(arg));
-        }
-    }
-
-    make(formatter: Formatter): string {
-        return formatter.formatCall(this.name, this.args.map((arg) => arg.make(formatter)));
-    }
-}
-
 export class Exp {
     name: string;
     type: number;
-    kind: 'call' | 'value' = 'call';
+    kind: 'action' | 'call' | 'value' = 'call';
     args?: Exp[];
     value?: string | number | boolean;
     constructor(private json: y3.json.JObject) {
         this.type = json.arg_type as number;
-        if (typeof json.sub_type === 'string') {
-            this.name = json.sub_type as string;
+        if (json.sub_type === undefined || typeof json.sub_type === 'string') {
+            this.name = (json.sub_type ?? json.action_type) as string;
             this.args = [];
             for (let arg of json.args_list as y3.json.JObject[]) {
                 this.args.push(new Exp(arg));
+            }
+            if ('op_arg' in json) {
+                for (let op_arg of json.op_arg as y3.json.JObject[]) {
+                    if (op_arg) {
+                        this.args.push(new Exp(op_arg));
+                    }
+                }
             }
         } else if (json.sub_type === 1) {
             this.kind = 'value';
@@ -46,9 +38,9 @@ export class Exp {
 
     make(formatter: Formatter): string {
         if (this.kind === 'value') {
-            return `_${this.type}(${y3.lua.encode(this.value)})`;
+            return formatter.formatValue(this.type, y3.lua.encode(this.value));
         } else {
-            return `${this.name}(${this.args!.map((arg) => arg.make(formatter)).join(', ')})`;
+            return formatter.formatCall(this.name, this.args!.map((arg) => arg.make(formatter)));
         }
     }
 }
@@ -56,14 +48,14 @@ export class Exp {
 export class ECA {
     name: string;
     events: Event[] = [];
-    actions: Action[] = [];
+    actions: Exp[] = [];
     constructor(private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
         for (let event of json.event as y3.json.JObject[]) {
             this.events.push(new Event(event));
         }
         for (let action of json.action as y3.json.JObject[]) {
-            this.actions.push(new Action(action));
+            this.actions.push(new Exp(action));
         }
     }
 

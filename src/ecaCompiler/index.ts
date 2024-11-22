@@ -3,7 +3,14 @@ import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
+function testConfig(formatter: Formatter) {
+}
+
 export function init() {
+    const formatter = new Formatter();
+
+    testConfig(formatter);
+
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
         if (!y3.env.scriptUri) {
             vscode.window.showErrorMessage('请先打开地图');
@@ -18,7 +25,6 @@ export function init() {
             progress.report({
                 message: '正在搜索触发器文件...',
             });
-            let formatter = new Formatter();
             let compiler = new Compiler();
             let inTriggerDir = y3.uri(y3.env.mapUri!, 'global_trigger/trigger');
             let scanResult = await y3.fs.scan(inTriggerDir, undefined, () => {
