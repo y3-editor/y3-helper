@@ -61,7 +61,7 @@ class Rule {
                         continue;
                     }
                     const argIndex = this.argNames?.indexOf(argName);
-                    if (argIndex && argIndex !== -1) {
+                    if (argIndex !== undefined && argIndex !== -1) {
                         parts.push(argIndex + 1); // 参数索引从1开始
                     } else {
                         parts.push(match[0]);
@@ -114,7 +114,7 @@ export class Formatter {
         return rule.format(args);
     }
 
-    public formatValue(type: number, value: string | number | boolean) {
+    public formatValue(type: number, value: string | number | boolean | undefined) {
         let name = '$' + String(type);
         let rule = this.rules.get(name);
         if (!rule) {

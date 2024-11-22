@@ -38,7 +38,7 @@ export class Exp {
 
     make(formatter: Formatter): string {
         if (this.kind === 'value') {
-            return formatter.formatValue(this.type, y3.lua.encode(this.value));
+            return formatter.formatValue(this.type, this.value);
         } else {
             return formatter.formatCall(this.name, this.args!.map((arg) => arg.make(formatter)));
         }
