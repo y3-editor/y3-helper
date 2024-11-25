@@ -8,11 +8,13 @@ import * as vscode from 'vscode';
 import * as terminal from './terminal';
 import * as treeView from './treeView';
 
-function setPort(port: number) {
+let currentPort: number | undefined;
+async function setPort(port: number) {
     if (!env.scriptUri) {
         return;
     }
-    tools.fs.writeFile(env.scriptUri, 'log/helper_port.lua', `return ${port}`);
+    currentPort = port;
+    await tools.fs.writeFile(env.scriptUri, 'log/helper_port.lua', `return ${port}`);
 }
 
 let server: ConsoleServer | undefined;
@@ -160,6 +162,12 @@ export function init() {
         setPort(port!);
     });
     setPort(port);
+}
+
+export async function updateHelperPortFile() {
+    if (currentPort) {
+        await setPort(currentPort);
+    }
 }
 
 export function getServer(): ConsoleServer {

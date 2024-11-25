@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
+import { updateHelperPortFile } from './console';
 
 interface LaunchOptions {
     luaArgs?: {[key: string]: string};
@@ -68,6 +69,8 @@ export class GameLauncher {
         if (options?.multi) {
             vscode.window.showInformationMessage("正在以多开模式启动，若无法启动或看到“错误码：54”，请手动启动编辑器登录（并选择30天免登录）再使用此功能");
         }
+
+        await updateHelperPortFile();
 
         let code = await runShell(
             "启动游戏",
