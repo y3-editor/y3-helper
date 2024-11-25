@@ -2,14 +2,14 @@ import { Compiler } from './compiler';
 import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import { testConfig } from './testConfig';
+import { fillStatic, fillMapDefined } from './testConfig';
 
 export function init() {
     const formatter = new Formatter();
-
-    testConfig(formatter);
+    fillStatic(formatter);
 
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
+        await y3.env.mapReady();
         if (!y3.env.scriptUri) {
             vscode.window.showErrorMessage('请先打开地图');
             return;
@@ -20,6 +20,10 @@ export function init() {
             title: '编译中...',
             cancellable: true,
         }, async (progress, token) => {
+            progress.report({
+                message: '正在加载地图配置...',
+            });
+            await fillMapDefined(formatter);
             progress.report({
                 message: '正在搜索触发器文件...',
             });
