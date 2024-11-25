@@ -18,6 +18,11 @@ type RulePart = string | number | typeof OptionalStart | typeof OptionalEnd;
 
 type Rule = string | Record<number | string, string> | ((args?: string[]) => string) | null;
 
+interface OptionalGaurd {
+    start: number;
+    hasValue: boolean;
+}
+
 class RuleHandler {
     constructor(public rule: Rule, public argNames?: string[]) {
         if (typeof rule !== 'string') {
@@ -135,17 +140,53 @@ class RuleHandler {
         }
         let i;
         let buf: string[] = [];
+        let optionalGaurd: OptionalGaurd | undefined;
         for (i = 0;i < this._parts!.length;i++) {
             let part = this._parts![i];
             if (typeof part === 'number') {
-                buf.push(args?.[part - 1] ?? 'nil');
+                let value = args?.[part - 1];
+                if (value !== undefined && value !== null && value !== 'nil') {
+                    if (optionalGaurd) {
+                        optionalGaurd.hasValue = true;
+                    }
+                    buf.push(value);
+                } else {
+                    buf.push('nil');
+                }
             } else if (typeof part === 'string') {
                 buf.push(part);
             } else if (part === OptionalStart) {
+                optionalGaurd = {
+                    start: buf.length,
+                    hasValue: false,
+                };
             } else if (part === OptionalEnd) {
+                if (optionalGaurd && !optionalGaurd.hasValue) {
+                    buf.splice(optionalGaurd.start, buf.length - optionalGaurd.start);
+                    this.clearLastEmptyLine(buf);
+                }
+                optionalGaurd = undefined;
             }
         };
         return buf.join('');
+    }
+
+    private clearLastEmptyLine(buf: string[]) {
+        for (let i = buf.length - 1; i >= 0; i--) {
+            if (buf[i].match(/^[ ]*$/)) {
+                buf.length = i;
+                continue;
+            }
+            let newLine = buf[i].match(/[\r\n]+[ ]*$/);
+            if (newLine) {
+                if (newLine.index === 0) {
+                    buf.length = i;
+                    continue;
+                }
+                buf[i] = buf[i].slice(0, newLine.index);
+            }
+            break;
+        }
     }
 }
 

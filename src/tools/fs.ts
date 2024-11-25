@@ -93,6 +93,9 @@ export async function dir(uri: vscode.Uri | string, relativePath?: string) {
         uri = vscode.Uri.joinPath(uri, relativePath);
     }
     try {
+        if ((await vscode.workspace.fs.stat(uri)).type !== vscode.FileType.Directory) {
+            return [];
+        };
         let files = await vscode.workspace.fs.readDirectory(uri);
         return files;
     } catch {

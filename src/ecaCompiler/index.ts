@@ -25,33 +25,49 @@ export function init() {
             });
             let compiler = new Compiler();
             let inTriggerDir = y3.uri(y3.env.mapUri!, 'global_trigger/trigger');
+            y3.log.info(`【编译ECA】开始，触发器目录为${inTriggerDir}`);
             let scanResult = await y3.fs.scan(inTriggerDir, undefined, () => {
                 if (token.isCancellationRequested) {
                     throw new vscode.CancellationError();
                 }
             });
+            y3.log.info(`【编译ECA】搜索到${scanResult.length}个文件和目录`);
             let fileNames = scanResult
                 . filter((file) => file[1] === vscode.FileType.File && file[0].endsWith('.json'))
                 . map((file) => file[0]);
-                
+
+            y3.log.info(`【编译ECA】搜索到${fileNames.length}个json文件`);
             if (fileNames.length === 0) {
                 return;
             }
+            let writeTasks = [];
             for (let i = 0; i < fileNames.length; i++) {
                 if (token.isCancellationRequested) {
                     throw new vscode.CancellationError();
                 }
                 progress.report({
-                    message: `正在编译触发器文件(${i}/${fileNames.length})...`,
+                    message: `正在编译触发器文件(${i + 1}/${fileNames.length})...`,
                 });
+                y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length})...`);
 
                 let inUri = y3.uri(inTriggerDir, fileNames[i]);
                 let outUri = y3.uri(outTriggerDir, fileNames[i].replace('.json', '.lua'));
                 let eca = await compiler.compile(inUri);
                 let content = eca.make(formatter);
-                await y3.fs.writeFile(outUri, content);
+                writeTasks.push(new Promise(async (resolve) => {
+                    let file = await y3.fs.readFile(outUri);
+                    if (file?.string === content) {
+                        resolve(false);
+                        return;
+                    }
+                    await y3.fs.writeFile(outUri, content);
+                    resolve(true);
+                }));
             }
+            y3.log.info('【编译ECA】等待文件全部写入完成');
+            await Promise.all(writeTasks);
         });
         vscode.window.showInformationMessage('编译完成');
+        y3.log.info(`【编译ECA】完成`);
     });
 }
