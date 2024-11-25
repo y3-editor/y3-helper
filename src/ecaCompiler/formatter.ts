@@ -16,7 +16,7 @@ const OptionalEnd = Symbol('OptionalEnd');
 
 type RulePart = string | number | typeof OptionalStart | typeof OptionalEnd;
 
-type Rule = string | Record<number | string, string> | ((args?: string[]) => string);
+type Rule = string | Record<number | string, string> | ((args?: string[]) => string) | null;
 
 class RuleHandler {
     constructor(public rule: Rule, public argNames?: string[]) {
@@ -50,6 +50,10 @@ class RuleHandler {
 
             switch (match[0]) {
                 case '<?':
+                    let last = parts[parts.length - 1];
+                    if (typeof last === 'string' && last?.endsWith('  ')) {
+                        parts.push('  ');
+                    }
                     parts.push(OptionalStart);
                     continue;
                 case '?>': 
@@ -57,7 +61,7 @@ class RuleHandler {
                     continue;
                 default: {
                     // 添加匹配项
-                    const argName = match[0].slice(1, -1); // 去掉大括号
+                    let argName = match[0].slice(1, -1); // 去掉大括号
                     if (argName === '') {
                         parts.push(curDefault);
                         curDefault++;
@@ -101,6 +105,9 @@ class RuleHandler {
                 return children;
             }
             case 'object': {
+                if (this.rule === null) {
+                    return NilRuleHandler;
+                }
                 let rule = this.rule[args![0]];
                 if (!rule) {
                     return DefaultRuleHandler;
@@ -126,28 +133,30 @@ class RuleHandler {
         if (!this._parts) {
             this.compile(this.rule as string, args);
         }
-        return this._parts!.map((part) => {
+        let i;
+        let buf: string[] = [];
+        for (i = 0;i < this._parts!.length;i++) {
+            let part = this._parts![i];
             if (typeof part === 'number') {
-                return args?.[part - 1] ?? 'nil';
+                buf.push(args?.[part - 1] ?? 'nil');
+            } else if (typeof part === 'string') {
+                buf.push(part);
+            } else if (part === OptionalStart) {
+            } else if (part === OptionalEnd) {
             }
-            if (part === OptionalStart || part === OptionalEnd) {
-                return '';
-            }
-            return part;
-        }).join('');
+        };
+        return buf.join('');
     }
 }
 
 let DefaultRuleHandler = new RuleHandler('{}');
+let NilRuleHandler = new RuleHandler('nil');
 
 export class Formatter {
     public rules = new Map<string | number, RuleHandler>();
-    public setCallRule(name: string, rule: Rule, argNames?: string[]) {
+    public setRule(name: string | number, rule: Rule, argNames?: string[]) {
         this.rules.set(name, new RuleHandler(rule, argNames));
-    }
-
-    public setValueRule(type: number, rule: Rule) {
-        this.rules.set(type, new RuleHandler(rule));
+        return this;
     }
 
     public formatCall(name: string, args: string[]) {

@@ -10,7 +10,7 @@ export class Exp {
     name: string;
     type: number;
     kind: 'action' | 'call' | 'value' = 'call';
-    args?: Exp[];
+    args?: (Exp | null)[];
     value?: string | number | boolean;
     constructor(private json: y3.json.JObject) {
         this.type = json.arg_type as number;
@@ -22,7 +22,9 @@ export class Exp {
             }
             if ('op_arg' in json) {
                 for (let op_arg of json.op_arg as y3.json.JObject[]) {
-                    if (op_arg) {
+                    if (op_arg === null) {
+                        this.args.push(null);
+                    } else {
                         this.args.push(new Exp(op_arg));
                     }
                 }
@@ -40,7 +42,13 @@ export class Exp {
         if (this.kind === 'value') {
             return formatter.formatValue(this.type, this.value);
         } else {
-            return formatter.formatCall(this.name, this.args!.map((arg) => arg.make(formatter)));
+            return formatter.formatCall(this.name, this.args!.map((arg) => {
+                if (arg === null) {
+                    return 'nil';
+                } else {
+                    return arg.make(formatter);
+                }
+            }));
         }
     }
 }
