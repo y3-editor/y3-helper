@@ -21,8 +21,10 @@ export class Exp {
                 this.args.push(new Exp(arg));
             }
             if ('op_arg' in json) {
+                let enables = json.op_arg_enable as boolean[];
                 for (let op_arg of json.op_arg as y3.json.JObject[]) {
-                    if (op_arg === null) {
+                    let enable = enables?.shift();
+                    if (op_arg === null || enable === false) {
                         this.args.push(null);
                     } else {
                         this.args.push(new Exp(op_arg));
