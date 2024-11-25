@@ -16,26 +16,34 @@ const OptionalEnd = Symbol('OptionalEnd');
 
 type RulePart = string | number | typeof OptionalStart | typeof OptionalEnd;
 
-class Rule {
-    constructor(public rule: string, public argNames?: string[]) { }
+type Rule = string | Record<number | string, string> | ((args?: string[]) => string);
+
+class RuleHandler {
+    constructor(public rule: Rule, public argNames?: string[]) {
+        if (typeof rule !== 'string') {
+            this._children = new Map();
+        }
+    }
 
     private _parts?: RulePart[];
 
-    private compile() {
+    private _children?: Map<any, RuleHandler>;
+
+    private compile(rule: string, args?: any[]) {
         const regex = /\{[^\{\}]*\}|\<\?|\?\>/g;
         let match;
         let lastIndex = 0;
         let curDefault = 1;
         let parts: RulePart[] = [];
 
-        while ((match = regex.exec(this.rule)) !== null) {
+        while ((match = regex.exec(rule)) !== null) {
             // 捕获匹配项的位置
             const matchStart = match.index;
             const matchEnd = regex.lastIndex;
 
             // 添加前面的静态部分
             if (matchStart > lastIndex) {
-                parts.push(this.rule.slice(lastIndex, matchStart));
+                parts.push(rule.slice(lastIndex, matchStart));
             }
 
             lastIndex = matchEnd;
@@ -72,16 +80,51 @@ class Rule {
         }
 
         // 添加最后的静态部分
-        if (lastIndex < this.rule.length) {
-            parts.push(this.rule.slice(lastIndex));
+        if (lastIndex < rule.length) {
+            parts.push(rule.slice(lastIndex));
         }
 
         this._parts = parts;
     }
 
-    public format(args?: string[]) {
+    private getRule(args?: any[]): RuleHandler {
+        switch (typeof this.rule) {
+            case 'string':
+                return this;
+            case 'function': {
+                let newRule = this.rule(args);
+                let children = this._children!.get(newRule);
+                if (!children) {
+                    children = new RuleHandler(newRule);
+                    this._children!.set(newRule, children);
+                }
+                return children;
+            }
+            case 'object': {
+                let rule = this.rule[args![0]];
+                if (!rule) {
+                    return DefaultRuleHandler;
+                }
+                let children = this._children!.get(rule);
+                if (!children) {
+                    children = new RuleHandler(rule);
+                    this._children!.set(rule, children);
+                }
+                return children;
+            }
+            default:
+                throw new Error('Unknown rule type' + String(this.rule));
+        }
+    }
+
+    public format(args?: any[]) {
+        let ruleHandler = this.getRule(args);
+        return ruleHandler.make(args);
+    }
+
+    private make(args?: any[]) {
         if (!this._parts) {
-            this.compile();
+            this.compile(this.rule as string, args);
         }
         return this._parts!.map((part) => {
             if (typeof part === 'number') {
@@ -95,15 +138,16 @@ class Rule {
     }
 }
 
+let DefaultRuleHandler = new RuleHandler('{}');
+
 export class Formatter {
-    public rules = new Map<string, Rule>();
-    public setCallRule(name: string, rule: string, argNames?: string[]) {
-        this.rules.set(name, new Rule(rule, argNames));
+    public rules = new Map<string | number, RuleHandler>();
+    public setCallRule(name: string, rule: Rule, argNames?: string[]) {
+        this.rules.set(name, new RuleHandler(rule, argNames));
     }
 
-    public setValueRule(type: number, rule: string) {
-        let name = '$' + String(type);
-        this.rules.set(name, new Rule(rule));
+    public setValueRule(type: number, rule: Rule) {
+        this.rules.set(type, new RuleHandler(rule));
     }
 
     public formatCall(name: string, args: string[]) {
@@ -115,11 +159,10 @@ export class Formatter {
     }
 
     public formatValue(type: number, value: string | number | boolean | undefined) {
-        let name = '$' + String(type);
-        let rule = this.rules.get(name);
+        let rule = this.rules.get(type);
         if (!rule) {
             return y3.lua.encode(value);
         }
-        return rule.format([y3.lua.encode(value)]);
+        return rule.format([value]);
     }
 }

@@ -2,14 +2,7 @@ import { Compiler } from './compiler';
 import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-
-function testConfig(formatter: Formatter) {
-    formatter.setValueRule(100006, 'y3.unit.get_by_res_id({})');
-
-    formatter.setCallRule('UNIT_ENTITY_POINT', '{}:get_point()');
-    formatter.setCallRule('ALL_PLAYER', 'y3.player_group.get_all_players()');
-    formatter.setCallRule('CREATE_HARM_TEXT_NEW', 'y3.ui.create_floating_text2({point}, {type}, {str}, {jump_word_track}, {player_group})', ['point', 'type', 'str', 'player_group', 'jump_word_track']);
-}
+import { testConfig } from './testConfig';
 
 export function init() {
     const formatter = new Formatter();
