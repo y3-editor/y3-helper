@@ -3,7 +3,10 @@ import * as vscode from 'vscode';
 import { Formatter } from './formatter';
 
 export class Event {
-    constructor(private json: y3.json.JObject) { }
+    name: string;
+    constructor(private json: y3.json.JObject) {
+        this.name = json.event_type as string;
+    }
 }
 
 export class Exp {

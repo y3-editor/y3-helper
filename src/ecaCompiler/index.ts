@@ -56,17 +56,21 @@ export function init() {
 
                 let inUri = y3.uri(inTriggerDir, fileNames[i]);
                 let outUri = y3.uri(outTriggerDir, fileNames[i].replace('.json', '.lua'));
-                let eca = await compiler.compile(inUri);
-                let content = eca.make(formatter);
-                writeTasks.push(new Promise(async (resolve) => {
-                    let file = await y3.fs.readFile(outUri);
-                    if (file?.string === content) {
-                        resolve(false);
-                        return;
-                    }
-                    await y3.fs.writeFile(outUri, content);
-                    resolve(true);
-                }));
+                try {
+                    let eca = await compiler.compile(inUri);
+                    let content = eca.make(formatter);
+                    writeTasks.push(new Promise(async (resolve) => {
+                        let file = await y3.fs.readFile(outUri);
+                        if (file?.string === content) {
+                            resolve(false);
+                            return;
+                        }
+                        await y3.fs.writeFile(outUri, content);
+                        resolve(true);
+                    }));
+                } catch (e) {
+                    y3.log.error(`【编译ECA】编译${inUri.fsPath}失败：${e}`);
+                }
             }
             y3.log.info('【编译ECA】等待文件全部写入完成');
             await Promise.all(writeTasks);
