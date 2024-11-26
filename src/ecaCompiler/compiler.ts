@@ -21,13 +21,14 @@ export class Exp {
                 this.args.push(new Exp(arg));
             }
             if ('op_arg' in json) {
-                let enables = json.op_arg_enable as boolean[];
-                for (let op_arg of json.op_arg as y3.json.JObject[]) {
-                    let enable = enables?.shift();
-                    if (op_arg === null || enable === false) {
+                let enables = json.op_arg_enable as boolean[] | undefined;
+                let op_args = json.op_arg as y3.json.JObject[];
+                for (let i = 0; i < op_args.length; i++) {
+                    let enable = enables?.[i];
+                    if (op_args[i] === null || enable === false) {
                         this.args.push(null);
                     } else {
-                        this.args.push(new Exp(op_arg));
+                        this.args.push(new Exp(op_args[i]));
                     }
                 }
             }
