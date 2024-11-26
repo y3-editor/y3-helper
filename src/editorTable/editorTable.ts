@@ -6,7 +6,7 @@ import { EditorData, valueOnGet, valueOnSet } from "./editorData";
 export { EditorData } from "./editorData";
 
 const template_dir = 'template\\json_template';
-const meta_dir = 'src\\editor_meta';
+const meta_dir = 'src\\meta\\editor_meta';
 
 type ActionType = 'create' | 'delete' | 'change';
 
