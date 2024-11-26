@@ -1,13 +1,13 @@
 import { Table } from "../constants";
-import { UnitData as Unit } from "../meta/editor_meta/unit";
-import { SoundData as Sound } from "../meta/editor_meta/sound";
-import { AbilityData as Ability } from "../meta/editor_meta/ability";
-import { DecorationData as Decoration } from "../meta/editor_meta/decoration";
-import { DestructibleData as Destructible } from "../meta/editor_meta/destructible";
-import { ItemData as Item } from "../meta/editor_meta/item";
-import { ModifierData as Modifier } from "../meta/editor_meta/modifier";
-import { ProjectileData as Projectile } from "../meta/editor_meta/projectile";
-import { TechData as Tech } from "../meta/editor_meta/tech";
+import { UnitData as Unit } from "../meta/editor/unit";
+import { SoundData as Sound } from "../meta/editor/sound";
+import { AbilityData as Ability } from "../meta/editor/ability";
+import { DecorationData as Decoration } from "../meta/editor/decoration";
+import { DestructibleData as Destructible } from "../meta/editor/destructible";
+import { ItemData as Item } from "../meta/editor/item";
+import { ModifierData as Modifier } from "../meta/editor/modifier";
+import { ProjectileData as Projectile } from "../meta/editor/projectile";
+import { TechData as Tech } from "../meta/editor/tech";
 import * as y3 from 'y3-helper';
 import { hash } from "../utility";
 
