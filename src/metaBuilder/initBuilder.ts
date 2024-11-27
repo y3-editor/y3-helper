@@ -9,7 +9,7 @@ import { JumpWord } from './jumpword';
 import { Font } from './font';
 import { Objects } from './objects';
 
-let path = 'y3-helper/meta';
+let path = 'y3-helper/helper_meta';
 
 class InitBuilder extends BaseBuilder {
     private builders: BaseBuilder[] = [];

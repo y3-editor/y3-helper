@@ -1,0 +1,358 @@
+{
+    "ABILITY_BUILD_FINISH": {
+        "key": "ET_ABILITY_BUILD_FINISH",
+        "name": "技能-建造完成"
+    },
+    "ABILITY_PRECONDITION_FAILED": {
+        "key": "ET_ABILITY_PRECONDITION_FAILED",
+        "name": "技能类型-前置条件不成立"
+    },
+    "ABILITY_PRECONDITION_SUCCEED": {
+        "key": "ET_ABILITY_PRECONDITION_SUCCEED",
+        "name": "技能类型-前置条件成立"
+    },
+    "ANY_ROLE_JOIN_GAME": {
+        "key": "ET_ROLE_JOIN_BATTLE",
+        "name": "玩家-加入游戏"
+    },
+    "BREAK_ITEM_EVENT": {
+        "key": "ET_ITEM_BROKEN",
+        "name": "物品-死亡"
+    },
+    "BUILD_SKILL_BEFORE_RELEASE": {
+        "key": "ET_BUILD_SKILL_BEFORE_RELEASE",
+        "name": "技能-建造技能释放前"
+    },
+    "CANCEL_SELECT_UNIT": {
+        "key": "CANCEL_SELECT_UNIT",
+        "name": "选中-取消"
+    },
+    "CHAT_SEND_GM": {
+        "key": "ET_CHAT_SEND_GM",
+        "name": "玩家-发送消息"
+    },
+    "CREATE_ITEM_EVENT": {
+        "key": "ET_ITEM_ON_CREATE",
+        "name": "物品-创建"
+    },
+    "DOUBLE_CLICK_DEST_EVENT": {
+        "key": "ET_DOUBLE_CLICK_DEST",
+        "name": "鼠标-双击可破坏物"
+    },
+    "DOUBLE_CLICK_ITEM_EVENT": {
+        "key": "ET_DOUBLE_CLICK_ITEM",
+        "name": "鼠标-双击物品"
+    },
+    "DOWNLOAD_MAP_ARCHIVE_CALLBACK": {
+        "key": "ET_DOWNLOAD_MAP_ARCHIVE_CALLBACK",
+        "name": "未知-ET_DOWNLOAD_MAP_ARCHIVE_CALLBACK"
+    },
+    "GAME_PAUSE": {
+        "key": "ET_GAME_PAUSE",
+        "name": "游戏-暂停"
+    },
+    "GAME_RESUME": {
+        "key": "ET_GAME_RESUME",
+        "name": "游戏-恢复"
+    },
+    "GAME_SNAPSHOT_MISMATCH": {
+        "key": "ET_GAME_SNAPSHOT_MISMATCH",
+        "name": "游戏-逻辑不同步"
+    },
+    "INIT_FINISHED": {
+        "key": "ET_GAME_INIT",
+        "name": "游戏-初始化"
+    },
+    "ITEM_CREATE_ON_DEST_COLLECTED_EVENT": {
+        "key": "ET_ITEM_CREATE_ON_DEST_COLLECTED",
+        "name": "物品-采集创建"
+    },
+    "ITEM_ON_DESTROY_EVENT": {
+        "key": "ET_ITEM_ON_DESTROY",
+        "name": "物品-移除"
+    },
+    "ITEM_PRECONDITION_FAILED": {
+        "key": "ET_ITEM_PRECONDITION_FAILED",
+        "name": "物品类型-前置条件不成立"
+    },
+    "ITEM_PRECONDITION_SUCCEED": {
+        "key": "ET_ITEM_PRECONDITION_SUCCEED",
+        "name": "物品类型-前置条件成立"
+    },
+    "KEYBOARD_KEY_DOWN_EVENT": {
+        "key": "ET_KEYBOARD_KEY_DOWN_EVENT",
+        "name": "键盘-按下"
+    },
+    "KEYBOARD_KEY_UP_EVENT": {
+        "key": "ET_KEYBOARD_KEY_UP_EVENT",
+        "name": "键盘-抬起"
+    },
+    "LOST_SELECT_UNIT": {
+        "key": "LOST_SELECT_UNIT",
+        "name": "选中-失去单位"
+    },
+    "MALL_NOTIFY_CANCEL_MATCH": {
+        "key": "ET_MALL_NOTIFY_CANCEL_MATCH",
+        "name": "steam-取消匹配"
+    },
+    "MALL_NOTIFY_ENTER_LOBBY": {
+        "key": "ET_MALL_NOTIFY_ENTER_LOBBY",
+        "name": "steam-进入大厅"
+    },
+    "MALL_NOTIFY_FRIEND_DELETE": {
+        "key": "ET_MALL_NOTIFY_FRIEND_DELETE",
+        "name": "steam-收到被好友删除"
+    },
+    "MALL_NOTIFY_FRIEND_NEW": {
+        "key": "ET_MALL_NOTIFY_FRIEND_NEW",
+        "name": "steam-收到好友申请"
+    },
+    "MALL_NOTIFY_FRIEND_UPDATE": {
+        "key": "ET_MALL_NOTIFY_FRIEND_UPDATE",
+        "name": "steam-好友在线状态变化"
+    },
+    "MALL_NOTIFY_START_MATCH": {
+        "key": "ET_MALL_NOTIFY_START_MATCH",
+        "name": "steam-开始匹配"
+    },
+    "MALL_NOTIFY_TEAM_INVITE": {
+        "key": "ET_MALL_NOTIFY_TEAM_INVITE",
+        "name": "steam-收到队伍邀请"
+    },
+    "MALL_NOTIFY_TEAM_UPDATE": {
+        "key": "ET_MALL_NOTIFY_TEAM_UPDATE",
+        "name": "steam-本地玩家队伍变化"
+    },
+    "MICRO_SPEAK": {
+        "key": "ET_MICRO_SPEAK",
+        "name": "玩家-语音发言"
+    },
+    "MOUSE_HOVER_EVENT": {
+        "key": "ET_MOUSE_HOVER_EVENT",
+        "name": "鼠标-悬停"
+    },
+    "MOUSE_KEY_DB_CLICK_EVENT": {
+        "key": "MOUSE_KEY_DB_CLICK_EVENT",
+        "name": "鼠标-双击"
+    },
+    "MOUSE_KEY_DB_CLICK_UNIT_EVENT": {
+        "key": "MOUSE_KEY_DB_CLICK_UNIT_EVENT",
+        "name": "鼠标-双击单位"
+    },
+    "MOUSE_KEY_DOWN_EVENT": {
+        "key": "ET_MOUSE_KEY_DOWN_EVENT",
+        "name": "鼠标-按下"
+    },
+    "MOUSE_KEY_DOWN_UNIT_EVENT": {
+        "key": "MOUSE_KEY_DOWN_UNIT_EVENT",
+        "name": "鼠标-按下单位"
+    },
+    "MOUSE_KEY_UP_EVENT": {
+        "key": "ET_MOUSE_KEY_UP_EVENT",
+        "name": "鼠标-抬起"
+    },
+    "MOUSE_KEY_UP_UNIT_EVENT": {
+        "key": "MOUSE_KEY_UP_UNIT_EVENT",
+        "name": "鼠标-抬起单位"
+    },
+    "MOUSE_MOVE_EVENT": {
+        "key": "MOUSE_MOVE_EVENT",
+        "name": "鼠标-移动"
+    },
+    "MOUSE_WHEEL_EVENT": {
+        "key": "ET_MOUSE_WHEEL_EVENT",
+        "name": "鼠标-滚轮"
+    },
+    "PLATFORM_STORE_ITEM_CHANGED_EVENT": {
+        "key": "ET_ROLE_STORE_ITEM_CHANGED",
+        "name": "玩家-平台道具变化"
+    },
+    "PLATFORM_STORE_PAGE_CHANGED_EVENT": {
+        "key": "ET_ROLE_STORE_PAGE_STATE_CHANGED",
+        "name": "玩家-平台商城窗口变化"
+    },
+    "PLAYER_ATTR_CHEATING_DETECTED": {
+        "key": "ET_ATTR_CHEATING_DETECTED",
+        "name": "玩家-检测到作弊"
+    },
+    "RECEIVE_CUSTOM_EVENT": {
+        "key": "ET_EVENT_CUSTOM",
+        "name": "游戏-消息"
+    },
+    "RELAUNCH_FRAME_CATCHING_FINISHED": {
+        "key": "ET_RELAUNCH_FRAME_CATCHING_FINISHED",
+        "name": "游戏-追帧完成"
+    },
+    "ROLE_ACTIVE_EXIT_GAME_EVENT": {
+        "key": "ET_ROLE_ACTIVE_EXIT_GAME_EVENT",
+        "name": "玩家-离开游戏"
+    },
+    "ROLE_CHANGE_TECH_EVENT": {
+        "key": "ET_ROLE_TECH_CHANGED",
+        "name": "玩家-科技变化"
+    },
+    "ROLE_DOWNGRADE_TECH_EVENT": {
+        "key": "ET_ROLE_TECH_DOWNGRADE",
+        "name": "玩家-科技降低"
+    },
+    "ROLE_HOLD_STORE_ITEM": {
+        "key": "ET_ROLE_HOLD_STORE_ITEM",
+        "name": "玩家-持有平台道具"
+    },
+    "ROLE_INPUT_MSG": {
+        "key": "ET_ROLE_INPUT_MSG",
+        "name": "玩家-发送指定消息"
+    },
+    "ROLE_LOSE_CONNECT": {
+        "key": "ET_ROLE_LOSE_CONNECT",
+        "name": "玩家-掉线"
+    },
+    "ROLE_RECONNECT": {
+        "key": "ET_ROLE_RECONNECT",
+        "name": "玩家-重连"
+    },
+    "ROLE_RESOURCE_CHANGED": {
+        "key": "ET_ROLE_RESOURCE_CHANGED",
+        "name": "玩家-属性变化"
+    },
+    "ROLE_UPGRADE_TECH_EVENT": {
+        "key": "ET_ROLE_TECH_UPGRADE",
+        "name": "玩家-科技提升"
+    },
+    "ROLE_USE_STORE_ITEM_END": {
+        "key": "ET_ROLE_USE_STORE_ITEM_END",
+        "name": "玩家-使用平台道具"
+    },
+    "SCENE_PRESET_LOADING_FINISH": {
+        "key": "ET_SCENE_PRESET_LOADING_FINISH",
+        "name": "游戏-地形预设加载完成"
+    },
+    "SELECT_DEST_EVENT": {
+        "key": "ET_SELECT_DEST",
+        "name": "选中-可破坏物"
+    },
+    "SELECT_ITEM_EVENT": {
+        "key": "ET_SELECT_ITEM",
+        "name": "选中-物品"
+    },
+    "SELECT_UNIT_EVENT": {
+        "key": "ET_SELECT_UNIT",
+        "name": "选中-单位"
+    },
+    "SELECT_UNIT_GROUP_EVENT": {
+        "key": "ET_SELECT_UNIT_GROUP",
+        "name": "选中-单位组"
+    },
+    "SELL_ITEM_EVENT": {
+        "key": "ET_ITEM_SOLD",
+        "name": "物品-出售"
+    },
+    "START_SKILL_POINTER": {
+        "key": "ET_START_SKILL_POINTER",
+        "name": "技能-打开指示器"
+    },
+    "STOP_SKILL_POINTER": {
+        "key": "ET_STOP_SKILL_POINTER",
+        "name": "技能-关闭指示器"
+    },
+    "TECH_PRECONDITION_FAILED": {
+        "key": "ET_TECH_PRECONDITION_FAILED",
+        "name": "科技类型-前置条件不成立"
+    },
+    "TECH_PRECONDITION_SUCCEED": {
+        "key": "ET_TECH_PRECONDITION_SUCCEED",
+        "name": "科技类型-前置条件成立"
+    },
+    "TRIGGER_COMPONENT_EVENT": {
+        "key": "ET_TRIGGER_COMPONENT_EVENT",
+        "name": "界面-消息"
+    },
+    "TRIGGER_UI_CHATBOX_VISIBLE_CHANGE_EVENT": {
+        "key": "ET_TRIGGER_UI_CHATBOX_VISIBLE_CHANGE_EVENT",
+        "name": "界面-聊天框可见性变化"
+    },
+    "TRIGGER_UI_CHECKBOX_EVENT": {
+        "key": "ET_TRIGGER_UI_CHECKBOX_CHANGE_EVENT",
+        "name": "界面-复选框变化"
+    },
+    "TRIGGER_UI_EQUIP_SLOT_DRAG_EVENT": {
+        "key": "ET_TRIGGER_UI_EQUIP_SLOT_DRAG_EVENT",
+        "name": "界面-装备拖拽"
+    },
+    "TRIGGER_UI_INPUT_FIELD_GET_FOCUS_EVENT": {
+        "key": "ET_TRIGGER_UI_INPUT_FIELD_GET_FOCUS_EVENT",
+        "name": "本地-界面-输入框获取焦点"
+    },
+    "TRIGGER_UI_INPUT_FIELD_LOST_FOCUS_EVENT": {
+        "key": "ET_TRIGGER_UI_INPUT_FIELD_LOST_FOCUS_EVENT",
+        "name": "本地-界面-输入框失去焦点"
+    },
+    "TRIGGER_UI_INPUT_FIELD_TEXT_CHANGED_EVENT": {
+        "key": "ET_TRIGGER_UI_INPUT_FIELD_TEXT_CHANGED_EVENT",
+        "name": "本地-界面-输入框内容改变"
+    },
+    "TRIGGER_UI_SLIDER_EVENT": {
+        "key": "ET_TRIGGER_UI_SLIDER_CHANGE_EVENT",
+        "name": "界面-滑动条变化"
+    },
+    "TRIGGER_UI_VIDEO_END_EVENT": {
+        "key": "ET_TRIGGER_UI_VIDEO_END_EVENT",
+        "name": "界面-视频播放完成"
+    },
+    "TYPE_ITEM_CHARGE_CHANGED_EVENT": {
+        "key": "ET_ITEM_CHARGE_CHANGED",
+        "name": "物品-充能变化"
+    },
+    "TYPE_ITEM_STACK_CHANGED_EVENT": {
+        "key": "ET_ITEM_STACK_CHANGED",
+        "name": "物品-堆叠变化"
+    },
+    "UNIT_ADD_ITEM_TO_BAR_EVENT": {
+        "key": "ET_UNIT_ADD_ITEM_TO_BAR",
+        "name": "物品-进入物品栏"
+    },
+    "UNIT_ADD_ITEM_TO_PKG_EVENT": {
+        "key": "ET_UNIT_ADD_ITEM_TO_PKG",
+        "name": "物品-进入背包"
+    },
+    "UNIT_ADD_TYPE_ITEM_EVENT": {
+        "key": "ET_UNIT_ADD_ITEM",
+        "name": "物品-获得"
+    },
+    "UNIT_ATTR_CHANGE_EVENT": {
+        "key": "ET_UNIT_ATTR_CHANGE",
+        "name": "单位-属性变化"
+    },
+    "UNIT_END_NAV_EVENT": {
+        "key": "ET_UNIT_END_NAV_EVENT",
+        "name": "单位-寻路结束"
+    },
+    "UNIT_PRECONDITION_FAILED": {
+        "key": "ET_UNIT_PRECONDITION_FAILED",
+        "name": "单位类型-前置条件不成立"
+    },
+    "UNIT_PRECONDITION_SUCCEED": {
+        "key": "ET_UNIT_PRECONDITION_SUCCEED",
+        "name": "单位类型-前置条件成立"
+    },
+    "UNIT_REMOVE_ITEM_FROM_BAR_EVENT": {
+        "key": "ET_UNIT_REMOVE_ITEM_FROM_BAR",
+        "name": "物品-离开物品栏"
+    },
+    "UNIT_REMOVE_ITEM_FROM_PKG_EVENT": {
+        "key": "ET_UNIT_REMOVE_ITEM_FROM_PKG",
+        "name": "物品-离开背包"
+    },
+    "UNIT_REMOVE_TYPE_ITEM_EVENT": {
+        "key": "ET_UNIT_REMOVE_ITEM",
+        "name": "物品-失去"
+    },
+    "UNIT_START_NAV_EVENT": {
+        "key": "ET_UNIT_START_NAV_EVENT",
+        "name": "单位-寻路开始"
+    },
+    "UNIT_USE_TYPE_ITEM_EVENT": {
+        "key": "ET_UNIT_USE_ITEM",
+        "name": "物品-使用"
+    }
+}

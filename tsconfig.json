@@ -1,7 +1,7 @@
 {
 	"include": [
 		"src/**/*.ts",
-		"src/meta/meta/**/*.ts"
+		"src/helper_meta/**/*.ts"
 	],
 	// 忽略对template/excel/importRules.ts的编译 因为它只是个模板 生成给用户用
 	"exclude": [
