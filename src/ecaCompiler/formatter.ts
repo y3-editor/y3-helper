@@ -200,10 +200,10 @@ export class Formatter {
         return this;
     }
 
-    public formatCall(name: string, args: string[]) {
+    public formatCall(name: string, args?: string[]) {
         let rule = this.rules.get(name);
         if (!rule) {
-            return name + '(' + args.join(', ') + ')';
+            return name + '(' + (args ? args.join(', ') : '') + ')';
         }
         return rule.format(args);
     }

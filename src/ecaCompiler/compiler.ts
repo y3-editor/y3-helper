@@ -7,6 +7,10 @@ export class Event {
     constructor(private json: y3.json.JObject) {
         this.name = json.event_type as string;
     }
+
+    make(formatter: Formatter): string {
+        return formatter.formatCall(this.name, []);
+    }
 }
 
 export class Exp {
@@ -74,11 +78,32 @@ export class ECA {
     }
 
     private makeActionPart(formatter: Formatter): string {
-        return this.actions.map((action) => action.make(formatter)).join('\r\n');
+        return this.actions.map((action) => action.make(formatter)).join('\n');
+    }
+
+    private increaseTab(content: string, tab: string = '    '): string {
+        return content.split('\n').map((line) => tab + line).join('\n');
+    }
+
+    private ensureEndWithNL(content: string): string {
+        return content.endsWith('\n') ? content : content + '\n';
+    }
+
+    private ensureNLisCRLF(content: string): string {
+        // 只替换单独的 \n，不替换 \r\n
+        return content.replace(/\n/g, '\r\n');
     }
 
     make(formatter: Formatter): string {
-        return this.makeActionPart(formatter);
+        let result = '';
+        if (this.events.length === 1) {
+            result = `y3.game:event(${this.events[0].make(formatter)}, function(_, data)\n`
+                + `${this.increaseTab(this.makeActionPart(formatter))}\n`
+                + `end)`;
+        }
+        result = this.ensureEndWithNL(result);
+        result = this.ensureNLisCRLF(result);
+        return result;
     }
 }
 

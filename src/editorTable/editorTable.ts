@@ -5,8 +5,8 @@ import { queue, throttle } from "../utility/decorators";
 import { EditorData, valueOnGet, valueOnSet } from "./editorData";
 export { EditorData } from "./editorData";
 
-const template_dir = 'template\\json_template';
-const meta_dir = 'src\\helper_meta\\editor';
+const templateDir = 'template\\json_template';
+const metaDir = 'src\\helper_meta\\editor';
 
 type ActionType = 'create' | 'delete' | 'change';
 
@@ -50,7 +50,7 @@ export async function ready() {
     for (const tableName in Table.name.fromCN) {
         if (tableMeta[tableName] === undefined) {
             let nameEN = Table.name.fromCN[tableName as Table.NameCN];
-            let metaUri = vscode.Uri.joinPath(y3.helper.extensionUri, meta_dir, `${nameEN}.json`);
+            let metaUri = vscode.Uri.joinPath(y3.helper.extensionUri, metaDir, `${nameEN}.json`);
             let metaFile = await y3.fs.readFile(metaUri);
             if (metaFile) {
                 tableMeta[tableName] = JSON.parse(metaFile.string);
@@ -413,7 +413,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             }
             templateJson = obj.text;
         } else {
-            let templateUri = vscode.Uri.joinPath(y3.helper.extensionUri, template_dir, `${this.nameEN}.json`);
+            let templateUri = vscode.Uri.joinPath(y3.helper.extensionUri, templateDir, `${this.nameEN}.json`);
             let template = await y3.fs.readFile(templateUri);
             if (!template) {
                 return undefined;

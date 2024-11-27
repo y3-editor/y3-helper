@@ -3,7 +3,25 @@ import { Formatter } from './formatter';
 import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
 
+const metaDir = 'src\\helper_meta\\trigger';
+
+let hasFilledEvents = false;
+async function fillEvents(formatter: Formatter) {
+    if (hasFilledEvents) {
+        return;
+    }
+    hasFilledEvents = true;
+    let eventInfoFile = await y3.fs.readFile(y3.uri(y3.helper.extensionUri, metaDir, 'event.json'));
+    y3.assert(eventInfoFile, '未找到event.json');
+    let eventInfo = y3.json.parse(eventInfoFile.string) as Record<string, { key: string, name: string }>;
+
+    for (let [key, info] of Object.entries(eventInfo)) {
+        formatter.setRule(key, y3.lua.encode(info.name));
+    }
+}
+
 export async function fillMapDefined(formatter: Formatter) {
+    await fillEvents(formatter);
     formatter
         // 字体类型
         .setRule(100259, {
