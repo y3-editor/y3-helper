@@ -4,12 +4,23 @@ import { Formatter } from './formatter';
 
 export class Event {
     name: string;
+    args?: Exp[];
     constructor(private json: y3.json.JObject) {
         this.name = json.event_type as string;
+        let args_list = json.args_list as y3.json.JObject[];
+        if (args_list.length > 0) {
+            this.args = [];
+            for (let arg of args_list) {
+                this.args.push(new Exp(arg));
+            }
+        }
     }
 
     make(formatter: Formatter): string {
-        return formatter.formatCall(this.name, []);
+        if (this.args) {
+            return formatter.formatEvent(this.name, this.args.map((arg) => arg.make(formatter)));
+        }
+        return formatter.formatEvent(this.name);
     }
 }
 

@@ -208,6 +208,16 @@ export class Formatter {
         return rule.format(args);
     }
 
+    public formatEvent(name: string, args?: string[]) {
+        let rule = this.rules.get(name);
+        let str = rule?.format(args) ?? name;
+        if (args) {
+            return [str, ...args].join(', ');
+        } else {
+            return str;
+        }
+    }
+
     public formatValue(type: number, value: string | number | boolean | undefined) {
         let rule = this.rules.get(type);
         if (!rule) {
