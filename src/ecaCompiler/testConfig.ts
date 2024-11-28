@@ -29,42 +29,53 @@ function wrapLuaValue(t: Record<any, any>) {
 
 export async function fillMapDefined(formatter: Formatter) {
     await fillEvents(formatter);
-    formatter
-        // 字体类型
-        .setRule(100259, wrapLuaValue({
-            'physics': '物理伤害',
-            'magic': '魔法伤害',
-            'real': '真实伤害',
-            'heal': '治疗',
-            'get_gold': '获取金币',
-            0: '系统字体',
-            'MSYH': '微软雅黑',
-            'HKHeiW9': '华康黑体W9',
-            'HKHeiW12': '华康黑体W12',
-            'HKSongW9': '华康标题宋W9',
-            'HKWeiBeiW7': '华康魏碑W7',
-            'HKXinZongYiW7': '华康新综艺体W7',
-            'HKXinZongYiW9': '华康新综艺体W9',
-            'HKYuanW5': '华康圆体W5',
-            'HKYuanW7': '华康圆体W7',
-            'HKYuanW9': '华康圆体W9',
-            // 从配置里读取自定义字体
-            ...(await define.字体.get()).reduce((map, font) => {
-                map[font.uid] = font.name;
-                return map;
-            }, {} as Record<string, string>),
-        }))
-        // 从配置里读取跳字类型
-        . setRule(100333, (await define.跳字.get()).reduce((map, word) => {
-            map[word.uid] = y3.lua.encode(word.name);
+    // 自定义事件
+    formatter.setRule(100238, (await define.自定义事件.getEvents()).reduce((map, event) => {
+        map[event.id] = y3.lua.encode(event.name);
+        return map;
+    }, {} as Record<string, string>))
+    // 字体类型
+    formatter.setRule(100259, wrapLuaValue({
+        'physics': '物理伤害',
+        'magic': '魔法伤害',
+        'real': '真实伤害',
+        'heal': '治疗',
+        'get_gold': '获取金币',
+        0: '系统字体',
+        'MSYH': '微软雅黑',
+        'HKHeiW9': '华康黑体W9',
+        'HKHeiW12': '华康黑体W12',
+        'HKSongW9': '华康标题宋W9',
+        'HKWeiBeiW7': '华康魏碑W7',
+        'HKXinZongYiW7': '华康新综艺体W7',
+        'HKXinZongYiW9': '华康新综艺体W9',
+        'HKYuanW5': '华康圆体W5',
+        'HKYuanW7': '华康圆体W7',
+        'HKYuanW9': '华康圆体W9',
+        // 从配置里读取自定义字体
+        ...(await define.字体.get()).reduce((map, font) => {
+            map[font.uid] = font.name;
             return map;
-        }, {} as Record<string, string>))
+        }, {} as Record<string, string>),
+    }))
+    // 从配置里读取跳字类型
+    formatter.setRule(100333, (await define.跳字.get()).reduce((map, word) => {
+        map[word.uid] = y3.lua.encode(word.name);
+        return map;
+    }, {} as Record<string, string>))
 }
 
-export function fillStatic(formatter: Formatter) {
+let hasFilledStatic = false;
+export async function fillStatic(formatter: Formatter) {
+    if (hasFilledStatic) {
+        return;
+    }
+    hasFilledStatic = true;
     formatter
         // 预设单位
         . setRule(100006, 'y3.unit.get_by_res_id({})')
+        // 玩家
+        . setRule(100025, 'y3.player({})')
         // 伤害类型
         . setRule(100064, wrapLuaValue({
             0: '物理',
@@ -224,4 +235,7 @@ export function fillStatic(formatter: Formatter) {
             ]
         )
         . setRule('NONE_ABILITY', null)
+        . setRule('DISPLAY_INFO_TO_PLAYER', '{}:display_info({}, {})')
+        . setRule('ANY_VAR_TO_STR', 'tostring({})')
+        . setRule('CHANGE_MODEL_TEXTURE', '{}:change_model_texture({}, {}, {}, {})')
 }

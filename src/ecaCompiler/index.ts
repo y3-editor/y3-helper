@@ -6,7 +6,6 @@ import { fillStatic, fillMapDefined } from './testConfig';
 
 export function init() {
     const formatter = new Formatter();
-    fillStatic(formatter);
 
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
         await y3.env.mapReady();
@@ -23,6 +22,7 @@ export function init() {
             progress.report({
                 message: '正在加载地图配置...',
             });
+            await fillStatic(formatter);
             await fillMapDefined(formatter);
             progress.report({
                 message: '正在搜索触发器文件...',
