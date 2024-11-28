@@ -238,4 +238,5 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('DISPLAY_INFO_TO_PLAYER', '{}:display_info({}, {})')
         . setRule('ANY_VAR_TO_STR', 'tostring({})')
         . setRule('CHANGE_MODEL_TEXTURE', '{}:change_model_texture({}, {}, {}, {})')
+        . setRule('GET_CUS_EVENT_PARAM', 'data.data[{}]')
 }
