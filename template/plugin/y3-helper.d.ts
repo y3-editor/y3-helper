@@ -12,6 +12,8 @@ export type Table = Record<TableKey, Record<string, string>>;
 export type MultiTable = Record<TableKey, Record<string, string>[]>;
 declare class Sheet {
 	private sheet;
+	name: string;
+	id: number;
 	constructor(sheet: exceljs.Worksheet);
 	private _cells?;
 	/**
@@ -345,6 +347,7 @@ declare class Rule<N extends y3.consts.Table.NameCN> {
 	private getValue;
 }
 declare function loadFile(path: vscode.Uri | string, sheetName?: number | string): Promise<Sheet>;
+declare function loadFileWithAllSheets(path: vscode.Uri | string): Promise<Sheet[]>;
 declare function setBaseDir(path: vscode.Uri | string): void;
 declare function rule<N extends Table$1.NameCN>(tableName: N, path: vscode.Uri | string, sheetName?: number | string): Rule<N>;
 declare function init(): void;
@@ -2885,6 +2888,7 @@ declare class EditorObject<N extends Table$1.NameCN = Table$1.NameCN> {
 	listFields(): string[];
 	private serialize;
 	private deserialize;
+	flushName(): void;
 }
 export interface CreateOptions<N extends Table$1.NameCN> {
 	/**
@@ -2904,7 +2908,7 @@ export interface CreateOptions<N extends Table$1.NameCN> {
 	 */
 	overwrite?: boolean;
 }
-declare class EditorTable<N extends Table$1.NameCN> extends vscode.Disposable {
+declare class EditorTable<N extends Table$1.NameCN = Table$1.NameCN> extends vscode.Disposable {
 	private manager;
 	name: N;
 	uri: vscode.Uri;
@@ -2981,7 +2985,7 @@ declare function getObject(uri: vscode.Uri | string): Promise<EditorObject | und
 declare class EditorManager {
 	rootUri: vscode.Uri;
 	constructor(rootUri: vscode.Uri);
-	editorTables: Record<string, any>;
+	editorTables: Map<Table$1.NameCN, EditorTable<Table$1.NameCN>>;
 	loadObject<N extends Table$1.NameCN>(tableName: N, key: number): Promise<y3.table.EditorObject<N> | null>;
 	/**
 	 * 打开物编表
@@ -2995,6 +2999,7 @@ declare class EditorManager {
 	private flushCache;
 	getAllObjects(): Promise<y3.table.EditorObject<"\u5355\u4F4D" | "\u58F0\u97F3" | "\u6280\u80FD" | "\u88C5\u9970\u7269" | "\u53EF\u7834\u574F\u7269" | "\u7269\u54C1" | "\u9B54\u6CD5\u6548\u679C" | "\u6295\u5C04\u7269" | "\u79D1\u6280">[]>;
 	getObjectsByKey(key: number): Promise<EditorObject[]>;
+	flushName(): void;
 }
 declare function openTable<N extends Table$1.NameCN>(tableName: N): EditorTable<N>;
 declare function getAllObjects(): Promise<y3.table.EditorObject<"\u5355\u4F4D" | "\u58F0\u97F3" | "\u6280\u80FD" | "\u88C5\u9970\u7269" | "\u53EF\u7834\u574F\u7269" | "\u7269\u54C1" | "\u9B54\u6CD5\u6548\u679C" | "\u6295\u5C04\u7269" | "\u79D1\u6280">[]>;
@@ -3004,6 +3009,7 @@ declare function ready$1(): Promise<void>;
 declare function get(key: string | number): string | undefined;
 declare function set(key: string | number, value: string): Promise<void>;
 declare function keyOf(value: string | number, preferNumber?: boolean): string | number;
+declare function onDidChange(listener: () => void): vscode.Disposable;
 export declare function download(options: string | URL | https.RequestOptions): Promise<Buffer>;
 export declare let log: vscode.LogOutputChannel;
 declare class File {
@@ -3031,7 +3037,10 @@ declare function dir(uri: vscode.Uri | string, relativePath?: string): Promise<[
 	string,
 	vscode.FileType
 ][]>;
-declare function scan(uri: vscode.Uri | string, relativePath?: string): Promise<[
+declare function scan(uri: vscode.Uri | string, relativePath?: string, partail?: (result: [
+	string,
+	vscode.FileType
+][]) => void): Promise<[
 	string,
 	vscode.FileType
 ][]>;
@@ -3072,6 +3081,8 @@ declare const encodeOptions: {
 	readonly indent: "    ";
 	readonly depth: 0;
 };
+declare const keywords: Set<string>;
+declare function getValidName(name: string): string;
 declare function encode(jsObject: any, options?: Partial<typeof encodeOptions>): string;
 declare function launch(): Promise<boolean>;
 export type EditorVersion = "1.0" | "2.0" | "unknown";
@@ -3220,13 +3231,13 @@ declare namespace plugin {
 	export { getManager, init$2 as init, onceDidRun, runAllPlugins };
 }
 declare namespace excel {
-	export { init, loadFile, rule, setBaseDir };
+	export { init, loadFile, loadFileWithAllSheets, rule, setBaseDir };
 }
 declare namespace table {
 	export { EditorData, EditorManager, EditorObject, EditorTable, FieldInfo, getAllObjects, getObject, getObjectsByKey, openTable, ready };
 }
 declare namespace language {
-	export { get, init$1 as init, keyOf, ready$1 as ready, set };
+	export { get, init$1 as init, keyOf, onDidChange, ready$1 as ready, set };
 }
 declare namespace fs {
 	export { copy, dir, isAbsolutePath, isDirectory, isExists, isFile, isRelativePath, readFile, removeFile, scan, stat, writeFile };
@@ -3235,7 +3246,7 @@ declare namespace json {
 	export { Item, JArray, JObject, Json, parse };
 }
 declare namespace lua {
-	export { encode };
+	export { encode, getValidName, keywords };
 }
 declare namespace consts {
 	export { Table$1 as Table };

@@ -8,7 +8,11 @@ export type Table = Record<TableKey, Record<string, string>>;
 export type MultiTable = Record<TableKey, Record<string, string>[]>;
 
 export class Sheet {
+    name: string;
+    id: number;
     constructor(private sheet: exceljs.Worksheet) {
+        this.name = sheet.name;
+        this.id = sheet.id;
     }
 
     private _cells?: Cells;
@@ -37,36 +41,24 @@ export class Sheet {
     private guessTableOffset(): string | undefined {
         let rowPart: string | undefined;
         let colPart: string | undefined;
-        let rowIndex = 0;
-        let colIndex = 0;
-        for (let i = 1; i <= this.sheet.columnCount; i++) {
+        const colCount = this.sheet.actualColumnCount;
+        const rowCount = this.sheet.actualRowCount;
+        for (let i = 1; i <= colCount; i++) {
             const col = this.sheet.getColumn(i);
-            let count = 0;
-            for (let j = 1; j <= this.sheet.rowCount; j++) {
-                if (col.values[j]) {
-                    count++;
-                }
-            }
-            if (count * 4 > this.sheet.rowCount) {
+            let count = col.values.length;
+            if (count * 4 > rowCount) {
                 colPart = col.letter;
-                colIndex = i;
                 break;
             }
         }
         if (!colPart) {
             return undefined;
         }
-        for (let i = 1; i <= this.sheet.rowCount; i++) {
+        for (let i = 1; i <= rowCount; i++) {
             const row = this.sheet.getRow(i);
-            let count = 0;
-            for (let j = 1; j <= this.sheet.columnCount; j++) {
-                if ((row.values as [])[j]) {
-                    count++;
-                }
-            }
-            if (count * 2 > this.sheet.columnCount) {
+            let count = (row.values as []).length;
+            if (count * 2 > colCount) {
                 rowPart = i.toString();
-                rowIndex = i;
                 break;
             }
         }
@@ -94,21 +86,23 @@ export class Sheet {
         const col = cell.col as any as number;
         const titleRow = this.sheet.getRow(row);
         const titles: string[] = [];
-        for (let c = col; c <= this.sheet.columnCount; c++) {
+        const colCount = this.sheet.actualColumnCount;
+        const rowCount = this.sheet.actualRowCount;
+        for (let c = col; c <= colCount; c++) {
             const cell = titleRow.getCell(c);
             const title = cell.toString();
             titles[c] = title ? title : (cell.address.match(/[A-Z]+/)?.[0] ?? c.toString());
         }
 
         let table: Table = {};
-        for (let r = row + 1 + (skip ?? 0); r <= this.sheet.rowCount; r++) {
+        for (let r = row + 1 + (skip ?? 0); r <= rowCount; r++) {
             const row = this.sheet.getRow(r);
             const key = row.getCell(col).toString();
             if (!key) {
                 continue;
             }
             table[key] = {};
-            for (let c = col; c <= this.sheet.columnCount; c++) {
+            for (let c = col; c <= colCount; c++) {
                 const title = titles[c];
                 table[key][title] = row.getCell(c).toString();
             }
@@ -147,7 +141,9 @@ export class Sheet {
         const col = cell.col as any as number;
         const titleRow = this.sheet.getRow(row);
         const titles: string[] = [];
-        for (let c = col; c <= this.sheet.columnCount; c++) {
+        const colCount = this.sheet.actualColumnCount;
+        const rowCount = this.sheet.actualRowCount;
+        for (let c = col; c <= colCount; c++) {
             const cell = titleRow.getCell(c);
             const title = cell.toString();
             titles[c] = title ? title : (cell.address.match(/[A-Z]+/)?.[0] ?? c.toString());
@@ -162,13 +158,13 @@ export class Sheet {
             }
             let record: Record<string, string> = {};
             current.push(record);
-            for (let c = col; c <= this.sheet.columnCount; c++) {
+            for (let c = col; c <= colCount; c++) {
                 const title = titles[c];
                 record[title] = row.getCell(c).toString();
             }
         };
 
-        for (let r = row + 1 + (skip ?? 0); r <= this.sheet.rowCount; r++) {
+        for (let r = row + 1 + (skip ?? 0); r <= rowCount; r++) {
             const row = this.sheet.getRow(r);
             const key = row.getCell(col).toString();
             if (key) {
@@ -226,5 +222,12 @@ export class Excel {
             return undefined;
         }
         return this.proxySheet[sheet.id] ??= new Sheet(sheet);
+    }
+
+    public getAllSheets(): Sheet[] {
+        this.workbook.worksheets.forEach((sheet) => {
+            this.proxySheet[sheet.id] ??= new Sheet(sheet);
+        });
+        return Object.values(this.proxySheet);
     }
 }
