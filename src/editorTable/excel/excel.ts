@@ -108,17 +108,7 @@ export class Sheet {
             }
         }
 
-        return new Proxy(table, {
-            set: () => {
-                throw new Error('这是只读表！');
-            },
-            get: (target, key) => {
-                if (typeof key === 'symbol') {
-                    return {};
-                }
-                return target[key] ?? {};
-            },
-        });
+        return table;
     }
 
     
@@ -174,17 +164,7 @@ export class Sheet {
             mergeIntoCurrent(row);
         }
 
-        return new Proxy(table, {
-            set: () => {
-                throw new Error('这是只读表！');
-            },
-            get: (target, key) => {
-                if (typeof key === 'symbol') {
-                    return {};
-                }
-                return target[key] ?? {};
-            },
-        });
+        return table;
     }
 }
 
