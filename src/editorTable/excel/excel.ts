@@ -2,8 +2,6 @@ import * as exceljs from 'exceljs';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
-export * as exceljs from 'exceljs';
-
 type Cells = Record<string, string>;
 type TableKey = string | number;
 export type Table = Record<TableKey, Record<string, string>>;

@@ -19,7 +19,7 @@
         {
             "type": "shell",
             "label": "🍟生成dts",
-            "command": "dts-bundle-generator src\\y3-helper.ts --o template\\plugin\\y3-helper.d.ts",
+            "command": "dts-bundle-generator --config dts-bundle-generator.config.json",
         }
     ]
 }

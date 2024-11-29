@@ -8,6 +8,7 @@ export * from './tools';
 export * as consts from './constants';
 export { env } from './env';
 export * as plugin from './plugin';
+export * as exceljs from 'exceljs';
 export let helper: vscode.ExtensionContext;
 
 /**
