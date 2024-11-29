@@ -17,22 +17,29 @@ export class Event {
     }
 
     make(formatter: Formatter): string {
-        if (this.args) {
-            return formatter.formatEvent(this.name, this.args.map((arg) => arg.make(formatter)));
-        }
-        return formatter.formatEvent(this.name);
+        return formatter.formatEvent(this.name, this.args?.map((arg) => arg.make(formatter)));
     }
 }
 
 export class Exp {
     name: string;
     type: number;
-    kind: 'action' | 'call' | 'value' = 'call';
+    kind: 'action' | 'call' | 'value' | 'code' = 'call';
     args?: (Exp | null)[];
     value?: string | number | boolean;
     constructor(private json: y3.json.JObject) {
         this.type = json.arg_type as number;
-        if (json.sub_type === undefined || typeof json.sub_type === 'string') {
+        let arg_list = json.args_list as y3.json.JObject[];
+        if (arg_list.length === 1 && typeof arg_list[0] !== 'object') {
+            if (json.sub_type === 1) {
+                this.kind = 'value';
+            } else {
+                this.kind = 'code';
+            }
+            this.name = '$' + String(json.arg_type);
+            this.value = arg_list[0];
+        }
+        else {
             this.name = (json.sub_type ?? json.action_type) as string;
             this.args = [];
             for (let arg of json.args_list as y3.json.JObject[]) {
@@ -50,18 +57,14 @@ export class Exp {
                     }
                 }
             }
-        } else if (json.sub_type === 1) {
-            this.kind = 'value';
-            this.name = '$' + String(json.arg_type);
-            this.value = (json.args_list as [any])[0];
-        } else {
-            throw new Error('Unknown sub_type: ' + json.sub_type);
         }
     }
 
     make(formatter: Formatter): string {
         if (this.kind === 'value') {
             return formatter.formatValue(this.type, this.value);
+        } else if (this.kind === 'code') {
+            return String(this.value);
         } else {
             return formatter.formatCall(this.name, this.args!.map((arg) => {
                 if (arg === null) {

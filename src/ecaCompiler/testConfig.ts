@@ -16,8 +16,21 @@ async function fillEvents(formatter: Formatter) {
     let eventInfo = y3.json.parse(eventInfoFile.string) as Record<string, { key: string, name: string }>;
 
     for (let [key, info] of Object.entries(eventInfo)) {
-        formatter.setRule(key, y3.lua.encode(info.name));
+        formatter.setRule(key, (args) => {
+            if (args) {
+                return [y3.lua.encode(info.name), ...args].join(', ');
+            }
+            return y3.lua.encode(info.name);
+        });
     }
+
+    formatter.setRule('GENERIC_UNIT_EVENT', (args) => {
+        let key = args?.[0];
+        if (!key) {
+            return '"GENERIC_UNIT_EVENT"';
+        }
+        return y3.lua.encode(eventInfo[key]?.name ?? key);
+    })
 }
 
 function wrapLuaValue(t: Record<any, any>) {
@@ -239,4 +252,7 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('ANY_VAR_TO_STR', 'tostring({})')
         . setRule('CHANGE_MODEL_TEXTURE', '{}:change_model_texture({}, {}, {}, {})')
         . setRule('GET_CUS_EVENT_PARAM', 'data.data[{}]')
+        . setRule('KILL_UNIT', '{}:kill_by({})')
+        . setRule('KILLER_UNIT', 'data.source_unit')
+        . setRule('KILLED_UNIT', 'data.target_unit')
 }

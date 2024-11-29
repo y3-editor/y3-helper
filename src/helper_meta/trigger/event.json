@@ -47,6 +47,274 @@
         "key": "ET_DOWNLOAD_MAP_ARCHIVE_CALLBACK",
         "name": "未知-ET_DOWNLOAD_MAP_ARCHIVE_CALLBACK"
     },
+    "ET_ABILITY_BS_END": {
+        "key": "ET_ABILITY_BS_END",
+        "name": "施法-结束"
+    },
+    "ET_ABILITY_BS_INTERRUPT": {
+        "key": "ET_ABILITY_BS_INTERRUPT",
+        "name": "未知-ET_ABILITY_BS_INTERRUPT"
+    },
+    "ET_ABILITY_CD_END": {
+        "key": "ET_ABILITY_CD_END",
+        "name": "技能-冷却结束"
+    },
+    "ET_ABILITY_CST_END": {
+        "key": "ET_ABILITY_CST_END",
+        "name": "施法-完成"
+    },
+    "ET_ABILITY_CST_INTERRUPT": {
+        "key": "ET_ABILITY_CST_INTERRUPT",
+        "name": "施法-打断出手"
+    },
+    "ET_ABILITY_CS_START": {
+        "key": "ET_ABILITY_CS_START",
+        "name": "施法-即将开始"
+    },
+    "ET_ABILITY_END": {
+        "key": "ET_ABILITY_END",
+        "name": "施法-停止"
+    },
+    "ET_ABILITY_LOSE": {
+        "key": "ET_ABILITY_LOSE",
+        "name": "技能-失去"
+    },
+    "ET_ABILITY_OBTAIN": {
+        "key": "ET_ABILITY_OBTAIN",
+        "name": "技能-获得"
+    },
+    "ET_ABILITY_PS_END": {
+        "key": "ET_ABILITY_PS_END",
+        "name": "施法-引导"
+    },
+    "ET_ABILITY_PS_INTERRUPT": {
+        "key": "ET_ABILITY_PS_INTERRUPT",
+        "name": "施法-打断开始"
+    },
+    "ET_ABILITY_PS_START": {
+        "key": "ET_ABILITY_PS_START",
+        "name": "施法-开始"
+    },
+    "ET_ABILITY_SP_END": {
+        "key": "ET_ABILITY_SP_END",
+        "name": "施法-出手"
+    },
+    "ET_ABILITY_SP_INTERRUPT": {
+        "key": "ET_ABILITY_SP_INTERRUPT",
+        "name": "施法-打断引导"
+    },
+    "ET_ABILITY_SWITCH": {
+        "key": "ET_ABILITY_SWITCH",
+        "name": "技能-交换"
+    },
+    "ET_ABILITY_UPGRADE": {
+        "key": "ET_ABILITY_UPGRADE",
+        "name": "技能-升级"
+    },
+    "ET_AI_TAKE_CONTROL": {
+        "key": "ET_AI_TAKE_CONTROL",
+        "name": "未知-ET_AI_TAKE_CONTROL"
+    },
+    "ET_BEFORE_UNIT_DIE": {
+        "key": "ET_BEFORE_UNIT_DIE",
+        "name": "单位-即将死亡"
+    },
+    "ET_COLLIDE_OBSTACLE_UNIT": {
+        "key": "ET_COLLIDE_OBSTACLE_UNIT",
+        "name": "未知-ET_COLLIDE_OBSTACLE_UNIT"
+    },
+    "ET_DEATH_PROJECTILE": {
+        "key": "ET_DEATH_PROJECTILE",
+        "name": "投射物-死亡"
+    },
+    "ET_DEST_COLLECTED_NEW": {
+        "key": "ET_DEST_COLLECTED_NEW",
+        "name": "可破坏物-采集"
+    },
+    "ET_DEST_CREATE_NEW": {
+        "key": "ET_DEST_CREATE_NEW",
+        "name": "可破坏物-创建"
+    },
+    "ET_DEST_DELETE": {
+        "key": "ET_DEST_DELETE",
+        "name": "可破坏物-移除"
+    },
+    "ET_DEST_DIE_NEW": {
+        "key": "ET_DEST_DIE_NEW",
+        "name": "可破坏物-死亡"
+    },
+    "ET_DEST_RES_CNT_CHG_NEW": {
+        "key": "ET_DEST_RES_CNT_CHG_NEW",
+        "name": "可破坏物-资源变化"
+    },
+    "ET_DEST_REVIVE_NEW": {
+        "key": "ET_DEST_REVIVE_NEW",
+        "name": "可破坏物-复活"
+    },
+    "ET_ITEM_CREATE_ON_DEST_COLLECTED": {
+        "key": "ET_ITEM_CREATE_ON_DEST_COLLECTED",
+        "name": "物品-采集创建"
+    },
+    "ET_ITEM_ON_DESTROY": {
+        "key": "ET_ITEM_ON_DESTROY",
+        "name": "物品-移除"
+    },
+    "ET_LOSS_MODIFIER": {
+        "key": "ET_LOSS_MODIFIER",
+        "name": "效果-失去"
+    },
+    "ET_MODIFIER_ADDTION": {
+        "key": "ET_MODIFIER_ADDTION",
+        "name": "效果-叠加"
+    },
+    "ET_MODIFIER_BE_COVERED": {
+        "key": "ET_MODIFIER_BE_COVERED",
+        "name": "效果-覆盖"
+    },
+    "ET_MODIFIER_CYCLE_TRIGGER": {
+        "key": "ET_MODIFIER_CYCLE_TRIGGER",
+        "name": "效果-心跳"
+    },
+    "ET_MODIFIER_GET_BEFORE_CREATE": {
+        "key": "ET_MODIFIER_GET_BEFORE_CREATE",
+        "name": "效果-即将获得"
+    },
+    "ET_MODIFIER_LAYER_CHANGE": {
+        "key": "ET_MODIFIER_LAYER_CHANGE",
+        "name": "效果-层数变化"
+    },
+    "ET_OBTAIN_MODIFIER": {
+        "key": "ET_OBTAIN_MODIFIER",
+        "name": "效果-获得"
+    },
+    "ET_PRODUCE_PROJECTILE": {
+        "key": "ET_PRODUCE_PROJECTILE",
+        "name": "投射物-创建"
+    },
+    "ET_REACH_MOVE_TARGET_UNIT": {
+        "key": "ET_REACH_MOVE_TARGET_UNIT",
+        "name": "未知-ET_REACH_MOVE_TARGET_UNIT"
+    },
+    "ET_REVIVE_UNIT": {
+        "key": "ET_REVIVE_UNIT",
+        "name": "单位-复活"
+    },
+    "ET_ROLE_INPUT_ACTIVATION_CODE": {
+        "key": "ET_ROLE_INPUT_ACTIVATION_CODE",
+        "name": "未知-ET_ROLE_INPUT_ACTIVATION_CODE"
+    },
+    "ET_UNIT_ACQUIRED_TARGET": {
+        "key": "ET_UNIT_ACQUIRED_TARGET",
+        "name": "单位-发现目标"
+    },
+    "ET_UNIT_BE_HURT": {
+        "key": "ET_UNIT_BE_HURT",
+        "name": "单位-受到伤害前"
+    },
+    "ET_UNIT_BE_HURT_BEFORE_APPLY": {
+        "key": "ET_UNIT_BE_HURT_BEFORE_APPLY",
+        "name": "单位-受到伤害时"
+    },
+    "ET_UNIT_BE_HURT_COMPLETE": {
+        "key": "ET_UNIT_BE_HURT_COMPLETE",
+        "name": "单位-受到伤害后"
+    },
+    "ET_UNIT_BORN": {
+        "key": "ET_UNIT_BORN",
+        "name": "单位-创建"
+    },
+    "ET_UNIT_BUILD_UPGRADE_CANCEL": {
+        "key": "ET_UNIT_BUILD_UPGRADE_CANCEL",
+        "name": "单位-建筑升级取消"
+    },
+    "ET_UNIT_BUILD_UPGRADE_FINISH": {
+        "key": "ET_UNIT_BUILD_UPGRADE_FINISH",
+        "name": "单位-建筑升级完成"
+    },
+    "ET_UNIT_BUILD_UPGRADE_START": {
+        "key": "ET_UNIT_BUILD_UPGRADE_START",
+        "name": "单位-建筑升级开始"
+    },
+    "ET_UNIT_CONSTRUCT_CANCEL": {
+        "key": "ET_UNIT_CONSTRUCT_CANCEL",
+        "name": "单位-建造取消"
+    },
+    "ET_UNIT_CONSTRUCT_FINISH": {
+        "key": "ET_UNIT_CONSTRUCT_FINISH",
+        "name": "单位-建造完成"
+    },
+    "ET_UNIT_CONSTRUCT_START": {
+        "key": "ET_UNIT_CONSTRUCT_START",
+        "name": "单位-建造开始"
+    },
+    "ET_UNIT_CREATE_SLAVE": {
+        "key": "ET_UNIT_CREATE_SLAVE",
+        "name": "未知-ET_UNIT_CREATE_SLAVE"
+    },
+    "ET_UNIT_DIE": {
+        "key": "ET_UNIT_DIE",
+        "name": "单位-死亡"
+    },
+    "ET_UNIT_ENTER_BATTLE": {
+        "key": "ET_UNIT_ENTER_BATTLE",
+        "name": "单位-进入战斗"
+    },
+    "ET_UNIT_ENTER_GRASS": {
+        "key": "ET_UNIT_ENTER_GRASS",
+        "name": "单位-进入草丛"
+    },
+    "ET_UNIT_EXIT_BATTLE": {
+        "key": "ET_UNIT_EXIT_BATTLE",
+        "name": "单位-脱离战斗"
+    },
+    "ET_UNIT_GET_CURE": {
+        "key": "ET_UNIT_GET_CURE",
+        "name": "单位-受到治疗时"
+    },
+    "ET_UNIT_HURT_OTHER": {
+        "key": "ET_UNIT_HURT_OTHER",
+        "name": "单位-造成伤害前"
+    },
+    "ET_UNIT_HURT_OTHER_BEFORE_APPLY": {
+        "key": "ET_UNIT_HURT_OTHER_BEFORE_APPLY",
+        "name": "单位-造成伤害时"
+    },
+    "ET_UNIT_LEAVE_GRASS": {
+        "key": "ET_UNIT_LEAVE_GRASS",
+        "name": "单位-离开草丛"
+    },
+    "ET_UNIT_ON_ADD_EXP": {
+        "key": "ET_UNIT_ON_ADD_EXP",
+        "name": "单位-获得经验后"
+    },
+    "ET_UNIT_ON_COMMAND": {
+        "key": "ET_UNIT_ON_COMMAND",
+        "name": "单位-接收命令"
+    },
+    "ET_UNIT_PRE_ADD_EXP": {
+        "key": "ET_UNIT_PRE_ADD_EXP",
+        "name": "单位-获得经验前"
+    },
+    "ET_UNIT_RELEASE_ABILITY": {
+        "key": "ET_UNIT_RELEASE_ABILITY",
+        "name": "单位-施放技能"
+    },
+    "ET_UNIT_REMOVE": {
+        "key": "ET_UNIT_REMOVE",
+        "name": "单位-移除"
+    },
+    "ET_UNIT_ROLE_CHANGED": {
+        "key": "ET_UNIT_ROLE_CHANGED",
+        "name": "单位-改变所属"
+    },
+    "ET_UNIT_TRY_ACQUIRE_TARGET": {
+        "key": "ET_UNIT_TRY_ACQUIRE_TARGET",
+        "name": "单位-即将索敌"
+    },
+    "ET_UPGRADE_UNIT": {
+        "key": "ET_UPGRADE_UNIT",
+        "name": "单位-升级"
+    },
     "GAME_PAUSE": {
         "key": "ET_GAME_PAUSE",
         "name": "游戏-暂停"
@@ -62,14 +330,6 @@
     "INIT_FINISHED": {
         "key": "ET_GAME_INIT",
         "name": "游戏-初始化"
-    },
-    "ITEM_CREATE_ON_DEST_COLLECTED_EVENT": {
-        "key": "ET_ITEM_CREATE_ON_DEST_COLLECTED",
-        "name": "物品-采集创建"
-    },
-    "ITEM_ON_DESTROY_EVENT": {
-        "key": "ET_ITEM_ON_DESTROY",
-        "name": "物品-移除"
     },
     "ITEM_PRECONDITION_FAILED": {
         "key": "ET_ITEM_PRECONDITION_FAILED",
