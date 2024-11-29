@@ -4,6 +4,8 @@ import { Table } from '../../constants';
 import * as y3 from 'y3-helper';
 import { Rule } from './rule';
 
+export * from './excel';
+
 let baseDir: vscode.Uri;
 
 /**
