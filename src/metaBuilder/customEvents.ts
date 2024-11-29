@@ -6,6 +6,12 @@ const template =
 `---@class ECAHelper
 %{FIELDS}
 
+---@diagnostic disable: invisible
+
+y3.eca = y3.eca or {}
+y3.eca.register_custom_event_impl = y3.eca.register_custom_event_impl or function (name, impl) end
+y3.eca.register_custom_event_resolve = y3.eca.register_custom_event_resolve or function (name, resolve) end
+
 %{IMPLS}
 
 y3.const.CustomEventName = y3.const.CustomEventName or {}
@@ -54,8 +60,7 @@ export class CustomEvents extends BaseBuilder {
                 let args = event.args.map((arg, index) => {
                     return `, ${y3.lua.getValidName(arg.name)}`;
                 });
-                return `---@diagnostic disable-next-line: invisible
-y3.eca.register_custom_event_impl('${event.name}', function (_${args.join('')})
+                return `y3.eca.register_custom_event_impl('${event.name}', function (_${args.join('')})
     y3.game.send_custom_event(${event.id}, {
 ${event.args.map((arg, index) => {
     if (isBasicType(arg.luaType)) {
