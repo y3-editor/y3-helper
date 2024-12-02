@@ -49,6 +49,9 @@ export class Exp {
                 if ('__tuple__' in arg) {
                     this.kind = 'var';
                     this.var = new Ref(arg.items as any);
+                } else if (Array.isArray(arg)) {
+                    this.kind = 'var';
+                    this.var = new Ref(arg as any);
                 } else {
                     this.args.push(new Exp(arg));
                 }
@@ -118,11 +121,16 @@ class Ref {
 
 export class ECA {
     name: string;
+    enabled: boolean = true;
     events: Event[] = [];
     actions: Exp[] = [];
     variables: Variable[] = [];
     constructor(private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
+        if (!json.enabled) {
+            this.enabled = false;
+            return;
+        }
         for (let event of json.event as y3.json.JObject[]) {
             this.events.push(new Event(event));
         }
@@ -174,7 +182,10 @@ export class ECA {
         return content.replace(/\n/g, '\r\n');
     }
 
-    make(formatter: Formatter): string {
+    make(formatter: Formatter): string | undefined {
+        if (!this.enabled) {
+            return undefined;
+        }
         let result = '';
         if (this.events.length === 1) {
             result += `y3.game:event(${this.events[0].make(formatter)}, function(_, params)\n`;

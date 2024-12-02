@@ -42,14 +42,17 @@ async function fullCompile(inDir: vscode.Uri, outDir: vscode.Uri, progress?: Pro
         if (progress?.isCanceled()) {
             throw new vscode.CancellationError();
         }
-        progress?.message(`正在编译触发器文件(${i + 1}/${fileNames.length})...`);
-        y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length})...`);
+        progress?.message(`正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
+        y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
 
         let inUri = y3.uri(inDir, fileNames[i]);
         let outUri = y3.uri(outDir, fileNames[i].replace(/\.json$/, '.lua'));
         try {
             let eca = await compiler.compile(inUri);
             let content = eca.make(formatter);
+            if (!content) {
+                continue;
+            }
             luaFiles.push(fileNames[i]);
             writeTasks.push(new Promise(async (resolve) => {
                 let file = await y3.fs.readFile(outUri);
