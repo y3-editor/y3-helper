@@ -255,4 +255,5 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('KILL_UNIT', '{}:kill_by({})')
         . setRule('KILLER_UNIT', 'data.source_unit')
         . setRule('KILLED_UNIT', 'data.target_unit')
+        . setRule('EVALUATE_LUA_CODE', 'y3.eca_rt.evaluate({}, {}, {}, {}, {}, {})')
 }
