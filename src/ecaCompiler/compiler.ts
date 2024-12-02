@@ -2,6 +2,8 @@ import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 import { Formatter } from './formatter';
 
+const reservedNames = new Set(['params']);
+
 export class Event {
     name: string;
     args?: Exp[];
@@ -95,7 +97,7 @@ class Variable {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName(this.name);
+        return y3.lua.getValidName(this.name, reservedNames);
     }
 }
 
@@ -110,7 +112,7 @@ class Ref {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName(this.name);
+        return y3.lua.getValidName(this.name, reservedNames);
     }
 }
 
@@ -175,7 +177,7 @@ export class ECA {
     make(formatter: Formatter): string {
         let result = '';
         if (this.events.length === 1) {
-            result += `y3.game:event(${this.events[0].make(formatter)}, function(_, data)\n`;
+            result += `y3.game:event(${this.events[0].make(formatter)}, function(_, params)\n`;
             if (this.variables.length > 0) {
                 result += `${this.increaseTab(this.makeVariablePart(formatter))}\n`;
             }

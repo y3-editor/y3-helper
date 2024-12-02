@@ -187,7 +187,7 @@ export const keywords = new Set([
 let validNameCache: Record<string, string> = {};
 let validNameBackCache: Record<string, string> = {};
 
-export function getValidName(name: string): string {
+export function getValidName(name: string, reserved?: Set<string>): string {
     if (!validNameCache[name]) {
         let luaName = name;
         // 如果第一位是数字，前面加上下划线
@@ -197,11 +197,8 @@ export function getValidName(name: string): string {
         // 把特殊符号替换成下划线
         luaName = luaName.replace(/[\x00-\x08\x0B-\x2F\x3A-\x40\x5B-\x60\x7B-\x9F]/g, '_');
         // 如果是关键字，后面加上下划线
-        if (keywords.has(luaName)) {
-          luaName = luaName + "_";
-        }
-        if (name === '') {
-            luaName = '_';
+        if (name === '' || keywords.has(luaName) || reserved?.has(luaName)) {
+            luaName = luaName + "_";
         }
         // 如果发生了碰撞，寻找一个不重复的名字
         if (validNameBackCache[luaName]) {
