@@ -24,8 +24,9 @@ export class Event {
 export class Exp {
     name: string;
     type: number;
-    kind: 'action' | 'call' | 'value' | 'code' = 'call';
+    kind: 'action' | 'call' | 'value' | 'var' | 'code' = 'call';
     args?: (Exp | null)[];
+    var?: Ref;
     value?: string | number | boolean;
     constructor(private json: y3.json.JObject) {
         this.type = json.arg_type as number;
@@ -43,7 +44,12 @@ export class Exp {
             this.name = (json.sub_type ?? json.action_type) as string;
             this.args = [];
             for (let arg of json.args_list as y3.json.JObject[]) {
-                this.args.push(new Exp(arg));
+                if ('__tuple__' in arg) {
+                    this.kind = 'var';
+                    this.var = new Ref(arg.items as any);
+                } else {
+                    this.args.push(new Exp(arg));
+                }
             }
             if ('op_arg' in json) {
                 let enables = json.op_arg_enable as boolean[] | undefined;
@@ -65,6 +71,13 @@ export class Exp {
             return formatter.formatValue(this.type, this.value);
         } else if (this.kind === 'code') {
             return String(this.value);
+        } else if (this.kind === 'var') {
+            let index = this.args?.[0];
+            if (index !== undefined && index !== null) {
+                return `${this.var!.make(formatter)}[${index.make(formatter)}]`;
+            } else {
+                return this.var!.make(formatter);
+            }
         } else {
             return formatter.formatCall(this.name, this.args!.map((arg) => {
                 if (arg === null) {
@@ -77,10 +90,35 @@ export class Exp {
     }
 }
 
+class Variable {
+    constructor(public name: string, public type: string, public isArray: boolean, public value: any) {
+    }
+
+    make(formatter: Formatter): string {
+        return y3.lua.getValidName(this.name);
+    }
+}
+
+class Ref {
+    name: string;
+    type: string;
+    scope: 'local' | 'global';
+    constructor(json: [string, string, 'local' | 'global']) {
+        this.type = json[0];
+        this.name = json[1];
+        this.scope = json[2];
+    }
+
+    make(formatter: Formatter): string {
+        return y3.lua.getValidName(this.name);
+    }
+}
+
 export class ECA {
     name: string;
     events: Event[] = [];
     actions: Exp[] = [];
+    variables: Variable[] = [];
     constructor(private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
         for (let event of json.event as y3.json.JObject[]) {
@@ -89,10 +127,36 @@ export class ECA {
         for (let action of json.action as y3.json.JObject[]) {
             this.actions.push(new Exp(action));
         }
+        const varData = json.var_data as [
+            Record<string, Record<string, any>>,
+            Record<string, 0|10>,
+            string[],
+        ];
+        let variableMap: Record<string, Variable> = {};
+        for (let [type, data] of Object.entries(varData[0])) {
+            for (let [name, value] of Object.entries(data)) {
+                variableMap[name] = new Variable(name, type, varData[1][name] !== 0, value);
+            }
+        }
+        for (let name of varData[2]) {
+            this.variables.push(variableMap[name]);
+        }
     }
 
     private makeActionPart(formatter: Formatter): string {
         return this.actions.map((action) => action.make(formatter)).join('\n');
+    }
+
+    private makeVariablePart(formatter: Formatter): string {
+        return this.variables.map((variable) => {
+            const name = variable.make(formatter);
+            const value = y3.lua.encode(variable.value);
+            if (variable.isArray) {
+                return `local ${name} = y3.eca_rt.array(${value})`;
+            } else {
+                return `local ${name} = ${value}`;
+            }
+        }).join('\n');
     }
 
     private increaseTab(content: string, tab: string = '    '): string {
@@ -112,6 +176,7 @@ export class ECA {
         let result = '';
         if (this.events.length === 1) {
             result = `y3.game:event(${this.events[0].make(formatter)}, function(_, data)\n`
+                + `${this.increaseTab(this.makeVariablePart(formatter))}\n`
                 + `${this.increaseTab(this.makeActionPart(formatter))}\n`
                 + `end)`;
         }

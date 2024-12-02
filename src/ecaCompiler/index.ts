@@ -74,6 +74,7 @@ export function init() {
                     } else {
                         y3.log.error(`【编译ECA】编译${inUri.fsPath}失败：${e}`);
                     }
+                    vscode.window.showErrorMessage(`编译${inUri.fsPath}失败：${e}`);
                 }
             }
             y3.log.info('【编译ECA】等待文件全部写入完成');
