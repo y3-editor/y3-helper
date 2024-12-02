@@ -175,10 +175,14 @@ export class ECA {
     make(formatter: Formatter): string {
         let result = '';
         if (this.events.length === 1) {
-            result = `y3.game:event(${this.events[0].make(formatter)}, function(_, data)\n`
-                + `${this.increaseTab(this.makeVariablePart(formatter))}\n`
-                + `${this.increaseTab(this.makeActionPart(formatter))}\n`
-                + `end)`;
+            result += `y3.game:event(${this.events[0].make(formatter)}, function(_, data)\n`;
+            if (this.variables.length > 0) {
+                result += `${this.increaseTab(this.makeVariablePart(formatter))}\n`;
+            }
+            if (this.actions.length > 0) {
+                result += `${this.increaseTab(this.makeActionPart(formatter))}\n`;
+            }
+            result += `end)`;
         }
         result = this.ensureEndWithNL(result);
         result = this.ensureNLisCRLF(result);
