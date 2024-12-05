@@ -21,6 +21,7 @@
 		"strict": true,
 		"paths": {
 			"y3-helper": ["./src/y3-helper"],
+			"map-declare": ["./src/map-declare"],
 		},
 		"declaration": true,
 		"declarationDir": "./tmp/types",

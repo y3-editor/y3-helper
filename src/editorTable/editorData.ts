@@ -10,6 +10,7 @@ import { ProjectileData as Projectile } from "../helper_meta/editor/projectile";
 import { TechData as Tech } from "../helper_meta/editor/tech";
 import * as y3 from 'y3-helper';
 import { hash } from "../utility";
+import * as MapData from 'map-declare';
 
 type KV = Record<string, string|number|boolean>;
 
@@ -20,18 +21,18 @@ interface CommonPatch {
     kv: KV;
 }
 
-type Data<T> = Omit<T, keyof CommonPatch> & CommonPatch;
+type Data<T> = T & CommonPatch;
 
 export type EditorData<N extends Table.NameCN>
-    = N extends '单位' ? Data<Unit>
-    : N extends '声音' ? Data<Sound>
-    : N extends '技能' ? Data<Ability>
-    : N extends '装饰物' ? Data<Decoration>
-    : N extends '可破坏物' ? Data<Destructible>
-    : N extends '物品' ? Data<Item>
-    : N extends '魔法效果' ? Data<Modifier>
-    : N extends '投射物' ? Data<Projectile>
-    : N extends '科技' ? Data<Tech>
+    = N extends '单位' ? Data<Unit> & MapData.MapUnit
+    : N extends '声音' ? Data<Sound> & MapData.MapSound
+    : N extends '技能' ? Data<Ability> & MapData.MapAbility
+    : N extends '装饰物' ? Data<Decoration> & MapData.MapDecoration
+    : N extends '可破坏物' ? Data<Destructible> & MapData.MapDestructible
+    : N extends '物品' ? Data<Item> & MapData.MapItem
+    : N extends '魔法效果' ? Data<Modifier> & MapData.MapModifier
+    : N extends '投射物' ? Data<Projectile> & MapData.MapProjectile
+    : N extends '科技' ? Data<Tech> & MapData.MapTech
     : never;
 
 interface FieldInfo {

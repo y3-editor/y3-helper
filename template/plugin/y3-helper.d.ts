@@ -4684,9 +4684,9 @@ interface CommonPatch {
 	 */
 	kv: KV;
 }
-type Data<T> = Omit<T, keyof CommonPatch> & CommonPatch;
-type EditorData<N extends Table$2.NameCN> = N extends "\u5355\u4F4D" ? Data<UnitData> : N extends "\u58F0\u97F3" ? Data<SoundData> : N extends "\u6280\u80FD" ? Data<AbilityData> : N extends "\u88C5\u9970\u7269" ? Data<DecorationData> : N extends "\u53EF\u7834\u574F\u7269" ? Data<DestructibleData> : N extends "\u7269\u54C1" ? Data<ItemData> : N extends "\u9B54\u6CD5\u6548\u679C" ? Data<ModifierData> : N extends "\u6295\u5C04\u7269" ? Data<ProjectileData> : N extends "\u79D1\u6280" ? Data<TechData> : never;
-type ItemShape = string | boolean | number | null | TupleShape | MapShape | ArrayShape;
+type Data<T> = T & CommonPatch;
+type EditorData<N extends Table$2.NameCN> = N extends "\u5355\u4F4D" ? Data<UnitData> & MapUnit : N extends "\u58F0\u97F3" ? Data<SoundData> & MapSound : N extends "\u6280\u80FD" ? Data<AbilityData> & MapAbility : N extends "\u88C5\u9970\u7269" ? Data<DecorationData> & MapDecoration : N extends "\u53EF\u7834\u574F\u7269" ? Data<DestructibleData> & MapDestructible : N extends "\u7269\u54C1" ? Data<ItemData> & MapItem : N extends "\u9B54\u6CD5\u6548\u679C" ? Data<ModifierData> & MapModifier : N extends "\u6295\u5C04\u7269" ? Data<ProjectileData> & MapProjectile : N extends "\u79D1\u6280" ? Data<TechData> & MapTech : never;
+type ItemShape = string | boolean | number | bigint | null | TupleShape | MapShape | ArrayShape;
 type ArrayShape = ItemShape[];
 type TupleShape = {
 	__tuple__: true;
@@ -4906,7 +4906,7 @@ interface CopyOptions {
 declare function copy(source: vscode.Uri | string, target: vscode.Uri | string, options?: CopyOptions): Promise<boolean>;
 declare function isRelativePath(path: string): boolean;
 declare function isAbsolutePath(path: string): boolean;
-type Item = string | boolean | number | null | JObject | JArray;
+type Item = string | boolean | number | bigint | null | JObject | JArray;
 type JArray = Item[];
 type JObject = {
 	[key: string]: Item;
@@ -4931,7 +4931,7 @@ declare const encodeOptions: {
 	readonly depth: 0;
 };
 declare const keywords: Set<string>;
-declare function getValidName(name: string): string;
+declare function getValidName(name: string, reserved?: Set<string>): string;
 declare function encode(jsObject: any, options?: Partial<typeof encodeOptions>): string;
 declare function launch(): Promise<boolean>;
 type EditorVersion = "1.0" | "2.0" | "unknown";

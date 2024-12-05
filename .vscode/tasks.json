@@ -19,7 +19,12 @@
         {
             "type": "shell",
             "label": "🍟生成dts",
-            "command": "dts-bundle-generator --config dts-bundle-generator.config.json",
+            "command": [
+                "dts-bundle-generator --config dts-bundle-generator.config.json",
+                ";",
+                "node dts-post.js",
+            ],
+            
         }
     ]
 }
