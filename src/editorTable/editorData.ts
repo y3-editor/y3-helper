@@ -152,13 +152,11 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
         }
         case 'PInt': {
             if (convertType) {
-                value = Number(value);
-                if (isNaN(value)) {
-                    value = 0;
+                try {
+                    value = BigInt(value);
+                } catch {
+                    throw new Error(`'${fieldInfo.field}'字段应为整数`);
                 }
-            }
-            if (!Number.isSafeInteger(value)) {
-                throw new Error(`'${fieldInfo.field}'字段应为整数`);
             }
             return value;
         }

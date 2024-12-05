@@ -10,7 +10,7 @@ const metaDir = 'src\\helper_meta\\editor';
 
 type ActionType = 'create' | 'delete' | 'change';
 
-type ItemShape = string | boolean | number | null | TupleShape | MapShape | ArrayShape;
+type ItemShape = string | boolean | number | bigint | null | TupleShape | MapShape | ArrayShape;
 type ArrayShape = ItemShape[];
 
 type TupleShape = {
@@ -98,7 +98,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
                 },
                 set: (target, p, value, receiver) => {
                     if (typeof p === 'string') {
-                        return this.set(p, value);
+                        return this.set(p, value, true);
                     }
                     return false;
                 },
@@ -200,7 +200,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     }
 
     private serialize(item: y3.json.Item, canBeTuple = true): ItemShape {
-        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
+        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || typeof item === 'bigint' || item === null) {
             return item;
         } else if (Array.isArray(item)) {
             if (canBeTuple) {
