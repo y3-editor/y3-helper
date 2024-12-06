@@ -13,14 +13,14 @@ export class 单位属性 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define.单位属性.getAttrs()).map(attr => new TreeNode(attr.name, {
+                node.childs = (await define().单位属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
                     contextValue: '单位属性',
                 }));
             },
         });
 
-        define.单位属性.onDidChange(() => {
+        define().单位属性.onDidChange(() => {
             this.refresh();
         });
     }

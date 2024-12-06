@@ -13,7 +13,7 @@ export class 跳字 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define.跳字.get()).map(word => {
+                node.childs = (await define().跳字.get()).map(word => {
                     return new TreeNode(word.name, {
                         description: `${word.uid}`,
                     });
@@ -21,7 +21,7 @@ export class 跳字 extends TreeNode {
             },
         });
 
-        define.跳字.onDidChange(() => {
+        define().跳字.onDidChange(() => {
             this.refresh();
         });
     }

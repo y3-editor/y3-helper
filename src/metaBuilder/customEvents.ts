@@ -39,13 +39,13 @@ export class CustomEvents extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.自定义事件.onDidChange(() => {
+        define().自定义事件.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let events = await define.自定义事件.getEvents();
+        let events = await define().自定义事件.getEvents();
         if (events.length === 0) {
             return;
         }

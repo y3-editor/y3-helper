@@ -59,7 +59,7 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.界面.getUIPackage())
+                        node.childs = (await define().界面.getUIPackage())
                             .画板
                             .map(ui => new UINode(ui, '画板'));
                     }
@@ -76,7 +76,7 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.界面.getUIPackage())
+                        node.childs = (await define().界面.getUIPackage())
                             .场景UI
                             .map(ui => new UINode(ui, '场景UI'));
                     }
@@ -93,7 +93,7 @@ export class 界面 extends TreeNode {
                             return;
                         }
 
-                        node.childs = (await define.界面.getUIPackage())
+                        node.childs = (await define().界面.getUIPackage())
                             .元件
                             .map(ui => new UINode(ui, '元件'));
                     }
@@ -101,7 +101,7 @@ export class 界面 extends TreeNode {
             ],
         });
 
-        define.界面.onDidChange(() => {
+        define().界面.onDidChange(() => {
             this.refresh();
         });
     }

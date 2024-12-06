@@ -16,13 +16,13 @@ export class UnitAttrs extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.单位属性.onDidChange(() => {
+        define().单位属性.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let attrs = await define.单位属性.getAttrs();
+        let attrs = await define().单位属性.getAttrs();
         if (attrs.length === 0) {
             return;
         }

@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import * as y3 from 'y3-helper';
 import { queue, throttle } from "../utility/decorators";
 import { EditorData, valueOnGet, valueOnSet } from "./editorData";
+import { define } from "../customDefine";
 export { EditorData } from "./editorData";
 
 const templateDir = 'template\\json_template';
@@ -32,6 +33,7 @@ type FieldMeta = {
 type TableMeta = { [key: string]: FieldMeta };
 
 let tableMeta: { [key: string]: TableMeta } = {};
+let customTableMeta: { [key: string]: TableMeta };
 
 export class FieldInfo {
     desc?: string;
@@ -39,9 +41,34 @@ export class FieldInfo {
     type?: string;
 
     constructor(public tableName: Table.NameCN, public field: string) {
-        this.desc = tableMeta[tableName]?.[field]?.desc;
-        this.tips = tableMeta[tableName]?.[field]?.tips;
-        this.type = tableMeta[tableName]?.[field]?.type;
+        let meta = customTableMeta?.[tableName]?.[field]
+                ?? tableMeta[tableName]?.[field];
+        if (!meta) {
+            return;
+        }
+        this.desc  = meta.desc;
+        this.tips  = meta.tips;
+        this.type  = meta.type;
+        this.field = meta.key ?? field;
+    }
+}
+
+async function updateCustomFields() {
+    customTableMeta = {
+        ["单位"]: {},
+    };
+    let attrs = await define().单位属性.getAttrs();
+    for (let attr of attrs) {
+        customTableMeta["单位"][attr.name] = {
+            key: attr.key,
+            type: 'number',
+            desc: attr.name,
+        };
+        customTableMeta["单位"][attr.key] = {
+            key: attr.key,
+            type: 'number',
+            desc: attr.name,
+        };
     }
 }
 
@@ -59,6 +86,10 @@ export async function ready() {
             }
         }
     }
+    await updateCustomFields();
+    define().单位属性.onDidChange(async () => {
+        await updateCustomFields();
+    });
 }
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     private _json?: y3.json.Json;
@@ -132,9 +163,9 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (key === 'name' && typeof value === 'string') {
             this._name = value;
         }
-        value = valueOnSet(fieldInfo, value, this.rawGet(key), convertType, this.key);
+        value = valueOnSet(fieldInfo, value, this.rawGet(fieldInfo.field), convertType, this.key);
         let raw = this.serialize(value);
-        return this.rawSet(key, raw);
+        return this.rawSet(fieldInfo.field, raw);
     }
 
     private rawGet(key: string): ItemShape | undefined {
@@ -451,12 +482,8 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
         return vscode.Uri.joinPath(this.uri, `${key}.json`);
     }
 
-    private _fieldInfoCache: { [field: string]: FieldInfo } = {};
-    public getFieldInfo(field: string): FieldInfo | undefined {
-        if (!this._fieldInfoCache[field]) {
-            this._fieldInfoCache[field] = new FieldInfo(this.name, field);
-        }
-        return this._fieldInfoCache[field];
+    public getFieldInfo(field: string): FieldInfo {
+        return new FieldInfo(this.name, field);
     }
 
     public listFields(): string[] {

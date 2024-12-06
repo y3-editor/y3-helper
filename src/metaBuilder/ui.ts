@@ -16,13 +16,13 @@ export class UI extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.界面.onDidChange(() => {
+        define().界面.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let uiPackage = await define.界面.getUIPackage();
+        let uiPackage = await define().界面.getUIPackage();
         let sceneUIs = uiPackage.场景UI;
         if (sceneUIs.length === 0) {
             return;

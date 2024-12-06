@@ -11,12 +11,12 @@ export class TS extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.单位属性.onDidChange(() => {
+        define().单位属性.onDidChange(() => {
             this.update();
         });
     }
     async make(): Promise<string> {
-        let attrs = await define.单位属性.getAttrs();
+        let attrs = await define().单位属性.getAttrs();
         return template.replace('%{UNIT_ATTRS}', attrs.map(attr => {
             return `    ${JSON.stringify(attr.name)}: number,`;
         }).join('\r\n'));

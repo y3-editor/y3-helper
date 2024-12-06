@@ -17,13 +17,13 @@ export class Font extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.字体.onDidChange(() => {
+        define().字体.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let datas = await define.字体.get();
+        let datas = await define().字体.get();
         if (datas.length === 0) {
             return;
         }

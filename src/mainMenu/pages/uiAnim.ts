@@ -13,7 +13,7 @@ export class 时间轴动画 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define.时间轴动画.get()).map(anim => {
+                node.childs = (await define().时间轴动画.get()).map(anim => {
                     return new TreeNode(anim.name, {
                         data: anim.uid,
                         description: `${anim.uid}`,
@@ -28,7 +28,7 @@ export class 时间轴动画 extends TreeNode {
             },
         });
 
-        define.时间轴动画.onDidChange(() => {
+        define().时间轴动画.onDidChange(() => {
             this.refresh();
         });
     }

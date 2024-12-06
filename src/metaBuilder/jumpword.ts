@@ -17,13 +17,13 @@ export class JumpWord extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.跳字.onDidChange(() => {
+        define().跳字.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let datas = await define.跳字.get();
+        let datas = await define().跳字.get();
         if (datas.length === 0) {
             return;
         }

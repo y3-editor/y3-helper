@@ -16,13 +16,13 @@ export class PlayerAttrs extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.玩家属性.onDidChange(() => {
+        define().玩家属性.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let attrs = await define.玩家属性.getAttrs();
+        let attrs = await define().玩家属性.getAttrs();
         if (attrs.length === 0) {
             return;
         }

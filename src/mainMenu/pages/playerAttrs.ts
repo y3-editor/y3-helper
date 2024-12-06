@@ -13,14 +13,14 @@ export class 玩家属性 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define.玩家属性.getAttrs()).map(attr => new TreeNode(attr.name, {
+                node.childs = (await define().玩家属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
                     contextValue: '玩家属性',
                 }));
             },
         });
 
-        define.玩家属性.onDidChange(() => {
+        define().玩家属性.onDidChange(() => {
             this.refresh();
         });
     }

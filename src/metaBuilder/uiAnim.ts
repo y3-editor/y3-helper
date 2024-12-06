@@ -17,13 +17,13 @@ export class UIAnim extends BaseBuilder {
     constructor(path: string) {
         super(path);
         this.update();
-        define.时间轴动画.onDidChange(() => {
+        define().时间轴动画.onDidChange(() => {
             this.update();
         });
     }
 
     async make() {
-        let anims = await define.时间轴动画.get();
+        let anims = await define().时间轴动画.get();
         if (anims.length === 0) {
             return;
         }
