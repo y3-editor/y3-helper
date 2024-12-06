@@ -8,8 +8,10 @@ import { UIAnim } from './uiAnim';
 import { JumpWord } from './jumpword';
 import { Font } from './font';
 import { Objects } from './objects';
+import { TS } from './tsMeta';
 
-let path = 'y3-helper/meta';
+let luaPath = 'y3-helper/meta';
+let tsPath  = 'y3-helper/plugin';
 
 class InitBuilder extends BaseBuilder {
     private builders: BaseBuilder[] = [];
@@ -37,7 +39,7 @@ class InitBuilder extends BaseBuilder {
     }
 
     public addChild(builder: any, fileName: string) {
-        let instance = new builder(path + '/' + fileName);
+        let instance = new builder(luaPath + '/' + fileName);
         this.addFile(instance);
         instance.onDidChange(() => {
             this.update();
@@ -47,7 +49,7 @@ class InitBuilder extends BaseBuilder {
 }
 
 export function init() {
-    let initBuilder = new InitBuilder(path + '/init.lua');
+    let initBuilder = new InitBuilder(luaPath + '/init.lua');
 
     initBuilder.addChild(UnitAttrs, 'unitAttrs.lua');
     initBuilder.addChild(PlayerAttrs, 'playerAttrs.lua');
@@ -57,4 +59,6 @@ export function init() {
     initBuilder.addChild(JumpWord, 'jumpword.lua');
     initBuilder.addChild(Font, 'font.lua');
     //initBuilder.addChild(Objects, 'objects.lua');
+
+    new TS(tsPath + '/map-declare.d.ts');
 }

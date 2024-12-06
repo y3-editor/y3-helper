@@ -4677,6 +4677,23 @@ interface TechData {
 	 */
 	max_lv: number;
 }
+
+interface MapSound {
+}
+interface MapAbility {
+}
+interface MapDecoration {
+}
+interface MapDestructible {
+}
+interface MapItem {
+}
+interface MapModifier {
+}
+interface MapProjectile {
+}
+interface MapTech {
+}
 type KV = Record<string, string | number | boolean>;
 interface CommonPatch {
 	/**
