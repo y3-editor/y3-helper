@@ -146,7 +146,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (key === 'name') {
             return this.name;
         }
-        let raw = this.rawGet(key);
+        let raw = this.rawGet(fieldInfo.field);
         if (raw === undefined) {
             return undefined;
         }
