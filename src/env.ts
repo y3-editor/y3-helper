@@ -264,7 +264,9 @@ class Env {
     }
 
     public editorVersion: EditorVersion = 'unknown';
+    // Editor.exe 的路径
     public editorUri?: vscode.Uri;
+    // Game_x64h.exe 的路径
     public editorExeUri?: vscode.Uri;
     public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;

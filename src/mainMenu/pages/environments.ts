@@ -1,6 +1,7 @@
 import { env } from "../../env";
 import { TreeNode, ViewInExplorerNode, ViewInNewVSCode, ViewInVSCode } from "../treeNode";
 import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 export class 环境 extends TreeNode {
     constructor() {
@@ -30,6 +31,26 @@ export class 环境 extends TreeNode {
                                 iconPath: new vscode.ThemeIcon('play'),
                             }),
                             new ViewInExplorerNode(env.editorUri),
+                            new TreeNode('本地版本', {
+                                iconPath: new vscode.ThemeIcon('versions'),
+                                description: '获取中...',
+                                tooltip: '获取中...',
+                                update: async (node) => {
+                                    let version = await y3.version.getClient();
+                                    node.description = version ? String(version.display) : '获取失败...';
+                                    node.tooltip     = version ? version.display : undefined;
+                                },
+                            }),
+                            new TreeNode('最新版本', {
+                                iconPath: new vscode.ThemeIcon('cloud-download'),
+                                description: '获取中...',
+                                tooltip: '获取中...',
+                                update: async (node) => {
+                                    let version = await y3.version.getServer();
+                                    node.description = version ? String(version.display) : '获取失败...';
+                                    node.tooltip     = version ? version.display : undefined;
+                                },
+                            })
                         ] : undefined;
                     },
                 }),
