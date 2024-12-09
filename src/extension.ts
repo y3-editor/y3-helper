@@ -110,24 +110,36 @@ class Helper {
                     // ignore
                 }
 
-                vscode.workspace.fs.createDirectory(y3Uri);
+                let result = await vscode.window.showInformationMessage('请选择仓库来源：\n'
+                    + 'Github (可能需要代理）\n'
+                    + 'Gitee (国内镜像）',
+                {
+                    modal: true,
+                }, 'Github', 'Gitee');
 
-                // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
-                await runShell("初始化Y3项目", "git", [
-                    "clone",
-                    "https://github.com/y3-editor/y3-lualib.git",
-                    y3Uri.fsPath,
-                ]);
+                if (!result) {
+                    vscode.window.showWarningMessage('已取消初始化项目');
+                    return;
+                }
 
-                // 如果clone失败，则尝试从备用地址 clone 项目，地址为 “https://gitee.com/tsukiko/y3-lualib”
-                try {
-                    await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, 'README.md'));
-                } catch {
-                    await runShell("初始化Y3项目（备用地址）", "git", [
+                if (result === 'Github') {
+                    // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
+                    await runShell("初始化Y3项目（Github）", "git", [
+                        "clone",
+                        "https://github.com/y3-editor/y3-lualib.git",
+                        y3Uri.fsPath,
+                    ]);
+                } else {
+                    await runShell("初始化Y3项目（Gitee）", "git", [
                         "clone",
                         "https://gitee.com/tsukiko/y3-lualib.git",
                         y3Uri.fsPath,
                     ]);
+                }
+
+                if (!y3.fs.isExists(y3Uri, 'README.md')) {
+                    vscode.window.showWarningMessage('仓库拉取失败！');
+                    return;
                 }
 
                 // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
