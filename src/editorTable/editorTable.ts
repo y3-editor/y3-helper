@@ -230,22 +230,15 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         return this._fieldList;
     }
 
-    private serialize(item: y3.json.Item, canBeTuple = true): ItemShape {
+    private serialize(item: y3.json.Item): ItemShape {
         if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || typeof item === 'bigint' || item === null) {
             return item;
         } else if (Array.isArray(item)) {
-            if (canBeTuple) {
-                return {
-                    __tuple__: true,
-                    items: item.map((i) => this.serialize(i, false)),
-                };
-            } else {
-                return item.map((i) => this.serialize(i, canBeTuple));
-            }
+            return item.map((i) => this.serialize(i));
         } else if (typeof item === 'object') {
             let map: MapShape = {};
             for (const key in item) {
-                map[key] = this.serialize(item[key], canBeTuple);
+                map[key] = this.serialize(item[key]);
             }
             return map;
         }
