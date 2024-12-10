@@ -455,8 +455,8 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
         let json = new y3.json.Json(templateJson);
         json.set('name', y3.language.keyOf(name, true));
         json.set('uid', key.toString());
-        json.set('key', key);
-        json.set('_ref_', key);
+        json.set('key', BigInt(key));
+        json.set('_ref_', BigInt(key));
 
         let obj = new EditorObject(this.manager, this.name, key);
         obj.uri = this.getUri(key);
