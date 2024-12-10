@@ -32,6 +32,10 @@ export class EditorLauncher {
             return false;
         }
 
+        if (await y3.version.askUpdate()) {
+            return false;
+        }
+
         await this.runPlugin();
 
         let project_path = projectUri.fsPath.replaceAll("\\", "/") + '/header.project';

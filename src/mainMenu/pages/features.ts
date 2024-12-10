@@ -107,8 +107,6 @@ export class 功能 extends TreeNode {
                 return env.scriptUri !== undefined;
             },
             collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-            update: async (node) => {
-            },
             childs: [
                 new TreeNode('初始化Y3库', {
                     command: {
@@ -124,6 +122,32 @@ export class 功能 extends TreeNode {
                     show: async () => {
                         return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'))
                             && !await globalScript.isEnabled();
+                    }
+                }),
+                new TreeNode('编辑器需要更新！', {
+                    iconPath: new vscode.ThemeIcon('symbol-event'),
+                    init: (node) => {
+                        y3.version.onDidChange(async () => {
+                            node.parent?.refresh();
+                        });
+                    },
+                    update: async (node) => {
+                        let client = await y3.version.getClient();
+                        let server = await y3.version.getServer();
+                        node.description = `${client?.display} -> ${server?.display}`;
+                        node.tooltip = `${client?.version} -> ${server?.version}`;
+                        node.command = {
+                            command: 'y3-helper.shell',
+                            title: '启动编辑器',
+                            arguments: [
+                                'start',
+                                y3.env.editorUri?.fsPath,
+                            ]
+                        };
+                    },
+                    show: async () => {
+                        return y3.env.editorUri !== undefined
+                            && await y3.version.needUpdate();
                     }
                 }),
                 new TreeNode('启动游戏', {

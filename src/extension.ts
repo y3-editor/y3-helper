@@ -319,6 +319,7 @@ class Helper {
             globalScript.init();
             luaLanguage.init();
             ecaCompiler.init();
+            y3.version.init();
         }, 100);
     }
 }

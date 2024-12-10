@@ -11,6 +11,7 @@ export interface TreeNodeOptional {
     onDidChangeCheckboxState?: (state: vscode.TreeItemCheckboxState) => void;
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
+    init?: (node: TreeNode) => void | Thenable<void>;
     show?: boolean | ((node: TreeNode) => boolean | Promise<boolean>);
     data?: any;
 }
@@ -19,6 +20,7 @@ export class TreeNode extends vscode.TreeItem {
     childs?: TreeNode[];
     parent?: TreeNode;
     show?: TreeNodeOptional["show"] = true;
+    init?: TreeNodeOptional["init"];
     update?: TreeNodeOptional["update"];
     onDidChangeCheckboxState?: TreeNodeOptional["onDidChangeCheckboxState"];
     data?: any;
@@ -31,6 +33,12 @@ export class TreeNode extends vscode.TreeItem {
             this.description = optional.description;
             this.contextValue = optional.contextValue;
             this.childs = optional.childs;
+            if (optional.init) {
+                this.init = async (node) => {
+                    this.init = undefined;
+                    return await optional.init?.(node);
+                };
+            }
             this.update = optional.update;
             this.show = optional.show ?? true;
             this.collapsibleState = optional.collapsibleState;
@@ -125,6 +133,7 @@ export class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
         let childs = [];
         for (const child of node.childs) {
             if (child.show instanceof Function) {
+                await child.init?.(child);
                 let show = await child.show(child);
                 if (!show) {
                     continue;
@@ -144,6 +153,7 @@ export class TreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     async getTreeItem(node: TreeNode): Promise<TreeNode> {
         node.tree = this;
+        await node.init?.(node);
         await node.update?.(node);
         node.updateChilds();
         node.collapsibleState = node.collapsibleState ?? (node.childs ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);

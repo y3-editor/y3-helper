@@ -42,7 +42,10 @@ export class GameLauncher {
             return false;
         }
 
-        
+        if (await y3.version.askUpdate()) {
+            return false;
+        }
+
         await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(env.scriptUri!, '.log'));
         let suc = await this.runPlugin();
         if (!suc) {

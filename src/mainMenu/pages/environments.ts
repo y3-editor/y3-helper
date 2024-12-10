@@ -35,21 +35,23 @@ export class 环境 extends TreeNode {
                                 iconPath: new vscode.ThemeIcon('versions'),
                                 description: '获取中...',
                                 tooltip: '获取中...',
+                                init: (node) => subscribeUpdate(node),
                                 update: async (node) => {
                                     let version = await y3.version.getClient();
                                     node.description = version ? String(version.display) : '获取失败...';
-                                    node.tooltip     = version ? version.display : undefined;
+                                    node.tooltip     = version ? String(version.version) : undefined;
+                                    subscribeUpdate(node);
                                 },
                             }),
                             new TreeNode('最新版本', {
                                 iconPath: new vscode.ThemeIcon('cloud-download'),
                                 description: '获取中...',
                                 tooltip: '获取中...',
+                                init: (node) => subscribeUpdate(node),
                                 update: async (node) => {
                                     let version = await y3.version.getServer();
                                     node.description = version ? String(version.display) : '获取失败...';
                                     node.tooltip     = version ? String(version.version) : undefined;
-                                    subscribeUpdate(node);
                                 },
                             }),
                         ] : undefined;
@@ -73,12 +75,7 @@ export class 环境 extends TreeNode {
     }
 };
 
-let hasSubscribed = false;
 function subscribeUpdate(node: TreeNode) {
-    if (hasSubscribed) {
-        return;
-    }
-    hasSubscribed = true;
     y3.version.onDidChange(() => {
         node.refresh();
     });
