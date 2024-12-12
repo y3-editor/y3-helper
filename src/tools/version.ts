@@ -89,7 +89,7 @@ export async function needUpdate(): Promise<boolean> {
     if (!client || !server) {
         return false;
     }
-    return client.version !== server.version;
+    return client.version < server.version;
 }
 
 interface UpdateResult {
