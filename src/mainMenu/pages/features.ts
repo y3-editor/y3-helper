@@ -8,7 +8,6 @@ import * as globalScript from '../../globalScript';
 
 function 多开模式() {
     let node = new TreeNode('多开模式', {
-        description: '12月4号编辑器更新后可用',
         tooltip: '请手动启动编辑器登录（并选择30天免登录）再使用此功能',
         checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
         onDidChangeCheckboxState(state) {
@@ -205,7 +204,7 @@ export class 功能 extends TreeNode {
                         };
                     },
                 }),
-                //多开模式(),
+                多开模式(),
                 启用Tracy(),
                 切换自定义视图(),
             ]
