@@ -91,6 +91,18 @@ export async function ready() {
         await updateCustomFields();
     });
 }
+
+const jsonFormatOptions: y3.json.formatOptions = {
+    stringify: (value) => {
+        if (typeof value === 'bigint') {
+            return value.toString();
+        }
+        if (typeof value === 'number' && isFinite(value)) {
+            return value.toFixed(1);
+        }
+    },
+};
+
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
@@ -110,7 +122,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             if (!this.text) {
                 return undefined;
             }
-            this._json = new y3.json.Json(this.text);
+            this._json = new y3.json.Json(this.text, jsonFormatOptions);
         }
         return this._json;
     }
@@ -445,7 +457,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             templateJson = template.string;
         }
 
-        let json = new y3.json.Json(templateJson);
+        let json = new y3.json.Json(templateJson, jsonFormatOptions);
         json.set('name', y3.language.keyOf(name, true));
         json.set('uid', key.toString());
         json.set('key', BigInt(key));

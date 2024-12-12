@@ -1,3 +1,4 @@
+import { string } from 'is';
 import * as jsonc from 'jsonc-parser';
 
 const parseOptions = {
@@ -18,9 +19,13 @@ export type Item = string | boolean | number | bigint | null | JObject | JArray;
 export type JArray = Item[];
 export type JObject = { [key: string]: Item };
 
+export interface formatOptions {
+    stringify?: (value: any) => string | undefined;
+}
+
 export class Json {
     private _text: string;
-    constructor(text: string) {
+    constructor(text: string, private options?: formatOptions) {
         this._text = text;
     }
 
@@ -77,20 +82,23 @@ export class Json {
         }
         this._tree = undefined;
 
-        let originStringify = JSON.stringify;
-
-        JSON.stringify = (value: any, replacer?: any, space?: any) => {
-            if (replacer) {
-                return originStringify(value, replacer, space);
-            }
-            if (typeof value === 'bigint') {
-                return value.toString();
-            }
-            if (typeof value === 'number' && isFinite(value)) {
-                return value.toFixed(1);
-            }
-            return originStringify(value, replacer, space);
-        };
+        let originStringify: typeof JSON.stringify | undefined;
+        if (this.options?.stringify) {
+            originStringify = JSON.stringify;
+            let hookedStringfy = (value: any, replacer?: any, space?: any) => {
+                if (replacer) {
+                    return originStringify!(value, replacer, space);
+                }
+                JSON.stringify = originStringify!;
+                let result = this.options!.stringify!(value);
+                JSON.stringify = hookedStringfy;
+                if (result !== undefined) {
+                    return result;
+                }
+                return originStringify!(value, replacer, space);
+            };
+            JSON.stringify = hookedStringfy;
+        }
 
         try {
             for (const key in this._patch) {
@@ -100,7 +108,9 @@ export class Json {
             }
         } finally {
             this._patch = undefined;
-            JSON.stringify = originStringify;
+            if (originStringify) {
+                JSON.stringify = originStringify;
+            }
         }
     }
 }
