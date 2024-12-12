@@ -5,6 +5,7 @@ import { queue, throttle } from "../utility/decorators";
 import { EditorData, valueOnGet, valueOnSet } from "./editorData";
 import { define } from "../customDefine";
 export { EditorData } from "./editorData";
+import { EditorJson } from "./editorJson";
 
 const templateDir = 'template\\json_template';
 const metaDir = 'src\\helper_meta\\editor';
@@ -92,17 +93,6 @@ export async function ready() {
     });
 }
 
-const jsonFormatOptions: y3.json.formatOptions = {
-    stringify: (value) => {
-        if (typeof value === 'bigint') {
-            return value.toString();
-        }
-        if (typeof value === 'number' && isFinite(value)) {
-            return value.toFixed(1);
-        }
-    },
-};
-
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
@@ -122,7 +112,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             if (!this.text) {
                 return undefined;
             }
-            this._json = new y3.json.Json(this.text, jsonFormatOptions);
+            this._json = new EditorJson(this.text);
         }
         return this._json;
     }
@@ -457,7 +447,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             templateJson = template.string;
         }
 
-        let json = new y3.json.Json(templateJson, jsonFormatOptions);
+        let json = new EditorJson(templateJson);
         json.set('name', y3.language.keyOf(name, true));
         json.set('uid', key.toString());
         json.set('key', BigInt(key));

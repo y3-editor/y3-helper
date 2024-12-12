@@ -1,4 +1,3 @@
-import { string } from 'is';
 import * as jsonc from 'jsonc-parser';
 
 const parseOptions = {
@@ -21,6 +20,7 @@ export type JObject = { [key: string]: Item };
 
 export interface formatOptions {
     stringify?: (value: any) => string | undefined;
+    patchEdit?: (edit: jsonc.Edit) => jsonc.Edit;
 }
 
 export class Json {
@@ -104,6 +104,9 @@ export class Json {
             for (const key in this._patch) {
                 const value = this._patch[key];
                 let edits = jsonc.modify(this._text, [key], value, editOptions);
+                if (this.options?.patchEdit) {
+                    edits = edits.map(this.options.patchEdit);
+                }
                 this._text = jsonc.applyEdits(this._text, edits);
             }
         } finally {
