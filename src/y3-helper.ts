@@ -10,6 +10,8 @@ export { env } from './env';
 export * as plugin from './plugin';
 export * as exceljs from 'exceljs';
 export let helper: vscode.ExtensionContext;
+import is from 'is';
+export { is };
 
 /**
  * 拼接路径为 Uri
@@ -51,11 +53,13 @@ export function print(...args: any[]) {
  * 在VSCode中打开文件
  * @param uri 文件路径
  */
-export function open(uri: vscode.Uri | string) {
+export function open(uri: vscode.Uri | string, line?: number) {
     if (typeof uri === 'string') {
         uri = vscode.Uri.parse(uri);
     }
-    vscode.commands.executeCommand('vscode.open', uri);
+    vscode.window.showTextDocument(uri, {
+        selection: line ? new vscode.Range(line, 0, line, 0) : undefined,
+    });
 }
 
 /**

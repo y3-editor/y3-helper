@@ -62,7 +62,7 @@
                 },
                 {
                     "command": "y3-helper.openPlugin",
-                    "when": "viewItem == 插件",
+                    "when": "viewItem == 插件列表",
                     "group": "navigation"
                 },
                 {
@@ -342,7 +342,7 @@
             {
                 "command": "y3-helper.openPlugin",
                 "title": "打开插件",
-                "enablement": "viewItem == 插件",
+                "enablement": "viewItem == 插件列表",
                 "category": "Y3开发助手"
             },
             {
@@ -432,6 +432,7 @@
         "fast-xml-parser": "^4.3.5",
         "fs-extra": "^11.2.0",
         "iconv-lite": "^0.6.3",
+        "is": "^3.3.0",
         "jsonc-parser": "^3.3.1",
         "jszip": "^3.10.1",
         "module-alias": "2.2.3",
@@ -440,6 +441,7 @@
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
+        "@types/is": "^0.0.25",
         "@types/mocha": "^10.0.3",
         "@types/module-alias": "^2.0.4",
         "@types/node": "^18.19.18",
@@ -448,6 +450,7 @@
         "@types/winreg": "^1.2.34",
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",
+        "@vscode/dts": "^0.4.1",
         "@vscode/test-electron": "^2.3.6",
         "dts-bundle-generator": "^9.5.1",
         "eslint": "^8.57.0",

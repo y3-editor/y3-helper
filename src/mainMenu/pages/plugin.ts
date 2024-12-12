@@ -1,11 +1,9 @@
 import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import * as path from 'path';
 
-export class 插件 extends TreeNode {
+export class 插件管理 extends TreeNode {
     constructor() {
-        let event: vscode.Disposable | undefined;
         super('插件', {
             iconPath: new vscode.ThemeIcon('extensions'),
             show: async () => {
@@ -35,7 +33,25 @@ export class 插件 extends TreeNode {
                         },
                     }),
                 ];
+            },
+        });
+    }
+}
 
+export class 插件列表 extends TreeNode {
+    constructor() {
+        let event: vscode.Disposable | undefined;
+        super('插件', {
+            iconPath: new vscode.ThemeIcon('extensions'),
+            show: async () => {
+                let pluginManager = y3.plugin.getManager();
+                if (!pluginManager) {
+                    return false;
+                }
+                let plugins = await pluginManager.getAll();
+                return plugins.length > 0;
+            },
+            update: async (node) => {
                 let pluginManager = y3.plugin.getManager();
                 if (!pluginManager) {
                     return;
@@ -44,6 +60,7 @@ export class 插件 extends TreeNode {
                 event?.dispose();
                 event = pluginManager.onDidChange(() => {
                     node.refresh();
+                    node.parent?.refresh();
                 });
 
                 let plugins = await pluginManager.getAll();
@@ -51,36 +68,43 @@ export class 插件 extends TreeNode {
                     return;
                 }
 
-                node.childs.push(new TreeNode('插件列表', {
-                    iconPath: new vscode.ThemeIcon('list-unordered'),
-                    update: async (node) => {
-                        node.childs = plugins.map(plugin => new TreeNode(plugin.name, {
-                            iconPath: new vscode.ThemeIcon('bracket-dot'),
-                            contextValue: '插件',
-                            data: plugin.uri,
-                            update: async (node) => {
-                                let exports = await plugin.getExports();
-                                node.childs = Object.values(exports).map(exp => new TreeNode(exp.name, {
-                                    iconPath: new vscode.ThemeIcon('run'),
-                                    description: exp.name === 'onGame' ? '启动游戏时运行'
-                                               : exp.name === 'onSave' ? '保存地图时运行'
-                                               : exp.name === 'onEditor' ? '用编辑器打开时运行'
-                                               : '点击运行',
-                                    command: {
-                                        command: 'y3-helper.runPlugin',
-                                        title: exp.name,
-                                        arguments: [plugin.uri, exp.name],
-                                    },
-                                }));
+                node.childs = [];
+                let autos = [];
+
+                for (const plugin of plugins) {
+                    let exports = await plugin.getExports();
+                    for (const exp of Object.values(exports)) {
+                        let child = new TreeNode(`${exp.name}`, {
+                            iconPath: new vscode.ThemeIcon('run'),
+                            description: `${plugin.name}`,
+                            command: {
+                                command: 'y3-helper.runPlugin',
+                                title: exp.name,
+                                arguments: [plugin.uri, exp.name],
                             },
-                        }));
-                    },
-                }));
+                            contextValue: '插件列表',
+                            data: {
+                                uri: plugin.uri,
+                                line: exp.line,
+                            }
+                        });
+                        if (exp.name === 'onGame' || exp.name === 'onSave' || exp.name === 'onEditor') {
+                            autos.push(child);
+                        } else {
+                            node.childs.push(child);
+                        }
+                    }
+                }
+
+                if (autos.length > 0) {
+                    node.childs.push(new TreeNode('------- 以下会自动运行 -------'));
+                    node.childs.push(...autos);
+                }
             },
         });
     }
 }
 
 vscode.commands.registerCommand('y3-helper.openPlugin', async (node: TreeNode) => {
-    y3.open(node.data);
+    y3.open(node.data.uri, node.data.line);
 });

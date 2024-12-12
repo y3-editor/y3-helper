@@ -8,7 +8,7 @@ import { 玩家属性 } from './pages/playerAttrs';
 import { 自定义事件 } from './pages/events';
 import { 界面 } from './pages/ui';
 import { 时间轴动画 } from './pages/uiAnim';
-import { 插件 } from './pages/plugin';
+import { 插件列表 } from './pages/plugin';
 import { 地图管理 } from './pages/mapManager';
 import { 跳字 } from './pages/jumpword';
 import { 字体 } from './pages/font';
@@ -17,6 +17,7 @@ let mainNode = new TreeNode('主菜单', {
     childs: [
         new 功能,
         new 地图管理,
+        new 插件列表,
         new 界面,
         new TreeNode('枚举', {
             iconPath: new vscode.ThemeIcon('list-tree'),show: async () => {
@@ -32,7 +33,6 @@ let mainNode = new TreeNode('主菜单', {
                 new 字体,
             ]
         }),
-        new 插件,
         new 环境,
         new TreeNode('重新选择Y3地图路径', {
             command: {

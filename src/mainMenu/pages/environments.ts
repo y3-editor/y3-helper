@@ -2,6 +2,7 @@ import { env } from "../../env";
 import { TreeNode, ViewInExplorerNode, ViewInNewVSCode, ViewInVSCode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
+import { 插件管理 } from './plugin';
 
 export class 环境 extends TreeNode {
     constructor() {
@@ -12,6 +13,7 @@ export class 环境 extends TreeNode {
                 return env.scriptUri !== undefined;
             },
             childs: [
+                new 插件管理,
                 new TreeNode('编辑器', {
                     update: async (node) => {
                         await env.editorReady(true);
