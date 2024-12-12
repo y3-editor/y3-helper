@@ -402,13 +402,14 @@ class Pseudoterminal implements vscode.Pseudoterminal {
 export class Terminal extends vscode.Disposable {
     private pseudoterminal: Pseudoterminal;
     private terminal: vscode.Terminal;
-    constructor(public name: string, onApply: (data: string) => Promise<void>) {
+    private _onApply?: (data: string) => Promise<void>;
+    constructor(public name: string) {
         super(() => {
             this.terminal.dispose();
         });
         this.pseudoterminal = new Pseudoterminal(async (data) => {
             this.disableInput();
-            await onApply(data);
+            await this._onApply?.(data);
             this.enableInput();
         });
         this.updateStartSymbol();
@@ -417,6 +418,10 @@ export class Terminal extends vscode.Disposable {
            pty: this.pseudoterminal,
         });
         this.terminal.show();
+    }
+
+    setApplyHandler(handler: (data: string) => Promise<void>) {
+        this._onApply = handler;
     }
 
     private _multiMode = false;

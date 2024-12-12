@@ -73,14 +73,16 @@ export class Client extends vscode.Disposable {
         }
     }
 
-    static terminalHistory: { [name: string]: string[]} = {};
+    static terminalHistory: { [name: string]: Terminal} = {};
 
     constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
             this.closeAllRequests();
             if (this.terminal) {
-                Client.terminalHistory[this.name] = this.terminal.getHistoryStack();
-                this.terminal.dispose();
+                Client.terminalHistory[this.name]?.dispose();
+                Client.terminalHistory[this.name] = this.terminal;
+                this.terminal.disableInput();
+                this.terminal.print('\n⛔ 客户端已断开。下次启动游戏会复用此控制台。 ⛔\n');
             }
             this.treeViewManager.dispose();
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
@@ -95,9 +97,10 @@ export class Client extends vscode.Disposable {
     public name = '默认客户端';
 
     private createTerminal(name: string) {
-        Client.terminalHistory[name] ??= [];
         this.terminal?.dispose();
-        this.terminal = new Terminal(name, async (data) => {
+        this.terminal = Client.terminalHistory[name] ?? new Terminal(name);
+        delete Client.terminalHistory[name];
+        this.terminal.setApplyHandler(async (data) => {
             // 如果提交的数据只有空格，就忽略掉
             if (data.trim() === '') {
                 return;
@@ -105,7 +108,7 @@ export class Client extends vscode.Disposable {
             this.notify('command', { data: data });
         });
         this.terminal.multiMode = this.multiMode;
-        this.terminal.setHistoryStack(Client.terminalHistory[this.name] ?? []);
+        this.terminal.enableInput();
         this.applyPrintBuffer();
     }
 
@@ -252,7 +255,8 @@ export class Client extends vscode.Disposable {
 }
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
-    let terminal = new Terminal('测试客户端', async (obj) => {
+    let terminal = new Terminal('测试客户端');
+    terminal.setApplyHandler(async (obj) => {
         // await new Promise((resolve) => {
         //    setTimeout(resolve, 2000);
         // });
