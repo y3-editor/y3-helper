@@ -59,7 +59,7 @@ interface KVShape {
 function fromKV(kvMap: Record<string, KVShape>): KV {
     let result: Record<string, string|number|boolean> = {};
     // 按照 sort 字段的值排序，然后将重新组成 { K: V.value } 的形式
-    let kvList = Object.values(kvMap).sort((a, b) => Number(a.sort - b.sort));
+    let kvList = Object.values(kvMap).sort((a, b) => Number(a.sort) - Number(b.sort));
     for (let kv of kvList) {
         result[kv.key] = kv.value;
     }
