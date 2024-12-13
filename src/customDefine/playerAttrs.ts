@@ -11,11 +11,14 @@ type Attr = {
 };
 
 export class PlayerAttrs extends BaseDefine {
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.loadAttrs.bind(this));
+        
         this.onDidChange(() => {
-            this._attrsCache = undefined;
+            this.cache.updateVersion();
         });
     }
 
@@ -58,9 +61,6 @@ export class PlayerAttrs extends BaseDefine {
     }
 
     public async getAttrs() {
-        if (!this._attrsCache) {
-            this._attrsCache = await this.loadAttrs();
-        }
-        return this._attrsCache;
+        return await this.cache.get();
     }
 }

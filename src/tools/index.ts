@@ -5,3 +5,4 @@ export * as json from './json';
 export * as lua from './lua';
 export * as tracy from './tracy';
 export * as version from './version';
+export { VersionCache as Cache } from './versionCache';

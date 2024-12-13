@@ -21,15 +21,16 @@ type UIPackage = {
 };
 
 export class UI extends BaseDefine {
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.loadUIPackage.bind(this));
+
         this.onDidChange(() => {
-            this._uiCache = undefined;
+            this.cache.updateVersion();
         });
     }
-
-    private _uiCache?: UIPackage;
 
     get watchPattern() {
         if (!env.mapUri) {
@@ -178,9 +179,6 @@ export class UI extends BaseDefine {
     }
 
     public async getUIPackage() {
-        if (!this._uiCache) {
-            this._uiCache = await this.loadUIPackage();
-        }
-        return this._uiCache;
+        return await this.cache.get();
     }
 }

@@ -3,6 +3,7 @@ import { env } from "../env";
 import { BaseDefine } from "./baseDefine";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
+import * as tools from '../tools';
 
 const filePath = 'attr.json';
 
@@ -12,15 +13,16 @@ type Attr = {
 };
 
 export class UnitAttrs extends BaseDefine {
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.loadAttrs.bind(this));
+
         this.onDidChange(() => {
-            this._attrsCache = undefined;
+            this.cache.updateVersion();
         });
     }
-
-    private _attrsCache?: Attr[];
 
     get watchPattern() {
         if (!env.projectUri) {
@@ -71,9 +73,6 @@ export class UnitAttrs extends BaseDefine {
     }
 
     public async getAttrs() {
-        if (!this._attrsCache) {
-            this._attrsCache = await this.loadAttrs();
-        }
-        return this._attrsCache;
+        return await this.cache.get();
     }
 }

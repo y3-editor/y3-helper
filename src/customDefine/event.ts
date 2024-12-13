@@ -26,17 +26,19 @@ export type Folder = {
 };
 
 export class Events extends BaseDefine {
+    private eventsCache;
+    private folderCache;
     constructor() {
         super();
 
+        this.eventsCache = new tools.Cache(this.loadEvents.bind(this));
+        this.folderCache = new tools.Cache(this.loadEventsFolder.bind(this));
+
         this.onDidChange(() => {
-            this._eventsCache = undefined;
-            this._folderCache = undefined;
+            this.eventsCache.updateVersion();
+            this.folderCache.updateVersion();
         });
     }
-
-    private _eventsCache?: Event[];
-    private _folderCache?: Folder;
 
     get watchPattern() {
         if (!env.mapUri) {
@@ -111,7 +113,7 @@ export class Events extends BaseDefine {
     }
 
     public async getEvents() {
-        return this._eventsCache ??= await this.loadEvents();
+        return await this.eventsCache.get();
     }
 
     private async loadEventsFolder() {
@@ -143,6 +145,6 @@ export class Events extends BaseDefine {
     }
 
     public async getEventsFolder() {
-        return this._folderCache ??= await this.loadEventsFolder();
+        return await this.folderCache.get();
     }
 }

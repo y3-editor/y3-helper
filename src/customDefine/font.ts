@@ -1,5 +1,6 @@
 import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
+import * as tools from '../tools';
 import * as y3 from 'y3-helper';
 
 const fileName = 'font.json';
@@ -10,12 +11,14 @@ type Data = {
 };
 
 export class Font extends BaseDefine {
-    private _cache?: Data[];
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.makeWords.bind(this));
+
         this.onDidChange(() => {
-            this._cache = undefined;
+            this.cache.updateVersion();
         });
     }
 
@@ -54,6 +57,6 @@ export class Font extends BaseDefine {
     }
 
     public async get(): Promise<Data[]> {
-        return this._cache ??= await this.makeWords();
+        return await this.cache.get();
     }
 }

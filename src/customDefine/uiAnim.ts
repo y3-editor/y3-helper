@@ -1,6 +1,7 @@
 import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
 import * as y3 from 'y3-helper';
+import * as tools from '../tools';
 
 const fileName = 'uianim.json';
 
@@ -24,12 +25,14 @@ type Anim = {
 };
 
 export class UIAnim extends BaseDefine {
-    private _cache?: Anim[];
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.makeAnims.bind(this));
+
         this.onDidChange(() => {
-            this._cache = undefined;
+            this.cache.updateVersion();
         });
     }
 
@@ -69,6 +72,6 @@ export class UIAnim extends BaseDefine {
     }
 
     public async get(): Promise<Anim[]> {
-        return this._cache ??= await this.makeAnims();
+        return await this.cache.get();
     }
 }

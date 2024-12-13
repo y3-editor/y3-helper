@@ -1,6 +1,7 @@
 import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
 import * as y3 from 'y3-helper';
+import * as tools from '../tools';
 
 const fileName = 'jumpword.json';
 
@@ -10,12 +11,14 @@ type Word = {
 };
 
 export class JumpWord extends BaseDefine {
-    private _cache?: Word[];
+    private cache;
     constructor() {
         super();
 
+        this.cache = new tools.Cache(this.makeWords.bind(this));
+
         this.onDidChange(() => {
-            this._cache = undefined;
+            this.cache.updateVersion();
         });
     }
 
@@ -51,6 +54,6 @@ export class JumpWord extends BaseDefine {
     }
 
     public async get(): Promise<Word[]> {
-        return this._cache ??= await this.makeWords();
+        return await this.cache.get();
     }
 }

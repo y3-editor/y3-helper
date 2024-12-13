@@ -13,43 +13,47 @@ import { 地图管理 } from './pages/mapManager';
 import { 跳字 } from './pages/jumpword';
 import { 字体 } from './pages/font';
 
-let mainNode = new TreeNode('主菜单', {
-    childs: [
-        new 功能,
-        new 地图管理,
-        new 插件列表,
-        new 界面,
-        new TreeNode('枚举', {
-            iconPath: new vscode.ThemeIcon('list-tree'),show: async () => {
-                await env.mapReady();
-                return env.mapUri !== undefined;
-            },
-            childs: [
-                new 单位属性,
-                new 玩家属性,
-                new 自定义事件,
-                new 时间轴动画,
-                new 跳字,
-                new 字体,
-            ]
-        }),
-        new 环境,
-        new TreeNode('重新选择Y3地图路径', {
-            command: {
-                command: 'y3-helper.selectAnotherMap',
-                title: '重新选择Y3地图路径',
-            },
-            iconPath: new vscode.ThemeIcon('search'),
-        }),
-    ]
-});
+function makeMainNode() {
+    return new TreeNode('主菜单', {
+        childs: [
+            new 功能,
+            new 地图管理,
+            new 插件列表,
+            new 界面,
+            new TreeNode('枚举', {
+                iconPath: new vscode.ThemeIcon('list-tree'),show: async () => {
+                    await env.mapReady();
+                    return env.mapUri !== undefined;
+                },
+                childs: [
+                    new 单位属性,
+                    new 玩家属性,
+                    new 自定义事件,
+                    new 时间轴动画,
+                    new 跳字,
+                    new 字体,
+                ]
+            }),
+            new 环境,
+            new TreeNode('重新选择Y3地图路径', {
+                command: {
+                    command: 'y3-helper.selectAnotherMap',
+                    title: '重新选择Y3地图路径',
+                },
+                iconPath: new vscode.ThemeIcon('search'),
+            }),
+        ]
+    });
+}
 
 class MainMenu {
     readonly view: vscode.TreeView<TreeNode>;
     readonly tree: TreeProvider;
+    private mainNode;
 
     constructor () {
-        this.tree = new TreeProvider(mainNode);
+        this.mainNode = makeMainNode();
+        this.tree = new TreeProvider(this.mainNode);
         this.view = vscode.window.createTreeView('y3-helper.mainMenu', {
             treeDataProvider: this.tree,
             manageCheckboxStateManually: true,
@@ -78,7 +82,7 @@ class MainMenu {
         }
         if (path) {
             let paths = path.split('/');
-            let node = mainNode;
+            let node = this.mainNode;
             for (let i = 0; i < paths.length; i++) {
                 if (node.childs === undefined) {
                     return;
