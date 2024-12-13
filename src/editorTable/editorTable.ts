@@ -248,7 +248,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     }
 
     private deserialize(item: ItemShape): y3.json.Item {
-        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || item === null) {
+        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || typeof item === 'bigint' || item === null) {
             return item;
         } else if (Array.isArray(item)) {
             return item.map((i) => this.deserialize(i));
