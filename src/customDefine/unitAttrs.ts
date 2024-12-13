@@ -1,7 +1,8 @@
 import { RelativePattern } from "vscode";
 import { env } from "../env";
-import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
+import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 const filePath = 'attr.json';
 
@@ -22,23 +23,20 @@ export class UnitAttrs extends BaseDefine {
     private _attrsCache?: Attr[];
 
     get watchPattern() {
-        if (!env.mapUri) {
+        if (!env.projectUri) {
             return;
         }
-        return new RelativePattern(env.mapUri, filePath);
+        return new RelativePattern(env.projectUri, filePath);
     }
 
     private async loadAttrs() {
         let attrs: Attr[] = [];
         try {
-            if (!env.mapUri) {
+            if (!env.projectUri) {
                 return attrs;
             }
-            let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
-            if (!jsonFile) {
-                return attrs;
-            }
-            let json = JSON.parse(jsonFile.string);
+            let context = await vscode.workspace.fs.readFile(y3.uri(env.projectUri, filePath));
+            let json = JSON.parse(context.toString());
             if (typeof json !== 'object') {
                 return attrs;
             }
@@ -65,6 +63,8 @@ export class UnitAttrs extends BaseDefine {
                     }
                 }
             }
+        } catch (e) {
+            y3.log.warn(`${filePath} 解析失败： ${e}`);
         } finally {
             return attrs;
         }
