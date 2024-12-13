@@ -21,6 +21,7 @@ export type JObject = { [key: string]: Item };
 export interface formatOptions {
     stringify?: (value: any) => string | undefined;
     patchEdit?: (edit: jsonc.Edit) => jsonc.Edit;
+    patchJson?: boolean;
 }
 
 export class Json {
@@ -82,38 +83,43 @@ export class Json {
         }
         this._tree = undefined;
 
-        let originStringify: typeof JSON.stringify | undefined;
-        if (this.options?.stringify) {
-            originStringify = JSON.stringify;
-            let hookedStringfy = (value: any, replacer?: any, space?: any) => {
-                if (replacer) {
+        if (this.options?.patchJson) {
+            let originStringify: typeof JSON.stringify | undefined;
+            if (this.options?.stringify) {
+                originStringify = JSON.stringify;
+                let hookedStringfy = (value: any, replacer?: any, space?: any) => {
+                    if (replacer) {
+                        return originStringify!(value, replacer, space);
+                    }
+                    JSON.stringify = originStringify!;
+                    let result = this.options!.stringify!(value);
+                    JSON.stringify = hookedStringfy;
+                    if (result !== undefined) {
+                        return result;
+                    }
                     return originStringify!(value, replacer, space);
-                }
-                JSON.stringify = originStringify!;
-                let result = this.options!.stringify!(value);
+                };
                 JSON.stringify = hookedStringfy;
-                if (result !== undefined) {
-                    return result;
-                }
-                return originStringify!(value, replacer, space);
-            };
-            JSON.stringify = hookedStringfy;
-        }
+            }
 
-        try {
-            for (const key in this._patch) {
-                const value = this._patch[key];
-                let edits = jsonc.modify(this._text, [key], value, editOptions);
-                if (this.options?.patchEdit) {
-                    edits = edits.map(this.options.patchEdit);
+            try {
+                for (const key in this._patch) {
+                    const value = this._patch[key];
+                    let edits = jsonc.modify(this._text, [key], value, editOptions);
+                    if (this.options?.patchEdit) {
+                        edits = edits.map(this.options.patchEdit);
+                    }
+                    this._text = jsonc.applyEdits(this._text, edits);
                 }
-                this._text = jsonc.applyEdits(this._text, edits);
+            } finally {
+                this._patch = undefined;
+                if (originStringify) {
+                    JSON.stringify = originStringify;
+                }
             }
-        } finally {
+        } else {
             this._patch = undefined;
-            if (originStringify) {
-                JSON.stringify = originStringify;
-            }
+            this._text = this.options?.stringify?.(this.data) ?? JSON.stringify(this.data, null, 4);
         }
     }
 }

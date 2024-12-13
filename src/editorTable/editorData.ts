@@ -51,7 +51,7 @@ interface KVShape {
     prop_cls: "PText"|"PBool"|"PFloat"|"PInt",
     remark: string,
     show_in_attr: boolean,
-    sort: number,
+    sort: bigint,
     type: keyof typeof Table.type.type,
     value: string|number|boolean,
 }
@@ -59,7 +59,7 @@ interface KVShape {
 function fromKV(kvMap: Record<string, KVShape>): KV {
     let result: Record<string, string|number|boolean> = {};
     // 按照 sort 字段的值排序，然后将重新组成 { K: V.value } 的形式
-    let kvList = Object.values(kvMap).sort((a, b) => a.sort - b.sort);
+    let kvList = Object.values(kvMap).sort((a, b) => Number(a.sort - b.sort));
     for (let kv of kvList) {
         result[kv.key] = kv.value;
     }
@@ -75,26 +75,24 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
                 ...result[key],
                 value,
             };
-            sort = Math.max(sort, result[key].sort);
+            sort = Math.max(sort, Number(result[key].sort));
         } else {
             let etype, type, prop_cls;
             if (typeof value === 'string') {
-                etype = 0;
-                type = 0;
+                etype = 0n;
+                type = 0n;
                 prop_cls = 'PText';
             } else if (typeof value === 'number') {
-                if (Number.isInteger(value)) {
-                    etype = 1;
-                    type = 2;
-                    prop_cls = 'PInt';
-                } else {
-                    etype = 2;
-                    type = 1;
-                    prop_cls = 'PFloat';
-                }
+                etype = 2n;
+                type = 1n;
+                prop_cls = 'PFloat';
+            } else if (typeof value === 'bigint') {
+                etype = 1n;
+                type = 2n;
+                prop_cls = 'PInt';
             } else if (typeof value === 'boolean') {
-                etype = 4;
-                type = 3;
+                etype = 4n;
+                type = 3n;
                 prop_cls = 'PBool';
             } else {
                 continue;
@@ -107,7 +105,7 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
                 prop_cls: prop_cls as any,
                 remark: '',
                 show_in_attr: false,
-                sort: ++sort,
+                sort: BigInt(++sort),
                 type: type as any,
                 value,
             };
