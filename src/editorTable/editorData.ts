@@ -73,6 +73,9 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
         if (key in result) {
             result[key] = {
                 ...result[key],
+                etype: BigInt(result[key].etype) as any,
+                type: BigInt(result[key].type) as any,
+                sort: BigInt(result[key].sort),
                 value,
             };
             sort = Math.max(sort, Number(result[key].sort));
