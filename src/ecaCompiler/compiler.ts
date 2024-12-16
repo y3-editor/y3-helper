@@ -131,7 +131,7 @@ class Ref {
 }
 
 class Closure {
-    constructor(private index: number) {
+    constructor(private eca: ECA, private json: y3.json.JObject) {
     }
 
     make(): string {
@@ -145,11 +145,17 @@ export class ECA {
     events: Event[] = [];
     actions: (Exp | Closure | Comment)[] = [];
     variables: Variable[] = [];
+    closures: Record<string, Closure> = {};
     constructor(private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
         if (!json.enabled) {
             this.enabled = false;
             return;
+        }
+        if (y3.is.object(json.sub_trigger)) {
+            for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
+                this.closures[id] = new Closure(this, closure);
+            }
         }
         for (let event of json.event as y3.json.JObject[]) {
             this.events.push(new Event(event));
@@ -177,7 +183,7 @@ export class ECA {
         if (Array.isArray(action)) {
             return new Comment(action as any);
         } else if (typeof action === 'number') {
-            return new Closure(action);
+            //return new Closure(action);
         } else {
             return new Exp(action as any);
         }
