@@ -169,41 +169,6 @@ class Env {
         return '2.0';
     }
 
-    private async searchMapPathInProject(folder: vscode.Uri, depth: number): Promise<vscode.Uri | undefined> {
-        // 递归搜索目录下的 `header.map` 文件所在目录
-        try {
-            let state = await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder, 'header.map'));
-            if (state.type === vscode.FileType.File) {
-                return folder;
-            }
-        } catch (error) {
-            // ignore
-        }
-        if (depth <= 0) {
-            return undefined;
-        }
-
-        let files = await vscode.workspace.fs.readDirectory(folder);
-        for (const file of files) {
-            if (file[1] === vscode.FileType.Directory) {
-                let mapFolder = await this.searchMapPathInProject(vscode.Uri.joinPath(folder, file[0]), depth - 1);
-                if (mapFolder) {
-                    return mapFolder;
-                }
-            }
-        }
-
-        return undefined;
-    }
-
-    private async searchMapFolderBySelectedUri(uri: vscode.Uri): Promise<vscode.Uri | undefined> {
-        // 检查一下上一层目录
-        let parentUri = vscode.Uri.joinPath(uri, '..');
-        let mapFolder = await this.searchMapPathInProject(parentUri, 0)
-                    ||  await this.searchMapPathInProject(uri, 3);
-        return mapFolder;
-    }
-
     private async searchProjectByFolder(folder: vscode.Uri): Promise<vscode.Uri | undefined> {
         let currentUri = folder;
         for (let i = 0; i < 20; i++) {
