@@ -95,6 +95,17 @@ export class Exp {
     }
 }
 
+class Comment {
+    content: string;
+    constructor(private json: [number, string, number, string]) {
+        this.content = json[1];
+    }
+
+    make(formatter: Formatter): string {
+        return '-- ' + this.content.replace(/\n/g, '\n-- ');
+    }
+}
+
 class Variable {
     constructor(public name: string, public type: string, public isArray: boolean, public value: any) {
     }
@@ -119,11 +130,20 @@ class Ref {
     }
 }
 
+class Closure {
+    constructor(private index: number) {
+    }
+
+    make(): string {
+        return '占位';
+    }
+}
+
 export class ECA {
     name: string;
     enabled: boolean = true;
     events: Event[] = [];
-    actions: Exp[] = [];
+    actions: (Exp | Closure | Comment)[] = [];
     variables: Variable[] = [];
     constructor(private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
@@ -134,8 +154,8 @@ export class ECA {
         for (let event of json.event as y3.json.JObject[]) {
             this.events.push(new Event(event));
         }
-        for (let action of json.action as y3.json.JObject[]) {
-            this.actions.push(new Exp(action));
+        for (let action of json.action as any) {
+            this.actions.push(this.parseAction(action));
         }
         const varData = json.var_data as [
             Record<string, Record<string, any>>,
@@ -150,6 +170,16 @@ export class ECA {
         }
         for (let name of varData[2]) {
             this.variables.push(variableMap[name]);
+        }
+    }
+
+    private parseAction(action: y3.json.JObject | y3.json.JArray | number) {
+        if (Array.isArray(action)) {
+            return new Comment(action as any);
+        } else if (typeof action === 'number') {
+            return new Closure(action);
+        } else {
+            return new Exp(action as any);
         }
     }
 

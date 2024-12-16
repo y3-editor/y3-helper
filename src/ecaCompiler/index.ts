@@ -44,6 +44,7 @@ async function fullCompile(inDir: vscode.Uri, outDir: vscode.Uri, progress?: Pro
         }
         progress?.message(`正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
         y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
+        progress?.update((i + 1) / fileNames.length * 100);
 
         let inUri = y3.uri(inDir, fileNames[i]);
         let outUri = y3.uri(outDir, fileNames[i].replace(/\.json$/, '.lua'));
@@ -65,11 +66,11 @@ async function fullCompile(inDir: vscode.Uri, outDir: vscode.Uri, progress?: Pro
             }));
         } catch (e) {
             if (e instanceof Error) {
-                y3.log.error(`【编译ECA】编译${inUri.fsPath}失败：${e}\n${e.stack}`);
+                y3.log.error(`【编译ECA】编译[${inUri.fsPath}]失败：${e}\n${e.stack}`);
             } else {
-                y3.log.error(`【编译ECA】编译${inUri.fsPath}失败：${e}`);
+                y3.log.error(`【编译ECA】编译[${inUri.fsPath}]失败：${e}`);
             }
-            vscode.window.showErrorMessage(`编译${inUri.fsPath}失败：${e}`);
+            vscode.window.showErrorMessage(`编译[${inUri.fsPath}]失败：${e}`);
         }
     }
 
