@@ -7,13 +7,13 @@ const reservedNames = new Set(['params']);
 export class Event {
     name: string;
     args?: Exp[];
-    constructor(private json: y3.json.JObject) {
+    constructor(private eca: ECA, private json: y3.json.JObject) {
         this.name = json.event_type as string;
         let args_list = json.args_list as y3.json.JObject[];
         if (args_list.length > 0) {
             this.args = [];
             for (let arg of args_list) {
-                this.args.push(new Exp(arg));
+                this.args.push(new Exp(eca, arg));
             }
         }
     }
@@ -26,11 +26,10 @@ export class Event {
 export class Exp {
     name: string;
     type: number;
-    kind: 'action' | 'call' | 'value' | 'var' | 'code' = 'call';
-    args?: (Exp | null)[];
-    var?: Ref;
+    kind: 'action' | 'call' | 'value' | 'code' = 'call';
+    args?: (Exp | VarRef | FuncRef | null)[];
     value?: string | number | boolean;
-    constructor(private json: y3.json.JObject) {
+    constructor(private eca: ECA, private json: y3.json.JObject) {
         this.type = json.arg_type as number;
         let arg_list = json.args_list as y3.json.JObject[];
         if (arg_list.length === 1 && typeof arg_list[0] !== 'object') {
@@ -46,14 +45,14 @@ export class Exp {
             this.name = (json.sub_type ?? json.action_type) as string;
             this.args = [];
             for (let arg of json.args_list as y3.json.JObject[]) {
-                if ('__tuple__' in arg) {
-                    this.kind = 'var';
-                    this.var = new Ref(arg.items as any);
+                if (typeof arg === 'number') {
+                    this.args.push(new FuncRef(eca, String(arg)));
+                } else if ('__tuple__' in arg) {
+                    this.args.push(new VarRef(arg.items as any));
                 } else if (Array.isArray(arg)) {
-                    this.kind = 'var';
-                    this.var = new Ref(arg as any);
+                    this.args.push(new VarRef(arg as any));
                 } else {
-                    this.args.push(new Exp(arg));
+                    this.args.push(new Exp(eca, arg));
                 }
             }
             if ('op_arg' in json) {
@@ -64,7 +63,7 @@ export class Exp {
                     if (op_args[i] === null || enable === false) {
                         this.args.push(null);
                     } else {
-                        this.args.push(new Exp(op_args[i]));
+                        this.args.push(new Exp(eca, op_args[i]));
                     }
                 }
             }
@@ -76,13 +75,6 @@ export class Exp {
             return formatter.formatValue(this.type, this.value);
         } else if (this.kind === 'code') {
             return String(this.value);
-        } else if (this.kind === 'var') {
-            let index = this.args?.[0];
-            if (index !== undefined && index !== null) {
-                return `${this.var!.make(formatter)}[${index.make(formatter)}]`;
-            } else {
-                return this.var!.make(formatter);
-            }
         } else {
             return formatter.formatCall(this.name, this.args!.map((arg) => {
                 if (arg === null) {
@@ -115,7 +107,7 @@ class Variable {
     }
 }
 
-class Ref {
+class VarRef {
     name: string;
     type: string;
     scope: 'local' | 'global';
@@ -130,38 +122,39 @@ class Ref {
     }
 }
 
-class Closure {
-    constructor(private eca: ECA, private json: y3.json.JObject) {
-    }
+class FuncRef {
+    constructor(public eca: ECA, public id: string) { }
 
-    make(): string {
-        return '占位';
+    make(formater: Formatter): string {
+        let closure = this.eca.closures[this.id];
+        if (closure) {
+            return closure.make(formater);
+        } else {
+            return '-- 未找到函数： ' + this.id;
+        }
     }
 }
 
-export class ECA {
+class Function {
     name: string;
     enabled: boolean = true;
     events: Event[] = [];
-    actions: (Exp | Closure | Comment)[] = [];
+    actions: (Exp | FuncRef | Comment)[] = [];
     variables: Variable[] = [];
-    closures: Record<string, Closure> = {};
-    constructor(private json: y3.json.JObject) {
+    constructor(private eca: ECA, private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
         if (!json.enabled) {
             this.enabled = false;
             return;
         }
-        if (y3.is.object(json.sub_trigger)) {
-            for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
-                this.closures[id] = new Closure(this, closure);
-            }
-        }
         for (let event of json.event as y3.json.JObject[]) {
-            this.events.push(new Event(event));
+            this.events.push(new Event(eca, event));
         }
         for (let action of json.action as any) {
-            this.actions.push(this.parseAction(action));
+            let result = this.parseAction(action);
+            if (result) {
+                this.actions.push(result);
+            }
         }
         const varData = json.var_data as [
             Record<string, Record<string, any>>,
@@ -179,13 +172,14 @@ export class ECA {
         }
     }
 
+
     private parseAction(action: y3.json.JObject | y3.json.JArray | number) {
         if (Array.isArray(action)) {
             return new Comment(action as any);
         } else if (typeof action === 'number') {
-            //return new Closure(action);
+            return new FuncRef(this.eca, String(action));
         } else {
-            return new Exp(action as any);
+            return new Exp(this.eca, action as any);
         }
     }
 
@@ -209,18 +203,9 @@ export class ECA {
         return content.split('\n').map((line) => tab + line).join('\n');
     }
 
-    private ensureEndWithNL(content: string): string {
-        return content.endsWith('\n') ? content : content + '\n';
-    }
-
-    private ensureNLisCRLF(content: string): string {
-        // 只替换单独的 \n，不替换 \r\n
-        return content.replace(/\n/g, '\r\n');
-    }
-
-    make(formatter: Formatter): string | undefined {
+    make(formatter: Formatter): string {
         if (!this.enabled) {
-            return undefined;
+            return `-- 子函数 ${this.name} 已禁用`;
         }
         let result = '';
         if (this.events.length === 1) {
@@ -233,10 +218,38 @@ export class ECA {
             }
             result += `end)`;
         }
+        return result;
+    }
+}
+
+export class ECA {
+    closures: Record<string, Function> = {};
+    main: Function;
+    constructor(private json: y3.json.JObject) {
+        if (y3.is.object(json.sub_trigger)) {
+            for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
+                this.closures[id] = new Function(this, closure);
+            }
+        }
+        this.main = new Function(this, json);
+    }
+
+    private ensureEndWithNL(content: string): string {
+        return content.endsWith('\n') ? content : content + '\n';
+    }
+
+    private ensureNLisCRLF(content: string): string {
+        // 只替换单独的 \n，不替换 \r\n
+        return content.replace(/\n/g, '\r\n');
+    }
+
+    make(formatter: Formatter) {
+        let result = this.main.make(formatter);
         result = this.ensureEndWithNL(result);
         result = this.ensureNLisCRLF(result);
         return result;
     }
+
 }
 
 export class Compiler {
