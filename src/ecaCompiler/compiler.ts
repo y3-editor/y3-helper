@@ -139,6 +139,7 @@ class Function {
     name: string;
     enabled: boolean = true;
     events: Event[] = [];
+    conditions: Exp[] = [];
     actions: (Exp | FuncRef | Comment)[] = [];
     variables: Variable[] = [];
     constructor(private eca: ECA, private json: y3.json.JObject) {
@@ -147,28 +148,39 @@ class Function {
             this.enabled = false;
             return;
         }
-        for (let event of json.event as y3.json.JObject[]) {
-            this.events.push(new Event(eca, event));
-        }
-        for (let action of json.action as any) {
-            let result = this.parseAction(action);
-            if (result) {
-                this.actions.push(result);
+        if (json.event) {
+            for (let event of json.event as y3.json.JObject[]) {
+                this.events.push(new Event(eca, event));
             }
         }
-        const varData = json.var_data as [
-            Record<string, Record<string, any>>,
-            Record<string, 0|10>,
-            string[],
-        ];
-        let variableMap: Record<string, Variable> = {};
-        for (let [type, data] of Object.entries(varData[0])) {
-            for (let [name, value] of Object.entries(data)) {
-                variableMap[name] = new Variable(name, type, varData[1][name] !== 0, value);
+        if (json.condition) {
+            for (let condition of json.condition as any) {
+                this.conditions.push(new Exp(eca, condition));
             }
         }
-        for (let name of varData[2]) {
-            this.variables.push(variableMap[name]);
+        if (json.action) {
+            for (let action of json.action as any) {
+                let result = this.parseAction(action);
+                if (result) {
+                    this.actions.push(result);
+                }
+            }
+        }
+        if (json.var_data) {
+            const varData = json.var_data as [
+                Record<string, Record<string, any>>,
+                Record<string, 0|10>,
+                string[],
+            ];
+            let variableMap: Record<string, Variable> = {};
+            for (let [type, data] of Object.entries(varData[0])) {
+                for (let [name, value] of Object.entries(data)) {
+                    variableMap[name] = new Variable(name, type, varData[1][name] !== 0, value);
+                }
+            }
+            for (let name of varData[2]) {
+                this.variables.push(variableMap[name]);
+            }
         }
     }
 
@@ -199,8 +211,32 @@ class Function {
         }).join('\n');
     }
 
+    private makeConditionPart(formatter: Formatter): string {
+        let result = '';
+        result += this.conditions.map((condition) => condition.make(formatter)).join('\n   and ');
+        return result;
+    }
+
     private increaseTab(content: string, tab: string = '    '): string {
         return content.split('\n').map((line) => tab + line).join('\n');
+    }
+
+    private makeBody(formatter: Formatter): string {
+        let result = '';
+        if (this.conditions.length > 0) {
+            result += `if not (function ()\n`;
+            result += this.increaseTab(`return ${this.makeConditionPart(formatter)}`);
+            result += `\nend)() then\n`;
+            result += `    return\n`;
+            result += `end\n`;
+        }
+        if (this.variables.length > 0) {
+            result += `${this.makeVariablePart(formatter)}\n`;
+        }
+        if (this.actions.length > 0) {
+            result += `${this.makeActionPart(formatter)}`;
+        }
+        return result;
     }
 
     make(formatter: Formatter): string {
@@ -210,13 +246,15 @@ class Function {
         let result = '';
         if (this.events.length === 1) {
             result += `y3.game:event(${this.events[0].make(formatter)}, function(_, params)\n`;
-            if (this.variables.length > 0) {
-                result += `${this.increaseTab(this.makeVariablePart(formatter))}\n`;
-            }
-            if (this.actions.length > 0) {
-                result += `${this.increaseTab(this.makeActionPart(formatter))}\n`;
-            }
+            result += this.increaseTab(this.makeBody(formatter));
             result += `end)`;
+        } else {
+            result += `local function action(_, params)\n`;
+            result += this.increaseTab(this.makeBody(formatter));
+            result += `\nend\n\n`;
+            for (let event of this.events) {
+                result += `y3.game:event(${event.make(formatter)}, action)\n`;
+            }
         }
         return result;
     }

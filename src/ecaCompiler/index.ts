@@ -13,12 +13,12 @@ interface Progress {
 }
 
 async function fullCompile(inDir: vscode.Uri, outDir: vscode.Uri, progress?: Progress) {
-    progress?.message('正在加载地图配置...');
+    progress?.message('加载地图配置...');
 
     await fillStatic(formatter);
     await fillMapDefined(formatter);
 
-    progress?.message('正在搜索触发器文件...');
+    progress?.message('搜索触发器文件...');
 
     let compiler = new Compiler();
     y3.log.info(`【编译ECA】开始，触发器目录为${inDir}`);
@@ -42,7 +42,7 @@ async function fullCompile(inDir: vscode.Uri, outDir: vscode.Uri, progress?: Pro
         if (progress?.isCanceled()) {
             throw new vscode.CancellationError();
         }
-        progress?.message(`正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
+        progress?.message(`触发器(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
         y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
         progress?.update((i + 1) / fileNames.length * 100);
 
@@ -94,16 +94,20 @@ export function init() {
         let outDir = y3.uri(y3.env.scriptUri, 'y3-trigger');
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: '编译中...',
+            title: '编译中',
             cancellable: true,
         }, async (progress, token) => {
             let value = 0;
+            let msg = '';
             await fullCompile(inDir, outDir, {
-                message: (message) => progress.report({ message }),
+                message: (message) => {
+                    msg = message;
+                    progress.report({ message });
+                },
                 update: (percent) => {
                     let delta = percent - value;
                     value = percent;
-                    progress.report({ increment: delta });
+                    progress.report({ increment: delta, message: msg });
                 },
                 isCanceled: () => token.isCancellationRequested,
             });
