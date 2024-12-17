@@ -131,6 +131,9 @@ export class 功能 extends TreeNode {
                         });
                     },
                     update: async (node) => {
+                        if (y3.env.editorUri === undefined) {
+                            return;
+                        }
                         let client = await y3.version.getClient();
                         let server = await y3.version.getServer();
                         node.description = `${client?.display} -> ${server?.display}`;
