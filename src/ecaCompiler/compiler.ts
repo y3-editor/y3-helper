@@ -42,7 +42,7 @@ export class Exp {
             this.value = arg_list[0];
         }
         else {
-            this.name = (json.sub_type ?? json.action_type) as string;
+            this.name = (json.sub_type ?? json.action_type ?? json.condition_type) as string;
             this.args = [];
             for (let arg of json.args_list as y3.json.JObject[]) {
                 if (typeof arg === 'number') {
@@ -212,9 +212,7 @@ class Function {
     }
 
     private makeConditionPart(formatter: Formatter): string {
-        let result = '';
-        result += this.conditions.map((condition) => condition.make(formatter)).join('\n   and ');
-        return result;
+        return this.conditions.map((condition) => `not ${condition.make(formatter)}`).join('\nor ');
     }
 
     private increaseTab(content: string, tab: string = '    '): string {
@@ -224,9 +222,8 @@ class Function {
     private makeBody(formatter: Formatter): string {
         let result = '';
         if (this.conditions.length > 0) {
-            result += `if not (function ()\n`;
-            result += this.increaseTab(`return ${this.makeConditionPart(formatter)}`);
-            result += `\nend)() then\n`;
+            result += `if ${this.makeConditionPart(formatter)}`;
+            result += ` then\n`;
             result += `    return\n`;
             result += `end\n`;
         }

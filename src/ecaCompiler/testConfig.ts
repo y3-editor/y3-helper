@@ -258,4 +258,6 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('EVALUATE_LUA_CODE', 'y3.eca_rt.evaluate({}, {}, {}, {}, {}, {})')
         . setRule('SET_VARIABLE', '{} = {}')
         . setRule('INT_PLUS_ONE', '({} + 1)')
+        . setRule('STRING_COMPARE', '({} {} {})')
+        . setRule('BOOL_COMPARE', '({} {} {})')
 }
