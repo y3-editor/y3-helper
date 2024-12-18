@@ -13,7 +13,7 @@ export class Event {
         if (args_list.length > 0) {
             this.args = [];
             for (let arg of args_list) {
-                this.args.push(new Exp(eca, arg));
+                this.args.push(Trigger.parseExp(eca, arg));
             }
         }
     }
@@ -23,67 +23,49 @@ export class Event {
     }
 }
 
-export class Exp {
+export class Value {
+    constructor(public type: number, public value: string | number | boolean) { }
+
+    make(formatter: Formatter): string {
+        return formatter.formatValue(this.type, this.value);
+    }
+}
+
+export class Call {
     name: string;
     type: number;
-    kind: 'action' | 'call' | 'value' | 'code' = 'call';
-    args?: (Exp | VarRef | FuncRef | null)[];
-    value?: string | number | boolean;
+    args?: (Exp | null)[];
     constructor(private eca: ECA, private json: y3.json.JObject) {
         this.type = json.arg_type as number;
+        this.name = (json.action_type ?? json.condition_type) as string
+                ??  (typeof json.sub_type === 'string' ? json.sub_type : `$${this.type}`);
         let arg_list = json.args_list as y3.json.JObject[];
-        if (arg_list.length === 1 && typeof arg_list[0] !== 'object') {
-            if (json.sub_type === 1) {
-                this.kind = 'value';
-            } else {
-                this.kind = 'code';
-            }
-            this.name = '$' + String(json.arg_type);
-            this.value = arg_list[0];
+        this.args = [];
+        for (let arg of arg_list) {
+            this.args.push(Trigger.parseExp(eca, arg));
         }
-        else {
-            this.name = (json.sub_type ?? json.action_type ?? json.condition_type) as string;
-            this.args = [];
-            for (let arg of json.args_list as y3.json.JObject[]) {
-                if (typeof arg === 'number') {
-                    this.args.push(new FuncRef(eca, String(arg)));
-                } else if ('__tuple__' in arg) {
-                    this.args.push(new VarRef(arg.items as any));
-                } else if (Array.isArray(arg)) {
-                    this.args.push(new VarRef(arg as any));
+        if ('op_arg' in json) {
+            let enables = json.op_arg_enable as boolean[] | undefined;
+            let op_args = json.op_arg as y3.json.JObject[];
+            for (let i = 0; i < op_args.length; i++) {
+                let enable = enables?.[i];
+                if (op_args[i] === null || enable === false) {
+                    this.args.push(null);
                 } else {
-                    this.args.push(new Exp(eca, arg));
-                }
-            }
-            if ('op_arg' in json) {
-                let enables = json.op_arg_enable as boolean[] | undefined;
-                let op_args = json.op_arg as y3.json.JObject[];
-                for (let i = 0; i < op_args.length; i++) {
-                    let enable = enables?.[i];
-                    if (op_args[i] === null || enable === false) {
-                        this.args.push(null);
-                    } else {
-                        this.args.push(new Exp(eca, op_args[i]));
-                    }
+                    this.args.push(Trigger.parseExp(eca, op_args[i]));
                 }
             }
         }
     }
 
     make(formatter: Formatter): string {
-        if (this.kind === 'value') {
-            return formatter.formatValue(this.type, this.value);
-        } else if (this.kind === 'code') {
-            return String(this.value);
-        } else {
-            return formatter.formatCall(this.name, this.args!.map((arg) => {
-                if (arg === null) {
-                    return 'nil';
-                } else {
-                    return arg.make(formatter);
-                }
-            }));
-        }
+        return formatter.formatCall(this.name, this.args!.map((arg) => {
+            if (arg === null) {
+                return 'nil';
+            } else {
+                return arg.make(formatter);
+            }
+        }));
     }
 }
 
@@ -114,7 +96,7 @@ class VarRef {
     constructor(json: [string, string, 'local' | 'global']) {
         this.type = json[0];
         this.name = json[1];
-        this.scope = json[2];
+        this.scope = json[2] ?? 'global';
     }
 
     make(formatter: Formatter): string {
@@ -122,7 +104,7 @@ class VarRef {
     }
 }
 
-class FuncRef {
+class TriggerRef {
     constructor(public eca: ECA, public id: string) { }
 
     make(formater: Formatter): string {
@@ -135,12 +117,12 @@ class FuncRef {
     }
 }
 
-class Function {
+class Trigger {
     name: string;
     enabled: boolean = true;
     events: Event[] = [];
     conditions: Exp[] = [];
-    actions: (Exp | FuncRef | Comment)[] = [];
+    actions: Action[] = [];
     variables: Variable[] = [];
     constructor(private eca: ECA, private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
@@ -155,12 +137,12 @@ class Function {
         }
         if (json.condition) {
             for (let condition of json.condition as any) {
-                this.conditions.push(new Exp(eca, condition));
+                this.conditions.push(Trigger.parseExp(eca, condition));
             }
         }
         if (json.action) {
             for (let action of json.action as any) {
-                let result = this.parseAction(action);
+                let result = Trigger.parseAction(this.eca, action);
                 if (result) {
                     this.actions.push(result);
                 }
@@ -184,15 +166,37 @@ class Function {
         }
     }
 
-
-    private parseAction(action: y3.json.JObject | y3.json.JArray | number) {
+    static parseAction(eca: ECA, action: y3.json.JObject | y3.json.JArray | number): Action {
         if (Array.isArray(action)) {
             return new Comment(action as any);
         } else if (typeof action === 'number') {
-            return new FuncRef(this.eca, String(action));
+            return new TriggerRef(eca, String(action));
         } else {
-            return new Exp(this.eca, action as any);
+            return new Call(eca, action as any);
         }
+    }
+
+    static parseExp(eca: ECA, exp: any): Exp {
+        if (typeof exp === 'number') {
+            return new TriggerRef(eca, String(exp));
+        }
+        if (Array.isArray(exp)) {
+            return new VarRef(exp as any);
+        } else if ('__tuple__' in exp) {
+            return new VarRef(exp.items);
+        } else {
+            const arg_list = exp.args_list as any[];
+            if (arg_list.length === 1) {
+                let first = arg_list[0];
+                if (Array.isArray(first)) {
+                    return new VarRef(first as any);
+                }
+                if (typeof first !== 'object') {
+                    return new Value(exp.arg_type, first);
+                }
+            }
+        }
+        return new Call(eca, exp);
     }
 
     private makeActionPart(formatter: Formatter): string {
@@ -257,16 +261,19 @@ class Function {
     }
 }
 
+type Exp = Value | Call | VarRef | TriggerRef;
+type Action = Call | Comment | TriggerRef;
+
 export class ECA {
-    closures: Record<string, Function> = {};
-    main: Function;
+    closures: Record<string, Trigger> = {};
+    main: Trigger;
     constructor(private json: y3.json.JObject) {
         if (y3.is.object(json.sub_trigger)) {
             for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
-                this.closures[id] = new Function(this, closure);
+                this.closures[id] = new Trigger(this, closure);
             }
         }
-        this.main = new Function(this, json);
+        this.main = new Trigger(this, json);
     }
 
     private ensureEndWithNL(content: string): string {
