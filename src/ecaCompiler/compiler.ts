@@ -267,11 +267,6 @@ class Trigger {
     private makeConditionPart(formatter: Formatter): string {
         return this.conditions.map((condition) => `not ${condition.make(formatter)}`).join('\nor ');
     }
-
-    private increaseTab(content: string, tab: string = '    '): string {
-        return content.split('\n').map((line) => tab + line).join('\n');
-    }
-
     private makeBody(formatter: Formatter): string {
         let result = '';
         if (this.conditions.length > 0) {
@@ -296,11 +291,11 @@ class Trigger {
         let result = '';
         if (this.events.length === 1) {
             result += `y3.game:event(${this.events[0].make(formatter)}, function(_, params)\n`;
-            result += this.increaseTab(this.makeBody(formatter));
+            result += formatter.increaseTab(this.makeBody(formatter));
             result += `end)`;
         } else {
             result += `local function action(_, params)\n`;
-            result += this.increaseTab(this.makeBody(formatter));
+            result += formatter.increaseTab(this.makeBody(formatter));
             result += `\nend\n\n`;
             for (let event of this.events) {
                 result += `y3.game:event(${event.make(formatter)}, action)\n`;

@@ -268,7 +268,34 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('GET_BOOLEAN_KV', '{}:kv_load({}, "boolean")')
         . setRule('EXTRACT_STR', 'string.sub({}, {} + 1, {})')
         . setRule('VARIABLE', '{}')
+        . setRule('HAS_KV_ANY', '{}:kv_has({})')
         . setRule('OR', (node) => {
-            return ''
+            const filters = node.args?.[0]?.makeArgs(formatter) ?? [];
+            if (filters.length === 0) {
+                return 'true';
+            }
+            return '(' + filters.join(' or ') + ')';
+        })
+        . setRule('IF_THEN_ELSE', (node) => {
+            const filters = node.args?.[0]?.makeArgs(formatter);
+            const thens = node.args?.[1]?.makeArgs(formatter);
+            const elses = node.args?.[2]?.makeArgs(formatter);
+            let result = '';
+            if (filters && filters.length > 0) {
+                result += 'if ' + filters.join(' and ') + ' then\n';
+            } else {
+                result += 'if false then\n';
+            }
+            if (thens) {
+                result += formatter.increaseTab(thens.join('\n'));
+                result += '\n';
+            }
+            if (elses) {
+                result += 'else\n';
+                result += formatter.increaseTab(elses.join('\n'));
+                result += '\n';
+            }
+            result += 'end';
+            return result;
         })
 }

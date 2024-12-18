@@ -227,4 +227,8 @@ export class Formatter {
         }
         return rule.format(this, node);
     }
+
+    public increaseTab(content: string, tab: string = '    '): string {
+        return content.split('\n').map((line) => tab + line).join('\n');
+    }
 }
