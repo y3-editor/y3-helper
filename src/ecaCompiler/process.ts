@@ -11,31 +11,39 @@ export interface Progress {
 
 export class Process {
     compiler = new Compiler();
-    writeTasks: Promise<any>[] = [];
-    luaFiles: string[] = [];
-    constructor(private inDir: vscode.Uri, private outDir: vscode.Uri, private formatter: Formatter, private progress?: Progress) { }
+    tasks: Promise<any>[] = [];
+    includeFiles: string[] = [];
+    inTriggerDir = 'global_trigger/trigger' as const;
+    scriptDir = 'script' as const;
+    outBasseDir = 'y3-trigger' as const;
+    outTriggerDir = 'trigger' as const;
+    inGlobalVariableFileName = 'globaltriggervariable.json' as const;
+
+    constructor(private mapDir: vscode.Uri, private formatter: Formatter, private progress?: Progress) { }
 
     public async fullCompile() {
-        let fileNames = await this.scanTriggers(this.inDir);
-        if (fileNames === undefined) {
-            return;
-        }
+        await this.compileGlobalVariables();
 
-        for (let i = 0; i < fileNames.length; i++) {
-            if (this.progress?.isCanceled()) {
-                throw new vscode.CancellationError();
+        let fileNames = await this.scanTriggers();
+        if (fileNames) {
+            for (let i = 0; i < fileNames.length; i++) {
+                if (this.progress?.isCanceled()) {
+                    throw new vscode.CancellationError();
+                }
+                this.progress?.message(`触发器(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
+                y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
+                this.progress?.value((i + 1) / fileNames.length * 100);
+                await this.compileOneTrigger(fileNames[i]);
             }
-            this.progress?.message(`触发器(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
-            y3.log.info(`【编译ECA】正在编译触发器文件(${i + 1}/${fileNames.length}): ${fileNames[i]}`);
-            this.progress?.value((i + 1) / fileNames.length * 100);
-            await this.compileOneTrigger(fileNames[i]);
         }
 
+        await this.makeInitFile();
         await this.waitFinish();
     }
 
-    private async scanTriggers(inDir: vscode.Uri) {
+    private async scanTriggers() {
         this.progress?.message('搜索触发器文件...');
+        const inDir = y3.uri(this.mapDir, this.inTriggerDir);
 
         y3.log.info(`【编译ECA】开始，触发器目录为${inDir}`);
         let scanResult = await y3.fs.scan(inDir, undefined, () => {
@@ -56,7 +64,7 @@ export class Process {
     }
 
     public async compileOneTrigger(fileName: string) {
-        let uri = y3.uri(this.inDir, fileName);
+        let uri = y3.uri(this.mapDir, this.inTriggerDir, fileName);
         try {
             let eca = await this.compiler.compile(uri);
             let content = eca.make(this.formatter);
@@ -64,17 +72,9 @@ export class Process {
                 return;
             }
 
-            let outUri = y3.uri(this.outDir, fileName.replace(/\.json$/, '.lua'));
-            this.luaFiles.push(fileName);
-            this.writeTasks.push(new Promise(async (resolve) => {
-                let file = await y3.fs.readFile(outUri);
-                if (file?.string === content) {
-                    resolve(false);
-                    return;
-                }
-                await y3.fs.writeFile(outUri, content);
-                resolve(true);
-            }));
+            let includeName = [this.outBasseDir, this.outTriggerDir, fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
+            this.includeFiles.push(includeName);
+            this.write(includeName, content);
         } catch (e) {
             if (e instanceof Error) {
                 y3.log.error(`【编译ECA】编译[${uri.fsPath}]失败：${e}\n${e.stack}`);
@@ -85,13 +85,51 @@ export class Process {
         }
     }
 
-    public async waitFinish() {
+    public async compileGlobalVariables() {
+        this.progress?.message('编译全局变量...');
+        const uri = y3.uri(this.mapDir, this.inGlobalVariableFileName);
+        try {
+            const file = await y3.fs.readFile(uri);
+            y3.assert(file, 'File not found: ' + uri.fsPath);
+            const json = y3.json.parse(file.string);
+
+            const includeName = [this.outBasseDir, '全局变量.lua'].join('/');
+            this.includeFiles.push(includeName);
+            this.write(includeName, json);
+        } catch (e) {
+            if (e instanceof Error) {
+                y3.log.error(`【编译ECA】编译[${uri.fsPath}]失败：${e}\n${e.stack}`);
+            } else {
+                y3.log.error(`【编译ECA】编译[${uri.fsPath}]失败：${e}`);
+            }
+            vscode.window.showErrorMessage(`编译[${uri.fsPath}]失败：${e}`);
+        }
+    }
+
+    private write(includeName: string, content: string) {
+        this.tasks.push(new Promise(async (resolve) => {
+            const uri = y3.uri(this.mapDir, this.scriptDir, includeName);
+            let file = await y3.fs.readFile(uri);
+            if (file?.string === content) {
+                resolve(false);
+                return;
+            }
+            await y3.fs.writeFile(uri, content);
+            resolve(true);
+        }));
+    }
+
+    public async makeInitFile() {
         y3.log.info('【编译ECA】正在生成索引文件...');
-        this.writeTasks.push(y3.fs.writeFile(y3.uri(this.outDir, 'init.lua'), this.luaFiles.map(uri => {
-            return `include ${y3.lua.encode(uri.replace(/\.json$/, '').replace(/\\/g, '.'))}`;
-        }).join('\r\n') + '\r\n'));
+        const content = this.includeFiles.map(fileName => {
+            return `include ${y3.lua.encode(fileName.replace(/\.lua$/, '').replace(/[\\/]/g, '.'))}`;
+        }).join('\r\n') + '\r\n';
+        this.write(this.outBasseDir + '/init.lua', content);
+    }
+
+    public async waitFinish() {
     
         y3.log.info('【编译ECA】等待文件全部写入完成');
-        await Promise.all(this.writeTasks);
+        await Promise.all(this.tasks);
     }
 }

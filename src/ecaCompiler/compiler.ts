@@ -293,7 +293,7 @@ export class Compiler {
         if (typeof input === 'string') {
             json = y3.json.parse(input);
         } else if (input instanceof vscode.Uri) {
-            let file = await y3.fs.readFile(input.fsPath);
+            let file = await y3.fs.readFile(input);
             y3.assert(file, 'File not found: ' + input.fsPath);
             json = y3.json.parse(file.string);
         } else {

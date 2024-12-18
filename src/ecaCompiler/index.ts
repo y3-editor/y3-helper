@@ -13,8 +13,6 @@ export function init() {
             vscode.window.showErrorMessage('请先打开地图');
             return;
         }
-        let inDir = y3.uri(y3.env.mapUri!, 'global_trigger/trigger');
-        let outDir = y3.uri(y3.env.scriptUri, 'y3-trigger');
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: '编译中',
@@ -28,7 +26,7 @@ export function init() {
             await fillStatic(formatter);
             await fillMapDefined(formatter);
 
-            let process = new Process(inDir, outDir, formatter, {
+            let process = new Process(y3.env.mapUri!, formatter, {
                 message: (message) => {
                     msg = message;
                     progress.report({ message });
