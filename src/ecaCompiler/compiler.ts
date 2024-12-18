@@ -117,6 +117,16 @@ class TriggerRef {
     }
 }
 
+function toArray(v: any) {
+    if (Array.isArray(v)) {
+        return v;
+    }
+    if (typeof v === 'object' && v !== null && '__tuple__' in v) {
+        return v.items;
+    }
+    return undefined;
+}
+
 class Trigger {
     name: string;
     enabled: boolean = true;
@@ -180,16 +190,14 @@ class Trigger {
         if (typeof exp === 'number') {
             return new TriggerRef(eca, String(exp));
         }
-        if (Array.isArray(exp)) {
-            return new VarRef(exp as any);
-        } else if ('__tuple__' in exp) {
-            return new VarRef(exp.items);
+        if (toArray(exp)) {
+            return new VarRef(toArray(exp));
         } else {
             const arg_list = exp.args_list as any[];
             if (arg_list.length === 1) {
                 let first = arg_list[0];
-                if (Array.isArray(first)) {
-                    return new VarRef(first as any);
+                if (toArray(first)) {
+                    return new VarRef(toArray(first));
                 }
                 if (typeof first !== 'object') {
                     return new Value(exp.arg_type, first);

@@ -89,6 +89,10 @@ export async function fillStatic(formatter: Formatter) {
         . setRule(100006, 'y3.unit.get_by_res_id({})')
         // 玩家
         . setRule(100025, 'y3.player({})')
+        . setRule(100035, {
+            '==': '==',
+            '!=': '~=',
+        })
         // 伤害类型
         . setRule(100064, wrapLuaValue({
             0: '物理',
@@ -260,4 +264,8 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('INT_PLUS_ONE', '({} + 1)')
         . setRule('STRING_COMPARE', '({} {} {})')
         . setRule('BOOL_COMPARE', '({} {} {})')
+        . setRule('TRIGGER_PLAYER', 'params.player')
+        . setRule('GET_BOOLEAN_KV', '{}:kv_load({}, "boolean")')
+        . setRule('EXTRACT_STR', 'string.sub({}, {} + 1, {})')
+        . setRule('VARIABLE', '{}')
 }
