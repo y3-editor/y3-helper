@@ -5,6 +5,7 @@ import { Formatter } from './formatter';
 const reservedNames = new Set(['params']);
 
 export abstract class Node {
+    name?: string;
     args?: (Exp | null)[];
     abstract make(formatter: Formatter): string;
     abstract makeArgs(formatter: Formatter): string[] | undefined;
@@ -111,7 +112,7 @@ class Variable extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName(this.name, reservedNames);
+        return y3.lua.getValidName('v' + this.name, reservedNames);
     }
 
     makeArgs(formatter: Formatter) {
@@ -131,7 +132,7 @@ class VarRef extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName(this.name, reservedNames);
+        return y3.lua.getValidName('v' + this.name, reservedNames);
     }
 
     makeArgs(formatter: Formatter) {

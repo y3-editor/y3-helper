@@ -308,4 +308,9 @@ export async function fillStatic(formatter: Formatter) {
             result += 'end';
             return result;
         })
+        . setRule('CALL_TRIGGER_FUNC', (node) => {
+            let id = node.args?.[0]?.name;
+            let args = node.args?.[0]?.makeArgs(formatter);
+            return `Func[${y3.lua.encode(id)}](${args?.join(', ')})`;
+        })
 }
