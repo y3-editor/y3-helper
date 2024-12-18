@@ -4,10 +4,16 @@ import { Formatter } from './formatter';
 
 const reservedNames = new Set(['params']);
 
-export class Event {
+export abstract class Node {
+    args?: (Exp | null)[];
+    abstract make(formatter: Formatter): string;
+    abstract makeArgs(formatter: Formatter): string[] | undefined;
+}
+
+export class Event extends Node {
     name: string;
-    args?: Exp[];
     constructor(private eca: ECA, private json: y3.json.JObject) {
+        super();
         this.name = json.event_type as string;
         let args_list = json.args_list as y3.json.JObject[];
         if (args_list.length > 0) {
@@ -22,28 +28,31 @@ export class Event {
         return formatter.formatEvent(this.name, this);
     }
 
-    makeArgs(formatter: Formatter): string[] {
-        return this.args?.map((arg) => arg.make(formatter)) ?? [];
+    makeArgs(formatter: Formatter) {
+        return this.args?.filter(arg => arg !== null).map(arg => arg.make(formatter));
     }
 }
 
-export class Value {
-    constructor(public type: number, public value: string | number | boolean) { }
+export class Value extends Node {
+    constructor(public type: number, public value: string | number | boolean) {
+        super();
+    }
 
     make(formatter: Formatter): string {
         return formatter.formatValue(this.type, this);
     }
 
-    makeArgs(formatter: Formatter): string[] {
-        return [];
+    makeArgs(formatter: Formatter) {
+        return undefined;
     }
 }
 
-export class Call {
+export class Call extends Node {
     name: string;
     type: number;
     args: (Exp | null)[] = [];
     constructor(private eca: ECA, private json: y3.json.JObject) {
+        super();
         this.type = json.arg_type as number;
         this.name = (json.action_type ?? json.condition_type) as string
                 ??  (typeof json.sub_type === 'string' ? json.sub_type : `$${this.type}`);
@@ -80,31 +89,42 @@ export class Call {
     }
 }
 
-class Comment {
+class Comment extends Node {
     content: string;
     constructor(private json: [number, string, number, string]) {
+        super();
         this.content = json[1];
     }
 
     make(formatter: Formatter): string {
         return '-- ' + this.content.replace(/\n/g, '\n-- ');
     }
+
+    makeArgs(formatter: Formatter) {
+        return undefined;
+    }
 }
 
-class Variable {
+class Variable extends Node {
     constructor(public name: string, public type: string, public isArray: boolean, public value: any) {
+        super();
     }
 
     make(formatter: Formatter): string {
         return y3.lua.getValidName(this.name, reservedNames);
     }
+
+    makeArgs(formatter: Formatter) {
+        return undefined;
+    }
 }
 
-class VarRef {
+class VarRef extends Node {
     name: string;
     type: string;
     scope: 'local' | 'global';
     constructor(json: [string, string, 'local' | 'global']) {
+        super();
         this.type = json[0];
         this.name = json[1];
         this.scope = json[2] ?? 'global';
@@ -114,13 +134,15 @@ class VarRef {
         return y3.lua.getValidName(this.name, reservedNames);
     }
 
-    makeArgs(formatter: Formatter): string[] {
-        return [];
+    makeArgs(formatter: Formatter) {
+        return undefined;
     }
 }
 
-class TriggerRef {
-    constructor(public eca: ECA, public id: string) { }
+class TriggerRef extends Node {
+    constructor(public eca: ECA, public id: string) {
+        super();
+    }
 
     make(formater: Formatter): string {
         let closure = this.eca.closures[this.id];
@@ -131,8 +153,8 @@ class TriggerRef {
         }
     }
 
-    makeArgs(formatter: Formatter): string[] {
-        return [];
+    makeArgs(formatter: Formatter) {
+        return undefined;
     }
 }
 
@@ -290,8 +312,6 @@ class Trigger {
 
 type Exp = Value | Call | VarRef | TriggerRef;
 type Action = Call | Comment | TriggerRef;
-
-export type Node = Exp | Event;
 
 export class ECA {
     closures: Record<string, Trigger> = {};

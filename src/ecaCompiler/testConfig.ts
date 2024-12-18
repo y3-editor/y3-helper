@@ -18,14 +18,14 @@ async function fillEvents(formatter: Formatter) {
     for (let [key, info] of Object.entries(eventInfo)) {
         formatter.setRule(key, (node) => {
             if ('args' in node) {
-                return [y3.lua.encode(info.name), ...node.makeArgs(formatter)].join(', ');
+                return [y3.lua.encode(info.name), ...node.makeArgs(formatter) ?? []].join(', ');
             }
             return y3.lua.encode(info.name);
         });
     }
 
     formatter.setRule('GENERIC_UNIT_EVENT', (node) => {
-        let key = node.makeArgs(formatter)[0];
+        let key = node.makeArgs(formatter)?.[0];
         if (!key) {
             return '"GENERIC_UNIT_EVENT"';
         }

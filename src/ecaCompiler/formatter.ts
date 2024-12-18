@@ -209,7 +209,7 @@ export class Formatter {
     public formatCall(name: string, node: Node) {
         let rule = this.rules.get(name);
         if (!rule) {
-            return name + '(' + node.makeArgs(this).join(', ') + ')';
+            return name + '(' + (node.makeArgs(this)?.join(', ') ?? '') + ')';
         }
         return rule.format(this, node);
     }
