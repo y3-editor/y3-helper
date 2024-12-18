@@ -13,9 +13,9 @@ async function fillEvents(formatter: Formatter) {
     hasFilledEvents = true;
     let eventInfoFile = await y3.fs.readFile(y3.uri(y3.helper.extensionUri, metaDir, 'event.json'));
     y3.assert(eventInfoFile, '未找到event.json');
-    let eventInfo = y3.json.parse(eventInfoFile.string) as Record<string, { key: string, name: string }>;
+    formatter.eventInfo = y3.json.parse(eventInfoFile.string);
 
-    for (let [key, info] of Object.entries(eventInfo)) {
+    for (let [key, info] of Object.entries(formatter.eventInfo)) {
         formatter.setRule(key, (node) => {
             if ('args' in node) {
                 return [y3.lua.encode(info.name), ...node.makeArgs(formatter) ?? []].join(', ');
@@ -29,7 +29,7 @@ async function fillEvents(formatter: Formatter) {
         if (!key) {
             return '"GENERIC_UNIT_EVENT"';
         }
-        return y3.lua.encode(eventInfo[key]?.name ?? key);
+        return y3.lua.encode(formatter.eventInfo[key]?.name ?? key);
     })
 }
 
@@ -269,6 +269,20 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('EXTRACT_STR', 'string.sub({}, {} + 1, {})')
         . setRule('VARIABLE', '{}')
         . setRule('HAS_KV_ANY', '{}:kv_has({})')
+        . setRule('$100021', (node) => {
+            const filters = node.makeArgs(formatter);
+            if (filters && filters.length > 0) {
+                return '(' + filters.join(' and ') + ')';
+            }
+            return 'false';
+        })
+        . setRule('$100022', (node) => {
+            const filters = node.makeArgs(formatter);
+            if (filters && filters.length > 0) {
+                return filters.join('\n');
+            }
+            return '';
+        })
         . setRule('OR', (node) => {
             const filters = node.args?.[0]?.makeArgs(formatter) ?? [];
             if (filters.length === 0) {
@@ -277,22 +291,18 @@ export async function fillStatic(formatter: Formatter) {
             return '(' + filters.join(' or ') + ')';
         })
         . setRule('IF_THEN_ELSE', (node) => {
-            const filters = node.args?.[0]?.makeArgs(formatter);
-            const thens = node.args?.[1]?.makeArgs(formatter);
-            const elses = node.args?.[2]?.makeArgs(formatter);
+            const filters = node.args?.[0]?.make(formatter);
+            const thens = node.args?.[1]?.make(formatter);
+            const elses = node.args?.[2]?.make(formatter);
             let result = '';
-            if (filters && filters.length > 0) {
-                result += 'if ' + filters.join(' and ') + ' then\n';
-            } else {
-                result += 'if false then\n';
-            }
-            if (thens) {
-                result += formatter.increaseTab(thens.join('\n'));
+            result += `if ${filters ?? 'false'} then\n`;
+            if (thens !== undefined && thens !== '') {
+                result += formatter.increaseTab(thens);
                 result += '\n';
             }
-            if (elses) {
+            if (elses !== undefined && elses !== '') {
                 result += 'else\n';
-                result += formatter.increaseTab(elses.join('\n'));
+                result += formatter.increaseTab(elses);
                 result += '\n';
             }
             result += 'end';

@@ -1,5 +1,5 @@
 import * as y3 from 'y3-helper';
-import { Node, Value } from './compiler';
+import { Node, Trigger, Value } from './compiler';
 
 /*
 CreateUnit({1}, {2}, {3})
@@ -201,6 +201,7 @@ let NilRuleHandler = new RuleHandler('nil');
 
 export class Formatter {
     public rules = new Map<string | number, RuleHandler>();
+    public eventInfo: Record<string, { key: string, name: string }> = {};
     public setRule(name: string | number, rule: Rule, argNames?: string[]) {
         this.rules.set(name, new RuleHandler(rule, argNames));
         return this;
@@ -226,6 +227,72 @@ export class Formatter {
             return y3.lua.encode(node.value);
         }
         return rule.format(this, node);
+    }
+
+    private makeActionPart(trg: Trigger): string {
+        return trg.actions.map((action) => action.make(this)).join('\n');
+    }
+
+    private makeVariablePart(trg: Trigger): string {
+        return trg.variables.map((variable) => {
+            const name = variable.make(this);
+            const value = y3.lua.encode(variable.value);
+            if (variable.isArray) {
+                return `local ${name} = y3.eca_rt.array(${value})`;
+            } else {
+                return `local ${name} = ${value}`;
+            }
+        }).join('\n');
+    }
+
+    private makeConditionPart(trg: Trigger): string {
+        return trg.conditions.map((condition) => `not ${condition.make(this)}`).join('\nor ');
+    }
+    private makeBody(trg: Trigger): string {
+        let result = '';
+        if (trg.conditions.length > 0) {
+            result += `if ${this.makeConditionPart(trg)}`;
+            result += ` then\n`;
+            result += `    return\n`;
+            result += `end\n`;
+        }
+        if (trg.variables.length > 0) {
+            result += `${this.makeVariablePart(trg)}\n`;
+        }
+        if (trg.actions.length > 0) {
+            result += `${this.makeActionPart(trg)}`;
+        }
+        return result;
+    }
+    
+    public formatTrigger(trg: Trigger) {
+            if (!trg.enabled) {
+                return `-- 子函数 ${trg.name} 已禁用`;
+            }
+            let result = '';
+            if (trg.events.length === 1) {
+                result += `y3.game:event(${trg.events[0].make(this)}, function(_, params)\n`;
+                result += this.increaseTab(this.makeBody(trg));
+                result += `end)`;
+            } else {
+                if (trg.events.length > 1) {
+                    let types = [];
+                    for (let event of trg.events) {
+                        let cnName = this.eventInfo[event.name]?.name;
+                        if (cnName) {
+                            types.push(`EventParam.` + cnName);
+                        }
+                    }
+                    result += `---@param params ${types.join('|')}\n`;
+                }
+                result += `local function action(_, params)\n`;
+                result += this.increaseTab(this.makeBody(trg));
+                result += `\nend\n\n`;
+                for (let event of trg.events) {
+                    result += `y3.game:event(${event.make(this)}, action)\n`;
+                }
+            }
+            return result;
     }
 
     public increaseTab(content: string, tab: string = '    '): string {

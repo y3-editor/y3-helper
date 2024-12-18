@@ -168,7 +168,7 @@ function toArray(v: any) {
     return undefined;
 }
 
-class Trigger {
+export class Trigger {
     name: string;
     enabled: boolean = true;
     events: Event[] = [];
@@ -248,60 +248,8 @@ class Trigger {
         return new Call(eca, exp);
     }
 
-    private makeActionPart(formatter: Formatter): string {
-        return this.actions.map((action) => action.make(formatter)).join('\n');
-    }
-
-    private makeVariablePart(formatter: Formatter): string {
-        return this.variables.map((variable) => {
-            const name = variable.make(formatter);
-            const value = y3.lua.encode(variable.value);
-            if (variable.isArray) {
-                return `local ${name} = y3.eca_rt.array(${value})`;
-            } else {
-                return `local ${name} = ${value}`;
-            }
-        }).join('\n');
-    }
-
-    private makeConditionPart(formatter: Formatter): string {
-        return this.conditions.map((condition) => `not ${condition.make(formatter)}`).join('\nor ');
-    }
-    private makeBody(formatter: Formatter): string {
-        let result = '';
-        if (this.conditions.length > 0) {
-            result += `if ${this.makeConditionPart(formatter)}`;
-            result += ` then\n`;
-            result += `    return\n`;
-            result += `end\n`;
-        }
-        if (this.variables.length > 0) {
-            result += `${this.makeVariablePart(formatter)}\n`;
-        }
-        if (this.actions.length > 0) {
-            result += `${this.makeActionPart(formatter)}`;
-        }
-        return result;
-    }
-
     make(formatter: Formatter): string {
-        if (!this.enabled) {
-            return `-- 子函数 ${this.name} 已禁用`;
-        }
-        let result = '';
-        if (this.events.length === 1) {
-            result += `y3.game:event(${this.events[0].make(formatter)}, function(_, params)\n`;
-            result += formatter.increaseTab(this.makeBody(formatter));
-            result += `end)`;
-        } else {
-            result += `local function action(_, params)\n`;
-            result += formatter.increaseTab(this.makeBody(formatter));
-            result += `\nend\n\n`;
-            for (let event of this.events) {
-                result += `y3.game:event(${event.make(formatter)}, action)\n`;
-            }
-        }
-        return result;
+        return formatter.formatTrigger(this);
     }
 }
 
