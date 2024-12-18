@@ -19,7 +19,11 @@ export class Event {
     }
 
     make(formatter: Formatter): string {
-        return formatter.formatEvent(this.name, this.args?.map((arg) => arg.make(formatter)));
+        return formatter.formatEvent(this.name, this);
+    }
+
+    makeArgs(formatter: Formatter): string[] {
+        return this.args?.map((arg) => arg.make(formatter)) ?? [];
     }
 }
 
@@ -27,20 +31,23 @@ export class Value {
     constructor(public type: number, public value: string | number | boolean) { }
 
     make(formatter: Formatter): string {
-        return formatter.formatValue(this.type, this.value);
+        return formatter.formatValue(this.type, this);
+    }
+
+    makeArgs(formatter: Formatter): string[] {
+        return [];
     }
 }
 
 export class Call {
     name: string;
     type: number;
-    args?: (Exp | null)[];
+    args: (Exp | null)[] = [];
     constructor(private eca: ECA, private json: y3.json.JObject) {
         this.type = json.arg_type as number;
         this.name = (json.action_type ?? json.condition_type) as string
                 ??  (typeof json.sub_type === 'string' ? json.sub_type : `$${this.type}`);
         let arg_list = json.args_list as y3.json.JObject[];
-        this.args = [];
         for (let arg of arg_list) {
             this.args.push(Trigger.parseExp(eca, arg));
         }
@@ -59,13 +66,17 @@ export class Call {
     }
 
     make(formatter: Formatter): string {
-        return formatter.formatCall(this.name, this.args!.map((arg) => {
+        return formatter.formatCall(this.name, this);
+    }
+
+    makeArgs(formatter: Formatter): string[] {
+        return this.args.map((arg) => {
             if (arg === null) {
                 return 'nil';
             } else {
                 return arg.make(formatter);
             }
-        }));
+        });
     }
 }
 
@@ -102,6 +113,10 @@ class VarRef {
     make(formatter: Formatter): string {
         return y3.lua.getValidName(this.name, reservedNames);
     }
+
+    makeArgs(formatter: Formatter): string[] {
+        return [];
+    }
 }
 
 class TriggerRef {
@@ -114,6 +129,10 @@ class TriggerRef {
         } else {
             return '-- 未找到函数： ' + this.id;
         }
+    }
+
+    makeArgs(formatter: Formatter): string[] {
+        return [];
     }
 }
 
@@ -271,6 +290,8 @@ class Trigger {
 
 type Exp = Value | Call | VarRef | TriggerRef;
 type Action = Call | Comment | TriggerRef;
+
+export type Node = Exp | Event;
 
 export class ECA {
     closures: Record<string, Trigger> = {};

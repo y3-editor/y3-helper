@@ -16,16 +16,16 @@ async function fillEvents(formatter: Formatter) {
     let eventInfo = y3.json.parse(eventInfoFile.string) as Record<string, { key: string, name: string }>;
 
     for (let [key, info] of Object.entries(eventInfo)) {
-        formatter.setRule(key, (args) => {
-            if (args) {
-                return [y3.lua.encode(info.name), ...args].join(', ');
+        formatter.setRule(key, (node) => {
+            if ('args' in node) {
+                return [y3.lua.encode(info.name), ...node.makeArgs(formatter)].join(', ');
             }
             return y3.lua.encode(info.name);
         });
     }
 
-    formatter.setRule('GENERIC_UNIT_EVENT', (args) => {
-        let key = args?.[0];
+    formatter.setRule('GENERIC_UNIT_EVENT', (node) => {
+        let key = node.makeArgs(formatter)[0];
         if (!key) {
             return '"GENERIC_UNIT_EVENT"';
         }
@@ -268,4 +268,7 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('GET_BOOLEAN_KV', '{}:kv_load({}, "boolean")')
         . setRule('EXTRACT_STR', 'string.sub({}, {} + 1, {})')
         . setRule('VARIABLE', '{}')
+        . setRule('OR', (node) => {
+            return ''
+        })
 }

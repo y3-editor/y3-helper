@@ -1,4 +1,5 @@
 import * as y3 from 'y3-helper';
+import { Node, Value } from './compiler';
 
 /*
 CreateUnit({1}, {2}, {3})
@@ -16,7 +17,7 @@ const OptionalEnd = Symbol('OptionalEnd');
 
 type RulePart = string | number | typeof OptionalStart | typeof OptionalEnd;
 
-type Rule = string | Record<number | string, string> | ((args?: string[]) => string) | null;
+type Rule = string | Record<number | string, string> | ((node: Node) => string) | null;
 
 interface OptionalGaurd {
     start: number;
@@ -34,7 +35,7 @@ class RuleHandler {
 
     private _children?: Map<any, RuleHandler>;
 
-    private compile(rule: string, args?: any[]) {
+    private compile(rule: string) {
         const regex = /\{[^\{\}]*\}|\<\?|\?\>/g;
         let match;
         let lastIndex = 0;
@@ -96,12 +97,12 @@ class RuleHandler {
         this._parts = parts;
     }
 
-    private getRule(args?: any[]): RuleHandler {
+    private getRule(formatter: Formatter, node: Node): RuleHandler {
         switch (typeof this.rule) {
             case 'string':
                 return this;
             case 'function': {
-                let newRule = this.rule(args);
+                let newRule = this.rule(node);
                 let children = this._children!.get(newRule);
                 if (!children) {
                     children = new RuleHandler(newRule);
@@ -113,7 +114,10 @@ class RuleHandler {
                 if (this.rule === null) {
                     return NilRuleHandler;
                 }
-                let rule = this.rule[args![0]];
+                if (!('value' in node)) {
+                    return DefaultRuleHandler;
+                }
+                let rule = this.rule[String(node.value)];
                 if (!rule) {
                     return DefaultRuleHandler;
                 }
@@ -129,14 +133,14 @@ class RuleHandler {
         }
     }
 
-    public format(args?: any[]) {
-        let ruleHandler = this.getRule(args);
-        return ruleHandler.make(args);
+    public format(formatter: Formatter, node: Node) {
+        let ruleHandler = this.getRule(formatter, node);
+        return ruleHandler.make(formatter, node);
     }
 
-    private make(args?: any[]) {
+    private make(formatter: Formatter, node: Node) {
         if (!this._parts) {
-            this.compile(this.rule as string, args);
+            this.compile(this.rule as string);
         }
         let i;
         let buf: string[] = [];
@@ -144,14 +148,16 @@ class RuleHandler {
         for (i = 0;i < this._parts!.length;i++) {
             let part = this._parts![i];
             if (typeof part === 'number') {
-                let value = args?.[part - 1];
-                if (value !== undefined && value !== null && value !== 'nil') {
-                    if (optionalGaurd) {
-                        optionalGaurd.hasValue = true;
+                if ('args' in node) {
+                    let value = node.args?.[part - 1];
+                    if (value) {
+                        if (optionalGaurd) {
+                            optionalGaurd.hasValue = true;
+                        }
+                        buf.push(value.make(formatter));
+                    } else {
+                        buf.push('nil');
                     }
-                    buf.push(value);
-                } else {
-                    buf.push('nil');
                 }
             } else if (typeof part === 'string') {
                 buf.push(part);
@@ -200,25 +206,25 @@ export class Formatter {
         return this;
     }
 
-    public formatCall(name: string, args?: string[]) {
+    public formatCall(name: string, node: Node) {
         let rule = this.rules.get(name);
         if (!rule) {
-            return name + '(' + (args ? args.join(', ') : '') + ')';
+            return name + '(' + node.makeArgs(this).join(', ') + ')';
         }
-        return rule.format(args);
+        return rule.format(this, node);
     }
 
-    public formatEvent(name: string, args?: string[]) {
+    public formatEvent(name: string, node: Node) {
         let rule = this.rules.get(name);
-        let str = rule?.format(args) ?? name;
+        let str = rule?.format(this, node) ?? name;
         return str;
     }
 
-    public formatValue(type: number, value: string | number | boolean | undefined) {
+    public formatValue(type: number, node: Value) {
         let rule = this.rules.get(type);
         if (!rule) {
-            return y3.lua.encode(value);
+            return y3.lua.encode(node.value);
         }
-        return rule.format([value]);
+        return rule.format(this, node);
     }
 }
