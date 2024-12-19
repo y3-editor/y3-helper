@@ -112,7 +112,7 @@ export class Variable extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName((this.isGlobal ? 'V' : 'v') + this.name, reservedNames);
+        return y3.lua.getValidName((this.isGlobal ? 'V_' : 'v_') + this.name, reservedNames);
     }
 
     makeArgs(formatter: Formatter) {
@@ -132,7 +132,7 @@ class VarRef extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName('v' + this.name, reservedNames);
+        return y3.lua.getValidName((this.scope === 'global' ? 'V_' : 'v_') + this.name, reservedNames);
     }
 
     makeArgs(formatter: Formatter) {

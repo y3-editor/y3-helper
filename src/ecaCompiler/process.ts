@@ -123,9 +123,11 @@ export class Process {
 
     public async makeInitFile() {
         y3.log.info('【编译ECA】正在生成索引文件...');
-        const content = this.includeFiles.map(fileName => {
+        const headPart = 'Func = {}';
+        const includesPart = this.includeFiles.map(fileName => {
             return `include ${y3.lua.encode(fileName.replace(/\.lua$/, '').replace(/[\\/]/g, '.'))}`;
-        }).join('\r\n') + '\r\n';
+        }).join('\n');
+        let content = this.formatter.asFileContent([headPart, includesPart].join('\n\n'));
         this.write(this.outBasseDir + '/init.lua', content);
     }
 
