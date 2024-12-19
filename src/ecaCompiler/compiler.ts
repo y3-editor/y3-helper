@@ -106,7 +106,7 @@ class Comment extends Node {
     }
 }
 
-class Variable extends Node {
+export class Variable extends Node {
     constructor(public name: string, public type: string, public isArray: boolean, public value: any) {
         super();
     }
@@ -269,26 +269,42 @@ export class ECA {
         this.main = new Trigger(this, json);
     }
 
-    private ensureEndWithNL(content: string): string {
-        return content.endsWith('\n') ? content : content + '\n';
+    make(formatter: Formatter) {
+        let result = this.main.make(formatter);
+        result = formatter.asFileContent(result);
+        return result;
     }
+}
 
-    private ensureNLisCRLF(content: string): string {
-        // 只替换单独的 \n，不替换 \r\n
-        return content.replace(/\n/g, '\r\n');
+export class GlobalVariables {
+    variables = new Map<string, Variable>();
+
+    constructor(private json: y3.json.JObject) {
+        const dict = json.variable_dict as Record<string, Record<string, any>>;
+        for (const type in dict) {
+            const group = dict[type];
+            for (const name in group) {
+                const value = group[name];
+                const variable = new Variable(name, type, false, value);
+                this.variables.set(name, variable);
+            }
+        }
     }
 
     make(formatter: Formatter) {
-        let result = this.main.make(formatter);
-        result = this.ensureEndWithNL(result);
-        result = this.ensureNLisCRLF(result);
-        return result;
+        let buffer: string[] = [];
+        for (const variable of this.variables.values()) {
+            buffer.push(formatter.formatVariable(variable, true));
+            buffer.push('\n');
+        }
+        let content = buffer.join('');
+        content = formatter.asFileContent(content);
+        return content;
     }
-
 }
 
 export class Compiler {
-    public async compile(input: string | vscode.Uri | y3.json.JObject): Promise<ECA> {
+    private async loadJson(input: string | vscode.Uri | y3.json.JObject) {
         let json: y3.json.JObject;
         if (typeof input === 'string') {
             json = y3.json.parse(input);
@@ -299,6 +315,15 @@ export class Compiler {
         } else {
             json = input;
         }
+        return json;
+    }
+    public async compileECA(input: string | vscode.Uri | y3.json.JObject): Promise<ECA> {
+        let json = await this.loadJson(input);
         return new ECA(json);
+    }
+
+    public async compileGlobalVariables(input: string | vscode.Uri | y3.json.JObject) {
+        let json = await this.loadJson(input);
+        return new GlobalVariables(json);
     }
 }

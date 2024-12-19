@@ -1,5 +1,5 @@
 import * as y3 from 'y3-helper';
-import { Node, Trigger, Value } from './compiler';
+import { Node, Trigger, Value, Variable } from './compiler';
 
 /*
 CreateUnit({1}, {2}, {3})
@@ -233,16 +233,19 @@ export class Formatter {
         return trg.actions.map((action) => action.make(this)).join('\n');
     }
 
+    public formatVariable(variable: Variable, isGlobal = false): string {
+        const name = variable.make(this);
+        const value = y3.lua.encode(variable.value);
+        const localHead = isGlobal ? '' : 'local ';
+        if (variable.isArray) {
+            return `${localHead}${name} = y3.eca_rt.array(${value})`;
+        } else {
+            return `${localHead}${name} = ${value}`;
+        }
+    }
+
     private makeVariablePart(trg: Trigger): string {
-        return trg.variables.map((variable) => {
-            const name = variable.make(this);
-            const value = y3.lua.encode(variable.value);
-            if (variable.isArray) {
-                return `local ${name} = y3.eca_rt.array(${value})`;
-            } else {
-                return `local ${name} = ${value}`;
-            }
-        }).join('\n');
+        return trg.variables.map(variable => this.formatVariable(variable)).join('\n');
     }
 
     private makeConditionPart(trg: Trigger): string {
@@ -267,13 +270,13 @@ export class Formatter {
     
     public formatTrigger(trg: Trigger) {
             if (!trg.enabled) {
-                return `-- 子函数 ${trg.name} 已禁用`;
+                return `-- 触发器 ${trg.name} 已禁用`;
             }
             let result = '';
             if (trg.events.length === 1) {
                 result += `y3.game:event(${trg.events[0].make(this)}, function(_, params)\n`;
                 result += this.increaseTab(this.makeBody(trg));
-                result += `end)`;
+                result += `\nend)`;
             } else {
                 if (trg.events.length > 1) {
                     let types = [];
@@ -297,5 +300,20 @@ export class Formatter {
 
     public increaseTab(content: string, tab: string = '    '): string {
         return content.split('\n').map((line) => tab + line).join('\n');
+    }
+
+    private ensureEndWithNL(content: string): string {
+        return content.endsWith('\n') ? content : content + '\n';
+    }
+
+    private ensureNLisCRLF(content: string): string {
+        // 只替换单独的 \n，不替换 \r\n
+        return content.replace(/\n/g, '\r\n');
+    }
+
+    public asFileContent(content: string): string {
+        content = this.ensureEndWithNL(content);
+        content = this.ensureNLisCRLF(content);
+        return content;
     }
 }

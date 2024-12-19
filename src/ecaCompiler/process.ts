@@ -66,7 +66,7 @@ export class Process {
     public async compileOneTrigger(fileName: string) {
         let uri = y3.uri(this.mapDir, this.inTriggerDir, fileName);
         try {
-            let eca = await this.compiler.compile(uri);
+            let eca = await this.compiler.compileECA(uri);
             let content = eca.make(this.formatter);
             if (!content) {
                 return;
@@ -89,13 +89,15 @@ export class Process {
         this.progress?.message('编译全局变量...');
         const uri = y3.uri(this.mapDir, this.inGlobalVariableFileName);
         try {
-            const file = await y3.fs.readFile(uri);
-            y3.assert(file, 'File not found: ' + uri.fsPath);
-            const json = y3.json.parse(file.string);
+            let globalVariables = await this.compiler.compileGlobalVariables(uri);
+            let content = globalVariables.make(this.formatter);
+            if (!content) {
+                return;
+            }
 
             const includeName = [this.outBasseDir, '全局变量.lua'].join('/');
             this.includeFiles.push(includeName);
-            this.write(includeName, json);
+            this.write(includeName, content);
         } catch (e) {
             if (e instanceof Error) {
                 y3.log.error(`【编译ECA】编译[${uri.fsPath}]失败：${e}\n${e.stack}`);
