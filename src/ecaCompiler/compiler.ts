@@ -35,7 +35,7 @@ export class Event extends Node {
 }
 
 export class Value extends Node {
-    constructor(public type: number, public value: string | number | boolean) {
+    constructor(public type: number | string, public value: string | number | boolean) {
         super();
     }
 
@@ -107,12 +107,12 @@ class Comment extends Node {
 }
 
 export class Variable extends Node {
-    constructor(public name: string, public type: string, public isArray: boolean, public value: any) {
+    constructor(public name: string, public type: string, public isArray: boolean, public value: Value, public isGlobal = false) {
         super();
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName('v' + this.name, reservedNames);
+        return y3.lua.getValidName((this.isGlobal ? 'V' : 'v') + this.name, reservedNames);
     }
 
     makeArgs(formatter: Formatter) {
@@ -209,7 +209,7 @@ export class Trigger {
             let variableMap: Record<string, Variable> = {};
             for (let [type, data] of Object.entries(varData[0])) {
                 for (let [name, value] of Object.entries(data)) {
-                    variableMap[name] = new Variable(name, type, varData[1][name] !== 0, value);
+                    variableMap[name] = new Variable(name, type, varData[1][name] !== 0, new Value(type, value));
                 }
             }
             for (let name of varData[2]) {
@@ -285,7 +285,7 @@ export class GlobalVariables {
             const group = dict[type];
             for (const name in group) {
                 const value = group[name];
-                const variable = new Variable(name, type, false, value);
+                const variable = new Variable(name, type, false, new Value(type, value), true);
                 this.variables.set(name, variable);
             }
         }
@@ -294,7 +294,7 @@ export class GlobalVariables {
     make(formatter: Formatter) {
         let buffer: string[] = [];
         for (const variable of this.variables.values()) {
-            buffer.push(formatter.formatVariable(variable, true));
+            buffer.push(formatter.formatVariable(variable));
             buffer.push('\n');
         }
         let content = buffer.join('');

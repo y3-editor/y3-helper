@@ -148,16 +148,16 @@ class RuleHandler {
         for (i = 0;i < this._parts!.length;i++) {
             let part = this._parts![i];
             if (typeof part === 'number') {
-                if ('args' in node) {
-                    let value = node.args?.[part - 1];
-                    if (value) {
-                        if (optionalGaurd) {
-                            optionalGaurd.hasValue = true;
-                        }
-                        buf.push(value.make(formatter));
-                    } else {
-                        buf.push('nil');
+                let value = node.args?.[part - 1];
+                if (value) {
+                    if (optionalGaurd) {
+                        optionalGaurd.hasValue = true;
                     }
+                    buf.push(value.make(formatter));
+                } else if (node instanceof Value && part === 1) {
+                    buf.push(y3.lua.encode(node.value));
+                } else {
+                    buf.push('nil');
                 }
             } else if (typeof part === 'string') {
                 buf.push(part);
@@ -221,7 +221,7 @@ export class Formatter {
         return str;
     }
 
-    public formatValue(type: number, node: Value) {
+    public formatValue(type: number | string, node: Value) {
         let rule = this.rules.get(type);
         if (!rule) {
             return y3.lua.encode(node.value);
@@ -233,10 +233,10 @@ export class Formatter {
         return trg.actions.map((action) => action.make(this)).join('\n');
     }
 
-    public formatVariable(variable: Variable, isGlobal = false): string {
+    public formatVariable(variable: Variable): string {
         const name = variable.make(this);
-        const value = y3.lua.encode(variable.value);
-        const localHead = isGlobal ? '' : 'local ';
+        const value = this.formatValue(variable.type, variable.value);
+        const localHead = variable.isGlobal ? '' : 'local ';
         if (variable.isArray) {
             return `${localHead}${name} = y3.eca_rt.array(${value})`;
         } else {

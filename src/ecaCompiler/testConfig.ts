@@ -209,6 +209,7 @@ export async function fillStatic(formatter: Formatter) {
             [0xDC]: 'RWIN', // 右Win
             [0xDD]: 'APPS', // 应用
         }))
+        . setRule('PLAYER', 'y3.player({})')
 
         . setRule('UNIT_ENTITY_POINT', '{}:get_point()')
         . setRule('ALL_PLAYER', 'y3.player_group.get_all_players()')
