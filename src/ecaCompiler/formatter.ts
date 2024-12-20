@@ -243,7 +243,7 @@ export class Formatter {
         const value = this.formatValue(variable.type, variable.value);
         const localHead = variable.isGlobal ? '' : 'local ';
         if (variable.isArray) {
-            return `${localHead}${name} = y3.eca_rt.array(${value})`;
+            return `${localHead}${name} = y3.eca_rt.array(${y3.lua.encode(value)})`;
         } else {
             return `${localHead}${name} = ${value}`;
         }
