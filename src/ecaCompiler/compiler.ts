@@ -281,11 +281,12 @@ export class GlobalVariables {
 
     constructor(private json: y3.json.JObject) {
         const dict = json.variable_dict as Record<string, Record<string, any>>;
+        const length = json.variable_length_dict as Record<string, number>;
         for (const type in dict) {
             const group = dict[type];
             for (const name in group) {
                 const value = group[name];
-                const variable = new Variable(name, type, false, new Value(type, value), true);
+                const variable = new Variable(name, type, length[name] === 10, new Value(type, value), true);
                 this.variables.set(name, variable);
             }
         }

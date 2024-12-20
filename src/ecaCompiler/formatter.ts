@@ -36,7 +36,7 @@ class RuleHandler {
     private _children?: Map<any, RuleHandler>;
 
     private compile(rule: string) {
-        const regex = /\{[^\{\}]*\}|\<\?|\?\>/g;
+        const regex = /\{[^\{\}]*\}|\<\?|\?\>|%/g;
         let match;
         let lastIndex = 0;
         let curDefault = 1;
@@ -55,6 +55,11 @@ class RuleHandler {
             lastIndex = matchEnd;
 
             switch (match[0]) {
+                case '%':
+                    parts.push(rule.slice(lastIndex, lastIndex + 1));
+                    lastIndex++;
+                    regex.lastIndex = lastIndex;
+                    continue;
                 case '<?':
                     let last = parts[parts.length - 1];
                     if (typeof last === 'string' && last?.endsWith('  ')) {

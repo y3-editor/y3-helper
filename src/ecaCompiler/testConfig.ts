@@ -210,6 +210,10 @@ export async function fillStatic(formatter: Formatter) {
             [0xDD]: 'APPS', // 应用
         }))
         . setRule('PLAYER', 'y3.player({})')
+        . setRule('POINT', 'y3.point(0, 0)')
+        . setRule('PLAYER_GROUP', 'y3.player_group.create()')
+        . setRule('UNIT_GROUP', 'y3.unit_group.create()')
+        . setRule('TABLE', '%{%}')
 
         . setRule('UNIT_ENTITY_POINT', '{}:get_point()')
         . setRule('ALL_PLAYER', 'y3.player_group.get_all_players()')
