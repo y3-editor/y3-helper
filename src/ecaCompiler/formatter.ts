@@ -243,7 +243,17 @@ export class Formatter {
         const value = this.formatValue(variable.type, variable.value);
         const localHead = variable.isGlobal ? '' : 'local ';
         if (variable.isArray) {
-            return `${localHead}${name} = y3.eca_rt.array(${y3.lua.encode(value)})`;
+            if (value === 'nil') {
+                return `${localHead}${name} = y3.eca_rt.array()`;
+            } else if (value === '""') {
+                return `${localHead}${name} = y3.eca_rt.array("")`;
+            } else if ((value === '0' || value === '-1') && variable.type !== 'INTEGER') {
+                return `${localHead}${name} = y3.eca_rt.array()`;
+            } else if (variable.type === 'BOOLEAN' || variable.type === 'FLOAT' || variable.type === 'INTEGER') {
+                return `${localHead}${name} = y3.eca_rt.array(${value})`;
+            } else {
+                return `${localHead}${name} = y3.eca_rt.array(${y3.lua.encode(value)})`;
+            }
         } else {
             return `${localHead}${name} = ${value}`;
         }

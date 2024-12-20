@@ -2,6 +2,7 @@
 import { Formatter } from './formatter';
 import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
+import { Value } from './compiler';
 
 const metaDir = 'src\\helper_meta\\trigger';
 
@@ -214,6 +215,7 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('PLAYER_GROUP', 'y3.player_group.create()')
         . setRule('UNIT_GROUP', 'y3.unit_group.create()')
         . setRule('TABLE', '%{%}')
+        . setRule('FLOAT', (v) => ((v as Value).value as Number).toFixed(1))
 
         . setRule('UNIT_ENTITY_POINT', '{}:get_point()')
         . setRule('ALL_PLAYER', 'y3.player_group.get_all_players()')
