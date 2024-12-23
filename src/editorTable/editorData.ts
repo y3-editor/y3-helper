@@ -227,13 +227,13 @@ export function valueOnSet(fieldInfo: FieldInfo, value: any, raw: any, convertTy
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_name`;
         const hashKey = hash(key);
         y3.language.set(hashKey, value);
-        return hashKey;
+        return BigInt(hashKey);
     }
     if (fieldInfo.field === 'description' && objectKey !== undefined) {
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_description`;
         const hashKey = hash(key);
         y3.language.set(hashKey, value);
-        return hashKey;
+        return BigInt(hashKey);
     }
     value = checkAndConvertType(fieldInfo, value, convertType);
     if (fieldInfo.type === 'PLocalizeText') {
