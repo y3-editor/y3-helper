@@ -18,10 +18,16 @@ export class 地图管理 extends TreeNode {
                 let entryMap = y3.env.project?.entryMap;
                 let currentMap = y3.env.currentMap;
                 node.childs = y3.env.project?.maps.map(map => {
-                    return new TreeNode(map.name, {
-                        iconPath: map === entryMap ? new vscode.ThemeIcon('star-full') : new vscode.ThemeIcon('star-empty'),
-                        description: map === currentMap ? '当前地图' : undefined,
-                        tooltip: `id: ${String(map.id)}\n\n点击切换至此地图`,
+                    return new TreeNode(`${map.description}`, {
+                        iconPath: map === currentMap
+                                ? new vscode.ThemeIcon('arrow-circle-right')
+                                : new vscode.ThemeIcon('circle-outline'),
+                        description: map === entryMap
+                                ? `${map.name}(主地图)`
+                                : map.name,
+                        tooltip: map === currentMap
+                                ? `id: ${String(map.id)}\n\n这是当前地图`
+                                : `id: ${String(map.id)}\n\n点击切换至此地图`,
                         command: {
                             command: "y3-helper.changeMap",
                             title: "切换地图",

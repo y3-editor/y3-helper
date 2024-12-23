@@ -14,29 +14,46 @@ type EditorVersion = '1.0' | '2.0' | 'unknown';
 class Map {
     id: bigint = 0n;
     editorTable: EditorManager;
+    description: string;
     scriptUri: vscode.Uri;
     constructor(public name: string, public uri: vscode.Uri) {
         this.editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
         this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
+        this.description = name;
         y3.language.onDidChange(() => {
             this.editorTable.flushName();
         });
     }
 
     async start() {
-        let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
-        if (!headerMap) {
-            return;
-        }
-        let headerMapJson = jsonc.parseTree(headerMap.string);
-        if (!headerMapJson) {
-            return;
-        }
-        let idNode = jsonc.findNodeAtLocation(headerMapJson, ['id']);
-        if (!idNode) {
-            return;
-        }
-        this.id = BigInt(headerMap.string.slice(idNode.offset, idNode.offset + idNode.length));
+        await Promise.all([
+            (async () => {
+                let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
+                if (!headerMap) {
+                    return;
+                }
+                let headerMapJson = jsonc.parseTree(headerMap.string);
+                if (!headerMapJson) {
+                    return;
+                }
+                let idNode = jsonc.findNodeAtLocation(headerMapJson, ['id']);
+                if (!idNode) {
+                    return;
+                }
+                this.id = BigInt(headerMap.string.slice(idNode.offset, idNode.offset + idNode.length));
+            })(),
+            (async () => {
+                let descFile = await y3.fs.readFile(y3.uri(this.uri, 'desc.json'));
+                if (!descFile) {
+                    return;
+                }
+                let descJson = jsonc.parse(descFile.string);
+                if (!descJson) {
+                    return;
+                }
+                this.description = descJson.name;
+            })(),
+        ]);
     }
 }
 
