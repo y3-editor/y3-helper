@@ -35,16 +35,16 @@ export function init(context: vscode.ExtensionContext) {
     let debug = require('../' + debuggerPath + '/js/extension.js');
     debug.activate(debuggerContext);
 
-    function update_debugger_path() {
+    function updateDebuggerPath() {
         if (!env.scriptUri) {
             return;
         }
         tools.fs.writeFile(env.scriptUri, 'log/debugger_path.lua', `return [[${debuggerContext.extensionUri.fsPath}]]`);
     }
 
-    update_debugger_path();
+    updateDebuggerPath();
     env.onDidChange(() => {
-        update_debugger_path();
+        updateDebuggerPath();
     });
 
     let launch = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
@@ -57,7 +57,7 @@ export function init(context: vscode.ExtensionContext) {
     attach.tooltip = '附加调试器';
     attach.command = 'y3-helper.attach';
 
-    function update_items() {
+    function updateItems() {
         if (vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('ShowStatusBarItem')) {
             launch.show();
             attach.show();
@@ -67,9 +67,9 @@ export function init(context: vscode.ExtensionContext) {
         }
     }
 
-    update_items();
+    updateItems();
     vscode.workspace.onDidChangeConfiguration(() => {
-        update_items();
+        updateItems();
     });
 
     vscode.debug.onDidStartDebugSession((e) => {
@@ -85,6 +85,28 @@ export function init(context: vscode.ExtensionContext) {
             debugSessions.splice(idx, 1);
         }
     });
+
+    startWaitDebuggerHelper();
+}
+
+async function startWaitDebuggerHelper() {
+    while (true) {
+        await y3.sleep(1000);
+        if (!env.project) {
+            continue;
+        }
+        let needAttach = false;
+        for (const map of env.project.maps) {
+            const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
+            if (await y3.fs.isExists(logPath)) {
+                await y3.fs.removeFile(logPath);
+                needAttach = true;
+            }
+        }
+        if (needAttach && debugSessions.length === 0) {
+            await attach();
+        }
+    }
 }
 
 function getName(id?: number) {
