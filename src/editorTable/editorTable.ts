@@ -96,7 +96,7 @@ export async function ready() {
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     private _json?: y3.json.Json;
     private _name?: string;
-    public text?: string;
+    private _text?: string;
     public uri?: vscode.Uri;
     constructor(private manager: EditorManager, public tableName: N, public key: number) {}
 
@@ -115,6 +115,24 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             this._json = new EditorJson(this.text);
         }
         return this._json;
+    }
+
+    public get text(): string | undefined {
+        if (this._text === undefined) {
+            if (!this._json) {
+                return undefined;
+            }
+            this._text = this._json.text;
+        }
+        return this._text;
+    }
+
+    public set text(text: string) {
+        if (text === this._text) {
+            return;
+        }
+        this._text = text;
+        this._json = undefined;
     }
 
     /**
@@ -180,6 +198,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         }
         let res = this.json.set(key, value);
         if (res) {
+            this._text = undefined;
             this.updateFile();
         }
         return res;

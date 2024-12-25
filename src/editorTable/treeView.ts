@@ -17,25 +17,28 @@ class FileNode extends vscode.TreeItem {
         this.id = `${tableName}/${key}`;
     }
 
-    public object?: editorTable.EditorObject<any>;
     public update(): void | Promise<void> {
         let table = editorTable.openTable(this.tableName);
-        this.object = table.fetch(this.key);
+        let object = table.fetch(this.key);
         this.command = {
             command: 'vscode.open',
             title: '打开文件',
             arguments: [table.getUri(this.key)],
         };
-        if (this.object) {
-            this.label = `${this.object.name}(${this.key})`;
-            this.resourceUri = this.object.uri;
+        if (object) {
+            this.label = `${object.name}(${this.key})`;
+            this.resourceUri = object.uri;
             return;
-        } else if (this.object === undefined) {
+        } else if (object === undefined) {
             return new Promise<void>(async resolve => {
                 await table.get(this.key);
                 resolve();
             });
         }
+    }
+
+    get object() {
+        return editorTable.openTable(this.tableName).fetch(this.key);
     }
 }
 
@@ -203,12 +206,13 @@ class TreeView extends vscode.Disposable {
 
         // 重命名
         vscode.commands.registerCommand("y3-helper.renameEditorTableItem", async (fileNode: FileNode) => {
-            if (!fileNode.object) {
+            const object = fileNode.object;
+            if (!object) {
                 return;
             }
             const inputOptions: vscode.InputBoxOptions = {
                 prompt: '修改后的新名称',
-                value: fileNode.object.name,
+                value: object.name,
                 placeHolder: '新名称',
                 validateInput: (text: string) => {
                     if (text.length === 0) {
@@ -218,18 +222,19 @@ class TreeView extends vscode.Disposable {
                 }
             };
             let value = await vscode.window.showInputBox(inputOptions);
-            if (!value || value === fileNode.object.name) {
+            if (!value || value === object.name) {
                 return;
             }
-            fileNode.object.data.name = value;
+            object.data.name = value;
         });
 
         // 复制对象
         vscode.commands.registerCommand("y3-helper.copyFromEditorTableItem", async (fileNode: FileNode) => {
-            if (!fileNode.object) {
+            const object = fileNode.object;
+            if (!object) {
                 return;
             }
-            let name = fileNode.object.name;
+            let name = object.name;
             if (name.match(/（复制）/)) {
                 name = name.replace(/（复制）/, '（复制 2）');
             } else if (name.match(/（复制 \d+）/)) {
@@ -238,7 +243,7 @@ class TreeView extends vscode.Disposable {
                 name += '（复制）';
             }
 
-            let newObj = await this.createObject(fileNode.tableName, name, fileNode.object.key);
+            let newObj = await this.createObject(fileNode.tableName, name, object.key);
 
             if (!newObj) {
                 y3.log.error('复制失败');

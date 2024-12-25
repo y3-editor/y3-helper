@@ -165,21 +165,17 @@ export async function set(key: string | number, value: string) {
 /**
  * 获取中文文本对应的key，如果不存在会新建
  * @param value 中文文本
- * @param preferNumber 如果可能，将key转换为整数
  */
 export function keyOf(value: string | number, preferNumber?: boolean): string | bigint {
     if (typeof value === 'number') {
         value = value.toString();
     }
     let key = language.keyOf(value);
-    if (preferNumber) {
-        try {
-            return BigInt(key);
-        } catch {
-            return key;
-        }
+    try {
+        return BigInt(key);
+    } catch {
+        return key;
     }
-    return key;
 }
 
 export function onDidChange(listener: () => void) {
