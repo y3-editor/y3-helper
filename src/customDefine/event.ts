@@ -31,8 +31,11 @@ export class Events extends BaseDefine {
     constructor() {
         super();
 
-        this.eventsCache = new tools.Cache(this.loadEvents.bind(this));
-        this.folderCache = new tools.Cache(this.loadEventsFolder.bind(this));
+        this.eventsCache = new tools.Cache(this.loadEvents.bind(this), []);
+        this.folderCache = new tools.Cache(this.loadEventsFolder.bind(this), {
+            name: '<root>',
+            childs: {},
+        });
 
         this.onDidChange(() => {
             this.eventsCache.updateVersion();
@@ -49,67 +52,64 @@ export class Events extends BaseDefine {
 
     private async loadEvents() {
         let events: Event[] = [];
-        try {
-            if (!env.mapUri) {
-                return events;
-            }
-            let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
-            if (!jsonFile) {
-                return events;
-            }
-            let json = JSON.parse(jsonFile.string);
-            if (typeof json !== 'object') {
-                return events;
-            }
-
-            // 自定义单位属性
-            function lookInto(folder: any[], path: string[]) {
-                if (!Array.isArray(folder)) {
-                    return;
-                }
-                for (let item of folder) {
-                    if (typeof item !== 'object') {
-                        continue;
-                    }
-                    if (Array.isArray(item.items)) {
-                        let id = item.items[0];
-                        let name = item.items[1];
-                        if (id && name) {
-                            events.push({
-                                name,
-                                id,
-                                args: [],
-                                path,
-                            });
-                        }
-                    } else {
-                        lookInto(item.group, [...path, item.name]);
-                    }
-                }
-            }
-            lookInto(json.group_info, []);
-
-            for (const event of events) {
-                let conf = json.conf?.[event.id.toString()];
-                if (!conf) {
-                    continue;
-                }
-                for (let item of conf) {
-                    let name = item[0];
-                    let type: Table.TypeID = item[1];
-                    if (name && type) {
-                        event.args.push({
-                            name,
-                            type,
-                            luaType: Table.type.toLuaType[type] ?? 'any',
-                            desc: Table.type.toName[type] ?? '不支持的类型',
-                        });
-                    }
-                }
-            }
-        } finally {
+        if (!env.mapUri) {
             return events;
         }
+        let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
+        if (!jsonFile) {
+            return events;
+        }
+        let json = JSON.parse(jsonFile.string);
+        if (typeof json !== 'object') {
+            return events;
+        }
+
+        // 自定义单位属性
+        function lookInto(folder: any[], path: string[]) {
+            if (!Array.isArray(folder)) {
+                return;
+            }
+            for (let item of folder) {
+                if (typeof item !== 'object') {
+                    continue;
+                }
+                if (Array.isArray(item.items)) {
+                    let id = item.items[0];
+                    let name = item.items[1];
+                    if (id && name) {
+                        events.push({
+                            name,
+                            id,
+                            args: [],
+                            path,
+                        });
+                    }
+                } else {
+                    lookInto(item.group, [...path, item.name]);
+                }
+            }
+        }
+        lookInto(json.group_info, []);
+
+        for (const event of events) {
+            let conf = json.conf?.[event.id.toString()];
+            if (!conf) {
+                continue;
+            }
+            for (let item of conf) {
+                let name = item[0];
+                let type: Table.TypeID = item[1];
+                if (name && type) {
+                    event.args.push({
+                        name,
+                        type,
+                        luaType: Table.type.toLuaType[type] ?? 'any',
+                        desc: Table.type.toName[type] ?? '不支持的类型',
+                    });
+                }
+            }
+        }
+        return events;
     }
 
     public async getEvents() {

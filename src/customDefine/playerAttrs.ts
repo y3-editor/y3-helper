@@ -15,14 +15,12 @@ export class PlayerAttrs extends BaseDefine {
     constructor() {
         super();
 
-        this.cache = new tools.Cache(this.loadAttrs.bind(this));
+        this.cache = new tools.Cache(this.loadAttrs.bind(this), []);
         
         this.onDidChange(() => {
             this.cache.updateVersion();
         });
     }
-
-    private _attrsCache?: Attr[];
 
     get watchPattern() {
         if (!env.projectUri) {
@@ -33,31 +31,28 @@ export class PlayerAttrs extends BaseDefine {
 
     private async loadAttrs() {
         let attrs: Attr[] = [];
-        try {
-            if (!env.projectUri) {
-                return attrs;
-            }
-            let jsonFile = await tools.fs.readFile(env.projectUri, filePath);
-            if (!jsonFile) {
-                return attrs;
-            }
-            let json = JSON.parse(jsonFile.string);
-            if (typeof json !== 'object') {
-                return attrs;
-            }
-            if (!Array.isArray(json.role_res_types)) {
-                return attrs;
-            }
-            for (let item of json.role_res_types) {
-                let name = item.items?.[1]?.name;
-                let key  = item.items?.[1]?.key;
-                if (name && key) {
-                    attrs.push({name, key});
-                }
-            }
-        } finally {
+        if (!env.projectUri) {
             return attrs;
         }
+        let jsonFile = await tools.fs.readFile(env.projectUri, filePath);
+        if (!jsonFile) {
+            return attrs;
+        }
+        let json = JSON.parse(jsonFile.string);
+        if (typeof json !== 'object') {
+            return attrs;
+        }
+        if (!Array.isArray(json.role_res_types)) {
+            return attrs;
+        }
+        for (let item of json.role_res_types) {
+            let name = item.items?.[1]?.name;
+            let key  = item.items?.[1]?.key;
+            if (name && key) {
+                attrs.push({name, key});
+            }
+        }
+        return attrs;
     }
 
     public async getAttrs() {

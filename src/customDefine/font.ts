@@ -15,7 +15,7 @@ export class Font extends BaseDefine {
     constructor() {
         super();
 
-        this.cache = new tools.Cache(this.makeWords.bind(this));
+        this.cache = new tools.Cache(this.makeWords.bind(this), []);
 
         this.onDidChange(() => {
             this.cache.updateVersion();
@@ -30,30 +30,26 @@ export class Font extends BaseDefine {
     }
 
     private async makeWords(): Promise<Data[]> {
-        try {
-            if (!y3.env.projectUri) {
-                return [];
-            }
-            let file = await y3.fs.readFile(y3.env.projectUri, fileName);
-            if (!file) {
-                return [];
-            }
-            let json = JSON.parse(file.string);
-            let words: Data[] = [];
-            for (const uid in json) {
-                let obj = json[uid];
-                if (!obj.name || obj.is_official) {
-                    continue;
-                }
-                words.push({
-                    uid: uid,
-                    name: obj.name,
-                });
-            }
-            return words;
-        } catch {
+        if (!y3.env.projectUri) {
             return [];
         }
+        let file = await y3.fs.readFile(y3.env.projectUri, fileName);
+        if (!file) {
+            return [];
+        }
+        let json = JSON.parse(file.string);
+        let words: Data[] = [];
+        for (const uid in json) {
+            let obj = json[uid];
+            if (!obj.name || obj.is_official) {
+                continue;
+            }
+            words.push({
+                uid: uid,
+                name: obj.name,
+            });
+        }
+        return words;
     }
 
     public async get(): Promise<Data[]> {

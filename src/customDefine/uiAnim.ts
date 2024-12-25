@@ -29,7 +29,7 @@ export class UIAnim extends BaseDefine {
     constructor() {
         super();
 
-        this.cache = new tools.Cache(this.makeAnims.bind(this));
+        this.cache = new tools.Cache(this.makeAnims.bind(this), []);
 
         this.onDidChange(() => {
             this.cache.updateVersion();
@@ -44,31 +44,27 @@ export class UIAnim extends BaseDefine {
     }
 
     private async makeAnims(): Promise<Anim[]> {
-        try {
-            if (!y3.env.mapUri) {
-                return [];
-            }
-            let file = await y3.fs.readFile(y3.env.mapUri, fileName);
-            if (!file) {
-                return [];
-            }
-            let json = JSON.parse(file.string);
-            let anims: Anim[] = [];
-            for (const uid in json) {
-                let obj = json[uid];
-                anims.push({
-                    name: obj.anim_name,
-                    uid: uid,
-                    group: obj.group,
-                    frame: obj.f_rt,
-                    maxFrame: obj.max_frame,
-                    playMode: (playMode as any)[obj.play_mode],
-                });
-            }
-            return anims;
-        } catch {
+        if (!y3.env.mapUri) {
             return [];
         }
+        let file = await y3.fs.readFile(y3.env.mapUri, fileName);
+        if (!file) {
+            return [];
+        }
+        let json = JSON.parse(file.string);
+        let anims: Anim[] = [];
+        for (const uid in json) {
+            let obj = json[uid];
+            anims.push({
+                name: obj.anim_name,
+                uid: uid,
+                group: obj.group,
+                frame: obj.f_rt,
+                maxFrame: obj.max_frame,
+                playMode: (playMode as any)[obj.play_mode],
+            });
+        }
+        return anims;
     }
 
     public async get(): Promise<Anim[]> {

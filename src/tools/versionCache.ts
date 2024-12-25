@@ -1,24 +1,31 @@
+import * as y3 from 'y3-helper';
+
 export class VersionCache<T> {
-    constructor(private maker: () => T | Promise<T>) { }
+    constructor(private maker: () => T | Promise<T>, private cache: T) { }
 
     private version = 0;
-
-    private cache?: T;
+    private hasNew = false;
 
     public updateVersion() {
         this.version++;
-        this.cache = undefined;
+        this.hasNew = true;
     }
     
     public async get() {
-        if (this.cache !== undefined) {
+        if (!this.hasNew) {
             return this.cache;
         }
         let version = this.version;
-        let result = await this.maker();
-        if (this.version === version) {
-            this.cache = result;
+        try {
+            let result = await this.maker();
+            if (this.version === version) {
+                this.cache = result;
+                this.hasNew = false;
+            }
+            return result;
+        } catch (e) {
+            y3.log.error(e as Error);
+            return this.cache;
         }
-        return result;
     }
 }
