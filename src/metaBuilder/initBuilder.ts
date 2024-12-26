@@ -29,7 +29,7 @@ class InitBuilder extends BaseBuilder {
                 let name = builder.path
                     .replace(/\.lua$/, '')
                     .replace(/[\\/]/g, '.');
-                return `require '${name}'`;
+                return `include '${name}'`;
             });
         if (codes.length === 0) {
             return;
