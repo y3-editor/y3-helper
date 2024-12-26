@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { env } from '../env';
 import * as y3 from 'y3-helper';
-import { hash } from '../utility';
-import { throttle } from '../utility/decorators';
+import { hash, SpinLock } from '../utility';
+import { throttle, queue } from '../utility/decorators';
 
 const onDidChangeEmitter = new vscode.EventEmitter<void>();
 
@@ -28,14 +28,30 @@ class Language extends vscode.Disposable {
 
     private _mapLanguage?: y3.json.Json;
     private _mapReverse?: { [key: string]: string } = {};
+    private _ioLock = new SpinLock();
+    private _lastWriteTime = 0;
+
+    @throttle(500)
     async reload() {
+        if (this._waitWrite || Date.now() - this._lastWriteTime < 1000) {
+            this.reload();
+            return;
+        }
         this._mapReady = false;
+        if (!this.mapUri) {
+            return;
+        }
         try {
-            if (!this.mapUri) {
+            await this._ioLock.acquire();
+            y3.log.debug('开始读取语言文件');
+            let languageFile = await y3.fs.readFile(this.mapUri);
+            y3.log.debug('语言文件读取完成');
+            this._ioLock.release();
+            if (!languageFile) {
                 return;
             }
-            let languageFile = await y3.fs.readFile(this.mapUri);
-            if (!languageFile) {
+            if (this._waitWrite || Date.now() - this._lastWriteTime < 1000) {
+                this.reload();
                 return;
             }
             try {
@@ -72,15 +88,18 @@ class Language extends vscode.Disposable {
         return value;
     }
 
+    private _waitWrite = false;
     async set(key: string, value: string) {
-        await this.ready();
         if (this.get(key) === value) {
             return;
         }
+        y3.log.debug(`设置中文文本：${key} => ${value}`);
         this._mapLanguage?.set(key, value);
         if (this._mapReverse) {
             this._mapReverse[value] = key;
         }
+        this._waitWrite = true;
+        this._lastWriteTime = Date.now();
         this.updateFile();
     }
 
@@ -119,12 +138,18 @@ class Language extends vscode.Disposable {
 
     @throttle(500)
     private async updateFile() {
-        await this.ready();
+        this._waitWrite = false;
         let content = this._mapLanguage?.text;
         if (!content) {
             return;
         }
+        await this._ioLock.acquire();
+        this._lastWriteTime = Date.now();
+        y3.log.debug('开始写入语言文件');
         await y3.fs.writeFile(this.mapUri!, content);
+        y3.log.debug('语言文件写入完成');
+        this._ioLock.release();
+        this._lastWriteTime = Date.now();
     }
 }
 
@@ -155,7 +180,7 @@ export function get(key: string | number): string | undefined {
 /**
  * 添加中文文本
  */
-export async function set(key: string | number, value: string) {
+export function set(key: string | number, value: string) {
     if (typeof key === 'number') {
         key = key.toString();
     }

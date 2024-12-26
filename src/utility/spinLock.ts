@@ -4,7 +4,7 @@ import util from 'util';
  */
 export class SpinLock {
     private locked: boolean = false;
-    private waitTime = 0;
+    private waitTime = 100;
 
     constructor(waitTime?: number) {
         if (waitTime) {
