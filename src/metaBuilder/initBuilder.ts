@@ -24,7 +24,6 @@ class InitBuilder extends BaseBuilder {
             return;
         }
         let codes = this.builders
-            .filter((builder) => builder.exists)
             .map((builder) => {
                 // 将正斜杠和反斜杠替换为点号
                 let name = builder.path
@@ -41,10 +40,6 @@ class InitBuilder extends BaseBuilder {
     public addChild(builder: any, fileName: string) {
         let instance = new builder(luaPath + '/' + fileName);
         this.addFile(instance);
-        instance.onDidChange(() => {
-            this.update();
-        });
-
     }
 }
 
@@ -59,6 +54,10 @@ export function init() {
     initBuilder.addChild(JumpWord, 'jumpword.lua');
     initBuilder.addChild(Font, 'font.lua');
     //initBuilder.addChild(Objects, 'objects.lua');
+
+    env.onDidChange(() => {
+        initBuilder.update();
+    });
 
     new TS(tsPath + '/map-declare.d.ts');
 }

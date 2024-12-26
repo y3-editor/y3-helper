@@ -1,45 +1,19 @@
 import * as vscode from 'vscode';
 import { env } from '../env';
 import * as tools from '../tools';
+import { throttle } from '../utility/decorators';
 
 export abstract class BaseBuilder {
-    constructor(public path: string) {
-    }
-    protected _onDidChange = new vscode.EventEmitter<void>();
+    constructor(public path: string) { }
 
-    public onDidChange = this._onDidChange.event;
-
-    public exists = false;
-
-    private debounceTimer?: NodeJS.Timeout;
-    public update() {
-        if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
-        }
-        this.debounceTimer = setTimeout(() => {
-            this.debounceTimer = undefined;
-            this.didUpdate();
-        }, 1000);
-    }
-
-    private async didUpdate() {
+    @throttle(500)
+    public async update() {
         if (!env.scriptUri) {
-            this.updateExists(false);
             return;
         }
         let code = await this.make();
         if (code) {
-            this.updateExists(await tools.fs.writeFile(env.scriptUri, this.path, code));
-        } else {
-            tools.fs.removeFile(env.scriptUri, this.path);
-            this.updateExists(false);
-        }
-    }
-
-    private updateExists(exists: boolean) {
-        if (exists !== this.exists) {
-            this.exists = exists;
-            this._onDidChange.fire();
+            await tools.fs.writeFile(env.scriptUri, this.path, code);
         }
     }
 
