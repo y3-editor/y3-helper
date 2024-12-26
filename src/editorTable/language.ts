@@ -170,8 +170,8 @@ export async function ready() {
 /**
  * 根据key获取中文文本
  */
-export function get(key: string | number): string | undefined {
-    if (typeof key === 'number') {
+export function get(key: string | number | bigint): string | undefined {
+    if (typeof key === 'number' || typeof key === 'bigint') {
         key = key.toString();
     }
     return language.get(key);
@@ -180,8 +180,8 @@ export function get(key: string | number): string | undefined {
 /**
  * 添加中文文本
  */
-export function set(key: string | number, value: string) {
-    if (typeof key === 'number') {
+export function set(key: string | number | bigint, value: string) {
+    if (typeof key === 'number' || typeof key === 'bigint') {
         key = key.toString();
     }
     language.set(key, value);

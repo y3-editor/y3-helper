@@ -153,76 +153,78 @@ export function toCode(s: string):number[]{
     return res;
 }
 
-
 /**
  * 对字符串进行哈希，用以分配字符串在zhlanguage.json中的key
  * @param s 
  * @param seed 
  * @returns 
  */
-export function hash(s:string,seed:number=0x0): number{
+export function hash(s: string, seed = 0x0n): bigint{
     
     let key = toCode(s);
 
-    function fmix(h: number):number {
-        h ^= h >> 16;
-        h = (h * 0x85ebca6b) & 0xFFFFFFFF;
-        h ^= h >> 13;
-        h = (h * 0xc2b2ae35) & 0xFFFFFFFF;
-        h ^= h >> 16;
+    function fmix(h: bigint): bigint {
+        h ^= h >> 16n;
+        h = (h * 0x85ebca6bn) & 0xFFFFFFFFn;
+        h ^= h >> 13n;
+        h = (h * 0xc2b2ae35n) & 0xFFFFFFFFn;
+        h ^= h >> 16n;
         return h;
     }
 
-    let length = key.length;
-    let nblocks = Math.floor(length / 4);
+    let length = BigInt(key.length);
+    let nblocks = length / 4n;
 
     let h1 = seed;
 
-    let c1 = 0xcc9e2d51;
-    let c2 = 0x1b873593;
+    let c1 = 0xcc9e2d51n;
+    let c2 = 0x1b873593n;
 
 	// body
-    for (let blockStart: number = 0; blockStart < nblocks * 4;blockStart+=4 ){
-        let k1: number = key[blockStart + 3] << 24 | key[blockStart + 2] << 16 | key[blockStart + 1] << 8 | key[blockStart + 0];
+    for (let blockStart = 0n; blockStart < nblocks * 4n; blockStart += 4n){
+        let k1: bigint =  BigInt(key[Number(blockStart + 3n)]) << 24n
+                        | BigInt(key[Number(blockStart + 2n)]) << 16n
+                        | BigInt(key[Number(blockStart + 1n)]) << 8n
+                        | BigInt(key[Number(blockStart + 0n)]);
 
-        k1 = (c1 * k1) & 0xFFFFFFFF;
-        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;
-        k1 = (c2 * k1) & 0xFFFFFFFF;
+        k1 = (c1 * k1) & 0xFFFFFFFFn;
+        k1 = (k1 << 15n | k1 >> 17n) & 0xFFFFFFFFn;
+        k1 = (c2 * k1) & 0xFFFFFFFFn;
 
         h1 ^= k1;
-        h1 = (h1 << 13 | h1 >> 19) & 0xFFFFFFFF;
-        h1 = (h1 * 5 + 0xe6546b64) & 0xFFFFFFFF;
+        h1 = (h1 << 13n | h1 >> 19n) & 0xFFFFFFFFn;
+        h1 = (h1 * 5n + 0xe6546b64n) & 0xFFFFFFFFn;
     }
-		
+
     // tail
-    let tailIndex: number = nblocks * 4;
-    let k1: number = 0;
-    let tailSize: number = length & 3;
+    let tailIndex = nblocks * 4n;
+    let k1 = 0n;
+    let tailSize = BigInt(length) & 3n;
 
-    if (tailSize >= 3) {
-        k1 ^= key[tailIndex + 2] << 16;
+    if (tailSize >= 3n) {
+        k1 ^= BigInt(key[Number(tailIndex + 2n)]) << 16n;
     }
-    if (tailSize >= 2) {
-        k1 ^= key[tailIndex + 1] << 8;
+    if (tailSize >= 2n) {
+        k1 ^= BigInt(key[Number(tailIndex + 1n)]) << 8n;
     }
-    if (tailSize >= 1) {
-        k1 ^= key[tailIndex + 0];
+    if (tailSize >= 1n) {
+        k1 ^= BigInt(key[Number(tailIndex + 0n)]);
     }
 
-    if (tailSize > 0) {
-        k1 = (k1 * c1) & 0xFFFFFFFF;
-        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF;  // inlined ROTL32
-        k1 = (k1 * c2) & 0xFFFFFFFF;
+    if (tailSize > 0n) {
+        k1 = (k1 * c1) & 0xFFFFFFFFn;
+        k1 = (k1 << 15n | k1 >> 17n) & 0xFFFFFFFFn;  // inlined ROTL32
+        k1 = (k1 * c2) & 0xFFFFFFFFn;
         h1 ^= k1;
     }
 
     // finalization
-    let unsignedVal:number = fmix(h1 ^ length);
-    if ((unsignedVal & 0x80000000) === 0) {
+    let unsignedVal = fmix(h1 ^ length);
+    if ((unsignedVal & 0x80000000n) === 0n) {
         return unsignedVal;
     }
     else {
-        return -((unsignedVal ^ 0xFFFFFFFF) + 1);
+        return -((unsignedVal ^ 0xFFFFFFFFn) + 1n);
     }
 }
 
