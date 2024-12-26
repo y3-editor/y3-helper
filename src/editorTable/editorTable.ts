@@ -551,7 +551,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
         this._listCache.sort((a, b) => a - b);
     }
 
-    @throttle(200)
+    @throttle(500)
     private notifyChange() {
         this.resortList();
         this._onDidChange.fire();
