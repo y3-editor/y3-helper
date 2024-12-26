@@ -152,6 +152,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
             }
             return value;
         }
+        case 'PResource':
         case 'PInt': {
             if (convertType) {
                 try {
