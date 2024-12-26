@@ -4861,11 +4861,6 @@ declare class EditorManager {
 	 * @returns 表对象
 	 */
 	openTable<N extends Table$2.NameCN>(tableName: N): EditorTable<N>;
-	/**
-	 * 是否强制浮点数保留一位小数。默认为false。
-	 * 启用后如果想表示整数，需要使用 `123n` 或 `BigInt(123)`。
-	 */
-	fixedFloat: boolean;
 	private _allObjects?;
 	private _allObjectsMap?;
 	private _cacheVersion;
@@ -4877,6 +4872,7 @@ declare class EditorManager {
 declare function openTable<N extends Table$2.NameCN>(tableName: N): EditorTable<N>;
 declare function getAllObjects(): Promise<y3.table.EditorObject<"\u5355\u4F4D" | "\u58F0\u97F3" | "\u6280\u80FD" | "\u88C5\u9970\u7269" | "\u53EF\u7834\u574F\u7269" | "\u7269\u54C1" | "\u9B54\u6CD5\u6548\u679C" | "\u6295\u5C04\u7269" | "\u79D1\u6280">[]>;
 declare function getObjectsByKey(key: number): Promise<EditorObject[]>;
+declare let fixedFloat: boolean;
 declare function init$1(): void;
 declare function ready$1(): Promise<void>;
 declare function get(key: string | number | bigint): string | undefined;
@@ -5135,7 +5131,7 @@ declare namespace excel {
 	export { CellTable, Excel, MultiCellTable, MultiTable, Sheet, Table$1 as Table, init, loadFile, loadFileWithAllSheets, rule, setBaseDir };
 }
 declare namespace table {
-	export { EditorData, EditorManager, EditorObject, EditorTable, FieldInfo, getAllObjects, getObject, getObjectsByKey, openTable, ready };
+	export { EditorData, EditorManager, EditorObject, EditorTable, FieldInfo, fixedFloat, getAllObjects, getObject, getObjectsByKey, openTable, ready };
 }
 declare namespace language {
 	export { get, init$1 as init, keyOf, onDidChange, ready$1 as ready, set };

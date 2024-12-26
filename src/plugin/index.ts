@@ -68,7 +68,7 @@ async function initPlugin() {
     mainMenu.refresh('插件');
 }
 
-async function updatePlugin() {
+async function updatePluginDTS(showme = false) {
     await y3.env.mapReady();
     if (!y3.env.pluginUri) {
         return;
@@ -78,7 +78,7 @@ async function updatePlugin() {
     let suc = await y3.fs.copy(templateUri, targetUri, {
         overwrite: true,
     });
-    if (suc) {
+    if (suc && showme) {
         vscode.window.showInformationMessage('插件定义文件更新成功');
         y3.open(targetUri);
         mainMenu.refresh('插件');
@@ -157,13 +157,15 @@ export async function init() {
 
     updatePluginManager();
     updateMapSaveWatcher();
+    updatePluginDTS();
     y3.env.onDidChange(() => {
         updatePluginManager();
         updateMapSaveWatcher();
+        updatePluginDTS();
     });
 
     vscode.commands.registerCommand('y3-helper.initPlugin', initPlugin);
-    vscode.commands.registerCommand('y3-helper.updatePlugin', updatePlugin);
+    vscode.commands.registerCommand('y3-helper.updatePlugin', () => updatePluginDTS(true));
 
     vscode.commands.registerCommand('y3-helper.runPlugin', async (uri?: vscode.Uri, funcName?: string) => {
         if (!uri) {

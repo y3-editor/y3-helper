@@ -15,6 +15,7 @@ export class TS extends BaseBuilder {
             this.update();
         });
     }
+
     async make(): Promise<string> {
         let attrs = await define().单位属性.getAttrs();
         return template.replace('%{UNIT_ATTRS}', attrs.map(attr => {

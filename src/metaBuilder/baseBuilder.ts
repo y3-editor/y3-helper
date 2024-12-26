@@ -12,7 +12,7 @@ export abstract class BaseBuilder {
             return;
         }
         let code = await this.make();
-        if (code) {
+        if (code && code !== (await tools.fs.readFile(env.scriptUri))?.string) {
             await tools.fs.writeFile(env.scriptUri, this.path, code);
         }
     }
