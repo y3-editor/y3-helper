@@ -7,7 +7,8 @@ const template =
 %{ATTR_ENUMS}
 
 ---@enum(key, partial) y3.Const.PlayerAttr
-local PlayerAttr = {
+---@diagnostic disable-next-line: inject-field
+y3.const.CustomPlayerAttr = {
 %{META_ATTR_ENUMS}
 }
 `;

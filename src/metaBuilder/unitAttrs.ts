@@ -7,7 +7,8 @@ const template =
 %{ATTR_ENUMS}
 
 ---@enum(key, partial) y3.Const.UnitAttr
-local UnitAttr = {
+---@diagnostic disable-next-line: inject-field
+y3.const.CustomUnitAttr = {
 %{META_ATTR_ENUMS}
 }
 `;
