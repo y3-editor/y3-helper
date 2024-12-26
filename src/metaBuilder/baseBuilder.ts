@@ -11,8 +11,14 @@ export abstract class BaseBuilder {
         if (!env.scriptUri) {
             return;
         }
-        let code = await this.make() ?? '';
-        if (code !== (await tools.fs.readFile(env.scriptUri))?.string) {
+        let code = await this.make();
+        if (code === undefined) {
+            if (await tools.fs.isExists(env.scriptUri, this.path)) {
+                return;
+            } else {
+                await tools.fs.writeFile(env.scriptUri, this.path, '');
+            }
+        } else if (code !== (await tools.fs.readFile(env.scriptUri))?.string) {
             await tools.fs.writeFile(env.scriptUri, this.path, code);
         }
     }
