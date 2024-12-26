@@ -11,8 +11,8 @@ export abstract class BaseBuilder {
         if (!env.scriptUri) {
             return;
         }
-        let code = await this.make();
-        if (code && code !== (await tools.fs.readFile(env.scriptUri))?.string) {
+        let code = await this.make() ?? '';
+        if (code !== (await tools.fs.readFile(env.scriptUri))?.string) {
             await tools.fs.writeFile(env.scriptUri, this.path, code);
         }
     }
