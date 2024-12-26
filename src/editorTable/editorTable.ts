@@ -112,7 +112,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             if (!this.text) {
                 return undefined;
             }
-            this._json = new EditorJson(this.text);
+            this._json = new EditorJson(this.text, this.manager.fixedFloat);
         }
         return this._json;
     }
@@ -466,7 +466,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             templateJson = template.string;
         }
 
-        let json = new EditorJson(templateJson);
+        let json = new EditorJson(templateJson, this.manager.fixedFloat);
         json.set('uid', key.toString());
         json.set('key', BigInt(key));
         json.set('_ref_', BigInt(key));
@@ -687,6 +687,12 @@ export class EditorManager {
         }
         return this.editorTables.get(tableName) as EditorTable<N>;
     }
+
+    /**
+     * 是否强制浮点数保留一位小数。默认为false。
+     * 启用后如果想表示整数，需要使用 `123n` 或 `BigInt(123)`。
+     */
+    fixedFloat = false;
 
     private _allObjects?: EditorObject[];
     private _allObjectsMap?: Record<number, EditorObject[]>;
