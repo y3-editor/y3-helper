@@ -94,7 +94,7 @@ export async function ready() {
 }
 
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
-    private _json?: y3.json.Json;
+    private _json?: EditorJson;
     private _name?: string;
     private _text?: string;
     public uri?: vscode.Uri;
@@ -107,12 +107,12 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     /**
      * 获取对象的json数据语法树
      */
-    public get json(): y3.json.Json | undefined {
+    public get json(): EditorJson | undefined {
         if (this._json === undefined) {
             if (!this.text) {
                 return undefined;
             }
-            this._json = new EditorJson(this.text, fixedFloat);
+            this._json = new EditorJson(this.text);
         }
         return this._json;
     }
@@ -166,11 +166,10 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (key === 'name') {
             return this.name;
         }
-        let raw = this.rawGet(fieldInfo.field);
-        if (raw === undefined) {
+        let value = this.rawGet(fieldInfo.field);
+        if (value === undefined) {
             return undefined;
         }
-        let value = this.deserialize(raw);
         value = valueOnGet(fieldInfo, value, this.key);
         return value;
     }
@@ -184,24 +183,21 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             this._name = value;
         }
         value = valueOnSet(fieldInfo, value, this.rawGet(fieldInfo.field), convertType, this.key);
-        let raw = this.serialize(value);
-        return this.rawSet(fieldInfo.field, raw);
+        return this.rawSet(fieldInfo.field, value);
     }
 
-    private rawGet(key: string): ItemShape | undefined {
+    rawGet(key: string): ItemShape | undefined {
+        this.updateFile();
         return this.json?.get(key);
     }
 
-    private rawSet(key: string, value: ItemShape | undefined): boolean {
+    rawSet(key: string, value: ItemShape | undefined): boolean {
         if (!this.json) {
             return false;
         }
-        let res = this.json.set(key, value);
-        if (res) {
-            this._text = undefined;
-            this.updateFile();
-        }
-        return res;
+        this.updateFile();
+        this.json.set(key, value);
+        return true;
     }
 
     /**
@@ -235,6 +231,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (!this.uri || !this.json) {
             return false;
         }
+        this.json.updateText(fixedFloat);
         let content = this.json.text;
         let suc = await y3.fs.writeFile(this.uri, content);
         return suc;
@@ -249,40 +246,6 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     public listFields(): string[] {
         this._fieldList ??= Object.keys(tableMeta[this.tableName]);
         return this._fieldList;
-    }
-
-    private serialize(item: y3.json.Item): ItemShape {
-        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || typeof item === 'bigint' || item === null) {
-            return item;
-        } else if (Array.isArray(item)) {
-            return item.map((i) => this.serialize(i));
-        } else if (typeof item === 'object') {
-            let map: MapShape = {};
-            for (const key in item) {
-                map[key] = this.serialize(item[key]);
-            }
-            return map;
-        }
-        throw new Error('不支持的数据类型:' + typeof item);
-    }
-
-    private deserialize(item: ItemShape): y3.json.Item {
-        if (typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' || typeof item === 'bigint' || item === null) {
-            return item;
-        } else if (Array.isArray(item)) {
-            return item.map((i) => this.deserialize(i));
-        } else if (typeof item === 'object') {
-            if (item.__tuple__) {
-                return this.deserialize(item.items);
-            } else {
-                let map: MapShape = {};
-                for (const key in item) {
-                    map[key] = this.deserialize((item as MapShape)[key]);
-                }
-                return map;
-            }
-        }
-        throw new Error('不支持的数据类型:' + typeof item);
     }
 
     flushName() {
@@ -466,25 +429,16 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             templateJson = template.string;
         }
 
-        let json = new EditorJson(templateJson, fixedFloat);
-        json.set('uid', key.toString());
-        json.set('key', BigInt(key));
-        json.set('_ref_', BigInt(key));
-
         let obj = new EditorObject(this.manager, this.name, key);
         obj.uri = this.getUri(key);
-        obj.text = json.text;
+        obj.text = templateJson;
+        obj.rawSet('_ref_', BigInt(key));
+        obj.rawSet('uid', key.toString());
+        obj.rawSet('key', BigInt(key));
         obj.set('name', name);
         obj.set('description', "");
 
         this._objectCache[key] = obj;
-
-        let suc = await y3.fs.writeFile(obj.uri, obj.text);
-        if (!suc) {
-            this._objectCache[key] = undefined;
-            return undefined;
-        }
-
         return obj;
     }
 
