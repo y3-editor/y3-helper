@@ -109,22 +109,17 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
      */
     public get json(): EditorJson | undefined {
         if (this._json === undefined) {
-            if (!this.text) {
+            if (!this._text) {
                 return undefined;
             }
-            this._json = new EditorJson(this.text);
+            this._json = new EditorJson(this._text);
+            this._text = undefined;
         }
         return this._json;
     }
 
     public get text(): string | undefined {
-        if (this._text === undefined) {
-            if (!this._json) {
-                return undefined;
-            }
-            this._text = this._json.text;
-        }
-        return this._text;
+        return this._json?.text;
     }
 
     public set text(text: string) {
