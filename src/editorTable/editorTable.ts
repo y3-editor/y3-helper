@@ -5,7 +5,7 @@ import { queue, throttle } from "../utility/decorators";
 import { EditorData, valueOnGet, valueOnSet } from "./editorData";
 import { define } from "../customDefine";
 export { EditorData } from "./editorData";
-import { EditorJson } from "./editorJson";
+import { Y3Json } from "../tools/y3json";
 
 const templateDir = 'template\\json_template';
 const metaDir = 'src\\helper_meta\\editor';
@@ -94,7 +94,7 @@ export async function ready() {
 }
 
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
-    private _json?: EditorJson;
+    private _json?: Y3Json;
     private _name?: string;
     private _text?: string;
     public uri?: vscode.Uri;
@@ -107,12 +107,12 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     /**
      * 获取对象的json数据语法树
      */
-    public get json(): EditorJson | undefined {
+    public get json(): Y3Json | undefined {
         if (this._json === undefined) {
             if (!this._text) {
                 return undefined;
             }
-            this._json = new EditorJson(this._text);
+            this._json = new Y3Json(this._text);
             this._text = undefined;
         }
         return this._json;

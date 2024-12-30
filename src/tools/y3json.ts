@@ -3,7 +3,7 @@ import * as jsonc from 'jsonc-parser';
 /**
  * 编辑器使用的 JSON 格式，读写时会遵循编辑器的格式规范
  */
-export class EditorJson {
+export class Y3Json {
     private _text: string;
     private _tree?: jsonc.Node;
     private _data?: Record<string, any>;
