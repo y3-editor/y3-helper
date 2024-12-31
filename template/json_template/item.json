@@ -1,381 +1,26 @@
 {
     "_custom_": true, 
-    "_ref_": 134218218, 
+    "_ref_": 1, 
     "attached_ability": {
         "__tuple__": true, 
         "items": []
     }, 
-    "attached_agility": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_attack_interval": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_attack_mag": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_attack_phy": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_attack_range": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_attack_speed": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_cd_reduce": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_critical_chance": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_critical_dmg": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_defense_mag": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0.0, 
-            25.0, 
-            0.0, 
-            0.0
-        ]
-    }, 
-    "attached_defense_phy": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_dmg_reduction": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_dodge_rate": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_extra_dmg": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_healing_effect": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_hit_rate": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_hp_max": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_hp_rec": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_intelligence": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_mp_max": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_mp_rec": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_ori_speed": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
+    "attached_agility": 0.0, 
+    "attached_critical_chance": 0.0, 
+    "attached_dodge_rate": 0.0, 
+    "attached_hit_rate": 0.0, 
+    "attached_hp_max": 0.0, 
+    "attached_hp_rec": 0.0, 
+    "attached_intelligence": 0.0, 
     "attached_passive_abilities": {
         "__tuple__": true, 
-        "items": [
-            [
-                134252147, 
-                1
-            ]
-        ]
+        "items": []
     }, 
-    "attached_pene_mag": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_pene_mag_ratio": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_pene_phy": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_pene_phy_ratio": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_strength": {
-        "__tuple__": true, 
-        "items": [
-            0.0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vampire_mag": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vampire_phy": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_night": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_rng": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_sector_angle_day": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_sector_angle_night": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_sector_night": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_sector_rng": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
-    "attached_vision_true": {
-        "__tuple__": true, 
-        "items": [
-            0, 
-            0, 
-            0, 
-            0, 
-            0
-        ]
-    }, 
+    "attached_pene_mag": 0.0, 
+    "attached_pene_phy": 0.0, 
+    "attached_strength": 0.0, 
     "auto_use": false, 
-    "base_color_mod": 0, 
+    "base_color_mod": 1, 
     "base_tint_color": {
         "__tuple__": true, 
         "items": [
@@ -385,15 +30,10 @@
             0.5
         ]
     }, 
-    "body_size": 0.4, 
+    "body_size": 1.0, 
     "buy_res_list": {
         "__tuple__": true, 
-        "items": [
-            [
-                "official_res_1", 
-                570
-            ]
-        ]
+        "items": []
     }, 
     "cd_type": "", 
     "compose_list": {
@@ -403,28 +43,31 @@
     "cur_charge": 0, 
     "cur_stack": 1, 
     "delete_on_discard": false, 
-    "description": 1936974632, 
+    "description": 126088664, 
     "disable_overlapping": false, 
     "discard_enable": true, 
-    "discard_when_dead": false, 
+    "discard_when_dead": true, 
     "drop_stay_time": 9999, 
     "effect_list": {}, 
-    "fresnel_color": [
-        255, 
-        0, 
-        0, 
-        1
-    ], 
-    "fresnel_emissive_color_strength": 0, 
-    "fresnel_exp": 1, 
-    "hp_max": 1.0, 
-    "icon": 106554, 
+    "fresnel_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255, 
+            0.5
+        ]
+    }, 
+    "fresnel_emissive_color_strength": 1, 
+    "fresnel_exp": 10, 
+    "hp_max": 100, 
+    "icon": 100000, 
     "init_stock": 5, 
-    "item_billboard_type": 1, 
-    "key": 134218218, 
+    "item_billboard_type": 0, 
+    "key": 1, 
     "kv": {}, 
     "level": 1, 
-    "material_alpha": 0, 
+    "material_alpha": 0.5, 
     "material_change": 0, 
     "material_color": {
         "__tuple__": true, 
@@ -434,13 +77,13 @@
             255
         ]
     }, 
-    "material_color_intensity": 1, 
+    "material_color_intensity": 0, 
     "max_stock": 5, 
     "maximum_charging": 5, 
     "maximum_stacking": 5, 
-    "model": 204059, 
+    "model": 10022, 
     "model_opacity": 1, 
-    "name": -1270106446, 
+    "name": -1544338677, 
     "precondition_list": {
         "__tuple__": true, 
         "items": []
@@ -455,19 +98,16 @@
         "__tuple__": true, 
         "items": []
     }, 
-    "stack_type": 0, 
+    "stack_type": 2, 
     "start_rft": 1, 
     "suffix": "", 
     "tags": {
         "__tuple__": true, 
-        "items": [
-            "", 
-            ""
-        ]
+        "items": []
     }, 
-    "uid": "134218218", 
+    "uid": "1", 
     "use_base_tint_color": false, 
     "use_consume": 1, 
-    "use_fresnel": false, 
+    "use_fresnel": 0, 
     "use_virtual_light": 0
 }

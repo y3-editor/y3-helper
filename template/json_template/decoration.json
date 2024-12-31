@@ -1,4 +1,6 @@
 {
+    "_custom_": true, 
+    "_ref_": 1, 
     "attach_models": {
         "__tuple__": true, 
         "items": []
@@ -13,7 +15,7 @@
             0.5
         ]
     }, 
-    "cast_shadow": false, 
+    "cast_shadow": true, 
     "collision_box": {
         "__tuple__": true, 
         "items": [
@@ -43,129 +45,61 @@
         "__tuple__": true, 
         "items": [
             [
-                -4, 
-                -4
+                -2, 
+                -2
             ], 
             [
-                5, 
-                5
+                1, 
+                1
             ], 
-            [
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                512, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0, 
-                0
-            ], 
-            0.25
+            0
         ]
     }, 
-    "description": -1499420888, 
+    "description": -1885049458, 
     "effect_list": {
         "__tuple__": true, 
         "items": []
     }, 
+    "enable_camera_collision": 0, 
+    "enable_occlusion_perspective": false, 
+    "fresnel_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255, 
+            0.5
+        ]
+    }, 
+    "fresnel_emissive_color_strength": 1, 
+    "fresnel_exp": 10, 
     "icon": 100000, 
-    "key": 201367371, 
+    "key": 1, 
     "kv": {}, 
-    "material_alpha": 1.0, 
+    "material_alpha": 0.5, 
     "material_change": 0, 
     "material_color": {
         "__tuple__": true, 
         "items": [
-            2, 
-            2, 
-            2
+            255, 
+            255, 
+            255
         ]
     }, 
-    "material_color_intensity": 1.0, 
-    "model": 200003, 
-    "model_opacity": 0.0, 
-    "name": 1105701052, 
+    "material_color_intensity": 0, 
+    "model": 100006, 
+    "model_opacity": 1, 
+    "name": -770040658, 
     "receive_decal": false, 
-    "scale": 0.25, 
+    "scale": 1.0, 
     "suffix": "", 
     "tags": {
         "__tuple__": true, 
         "items": []
     }, 
-    "uid": "201367371", 
+    "uid": "1", 
     "use_base_tint_color": false, 
-    "use_physics": true
+    "use_fresnel": 0, 
+    "use_physics": false, 
+    "use_virtual_light": 0
 }
