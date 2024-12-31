@@ -182,8 +182,11 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
     }
 
     rawGet(key: string): ItemShape | undefined {
-        this.updateFile();
-        return this.json?.get(key);
+        let value = this.json?.get(key);
+        if (typeof value === 'object' && value !== null) {
+            this.updateFile();
+        }
+        return value;
     }
 
     rawSet(key: string, value: ItemShape | undefined): boolean {
