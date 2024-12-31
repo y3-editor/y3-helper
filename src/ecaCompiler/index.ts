@@ -18,23 +18,31 @@ export function init() {
             title: '编译中',
             cancellable: true,
         }, async (progress, token) => {
-            let value = 0;
             let msg = '';
+            let cur = 0;
+            let total = 1;
 
             progress.report({ message: '加载地图配置...'});
 
             await fillStatic(formatter);
             await fillMapDefined(formatter);
 
+            function makeMessage() {
+                const curStr = cur.toString().padStart(total.toString().length, '0');
+                return `(${curStr}/${total})${msg}`;
+            }
+
             let process = new Process(y3.env.mapUri!, formatter, {
                 message: (message) => {
                     msg = message;
-                    progress.report({ message });
+                    progress.report({ message: makeMessage() });
                 },
-                value: (percent) => {
-                    let delta = percent - value;
-                    value = percent;
-                    progress.report({ increment: delta, message: msg });
+                total: (total_) => {
+                    total = total_;
+                },
+                update: (value_ = 1) => {
+                    cur += value_;
+                    progress.report({ increment: value_ / total * 100, message: makeMessage() });
                 },
                 isCanceled: () => token.isCancellationRequested,
             });
