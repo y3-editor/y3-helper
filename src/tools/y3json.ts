@@ -5,11 +5,11 @@ import * as jsonc from 'jsonc-parser';
  */
 export class Y3Json {
     private _text: string;
-    private _tree?: jsonc.Node;
-    private _data?: Record<string, any>;
+    private _tree?: jsonc.Node | null;
+    private _data1?: Record<string, any> | null;
+    private _data2?: Record<string, any> | null;
     private _needUpdateText = false;
-    private _fixedFloat = false;
-    constructor(text: string) {
+    constructor(text: string, public fixedFloat = false) {
         this._text = text;
     }
 
@@ -26,18 +26,76 @@ export class Y3Json {
         return data;
     }
 
-    private makeData() {
+    private makeData1() {
         let data: Record<string, any> = jsonc.parse(this._text);
+        if (data === undefined) {
+            return undefined;
+        }
         data = this.dropTuple(data);
+        return data;
+    }
+
+    private makeData2() {
+        let tree = this.tree;
+        if (!tree) {
+            return undefined;
+        }
+
+        const text = this._text;
+
+        function decode(value: jsonc.Node): any {
+            switch (value.type) {
+                case 'null': {
+                    return null;
+                }
+                case 'boolean': {
+                    return value.value;
+                }
+                case 'string': {
+                    return value.value;
+                }
+                case 'number': {
+                    let rawText = text.slice(value.offset, value.offset + value.length);
+                    if (rawText.includes('.')) {
+                        return value.value;
+                    } else {
+                        return BigInt(value.value);
+                    }
+                }
+                case 'property': {
+                    let k = decode(value.children![0]);
+                    let v = decode(value.children![1]);
+                    return { k, v };
+                }
+                case 'array': {
+                    let items: any[] = [];
+                    for (let child of value.children!) {
+                        items.push(decode(child));
+                    }
+                    return items;
+                }
+                case 'object': {
+                    let items: Record<string, any> = {};
+                    for (let child of value.children!) {
+                        let { k, v } = decode(child);
+                        items[k] = v;
+                    }
+                    return items;
+                }
+            }
+        }
+
+        let data = decode(tree);
+
         return data;
     }
 
     private stringify() {
         const data = this.data;
-        const tree = this.tree;
-        const fixed = this._fixedFloat;
+        const fixed = this.fixedFloat;
+        const data2 = fixed ? undefined : this.data2;
 
-        function encode(value: any, tabLevel = 0) {
+        function encode(value: any, currentData2?: any, tabLevel = 0) {
             if (value === 'null') {
                 return 'null';
             }
@@ -46,10 +104,14 @@ export class Y3Json {
                     return value.toString();
                 };
                 case 'number': {
-                    if (fixed && isFinite(value)) {
+                    if (fixed) {
                         return value.toFixed(1);
                     } else {
-                        return JSON.stringify(value);
+                        if (typeof currentData2 === 'bigint') {
+                            return value.toString();
+                        } else {
+                            return value.toFixed(1);
+                        }
                     }
                 };
                 case 'string': {
@@ -69,7 +131,7 @@ export class Y3Json {
                         const tab = '    '.repeat(tabLevel + 1);
                         for (let i = 0; i < value.length; i++) {
                             let item = value[i];
-                            result += tab + encode(item, tabLevel + 1);
+                            result += tab + encode(item, currentData2?.[0], tabLevel + 1);
                             if (i < value.length - 1) {
                                 result += ', ';
                             }
@@ -88,7 +150,7 @@ export class Y3Json {
                         for (let i = 0; i < keys.length; i++) {
                             let key = keys[i];
                             let item = value[key];
-                            result += tab + encode(key) + ': ' + encode(item, tabLevel + 1);
+                            result += tab + encode(key) + ': ' + encode(item, currentData2?.[key], tabLevel + 1);
                             if (i < keys.length - 1) {
                                 result += ', ';
                             }
@@ -104,13 +166,13 @@ export class Y3Json {
             }
         }
 
-        let text = encode(data);
+        let text = encode(data, data2);
 
         return text;
     }
 
     get tree() {
-        return this._tree ??= jsonc.parseTree(this._text);
+        return this._tree ??= (jsonc.parseTree(this._text) ?? null);
     }
 
     get(key: string) {
@@ -118,11 +180,22 @@ export class Y3Json {
     }
 
     set(key: string, value: any) {
+        if (!this.data) {
+            return;
+        }
         this.data[key] = value;
     }
 
     get data() {
-        return this._data ??= this.makeData();
+        return this.fixedFloat ? this.data2 : this.data1;
+    }
+
+    get data1() {
+        return this._data1 ??= (this.makeData1() ?? null);
+    }
+
+    get data2() {
+        return this._data2 ??= (this.makeData2() ?? null);
     }
 
     get text() {
@@ -135,8 +208,7 @@ export class Y3Json {
         return this._text;
     }
 
-    updateText(fixedFloat: boolean) {
+    updateText() {
         this._needUpdateText = true;
-        this._fixedFloat = fixedFloat;
     }
 }

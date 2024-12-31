@@ -112,7 +112,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             if (!this._text) {
                 return undefined;
             }
-            this._json = new Y3Json(this._text);
+            this._json = new Y3Json(this._text, fixedFloat);
             this._text = undefined;
         }
         return this._json;
@@ -226,7 +226,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
         if (!this.uri || !this.json) {
             return false;
         }
-        this.json.updateText(fixedFloat);
+        this.json.updateText();
         let content = this.json.text;
         let suc = await y3.fs.writeFile(this.uri, content);
         return suc;
