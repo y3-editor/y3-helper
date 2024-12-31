@@ -86,6 +86,7 @@ export class Y3Json {
         }
 
         let data = decode(tree);
+        data = this.dropTuple(data);
 
         return data;
     }
@@ -131,7 +132,7 @@ export class Y3Json {
                         const tab = '    '.repeat(tabLevel + 1);
                         for (let i = 0; i < value.length; i++) {
                             let item = value[i];
-                            result += tab + encode(item, currentData2?.[0], tabLevel + 1);
+                            result += tab + encode(item, currentData2?.[i] ?? currentData2?.[0], tabLevel + 1);
                             if (i < value.length - 1) {
                                 result += ', ';
                             }
@@ -205,6 +206,11 @@ export class Y3Json {
         this._needUpdateText = false;
         this._text = this.stringify();
         this._tree = undefined;
+        if (this.fixedFloat) {
+            this._data1 = undefined;
+        } else {
+            this._data2 = undefined;
+        }
         return this._text;
     }
 
