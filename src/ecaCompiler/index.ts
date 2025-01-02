@@ -2,9 +2,49 @@ import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { fillStatic, fillMapDefined } from './testConfig';
-import { Process } from './process';
+import { Process, Progress } from './process';
 
 const formatter = new Formatter();
+
+class ProgressHandle implements Progress {
+    msg = '';
+    cur = 0;
+    max = 0;
+    lastPercent = 0;
+    constructor(private token: vscode.CancellationToken, private report: (increment: number, message: string) => void) { }
+
+    makeMessage() {
+        const curStr = this.cur.toString().padStart(this.max.toString().length, '0');
+        return `(${curStr}/${this.max})${this.msg}`;
+    }
+
+    message(message: string) {
+        this.msg = message;
+        this.report(0, this.makeMessage());
+    }
+
+    total(value: number) {
+        this.max = value;
+    }
+
+    update(value = 1) {
+        this.cur += value;
+        if (this.max === 0) {
+            return;
+        }
+        const percent = Math.floor(this.cur / this.max * 100);
+        if (percent === this.lastPercent) {
+            return;
+        }
+        const increment = percent - this.lastPercent;
+        this.lastPercent = percent;
+        this.report(increment, this.makeMessage());
+    }
+
+    isCanceled() {
+        return this.token.isCancellationRequested;
+    }
+}
 
 export function init() {
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
@@ -27,25 +67,9 @@ export function init() {
             await fillStatic(formatter);
             await fillMapDefined(formatter);
 
-            function makeMessage() {
-                const curStr = cur.toString().padStart(total.toString().length, '0');
-                return `(${curStr}/${total})${msg}`;
-            }
-
-            let process = new Process(y3.env.mapUri!, formatter, {
-                message: (message) => {
-                    msg = message;
-                    progress.report({ message: makeMessage() });
-                },
-                total: (total_) => {
-                    total = total_;
-                },
-                update: (value_ = 1) => {
-                    cur += value_;
-                    progress.report({ increment: value_ / total * 100, message: makeMessage() });
-                },
-                isCanceled: () => token.isCancellationRequested,
-            });
+            let process = new Process(y3.env.mapUri!, formatter, new ProgressHandle(token, (increment, message) => {
+                progress.report({ increment, message });
+            }));
 
             try {
                 await process.fullCompile();
