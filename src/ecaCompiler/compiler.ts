@@ -159,6 +159,18 @@ class TriggerRef extends Node {
     }
 }
 
+class NilNode extends Node {
+    make(formatter: Formatter): string {
+        return 'nil';
+    }
+
+    makeArgs(formatter: Formatter) {
+        return undefined;
+    }
+}
+
+const Nil = new NilNode();
+
 function toArray(v: any) {
     if (Array.isArray(v)) {
         return v;
@@ -229,6 +241,9 @@ export class Trigger {
     }
 
     static parseExp(eca: ECA, exp: any): Exp {
+        if (exp === null) {
+            return Nil;
+        }
         if (typeof exp === 'number') {
             return new TriggerRef(eca, String(exp));
         }
@@ -254,7 +269,7 @@ export class Trigger {
     }
 }
 
-type Exp = Value | Call | VarRef | TriggerRef;
+type Exp = Value | Call | VarRef | TriggerRef | NilNode;
 type Action = Call | Comment | TriggerRef;
 
 export class ECA {

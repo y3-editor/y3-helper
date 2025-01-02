@@ -47,9 +47,19 @@ export function init() {
                 isCanceled: () => token.isCancellationRequested,
             });
 
-            await process.fullCompile();
+            try {
+                await process.fullCompile();
+
+                vscode.window.showInformationMessage('编译完成');
+                y3.log.info(`【编译ECA】完成`);
+            } catch (e) {
+                if (e instanceof vscode.CancellationError) {
+                    vscode.window.showInformationMessage('编译已取消');
+                } else {
+                    vscode.window.showErrorMessage('编译失败');
+                    y3.log.error(`【编译ECA】失败: ${e}`);
+                }
+            }
         });
-        vscode.window.showInformationMessage('编译完成');
-        y3.log.info(`【编译ECA】完成`);
     });
 }
