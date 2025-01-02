@@ -20,7 +20,7 @@ export class Event extends Node {
         if (args_list.length > 0) {
             this.args = [];
             for (let arg of args_list) {
-                this.args.push(Trigger.parseExp(eca, arg));
+                this.args.push(parseExp(eca, arg));
             }
         }
     }
@@ -62,7 +62,7 @@ export class Call extends Node {
 
         let arg_list = json.args_list as y3.json.JObject[];
         for (let arg of arg_list) {
-            this.args.push(Trigger.parseExp(eca, arg));
+            this.args.push(parseExp(eca, arg));
         }
         if ('op_arg' in json) {
             let enables = json.op_arg_enable as boolean[] | undefined;
@@ -72,7 +72,7 @@ export class Call extends Node {
                 if (op_args[i] === null || enable === false) {
                     this.args.push(null);
                 } else {
-                    this.args.push(Trigger.parseExp(eca, op_args[i]));
+                    this.args.push(parseExp(eca, op_args[i]));
                 }
             }
         }
@@ -188,6 +188,60 @@ function toArray(v: any) {
     return undefined;
 }
 
+function parseAction(eca: ECA, action: y3.json.JObject | y3.json.JArray | number): Action {
+    if (Array.isArray(action)) {
+        return new Comment(action as any);
+    } else if (typeof action === 'number') {
+        return new TriggerRef(eca, String(action));
+    } else {
+        return new Call(eca, action as any);
+    }
+}
+
+function parseExp(eca: ECA, exp: any): Exp {
+    if (exp === null) {
+        return Nil;
+    }
+    if (typeof exp === 'number') {
+        return new TriggerRef(eca, String(exp));
+    }
+    if (toArray(exp)) {
+        return new VarRef(toArray(exp));
+    } else {
+        const arg_list = exp.args_list as any[];
+        if (arg_list.length === 1) {
+            let first = arg_list[0];
+            if (toArray(first)) {
+                return new VarRef(toArray(first));
+            }
+            if (typeof first !== 'object') {
+                return new Value(exp.arg_type, first);
+            }
+        }
+    }
+    return new Call(eca, exp);
+}
+
+interface VarData {
+    [0]: Record<string, Record<string, any>>;
+    [1]: Record<string, 0 | 10>;
+    [2]: string[];
+}
+
+function parseVarData(eca: ECA, varData: VarData) {
+    let variableMap: Record<string, Variable> = {};
+    for (let [type, data] of Object.entries(varData[0])) {
+        for (let [name, value] of Object.entries(data)) {
+            variableMap[name] = new Variable(name, type, varData[1][name] !== 0, new Value(type, value));
+        }
+    }
+    let variables: Variable[] = [];
+    for (let name of varData[2]) {
+        variables.push(variableMap[name]);
+    }
+    return variables;
+}
+
 export class Trigger {
     name: string;
     enabled: boolean = true;
@@ -208,71 +262,57 @@ export class Trigger {
         }
         if (json.condition) {
             for (let condition of json.condition as any) {
-                this.conditions.push(Trigger.parseExp(eca, condition));
+                this.conditions.push(parseExp(eca, condition));
             }
         }
         if (json.action) {
             for (let action of json.action as any) {
-                let result = Trigger.parseAction(this.eca, action);
+                let result = parseAction(this.eca, action);
                 if (result) {
                     this.actions.push(result);
                 }
             }
         }
         if (json.var_data) {
-            const varData = json.var_data as [
-                Record<string, Record<string, any>>,
-                Record<string, 0|10>,
-                string[],
-            ];
-            let variableMap: Record<string, Variable> = {};
-            for (let [type, data] of Object.entries(varData[0])) {
-                for (let [name, value] of Object.entries(data)) {
-                    variableMap[name] = new Variable(name, type, varData[1][name] !== 0, new Value(type, value));
-                }
-            }
-            for (let name of varData[2]) {
-                this.variables.push(variableMap[name]);
-            }
+            const varData = json.var_data as unknown as VarData;
+            this.variables = parseVarData(eca, varData);
         }
-    }
-
-    static parseAction(eca: ECA, action: y3.json.JObject | y3.json.JArray | number): Action {
-        if (Array.isArray(action)) {
-            return new Comment(action as any);
-        } else if (typeof action === 'number') {
-            return new TriggerRef(eca, String(action));
-        } else {
-            return new Call(eca, action as any);
-        }
-    }
-
-    static parseExp(eca: ECA, exp: any): Exp {
-        if (exp === null) {
-            return Nil;
-        }
-        if (typeof exp === 'number') {
-            return new TriggerRef(eca, String(exp));
-        }
-        if (toArray(exp)) {
-            return new VarRef(toArray(exp));
-        } else {
-            const arg_list = exp.args_list as any[];
-            if (arg_list.length === 1) {
-                let first = arg_list[0];
-                if (toArray(first)) {
-                    return new VarRef(toArray(first));
-                }
-                if (typeof first !== 'object') {
-                    return new Value(exp.arg_type, first);
-                }
-            }
-        }
-        return new Call(eca, exp);
     }
 
     make(formatter: Formatter): string {
         return formatter.formatTrigger(this);
+    }
+}
+
+export class Function {
+    name: string;
+    id: string;
+    enabled: boolean = true;
+    actions: Action[] = [];
+    variables: Variable[] = [];
+    constructor(private eca: ECA, private json: y3.json.JObject) {
+        this.name = json.func_name as string;
+        this.id = json.func_id as string;
+        if (!json.enabled) {
+            this.enabled = false;
+            return;
+        }
+        if (json.action) {
+            for (let action of json.action as any) {
+                let result = parseAction(this.eca, action);
+                if (result) {
+                    this.actions.push(result);
+                }
+            }
+        }
+        if (json.var_data) {
+            const varData = json.var_data as unknown as VarData;
+            this.variables = parseVarData(eca, varData);
+        }
+    }
+
+    make(formatter: Formatter): string {
+        return formatter.formatFunction(this);
     }
 }
 
@@ -281,14 +321,18 @@ type Action = Call | Comment | TriggerRef;
 
 export class ECA {
     closures: Record<string, Trigger> = {};
-    main: Trigger;
+    main: Trigger | Function;
     constructor(private json: y3.json.JObject) {
         if (y3.is.object(json.sub_trigger)) {
             for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
                 this.closures[id] = new Trigger(this, closure);
             }
         }
-        this.main = new Trigger(this, json);
+        if (json.is_func) {
+            this.main = new Function(this, json);
+        } else {
+            this.main = new Trigger(this, json);
+        }
     }
 
     make(formatter: Formatter) {

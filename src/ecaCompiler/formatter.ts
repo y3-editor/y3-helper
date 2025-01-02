@@ -1,5 +1,5 @@
 import * as y3 from 'y3-helper';
-import { Node, Trigger, Value, Variable } from './compiler';
+import { Node, Trigger, Function, Value, Variable } from './compiler';
 
 /*
 CreateUnit({1}, {2}, {3})
@@ -234,7 +234,7 @@ export class Formatter {
         return rule.format(this, node);
     }
 
-    private makeActionPart(trg: Trigger): string {
+    private makeActionPart(trg: Trigger | Function): string {
         return trg.actions.map((action) => action.make(this)).join('\n');
     }
 
@@ -259,16 +259,16 @@ export class Formatter {
         }
     }
 
-    private makeVariablePart(trg: Trigger): string {
+    private makeVariablePart(trg: Trigger | Function): string {
         return trg.variables.map(variable => this.formatVariable(variable)).join('\n');
     }
 
     private makeConditionPart(trg: Trigger): string {
         return trg.conditions.map((condition) => `not ${condition.make(this)}`).join('\nor ');
     }
-    private makeBody(trg: Trigger): string {
+    private makeBody(trg: Trigger | Function): string {
         let result = '';
-        if (trg.conditions.length > 0) {
+        if ('conditions' in trg && trg.conditions.length > 0) {
             result += `if ${this.makeConditionPart(trg)}`;
             result += ` then\n`;
             result += `    return\n`;
@@ -312,6 +312,19 @@ export class Formatter {
             }
             return result;
     }
+
+    public formatFunction(func: Function) {
+        let result = '';
+        if (!func.enabled) {
+            result += `-- 函数 ${func.name} 已禁用\n`;
+            result += `Func[${y3.lua.encode(func.name)}] = function (...) end`;
+            return result;
+        }
+        result += `Func[${y3.lua.encode(func.name)}] = function ()\n`;
+        result += this.increaseTab(this.makeBody(func));
+        result += `\nend`;
+        return result;
+}
 
     public increaseTab(content: string, tab: string = '    '): string {
         return content.split('\n').map((line) => tab + line).join('\n');
