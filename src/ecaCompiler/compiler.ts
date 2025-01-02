@@ -52,11 +52,14 @@ export class Call extends Node {
     name: string;
     type: number;
     args: (Exp | null)[] = [];
+    enabled = true;
     constructor(private eca: ECA, private json: y3.json.JObject) {
         super();
         this.type = json.arg_type as number;
         this.name = (json.action_type ?? json.condition_type) as string
                 ??  (typeof json.sub_type === 'string' ? json.sub_type : `$${this.type}`);
+        this.enabled = typeof json.enable === 'boolean' ? json.enable : true;
+
         let arg_list = json.args_list as y3.json.JObject[];
         for (let arg of arg_list) {
             this.args.push(Trigger.parseExp(eca, arg));
@@ -76,7 +79,11 @@ export class Call extends Node {
     }
 
     make(formatter: Formatter): string {
-        return formatter.formatCall(this.name, this);
+        let result = formatter.formatCall(this.name, this);
+        if (!this.enabled) {
+            result = '-- ' + result.replace(/\n/g, '\n-- ');
+        }
+        return result;
     }
 
     makeArgs(formatter: Formatter): string[] {
