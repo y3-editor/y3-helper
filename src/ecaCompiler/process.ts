@@ -65,6 +65,11 @@ export class Process {
             let compileResult = await this.compileOneFunction(functionNames[i]);
             if (compileResult) {
                 compileResults.push(compileResult);
+
+                let main = compileResult.eca.main;
+                if ('id' in main) {
+                    this.formatter.setFuncName(main.id, main.name);
+                }
             }
         }
 
@@ -109,10 +114,6 @@ export class Process {
         let uri = y3.uri(this.mapDir, this.inTriggerDir, fileName);
         try {
             let eca = await this.compiler.compileECA(uri);
-            let content = eca.make(this.formatter);
-            if (!content) {
-                return;
-            }
 
             let includeName = [this.outBasseDir, this.outTriggerDir, fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
             return { fileName, includeName, eca };
@@ -130,10 +131,6 @@ export class Process {
         let uri = y3.uri(this.mapDir, this.inFunctionDir, fileName);
         try {
             let eca = await this.compiler.compileECA(uri);
-            let content = eca.make(this.formatter);
-            if (!content) {
-                return;
-            }
 
             let includeName = [this.outBasseDir, this.outFunctionDir, fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
             return { fileName, includeName, eca };

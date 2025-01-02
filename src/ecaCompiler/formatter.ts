@@ -324,7 +324,17 @@ export class Formatter {
         result += this.increaseTab(this.makeBody(func));
         result += `\nend`;
         return result;
-}
+    }
+
+    private funcNameRecord: Record<string, string> = {};
+
+    public setFuncName(id: string, name: string) {
+        this.funcNameRecord[id] = name;
+    }
+
+    public getFuncName(id: string) {
+        return this.funcNameRecord[id] ?? id;
+    }
 
     public increaseTab(content: string, tab: string = '    '): string {
         return content.split('\n').map((line) => tab + line).join('\n');
