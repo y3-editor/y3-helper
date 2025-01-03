@@ -119,7 +119,7 @@ export class Variable extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName((this.isGlobal ? 'V_' : 'v_') + this.name, reservedNames);
+        return formatter.getVariableName(this.name, this.isGlobal);
     }
 
     makeArgs(formatter: Formatter) {
@@ -284,12 +284,18 @@ export class Trigger {
     }
 }
 
+type Param = {
+    name: string;
+    required: boolean;
+};
+
 export class Function {
     name: string;
     id: string;
     enabled: boolean = true;
     actions: Action[] = [];
     variables: Variable[] = [];
+    params: Param[] = [];
     constructor(private eca: ECA, private json: y3.json.JObject) {
         this.name = json.func_name as string;
         this.id = json.func_id as string;
@@ -308,6 +314,12 @@ export class Function {
         if (json.var_data) {
             const varData = json.var_data as unknown as VarData;
             this.variables = parseVarData(eca, varData);
+        }
+        if (json.func_param_list) {
+            this.params = (json.func_param_list as any[]).map((param: [string, boolean]) => {
+                param = toArray(param);
+                return { name: param[0], required: param[1] };
+            });
         }
     }
 
@@ -361,7 +373,7 @@ export class GlobalVariables {
     make(formatter: Formatter) {
         let buffer: string[] = [];
         for (const variable of this.variables.values()) {
-            buffer.push(formatter.formatVariable(variable));
+            buffer.push(`${formatter.getVariableName(variable.name, true)} = ${formatter.getVariableInitValue(variable)}`);
             buffer.push('\n');
         }
         let content = buffer.join('');

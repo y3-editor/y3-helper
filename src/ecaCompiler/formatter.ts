@@ -238,29 +238,58 @@ export class Formatter {
         return trg.actions.map((action) => action.make(this)).join('\n');
     }
 
-    public formatVariable(variable: Variable): string {
-        const name = variable.make(this);
+    public getVariableName(name: string, isGlobal = false) {
+        return y3.lua.getValidName((isGlobal ? 'V_' : 'v_') + name);
+    }
+
+    public getVariableInitValue(variable: Variable): string {
         const value = this.formatValue(variable.type, variable.value);
-        const localHead = variable.isGlobal ? '' : 'local ';
         if (variable.isArray) {
             if (value === 'nil') {
-                return `${localHead}${name} = y3.eca_rt.array()`;
+                return `y3.eca_rt.array()`;
             } else if (value === '""') {
-                return `${localHead}${name} = y3.eca_rt.array("")`;
+                return `y3.eca_rt.array("")`;
             } else if ((value === '0' || value === '-1') && variable.type !== 'INTEGER') {
-                return `${localHead}${name} = y3.eca_rt.array()`;
+                return `y3.eca_rt.array()`;
             } else if (variable.type === 'BOOLEAN' || variable.type === 'FLOAT' || variable.type === 'INTEGER') {
-                return `${localHead}${name} = y3.eca_rt.array(${value})`;
+                return `y3.eca_rt.array(${value})`;
             } else {
-                return `${localHead}${name} = y3.eca_rt.array(${y3.lua.encode(value)})`;
+                return `y3.eca_rt.array(${y3.lua.encode(value)})`;
             }
         } else {
-            return `${localHead}${name} = ${value}`;
+            return `${value}`;
         }
     }
 
-    private makeVariablePart(trg: Trigger | Function): string {
-        return trg.variables.map(variable => this.formatVariable(variable)).join('\n');
+    private makeVariablePart(trg: Trigger | Function): string | undefined {
+        let results = [];
+
+        function getParam(name: string) {
+            if (!(trg instanceof Function)) {
+                return undefined;
+            }
+            let param = trg.params.find((param) => param.name === name);
+            return param;
+        }
+        
+        for (let variable of trg.variables) {
+            let param = getParam(variable.name);
+            if (param) {
+                if (param.required) {
+                    continue;
+                } else {
+                    results.push(`if ${this.getVariableName(variable.name)} == nil then ${this.getVariableName(variable.name)} = ${this.getVariableInitValue(variable)} end`);
+                }
+            } else {
+                results.push(`local ${this.getVariableName(variable.name)} = ${this.getVariableInitValue(variable)}`);
+            }
+        }
+
+        if (results.length === 0) {
+            return undefined;
+        }
+
+        return results.join('\n') + '\n';
     }
 
     private makeConditionPart(trg: Trigger): string {
@@ -274,9 +303,9 @@ export class Formatter {
             result += `    return\n`;
             result += `end\n`;
         }
-        if (trg.variables.length > 0) {
-            result += `${this.makeVariablePart(trg)}\n`;
-        }
+
+        result += this.makeVariablePart(trg) ?? '';
+
         if (trg.actions.length > 0) {
             result += `${this.makeActionPart(trg)}`;
         }
@@ -320,7 +349,8 @@ export class Formatter {
             result += `Func[${y3.lua.encode(func.name)}] = function (...) end`;
             return result;
         }
-        result += `Func[${y3.lua.encode(func.name)}] = function ()\n`;
+        const params = func.params.map((param) => this.getVariableName(param.name)).join(', ');
+        result += `Func[${y3.lua.encode(func.name)}] = function (${params})\n`;
         result += this.increaseTab(this.makeBody(func));
         result += `\nend`;
         return result;

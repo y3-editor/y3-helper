@@ -85,8 +85,9 @@ export class Process {
                 let content = result.eca.make(this.formatter);
                 this.includeFiles.push(result.includeName);
                 this.write(result.includeName, content);
-            } catch {
-                y3.log.error(`【编译ECA】编译[${result.fileName}]失败`);
+            } catch(e) {
+                this.progress?.message(`编译[${result.fileName}]失败：${e}`);
+                y3.log.error(`【编译ECA】编译[${result.fileName}]失败：${e}`);
             }
         }
 

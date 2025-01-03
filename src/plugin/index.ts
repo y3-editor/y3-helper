@@ -75,6 +75,9 @@ async function updatePluginDTS(showme = false) {
     }
     const templateUri = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
     const targetUri = y3.uri(y3.env.pluginUri, 'y3-helper.d.ts');
+    if (!await y3.fs.isFile(templateUri)) {
+        return;
+    }
     let suc = await y3.fs.copy(templateUri, targetUri, {
         overwrite: true,
     });
