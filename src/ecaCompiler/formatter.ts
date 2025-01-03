@@ -214,10 +214,15 @@ export class Formatter {
 
     public formatCall(name: string, node: Node) {
         let rule = this.rules.get(name);
-        if (!rule) {
-            return name + '(' + (node.makeArgs(this)?.join(', ') ?? '') + ')';
+        if (rule) {
+            return rule.format(this, node);
         }
-        return rule.format(this, node);
+        let args = node.makeArgs(this)?.join(', ') ?? '';
+        let funcName = this.getFuncName(name);
+        if (funcName) {
+            return `Func[${y3.lua.encode(funcName)}](${args})`;
+        }
+        return `${name}(${args})`;
     }
 
     public formatEvent(name: string, node: Node) {
@@ -363,7 +368,7 @@ export class Formatter {
     }
 
     public getFuncName(id: string) {
-        return this.funcNameRecord[id] ?? id;
+        return this.funcNameRecord[id];
     }
 
     public increaseTab(content: string, tab: string = '    '): string {
