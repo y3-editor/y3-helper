@@ -23,9 +23,8 @@ export class InlayHintProvider implements vscode.InlayHintsProvider {
             if (objects.length === 0) {
                 continue;
             }
-            for (let object of objects) {
-                hints.push(new vscode.InlayHint(start, object.name));
-            }
+            let name = objects.map(object => object.name).join('|');
+            hints.push(new vscode.InlayHint(start, name));
         }
         if (hints.length === 0) {
             return null;
