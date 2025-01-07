@@ -186,7 +186,7 @@ export class Process {
     public async makeInitFile() {
         this.progress?.message('生成索引文件...');
         y3.log.info('【编译ECA】正在生成索引文件...');
-        const headPart = 'Func = {}';
+        const headPart = 'GameAPI.disable_all_eca_triggers()\nFunc = {}';
         const includesPart = this.includeFiles.map(fileName => {
             return `include ${y3.lua.encode(fileName.replace(/\.lua$/, '').replace(/[\\/]/g, '.'))}`;
         }).join('\n');
