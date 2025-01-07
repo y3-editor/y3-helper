@@ -383,26 +383,22 @@ export class GlobalVariables {
 }
 
 export class Compiler {
-    private async loadJson(input: string | vscode.Uri | y3.json.JObject) {
+    private loadJson(input: string | y3.json.JObject) {
         let json: y3.json.JObject;
         if (typeof input === 'string') {
             json = y3.json.parse(input);
-        } else if (input instanceof vscode.Uri) {
-            let file = await y3.fs.readFile(input);
-            y3.assert(file, 'File not found: ' + input.fsPath);
-            json = y3.json.parse(file.string);
         } else {
             json = input;
         }
         return json;
     }
-    public async compileECA(input: string | vscode.Uri | y3.json.JObject): Promise<ECA> {
-        let json = await this.loadJson(input);
+    public compileECA(input: string | y3.json.JObject) {
+        let json = this.loadJson(input);
         return new ECA(json);
     }
 
-    public async compileGlobalVariables(input: string | vscode.Uri | y3.json.JObject) {
-        let json = await this.loadJson(input);
+    public compileGlobalVariables(input: string | y3.json.JObject) {
+        let json = this.loadJson(input);
         return new GlobalVariables(json);
     }
 }
