@@ -46,7 +46,9 @@ export class GameLauncher {
             return false;
         }
 
-        await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(env.scriptUri!, '.log'));
+        for (let map of env.project!.maps) {
+            await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(map.scriptUri, '.log'));
+        }
         let suc = await this.runPlugin();
         if (!suc) {
             return false;
