@@ -22,23 +22,25 @@ export class Process {
     includeFiles: string[] = [];
     inTriggerDir = 'global_trigger/trigger' as const;
     inFunctionDir = 'global_trigger/function' as const;
+    inObjectDirs = ['ability', 'destructible', 'item', 'modifier', 'projectile', 'unit'] as const;
     scriptDir = 'script' as const;
     outBasseDir = 'y3-trigger' as const;
     outTriggerDir = 'trigger' as const;
     outFunctionDir = 'function' as const;
+    outObjectDir = 'object' as const;
     inGlobalVariableFileName = 'globaltriggervariable.json' as const;
 
     constructor(private mapDir: vscode.Uri, private formatter: Formatter, private progress?: Progress) { }
 
     public async fullCompile() {
-        await this.compileGlobalVariables();
-
         this.progress?.message('搜索触发器文件...');
         let triggerNames = await this.scanTriggers(y3.uri(this.mapDir, this.inTriggerDir));
         this.progress?.message('搜索函数文件...');
         let functionNames = await this.scanTriggers(y3.uri(this.mapDir, this.inFunctionDir));
 
-        this.progress?.total((triggerNames.length + functionNames.length) * 3);
+        this.progress?.total((triggerNames.length + functionNames.length) * 3 + 1);
+
+        await this.compileGlobalVariables();
 
         let compileResults: CompileResult[] = [];
 

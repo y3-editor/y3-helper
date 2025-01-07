@@ -58,10 +58,6 @@ export function init() {
             title: '编译中',
             cancellable: true,
         }, async (progress, token) => {
-            let msg = '';
-            let cur = 0;
-            let total = 1;
-
             progress.report({ message: '加载地图配置...'});
 
             await fillStatic(formatter);

@@ -290,6 +290,8 @@ export async function fillStatic(formatter: Formatter) {
             }
             return '';
         })
+        . setRule('$100002', '{}[{}]')
+        . setRule('$100028', '{}[{}]')
         . setRule('OR', (node) => {
             const filters = node.args?.[0]?.makeArgs(formatter) ?? [];
             if (filters.length === 0) {
