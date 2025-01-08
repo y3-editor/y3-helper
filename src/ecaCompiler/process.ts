@@ -27,7 +27,6 @@ export class Process {
     includeFiles: string[] = [];
     inTriggerDir = 'global_trigger/trigger' as const;
     inFunctionDir = 'global_trigger/function' as const;
-    inObjectDirs = ['ability', 'destructible', 'item', 'modifier', 'projectile', 'unit'] as const;
     scriptDir = 'script' as const;
     outBasseDir = 'y3-trigger' as const;
     outTriggerDir = 'trigger' as const;
@@ -51,7 +50,7 @@ export class Process {
 
         this.progress?.message('搜索物编触发器文件...');
         y3.log.info('【编译ECA】搜索物编触发器文件...');
-        let searchedObjects = await this.scanObjects(this.mapDir, this.inObjectDirs);
+        let searchedObjects = await this.scanObjects(this.mapDir);
         total += searchedObjects.length;
 
         this.progress?.total(total * 3 + 1);
@@ -149,7 +148,7 @@ export class Process {
                 continue;
             }
             results.push({
-                fileName: fileInfo[0],
+                fileName: this.makeValidFileName(fileInfo[0]),
                 content: file.string,
                 uri,
             });
@@ -159,9 +158,50 @@ export class Process {
         return results;
     }
 
-    private async scanObjects(inDir: vscode.Uri, dirs: readonly string[]) {
+    private validNameCache = new Map<string, string>();
+    private validNameDualCache = new Map<string, string>();
+    private makeValidFileName(name: string) {
+        let trim = name.replace(/\.json$/, '');
+        if (this.validNameCache.has(trim)) {
+            return this.validNameCache.get(trim)!;
+        }
+        let validName = trim.replace(/[\.\\\/\:\*\?\"\<\>\|]/g, '_');
+        if (this.validNameDualCache.has(validName)) {
+            for (let i = 1; ; i++) {
+                let newValidName = `${validName}_${i}`;
+                if (!this.validNameDualCache.has(newValidName)) {
+                    validName = newValidName;
+                    break;
+                }
+            }
+        }
+        this.validNameCache.set(trim, validName);
+        this.validNameDualCache.set(validName, trim);
+        return validName;
+    }
+
+    private async scanObjects(inDir: vscode.Uri) {
         y3.log.info(`【编译ECA】搜索目录为${inDir}`);
         let results: SearchResult[] = [];
+        for (const [nameEN, nameCN] of Object.entries(y3.consts.Table.name.toCN)) {
+            const table = y3.table.openTable(nameCN);
+            for (const key of await table.getList()) {
+                let uri = y3.uri(inDir, nameEN, `${key}.json`);
+                let file = await y3.fs.readFile(uri);
+                if (!file) {
+                    continue;
+                }
+                let object = await table.get(key);
+                if (!object) {
+                    continue;
+                }
+                results.push({
+                    fileName: this.makeValidFileName(`${nameCN} - ${object.name}`),
+                    content: file.string,
+                    uri,
+                });
+            }
+        }
         return results;
     }
 
@@ -169,7 +209,7 @@ export class Process {
         try {
             let eca = this.compiler.compileECA(searched.content);
 
-            let includeName = [this.outBasseDir, this.outTriggerDir, searched.fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
+            let includeName = [this.outBasseDir, this.outTriggerDir, searched.fileName + '.lua'].join('/');
             return {
                 fileName: searched.fileName,
                 includeName,
@@ -189,7 +229,7 @@ export class Process {
         try {
             let eca = this.compiler.compileECA(searched.content);
 
-            let includeName = [this.outBasseDir, this.outFunctionDir, searched.fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
+            let includeName = [this.outBasseDir, this.outFunctionDir, searched.fileName + '.lua'].join('/');
             return {
                 fileName: searched.fileName,
                 includeName,
@@ -209,7 +249,7 @@ export class Process {
         try {
             let eca = this.compiler.compileECA(searched.content);
 
-            let includeName = [this.outBasseDir, this.outObjectDir, searched.fileName.replace(/\.json$/, '').replace(/\./g, '_') + '.lua'].join('/');
+            let includeName = [this.outBasseDir, this.outObjectDir, searched.fileName + '.lua'].join('/');
             return {
                 fileName: searched.fileName,
                 includeName,
