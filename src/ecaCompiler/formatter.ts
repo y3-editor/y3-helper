@@ -251,15 +251,15 @@ export class Formatter {
         const value = this.formatValue(variable.type, variable.value);
         if (variable.isArray) {
             if (value === 'nil') {
-                return `y3.eca_rt.array()`;
+                return `y3.rt.array()`;
             } else if (value === '""') {
-                return `y3.eca_rt.array("")`;
+                return `y3.rt.array("")`;
             } else if ((value === '0' || value === '-1') && variable.type !== 'INTEGER') {
-                return `y3.eca_rt.array()`;
+                return `y3.rt.array()`;
             } else if (variable.type === 'BOOLEAN' || variable.type === 'FLOAT' || variable.type === 'INTEGER') {
-                return `y3.eca_rt.array(${value})`;
+                return `y3.rt.array(${value})`;
             } else {
-                return `y3.eca_rt.array(${y3.lua.encode(value)})`;
+                return `y3.rt.array(${y3.lua.encode(value)})`;
             }
         } else {
             return `${value}`;

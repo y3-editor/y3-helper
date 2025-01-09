@@ -35,23 +35,23 @@ export class Process {
     outObjectDir = 'object' as const;
     inGlobalVariableFileName = 'globaltriggervariable.json' as const;
 
-    constructor(private mapDir: vscode.Uri, private formatter: Formatter, private progress?: Progress) { }
+    constructor(private inMap: y3.Map, private outMap: y3.Map, private formatter: Formatter, private progress?: Progress) { }
 
     public async fullCompile() {
         let total = 0;
         this.progress?.message('搜索触发器文件...');
         y3.log.info('【编译ECA】搜索触发器文件...');
-        let searchedTriggers = await this.scanTriggers(y3.uri(this.mapDir, this.inTriggerDir));
+        let searchedTriggers = await this.scanTriggers(y3.uri(this.inMap.uri, this.inTriggerDir));
         total += searchedTriggers.length;
         
         this.progress?.message('搜索函数文件...');
         y3.log.info('【编译ECA】搜索函数文件...');
-        let searchedFunctions = await this.scanTriggers(y3.uri(this.mapDir, this.inFunctionDir));
+        let searchedFunctions = await this.scanTriggers(y3.uri(this.inMap.uri, this.inFunctionDir));
         total += searchedFunctions.length;
 
         this.progress?.message('搜索物编触发器文件...');
         y3.log.info('【编译ECA】搜索物编触发器文件...');
-        let searchedObjects = await this.scanObjects(this.mapDir);
+        let searchedObjects = await this.scanObjects(this.inMap.uri);
         total += searchedObjects.length;
 
         this.progress?.total(total * 3 + 1);
@@ -269,7 +269,7 @@ export class Process {
 
     public async compileGlobalVariables() {
         this.progress?.message('编译全局变量...');
-        const uri = y3.uri(this.mapDir, this.inGlobalVariableFileName);
+        const uri = y3.uri(this.inMap.uri, this.inGlobalVariableFileName);
         try {
             let globalVariables = this.compiler.compileGlobalVariables((await y3.fs.readFile(uri))!.string);
             let content = globalVariables.make(this.formatter);
@@ -310,18 +310,18 @@ export class Process {
         this.progress?.message('等待文件写入硬盘...');
         y3.log.info('【编译ECA】等待文件写入硬盘...');
 
-        const baseDir = y3.uri(this.mapDir, this.scriptDir, this.outBasseDir);
+        const baseDir = y3.uri(this.outMap.uri, this.scriptDir, this.outBasseDir);
         let scanResult = await y3.fs.scan(baseDir);
         for (let file of scanResult) {
             let fullName = `${this,this.outBasseDir}/${file[0]}`;
             if (file[1] === vscode.FileType.File && !this.writeCache.has(fullName)) {
                 y3.log.debug(`【编译ECA】删除多余的文件：${fullName}`);
-                y3.fs.removeFile(y3.uri(this.mapDir, this.scriptDir, fullName));
+                y3.fs.removeFile(y3.uri(this.outMap.uri, this.scriptDir, fullName));
             }
         }
 
         for (let [includeName, content] of this.writeCache) {
-            const uri = y3.uri(this.mapDir, this.scriptDir, includeName);
+            const uri = y3.uri(this.outMap.uri, this.scriptDir, includeName);
             let file = await y3.fs.readFile(uri);
             if (file?.string === content) {
                 y3.log.debug(`【编译ECA】跳过相同的文件：${includeName}`);

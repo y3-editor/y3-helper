@@ -266,7 +266,7 @@ export async function fillStatic(formatter: Formatter) {
         . setRule('KILL_UNIT', '{}:kill_by({})')
         . setRule('KILLER_UNIT', 'params.source_unit')
         . setRule('KILLED_UNIT', 'params.target_unit')
-        . setRule('EVALUATE_LUA_CODE', 'y3.eca_rt.evaluate({}, {}, {}, {}, {}, {})')
+        . setRule('EVALUATE_LUA_CODE', 'y3.rt.evaluate({}, {}, {}, {}, {}, {})')
         . setRule('SET_VARIABLE', '{} = {}')
         . setRule('INT_PLUS_ONE', '({} + 1)')
         . setRule('STRING_COMPARE', '({} {} {})')

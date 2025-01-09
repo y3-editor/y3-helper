@@ -5,7 +5,7 @@ export * as excel from './editorTable/excel';
 export * as table from './editorTable/editorTable';
 export * from './tools';
 export * as consts from './constants';
-export { env } from './env';
+export { env, Map } from './env';
 export * as plugin from './plugin';
 export * as exceljs from 'exceljs';
 export let helper: vscode.ExtensionContext;

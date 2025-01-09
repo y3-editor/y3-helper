@@ -49,21 +49,21 @@ class ProgressHandle implements Progress {
 export function init() {
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
         await y3.env.mapReady();
-        if (!y3.env.scriptUri) {
-            vscode.window.showErrorMessage('请先打开地图');
-            return;
-        }
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: '编译中',
             cancellable: true,
         }, async (progress, token) => {
+            if (!y3.env.currentTriggerMap || !y3.env.currentMap) {
+                vscode.window.showErrorMessage('请先打开地图');
+                return;
+            }
             progress.report({ message: '加载地图配置...'});
 
             await fillStatic(formatter);
             await fillMapDefined(formatter);
 
-            let process = new Process(y3.env.mapUri!, formatter, new ProgressHandle(token, (increment, message) => {
+            let process = new Process(y3.env.currentTriggerMap, y3.env.currentMap, formatter, new ProgressHandle(token, (increment, message) => {
                 progress.report({ increment, message });
             }));
 
