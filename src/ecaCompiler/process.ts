@@ -313,6 +313,9 @@ export class Process {
         const baseDir = y3.uri(this.outMap.uri, this.scriptDir, this.outBasseDir);
         let scanResult = await y3.fs.scan(baseDir);
         for (let file of scanResult) {
+            if (this.progress?.isCanceled()) {
+                throw new vscode.CancellationError();
+            }
             let fullName = `${this,this.outBasseDir}/${file[0]}`;
             if (file[1] === vscode.FileType.File && !this.writeCache.has(fullName)) {
                 y3.log.debug(`【编译ECA】删除多余的文件：${fullName}`);
@@ -321,6 +324,9 @@ export class Process {
         }
 
         for (let [includeName, content] of this.writeCache) {
+            if (this.progress?.isCanceled()) {
+                throw new vscode.CancellationError();
+            }
             const uri = y3.uri(this.outMap.uri, this.scriptDir, includeName);
             let file = await y3.fs.readFile(uri);
             if (file?.string === content) {
@@ -328,6 +334,7 @@ export class Process {
                 this.progress?.update();
                 continue;
             }
+            this.progress?.message(`正在写入硬盘：${includeName}`);
             y3.log.debug(`【编译ECA】写入文件：${includeName}`);
             await y3.fs.writeFile(uri, content);
             this.progress?.update();

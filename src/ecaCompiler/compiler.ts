@@ -130,8 +130,8 @@ export class Variable extends Node {
 class VarRef extends Node {
     name: string;
     type: string;
-    scope: 'local' | 'global';
-    constructor(json: [string, string, 'local' | 'global']) {
+    scope: 'local' | 'global' | 'actor';
+    constructor(json: [string, string, 'local' | 'global' | 'actor']) {
         super();
         this.type = json[0];
         this.name = json[1];
@@ -139,7 +139,14 @@ class VarRef extends Node {
     }
 
     make(formatter: Formatter): string {
-        return y3.lua.getValidName((this.scope === 'global' ? 'V_' : 'v_') + this.name, reservedNames);
+        switch (this.scope) {
+            case 'local':
+                return y3.lua.getValidName('l_' + this.name, reservedNames);
+            case 'global':
+                return y3.lua.getValidName('V_' + this.name, reservedNames);
+            case 'actor':
+                return 'y3.rt.storage(params).' + y3.lua.getValidName(this.name, reservedNames);
+        }
     }
 
     makeArgs(formatter: Formatter) {
@@ -178,7 +185,7 @@ class NilNode extends Node {
 
 const Nil = new NilNode();
 
-function toArray(v: any) {
+function toArray(v: any): any[] | undefined {
     if (Array.isArray(v)) {
         return v;
     }
@@ -206,13 +213,13 @@ function parseExp(eca: ECA, exp: any): Exp {
         return new TriggerRef(eca, String(exp));
     }
     if (toArray(exp)) {
-        return new VarRef(toArray(exp));
+        return new VarRef(toArray(exp) as any);
     } else {
         const arg_list = exp.args_list as any[];
         if (arg_list.length === 1) {
             let first = arg_list[0];
             if (toArray(first)) {
-                return new VarRef(toArray(first));
+                return new VarRef(toArray(first) as any);
             }
             if (typeof first !== 'object') {
                 return new Value(exp.arg_type, first);
@@ -222,21 +229,15 @@ function parseExp(eca: ECA, exp: any): Exp {
     return new Call(eca, exp);
 }
 
-interface VarData {
-    [0]: Record<string, Record<string, any>>;
-    [1]: Record<string, 0 | 10>;
-    [2]: string[];
-}
-
-function parseVarData(varData: VarData) {
+function parseVarData(dict: Record<string, Record<string, any>>, length: Record<string, 0 | 10>, order: string[] = []): Variable[] {
     let variableMap: Record<string, Variable> = {};
-    for (let [type, data] of Object.entries(varData[0])) {
+    for (let [type, data] of Object.entries(dict)) {
         for (let [name, value] of Object.entries(data)) {
-            variableMap[name] = new Variable(name, type, varData[1][name] !== 0, new Value(type, value));
+            variableMap[name] = new Variable(name, type, length[name] !== 0, new Value(type, value));
         }
     }
     let variables: Variable[] = [];
-    for (let name of varData[2]) {
+    for (let name of order) {
         variables.push(variableMap[name]);
     }
     return variables;
@@ -250,7 +251,7 @@ export class Trigger {
     conditions: Exp[] = [];
     actions: Action[] = [];
     variables: Variable[] = [];
-    constructor(public eca: ECA, private json: y3.json.JObject) {
+    constructor(public eca: ECA, private json: any) {
         this.name = json.trigger_name as string;
         this.groupID = json.group_id as number;
         if (!json.enabled || !json.valid || !json.call_enabled) {
@@ -258,7 +259,7 @@ export class Trigger {
             return;
         }
         if (json.event) {
-            for (let event of json.event as y3.json.JObject[]) {
+            for (let event of json.event as any[]) {
                 this.events.push(new Event(eca, event));
             }
         }
@@ -276,8 +277,7 @@ export class Trigger {
             }
         }
         if (json.var_data) {
-            const varData = json.var_data as unknown as VarData;
-            this.variables = parseVarData(varData);
+            this.variables = parseVarData(json.var_data[0], json.var_data[1], json.var_data[2]);
         }
     }
 
@@ -298,7 +298,7 @@ export class Function {
     actions: Action[] = [];
     variables: Variable[] = [];
     params: Param[] = [];
-    constructor(private eca: ECA, private json: y3.json.JObject) {
+    constructor(private eca: ECA, private json: any) {
         this.name = json.func_name as string;
         this.id = json.func_id as string;
         if (!json.enabled) {
@@ -314,12 +314,11 @@ export class Function {
             }
         }
         if (json.var_data) {
-            const varData = json.var_data as unknown as VarData;
-            this.variables = parseVarData(varData);
+            this.variables = parseVarData(json.var_data[0], json.var_data[1], json.var_data[2]);
         }
         if (json.func_param_list) {
             this.params = (json.func_param_list as any[]).map((param: [string, boolean]) => {
-                param = toArray(param);
+                param = toArray(param) as [string, boolean];
                 return { name: param[0], required: param[1] };
             });
         }
@@ -357,11 +356,17 @@ export class ECA {
 
 export class ECAGroup {
     ecas: ECA[] = [];
-    constructor(private json: y3.json.JObject, public objectType: y3.consts.Table.NameCN) {
+    variables: Variable[] = [];
+    constructor(private json: any, public objectType: y3.consts.Table.NameCN) {
         for (const [id, obj] of Object.entries(json.trigger_dict as Record<string, y3.json.JObject>)) {
             let eca = new ECA(obj, this);
             this.ecas.push(eca);
         }
+        this.variables = parseVarData(
+            json.variable_dict,
+            json.variable_length_dict,
+            toArray(json.variable_group_info)?.map((v: [string, string]) => v[0]),
+        );
     }
 
     make(formatter: Formatter) {

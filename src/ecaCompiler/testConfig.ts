@@ -292,6 +292,7 @@ export async function fillStatic(formatter: Formatter) {
         })
         . setRule('$100002', '{}[{}]')
         . setRule('$100028', '{}[{}]')
+        . setRule('$100148', '{}[{}]')
         . setRule('OR', (node) => {
             const filters = node.args?.[0]?.makeArgs(formatter) ?? [];
             if (filters.length === 0) {
