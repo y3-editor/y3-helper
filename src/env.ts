@@ -4,7 +4,7 @@ import winreg from 'winreg';
 import path from 'path';
 import * as tools from './tools';
 import { isPathValid } from './utility';
-import { queue } from './utility/decorators';
+import { queue, throttle } from './utility/decorators';
 import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { EditorManager } from './editorTable/editorTable';
@@ -57,12 +57,23 @@ class Map {
     }
 }
 
-class Project {
-    constructor(public uri: vscode.Uri) {}
+interface ProjectSetting {
+    use_main_level_trigger_and_object: boolean;
+    use_main_level_ui: boolean;
+}
+
+class Project extends vscode.Disposable {
+    private disposables: vscode.Disposable[] = [];
+    constructor(public uri: vscode.Uri, private onDiDChange?: () => void) {
+        super(() => {
+            this.disposables.forEach(d => d.dispose());
+        });
+    }
 
     entryMapId: bigint = 0n;
     maps: Map[] = [];
     entryMap?: Map;
+    setting?: ProjectSetting;
     async start() {
         let projectFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.project'));
         if (!projectFile) {
@@ -80,6 +91,9 @@ class Project {
         this.entryMapId = BigInt(projectFile.string.slice(entryMapIdNode.offset, entryMapIdNode.offset + entryMapIdNode.length));
 
         let started: Promise<any>[] = [];
+
+        started.push(this.loadSetting());
+
         for (const [mapName] of await y3.fs.dir(this.uri, 'maps')) {
             let map = new Map(mapName, vscode.Uri.joinPath(this.uri, 'maps', mapName));
             this.maps.push(map);
@@ -89,6 +103,29 @@ class Project {
         await Promise.all(started);
 
         this.entryMap = this.maps.find(map => map.id === this.entryMapId);
+    }
+
+    private async loadSetting() {
+        let applySetting = async () => {
+            try {
+                let settingFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'setting.json'));
+                if (!settingFile) {
+                    return;
+                }
+                this.setting = jsonc.parse(settingFile.string);
+            } catch (error) {
+                y3.log.error(`读取项目设置失败: ${error}`);
+                vscode.window.showErrorMessage(`读取项目设置失败: ${error}`);
+            }
+        };
+
+        await applySetting();
+        let fw = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, 'setting.json'));
+        this.disposables.push(fw);
+        fw.onDidChange(async () => {
+            await applySetting();
+            this.onDiDChange?.();
+        });
     }
 
     findMapByUri(uri: vscode.Uri) {
@@ -277,15 +314,9 @@ class Env {
         return this._editorTablePath;
     }
 
-    private _timer?: NodeJS.Timeout;
+    @throttle(100)
     private fireOnDidReload() {
-        if (this._timer) {
-            return;
-        }
-        this._timer = setTimeout(() => {
-            this._timer = undefined;
-            this.envChangeEmitter.fire();
-        }, 100);
+        this.envChangeEmitter.fire();
     }
 
     @queue()
@@ -339,7 +370,10 @@ class Env {
         }
         this.projectUri = projectUri;
         this.globalScriptUri = vscode.Uri.joinPath(this.projectUri, 'global_script');
-        this.project = new Project(projectUri);
+        this.project?.dispose();
+        this.project = new Project(projectUri, () => {
+            this.fireOnDidReload();
+        });
         await this.project.start();
         if (!this.project.entryMap) {
             return;
