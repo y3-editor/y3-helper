@@ -228,7 +228,7 @@ interface VarData {
     [2]: string[];
 }
 
-function parseVarData(eca: ECA, varData: VarData) {
+function parseVarData(varData: VarData) {
     let variableMap: Record<string, Variable> = {};
     for (let [type, data] of Object.entries(varData[0])) {
         for (let [name, value] of Object.entries(data)) {
@@ -244,14 +244,16 @@ function parseVarData(eca: ECA, varData: VarData) {
 
 export class Trigger {
     name: string;
+    groupID = 0;
     enabled: boolean = true;
     events: Event[] = [];
     conditions: Exp[] = [];
     actions: Action[] = [];
     variables: Variable[] = [];
-    constructor(private eca: ECA, private json: y3.json.JObject) {
+    constructor(public eca: ECA, private json: y3.json.JObject) {
         this.name = json.trigger_name as string;
-        if (!json.enabled) {
+        this.groupID = json.group_id as number;
+        if (!json.enabled || !json.valid || !json.call_enabled) {
             this.enabled = false;
             return;
         }
@@ -275,7 +277,7 @@ export class Trigger {
         }
         if (json.var_data) {
             const varData = json.var_data as unknown as VarData;
-            this.variables = parseVarData(eca, varData);
+            this.variables = parseVarData(varData);
         }
     }
 
@@ -313,7 +315,7 @@ export class Function {
         }
         if (json.var_data) {
             const varData = json.var_data as unknown as VarData;
-            this.variables = parseVarData(eca, varData);
+            this.variables = parseVarData(varData);
         }
         if (json.func_param_list) {
             this.params = (json.func_param_list as any[]).map((param: [string, boolean]) => {
@@ -334,7 +336,7 @@ type Action = Call | Comment | TriggerRef;
 export class ECA {
     closures: Record<string, Trigger> = {};
     main: Trigger | Function;
-    constructor(private json: y3.json.JObject) {
+    constructor(private json: y3.json.JObject, public group?: ECAGroup) {
         if (y3.is.object(json.sub_trigger)) {
             for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
                 this.closures[id] = new Trigger(this, closure);
@@ -349,8 +351,27 @@ export class ECA {
 
     make(formatter: Formatter) {
         let result = this.main.make(formatter);
-        result = formatter.asFileContent(result);
         return result;
+    }
+}
+
+export class ECAGroup {
+    ecas: ECA[] = [];
+    constructor(private json: y3.json.JObject, public objectType: y3.consts.Table.NameCN) {
+        for (const [id, obj] of Object.entries(json.trigger_dict as Record<string, y3.json.JObject>)) {
+            let eca = new ECA(obj, this);
+            this.ecas.push(eca);
+        }
+    }
+
+    make(formatter: Formatter) {
+        let buffer: string[] = [];
+        for (const eca of this.ecas) {
+            buffer.push(eca.make(formatter));
+            buffer.push('\n\n');
+        }
+        let content = buffer.join('');
+        return content;
     }
 }
 
@@ -377,28 +398,23 @@ export class GlobalVariables {
             buffer.push('\n');
         }
         let content = buffer.join('');
-        content = formatter.asFileContent(content);
         return content;
     }
 }
 
 export class Compiler {
-    private loadJson(input: string | y3.json.JObject) {
-        let json: y3.json.JObject;
-        if (typeof input === 'string') {
-            json = y3.json.parse(input);
-        } else {
-            json = input;
-        }
-        return json;
-    }
-    public compileECA(input: string | y3.json.JObject) {
-        let json = this.loadJson(input);
+    public compileECA(input: string) {
+        let json = y3.json.parse(input);
         return new ECA(json);
     }
 
-    public compileGlobalVariables(input: string | y3.json.JObject) {
-        let json = this.loadJson(input);
+    public compileGlobalVariables(input: string) {
+        let json = y3.json.parse(input);
         return new GlobalVariables(json);
+    }
+
+    public compileObject(input: string, objectType: y3.consts.Table.NameCN) {
+        let json = y3.json.parse(input);
+        return new ECAGroup(json, objectType);
     }
 }

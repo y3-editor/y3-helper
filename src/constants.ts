@@ -71,6 +71,31 @@ export namespace Table {
         } as const,
     } as const;
 
+    export const runtime = {
+        toCN: {
+            "unit": "单位",
+            "decoration": "装饰物",
+            "item": "物品",
+            "ability": "技能",
+            "buff": "魔法效果",
+            "projectile": "投射物",
+            "technology": "科技",
+            "destructible": "可破坏物",
+            "sound": "声音",
+        } as const,
+        fromCN: {
+            "单位": "unit",
+            "装饰物": "decoration",
+            "物品": "item",
+            "技能": "ability",
+            "魔法效果": "buff",
+            "投射物": "projectile",
+            "科技": "technology",
+            "可破坏物": "destructible",
+            "声音": "sound",
+        } as const,
+    };
+
     export const type = {
         toLuaType: {
             100000: "number",

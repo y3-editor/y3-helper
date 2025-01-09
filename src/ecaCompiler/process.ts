@@ -1,5 +1,5 @@
 import { Formatter } from './formatter';
-import { Compiler, ECA } from './compiler';
+import { Compiler, ECA, ECAGroup } from './compiler';
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 
@@ -13,13 +13,14 @@ export interface Progress {
 interface CompileResult {
     fileName: string,
     includeName: string,
-    eca: ECA,
+    eca: ECA | ECAGroup,
 }
 
 interface SearchResult {
     fileName: string,
     uri: vscode.Uri,
     content: string,
+    objectType?: y3.consts.Table.NameCN,
 }
 
 export class Process {
@@ -199,6 +200,7 @@ export class Process {
                     fileName: this.makeValidFileName(`${nameCN} - ${object.name}`),
                     content: file.string,
                     uri,
+                    objectType: nameCN,
                 });
             }
         }
@@ -247,7 +249,7 @@ export class Process {
 
     public async compileOneObject(searched: SearchResult) {
         try {
-            let eca = this.compiler.compileECA(searched.content);
+            let eca = this.compiler.compileObject(searched.content, searched.objectType!);
 
             let includeName = [this.outBasseDir, this.outObjectDir, searched.fileName + '.lua'].join('/');
             return {
@@ -290,7 +292,7 @@ export class Process {
 
     private writeCache = new Map<string, string>();
     private write(includeName: string, content: string) {
-        this.writeCache.set(includeName, content);
+        this.writeCache.set(includeName, this.formatter.asFileContent(content));
     }
 
     public async makeInitFile() {
@@ -300,7 +302,7 @@ export class Process {
         const includesPart = this.includeFiles.map(fileName => {
             return `include ${y3.lua.encode(fileName.replace(/\.lua$/, '').replace(/[\\/]/g, '.'))}`;
         }).join('\n');
-        let content = this.formatter.asFileContent([headPart, includesPart].join('\n\n'));
+        let content = [headPart, includesPart].join('\n\n');
         this.write(this.outBasseDir + '/init.lua', content);
     }
 

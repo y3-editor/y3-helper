@@ -321,9 +321,13 @@ export class Formatter {
             if (!trg.enabled) {
                 return `-- 触发器 ${trg.name} 已禁用`;
             }
+            let group = trg.eca.group;
+            let eventTarget = group
+                ? `y3.object.${y3.consts.Table.runtime.fromCN[group.objectType]}[${trg.groupID}]`
+                : 'y3.game';
             let result = '';
             if (trg.events.length === 1) {
-                result += `y3.game:event(${trg.events[0].make(this)}, function(_, params)\n`;
+                result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
                 result += this.increaseTab(this.makeBody(trg));
                 result += `\nend)`;
             } else {
@@ -341,7 +345,7 @@ export class Formatter {
                 result += this.increaseTab(this.makeBody(trg));
                 result += `\nend\n\n`;
                 for (let event of trg.events) {
-                    result += `y3.game:event(${event.make(this)}, action)\n`;
+                    result += `${eventTarget}:event(${event.make(this)}, action)\n`;
                 }
             }
             return result;
