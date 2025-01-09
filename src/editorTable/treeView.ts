@@ -158,7 +158,6 @@ class TreeView extends vscode.Disposable {
         }));
 
         env.onDidChange(() => this.refresh());
-        y3.language.onDidChange(() => this.refresh());
 
         // 刷新按钮
         this.disposables.push(vscode.commands.registerCommand('y3-helper.refreshTableViewer', () => this.provider.refresh()));
@@ -262,10 +261,14 @@ class TreeView extends vscode.Disposable {
         });
     }
 
+    private _languageWatcher?: vscode.Disposable;
     async refresh() {
         await env.mapReady();
         this.provider.flush();
         this.provider.refresh();
+
+        this._languageWatcher?.dispose();
+        this._languageWatcher = y3.env.currentTriggerMap?.language.onDidChange(() => this.refresh());
     }
 
     private provider: TreeViewProvider;

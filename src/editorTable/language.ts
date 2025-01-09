@@ -1,29 +1,27 @@
 import * as vscode from 'vscode';
-import { env } from '../env';
+import { Map } from '../env';
 import * as y3 from 'y3-helper';
 import { hash, SpinLock } from '../utility';
-import { throttle, queue } from '../utility/decorators';
+import { throttle } from '../utility/decorators';
 
-const onDidChangeEmitter = new vscode.EventEmitter<void>();
-
-class Language extends vscode.Disposable {
+export class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
-    public mapUri?: vscode.Uri;
-    private _mapReady = true;
+    public uri: vscode.Uri;
 
-    constructor() {
+    constructor(public map: Map) {
         super(() => {
             this.disposeList.forEach(d => d.dispose());
         });
-        if (env.mapUri) {
-            this.mapUri = vscode.Uri.joinPath(env.mapUri, "zhlanguage.json");
-            let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(env.mapUri, "zhlanguage.json"));
-            watcher.onDidChange(() => this.reload());
-            watcher.onDidCreate(() => this.reload());
-            watcher.onDidDelete(() => this.reload());
-            this.disposeList.push(watcher);
-            this.reload();
-        }
+        this.uri = vscode.Uri.joinPath(this.map.uri, "zhlanguage.json");
+    }
+
+    async start() {
+        let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, "zhlanguage.json"));
+        watcher.onDidChange(() => this.reload());
+        watcher.onDidCreate(() => this.reload());
+        watcher.onDidDelete(() => this.reload());
+        this.disposeList.push(watcher);
+        await this.reload();
     }
 
     private _mapLanguage?: y3.json.Json;
@@ -31,20 +29,18 @@ class Language extends vscode.Disposable {
     private _ioLock = new SpinLock();
     private _lastWriteTime = 0;
 
+    private onDidChangeEmitter = new vscode.EventEmitter<void>();
+
     @throttle(500)
     async reload() {
         if (this._waitWrite || Date.now() - this._lastWriteTime < 1000) {
             this.reload();
             return;
         }
-        this._mapReady = false;
-        if (!this.mapUri) {
-            return;
-        }
         try {
             await this._ioLock.acquire();
             y3.log.debug('开始读取语言文件');
-            let languageFile = await y3.fs.readFile(this.mapUri);
+            let languageFile = await y3.fs.readFile(this.uri);
             y3.log.debug('语言文件读取完成');
             this._ioLock.release();
             if (!languageFile) {
@@ -61,26 +57,16 @@ class Language extends vscode.Disposable {
                 y3.log.warn(`解析中文语言文件失败：${e}`);
             }
         } finally {
-            this._mapReady = true;
-            onDidChangeEmitter.fire();
+            this.onDidChangeEmitter.fire();
         }
     }
 
-    async ready() {
-        if (this._mapReady) {
-            return;
-        }
-        await new Promise<void>(resolve => {
-            let interval = setInterval(() => {
-                if (this._mapReady) {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
+    onDidChange = this.onDidChangeEmitter.event;
 
-    get(key: string): string | undefined {
+    get(key: string | number | bigint): string | undefined {
+        if (typeof key === 'number' || typeof key === 'bigint') {
+            key = key.toString();
+        }
         let value = this._mapLanguage?.get(key);
         if (typeof value !== 'string') {
             return undefined;
@@ -89,7 +75,10 @@ class Language extends vscode.Disposable {
     }
 
     private _waitWrite = false;
-    async set(key: string, value: string) {
+    async set(key: string | number | bigint, value: string) {
+        if (typeof key === 'number' || typeof key === 'bigint') {
+            key = key.toString();
+        }
         if (this.get(key) === value) {
             return;
         }
@@ -117,7 +106,10 @@ class Language extends vscode.Disposable {
         return result;
     }
 
-    keyOf(value: string): string {
+    keyOf(value: string | number | bigint): string | bigint {
+        if (typeof value === 'number' || typeof value === 'bigint') {
+            value = value.toString();
+        }
         this._mapReverse = this._mapReverse ?? this.makeReverse(this._mapLanguage?.data);
         if (this._mapReverse[value]) {
             return this._mapReverse[value];
@@ -125,7 +117,12 @@ class Language extends vscode.Disposable {
 
         let key = this.makeKey(value);
         this.set(key.toString(), value);
-        return key;
+
+        try {
+            return BigInt(key);
+        } catch {
+            return key;
+        }
     }
 
     private makeKey(value: string): string {
@@ -146,63 +143,9 @@ class Language extends vscode.Disposable {
         await this._ioLock.acquire();
         this._lastWriteTime = Date.now();
         y3.log.debug('开始写入语言文件');
-        await y3.fs.writeFile(this.mapUri!, content);
+        await y3.fs.writeFile(this.uri!, content);
         y3.log.debug('语言文件写入完成');
         this._ioLock.release();
         this._lastWriteTime = Date.now();
     }
-}
-
-let language: Language;
-
-export function init() {
-    language = new Language();
-    env.onDidChange(() => {
-        language.dispose();
-        language = new Language();
-    });
-}
-
-export async function ready() {
-    await language.ready();
-}
-
-/**
- * 根据key获取中文文本
- */
-export function get(key: string | number | bigint): string | undefined {
-    if (typeof key === 'number' || typeof key === 'bigint') {
-        key = key.toString();
-    }
-    return language.get(key);
-}
-
-/**
- * 添加中文文本
- */
-export function set(key: string | number | bigint, value: string) {
-    if (typeof key === 'number' || typeof key === 'bigint') {
-        key = key.toString();
-    }
-    language.set(key, value);
-}
-
-/**
- * 获取中文文本对应的key，如果不存在会新建
- * @param value 中文文本
- */
-export function keyOf(value: string | number, preferNumber?: boolean): string | bigint {
-    if (typeof value === 'number') {
-        value = value.toString();
-    }
-    let key = language.keyOf(value);
-    try {
-        return BigInt(key);
-    } catch {
-        return key;
-    }
-}
-
-export function onDidChange(listener: () => void) {
-    return onDidChangeEmitter.event(listener);
 }

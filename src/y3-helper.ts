@@ -3,7 +3,6 @@ import { fs, log } from './tools';
 
 export * as excel from './editorTable/excel';
 export * as table from './editorTable/editorTable';
-export * as language from './editorTable/language';
 export * from './tools';
 export * as consts from './constants';
 export { env } from './env';

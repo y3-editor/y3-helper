@@ -205,16 +205,16 @@ export function valueOnGet(fieldInfo: FieldInfo, value: any, objectKey?: number)
     if (fieldInfo.field === 'name' && objectKey !== undefined) {
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_name`;
         const hashKey = hash(key);
-        return y3.language.get(hashKey);
+        return y3.env.currentTriggerMap?.language.get(hashKey);
     }
     if (fieldInfo.field === 'description' && objectKey !== undefined) {
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_description`;
         const hashKey = hash(key);
-        return y3.language.get(hashKey);
+        return y3.env.currentTriggerMap?.language.get(hashKey);
     }
     if (fieldInfo.type === 'PLocalizeText') {
         if (typeof value === 'number' || typeof value === 'string') {
-            value = y3.language.get(value) ?? value;
+            value = y3.env.currentTriggerMap?.language.get(value) ?? value;
         }
     }
     return value;
@@ -227,18 +227,18 @@ export function valueOnSet(fieldInfo: FieldInfo, value: any, raw: any, convertTy
     if (fieldInfo.field === 'name' && objectKey !== undefined) {
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_name`;
         const hashKey = hash(key);
-        y3.language.set(hashKey, value);
+        y3.env.currentTriggerMap?.language.set(hashKey, value);
         return BigInt(hashKey);
     }
     if (fieldInfo.field === 'description' && objectKey !== undefined) {
         const key = `${Table.name.fromCN[fieldInfo.tableName]}_${objectKey}_description`;
         const hashKey = hash(key);
-        y3.language.set(hashKey, value);
+        y3.env.currentTriggerMap?.language.set(hashKey, value);
         return BigInt(hashKey);
     }
     value = checkAndConvertType(fieldInfo, value, convertType);
     if (fieldInfo.type === 'PLocalizeText') {
-        value = y3.language.keyOf(value as string, true);
+        value = y3.env.currentTriggerMap?.language.keyOf(value as string);
     }
     return value;
 }

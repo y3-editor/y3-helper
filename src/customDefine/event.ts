@@ -44,18 +44,18 @@ export class Events extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!env.mapUri) {
+        if (!env.triggerMapUri) {
             return;
         }
-        return new RelativePattern(env.mapUri, filePath);
+        return new RelativePattern(env.triggerMapUri, filePath);
     }
 
     private async loadEvents() {
         let events: Event[] = [];
-        if (!env.mapUri) {
+        if (!env.triggerMapUri) {
             return events;
         }
-        let jsonFile = await tools.fs.readFile(env.mapUri, filePath);
+        let jsonFile = await tools.fs.readFile(env.triggerMapUri, filePath);
         if (!jsonFile) {
             return events;
         }

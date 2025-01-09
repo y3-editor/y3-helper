@@ -25,7 +25,6 @@ vscode.commands.registerCommand('y3-helper.testExcel', async () => {
 });
 
 export function init() {
-    language.init();
     treeView.init();
     languageFeature.init();
     excel.init();

@@ -74,7 +74,6 @@ async function updateCustomFields() {
 }
 
 export async function ready() {
-    await y3.language.ready();
     for (const tableName in Table.name.fromCN) {
         if (tableMeta[tableName] === undefined) {
             let nameEN = Table.name.fromCN[tableName as Table.NameCN];
@@ -207,14 +206,14 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             if (name && name[1]) {
                 let id = parseInt(name[1]);
                 if (!isNaN(id)) {
-                    this._name = y3.language.get(id);
+                    this._name = y3.env.currentTriggerMap?.language.get(id);
                 }
             } else {
                 let name = this.json?.get('name');
                 if (typeof name === 'string') {
                     this._name = name;
                 } else if (typeof name === 'number') {
-                    this._name = y3.language.get(name);
+                    this._name = y3.env.currentTriggerMap?.language.get(name);
                 }
             }
         }
@@ -714,15 +713,15 @@ export class EditorManager {
  * @returns 表对象
  */
 export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> {
-    let map = y3.env.currentMap!;
+    let map = y3.env.currentTriggerMap!;
     return map.editorTable.openTable(tableName);
 }
 
 export async function getAllObjects() {
-    let map = y3.env.currentMap;
+    let map = y3.env.currentTriggerMap;
     while (!map || !map.editorTable) {
         await y3.sleep(100);
-        map = y3.env.currentMap;
+        map = y3.env.currentTriggerMap;
     }
     return await map.editorTable.getAllObjects();
 }
@@ -731,10 +730,10 @@ export async function getAllObjects() {
  * 根据key获取对象
  */
 export async function getObjectsByKey(key: number): Promise<EditorObject[]> {
-    let map = y3.env.currentMap;
+    let map = y3.env.currentTriggerMap;
     while (!map || !map.editorTable) {
         await y3.sleep(100);
-        map = y3.env.currentMap;
+        map = y3.env.currentTriggerMap;
     }
     return await map.editorTable.getObjectsByKey(key);
 }

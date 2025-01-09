@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getObject } from './documentManager';
 import * as jsonc from 'jsonc-parser';
-import { language } from 'y3-helper';
+import * as y3 from 'y3-helper';
 
 class FieldProvider implements vscode.HoverProvider {
     async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
@@ -76,7 +76,7 @@ class TranslateProvider implements vscode.HoverProvider {
             return;
         }
 
-        const text = language.get(node.value);
+        const text = y3.env.currentTriggerMap?.language.get(node.value);
         if (!text) {
             return;
         }

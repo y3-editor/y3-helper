@@ -3,7 +3,7 @@ import * as os from 'os';
 import winreg from 'winreg';
 import path from 'path';
 import * as tools from './tools';
-import { isPathValid } from './utility';
+import { Language } from "./editorTable/language";
 import { queue, throttle } from './utility/decorators';
 import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
@@ -11,22 +11,33 @@ import { EditorManager } from './editorTable/editorTable';
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
-class Map {
+export class Map {
     id: bigint = 0n;
-    editorTable: EditorManager;
+    private _editorTable: EditorManager;
     description: string;
     scriptUri: vscode.Uri;
+    language;
     constructor(public name: string, public uri: vscode.Uri) {
-        this.editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
+        this._editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
         this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
         this.description = name;
-        y3.language.onDidChange(() => {
-            this.editorTable.flushName();
+        this.language = new Language(this);
+        this.language.onDidChange(() => {
+            this._editorTable.flushName();
         });
+    }
+
+    get editorTable() {
+        if (env.project?.setting?.use_main_level_trigger_and_object) {
+            return env.project?.entryMap?._editorTable ?? this._editorTable;
+        } else {
+            return this._editorTable;
+        }
     }
 
     async start() {
         await Promise.all([
+            this.language.start(),
             (async () => {
                 let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
                 if (!headerMap) {
@@ -293,25 +304,35 @@ class Env {
     public y3Uri?: vscode.Uri;
     public pluginUri?: vscode.Uri;
     public projectUri?: vscode.Uri;
-    public editorTableUri?: vscode.Uri;// 物编数据
     public excelUri?: vscode.Uri;// excel表格路径
     public ruleUri?: vscode.Uri;// rule路径
     public project?: Project;
     public currentMap?: Map;
 
-    private _editorTablePath: string = "";
-    
-    public get editorTablePath(): string{
-        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
-            return "";
+    public get triggerMapUri(): vscode.Uri | undefined {
+        if (this.project?.setting?.use_main_level_trigger_and_object) {
+            return this.project?.entryMap?.uri;
+        } else {
+            return this.mapUri;
         }
-        this._editorTablePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "../editor_table");
+    }
 
-
-        if (!isPathValid(this._editorTablePath)) {
-            this._editorTablePath = "";
+    /**
+     * 当前触发器与物编使用的地图（项目管理 -> 使用主地图触发器与物编）
+     */
+    public get currentTriggerMap(): Map | undefined {
+        if (this.project?.setting?.use_main_level_trigger_and_object) {
+            return this.project?.entryMap;
+        } else {
+            return this.currentMap;
         }
-        return this._editorTablePath;
+    }
+
+    public get editorTableUri(): vscode.Uri | undefined {
+        if (!this.triggerMapUri) {
+            return undefined;
+        }
+        return y3.uri(this.triggerMapUri, 'editor_table');
     }
 
     @throttle(100)
@@ -351,7 +372,6 @@ class Env {
         this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
         this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
         this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
-        this.editorTableUri = vscode.Uri.joinPath(this.mapUri, "editor_table");
         this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
         this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
         tools.log.info(`mapUri: ${this.mapUri}`);
