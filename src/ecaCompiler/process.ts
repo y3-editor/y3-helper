@@ -166,7 +166,7 @@ export class Process {
         if (this.validNameCache.has(trim)) {
             return this.validNameCache.get(trim)!;
         }
-        let validName = trim.replace(/[\.\\\/\:\*\?\"\<\>\|]/g, '_');
+        let validName = trim.replace(/[\.\\\/\:\*\?\"\<\>\|\n]/g, '_');
         if (this.validNameDualCache.has(validName)) {
             for (let i = 1; ; i++) {
                 let newValidName = `${validName}_${i}`;
