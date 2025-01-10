@@ -222,3 +222,22 @@ export function isRelativePath(path: string) {
 export function isAbsolutePath(path: string) {
     return path.startsWith('/') || /^[a-zA-Z]:\\/.test(path);
 }
+
+export async function deleteEmptyDir(uri: vscode.Uri | string, recursive = true) {
+    if (typeof uri === 'string') {
+        uri = vscode.Uri.file(uri);
+    }
+    let files = await vscode.workspace.fs.readDirectory(uri);
+    if (files.length === 0) {
+        await vscode.workspace.fs.delete(uri);
+        return;
+    }
+    if (!recursive) {
+        return;
+    }
+    for (const [name, fileType] of files) {
+        if (fileType === vscode.FileType.Directory) {
+            await deleteEmptyDir(vscode.Uri.joinPath(uri, name), recursive);
+        }
+    }
+}

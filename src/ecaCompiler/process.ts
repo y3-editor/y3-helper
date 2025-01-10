@@ -311,6 +311,7 @@ export class Process {
         y3.log.info('【编译ECA】等待文件写入硬盘...');
 
         const baseDir = y3.uri(this.outMap.uri, this.scriptDir, this.outBasseDir);
+        let removeTask = [];
         let scanResult = await y3.fs.scan(baseDir);
         for (let file of scanResult) {
             if (this.progress?.isCanceled()) {
@@ -319,7 +320,7 @@ export class Process {
             let fullName = `${this,this.outBasseDir}/${file[0]}`;
             if (file[1] === vscode.FileType.File && !this.writeCache.has(fullName)) {
                 y3.log.debug(`【编译ECA】删除多余的文件：${fullName}`);
-                y3.fs.removeFile(y3.uri(this.outMap.uri, this.scriptDir, fullName));
+                removeTask.push(y3.fs.removeFile(y3.uri(this.outMap.uri, this.scriptDir, fullName)));
             }
         }
 
@@ -338,6 +339,14 @@ export class Process {
             y3.log.debug(`【编译ECA】写入文件：${includeName}`);
             await y3.fs.writeFile(uri, content);
             this.progress?.update();
+        }
+
+        if (removeTask.length > 0) {
+            Promise.all(removeTask).then(async () => {
+                y3.log.debug('【编译ECA】删除多余文件完成，清理空文件夹');
+                await y3.fs.deleteEmptyDir(baseDir);
+                y3.log.debug('【编译ECA】空文件夹清理完成');
+            });
         }
     }
 }

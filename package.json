@@ -392,7 +392,7 @@
                 },
                 "Y3-Helper.ECAOverridePath": {
                     "title": "（开发）用于ECA转Lua配置导表的工程路径",
-                    "description": "填编辑器工程路径即可，如 `D:/up1`",
+                    "description": "填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录",
                     "type": "string",
                     "default": "",
                     "scope": "resource"
