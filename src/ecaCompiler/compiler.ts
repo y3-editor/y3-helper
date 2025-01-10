@@ -95,6 +95,23 @@ export class Call extends Node {
             }
         });
     }
+
+    eachNode(callback: (node: Node) => boolean) {
+        for (let arg of this.args) {
+            if (arg === null) {
+                continue;
+            }
+            if (callback(arg)) {
+                return true;
+            }
+            if ('eachNode' in arg) {
+                if (arg.eachNode(callback)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
 class Comment extends Node {
@@ -114,12 +131,12 @@ class Comment extends Node {
 }
 
 export class Variable extends Node {
-    constructor(public name: string, public type: string, public isArray: boolean, public value: Value, public isGlobal = false) {
+    constructor(public name: string, public type: string, public isArray: boolean, public value: Value) {
         super();
     }
 
     make(formatter: Formatter): string {
-        return formatter.getVariableName(this.name, this.isGlobal);
+        return y3.lua.getValidName(this.name);
     }
 
     makeArgs(formatter: Formatter) {
@@ -127,7 +144,7 @@ export class Variable extends Node {
     }
 }
 
-class VarRef extends Node {
+export class VarRef extends Node {
     name: string;
     type: string;
     scope: 'local' | 'global' | 'actor';
@@ -145,7 +162,7 @@ class VarRef extends Node {
             case 'global':
                 return 'V.' + y3.lua.getValidName(this.name, reservedNames);
             case 'actor':
-                return 'y3.rt.storage(params).' + y3.lua.getValidName(this.name, reservedNames);
+                return 'g.' + y3.lua.getValidName(this.name, reservedNames);
         }
     }
 
@@ -170,6 +187,16 @@ class TriggerRef extends Node {
 
     makeArgs(formatter: Formatter) {
         return undefined;
+    }
+
+    eachNode(callback: (node: Node) => boolean) {
+        let closure = this.eca.closures[this.id];
+        if (closure) {
+            if (closure.eachNode(callback)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -281,6 +308,20 @@ export class Trigger {
         }
     }
 
+    eachNode(callback: (node: Node) => boolean) {
+        for (let action of this.actions) {
+            if (callback(action)) {
+                return true;
+            }
+            if ('eachNode' in action) {
+                if (action.eachNode(callback)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     make(formatter: Formatter): string {
         return formatter.formatTrigger(this);
     }
@@ -324,6 +365,20 @@ export class Function {
         }
     }
 
+    eachNode(callback: (node: Node) => boolean) {
+        for (let action of this.actions) {
+            if (callback(action)) {
+                return true;
+            }
+            if ('eachNode' in action) {
+                if (action.eachNode(callback)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     make(formatter: Formatter): string {
         return formatter.formatFunction(this);
     }
@@ -365,18 +420,12 @@ export class ECAGroup {
         this.variables = parseVarData(
             json.variable_dict,
             json.variable_length_dict,
-            toArray(json.variable_group_info)?.map((v: [string, string]) => v[0]),
+            json.variable_group_info?.map((v: any) => toArray(v)?.[0]),
         );
     }
 
     make(formatter: Formatter) {
-        let buffer: string[] = [];
-        for (const eca of this.ecas) {
-            buffer.push(eca.make(formatter));
-            buffer.push('\n\n');
-        }
-        let content = buffer.join('');
-        return content;
+        return formatter.formatECAGroup(this);
     }
 }
 
@@ -390,7 +439,7 @@ export class GlobalVariables {
             const group = dict[type];
             for (const name in group) {
                 const value = group[name];
-                const variable = new Variable(name, type, length[name] === 10, new Value(type, value), true);
+                const variable = new Variable(name, type, length[name] === 10, new Value(type, value));
                 this.variables.set(name, variable);
             }
         }
@@ -400,7 +449,7 @@ export class GlobalVariables {
         let buffer: string[] = [];
         buffer.push('V = {}\n\n');
         for (const variable of this.variables.values()) {
-            buffer.push(`${formatter.getVariableName(variable.name, true)} = ${formatter.getVariableInitValue(variable)}`);
+            buffer.push(`V.${y3.lua.getValidName(variable.name)} = ${formatter.getVariableInitValue(variable)}`);
             buffer.push('\n');
         }
         let content = buffer.join('');

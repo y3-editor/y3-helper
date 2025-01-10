@@ -1,5 +1,5 @@
 import * as y3 from 'y3-helper';
-import { Node, Trigger, Function, Value, Variable } from './compiler';
+import { Node, Trigger, Function, Value, Variable, VarRef, ECAGroup } from './compiler';
 
 /*
 CreateUnit({1}, {2}, {3})
@@ -243,10 +243,6 @@ export class Formatter {
         return trg.actions.map((action) => action.make(this)).join('\n');
     }
 
-    public getVariableName(name: string, isGlobal = false) {
-        return (isGlobal ? 'V.' : 'v.') + y3.lua.getValidName(name);
-    }
-
     public getVariableInitValue(variable: Variable): string {
         const value = this.formatValue(variable.type, variable.value);
         if (variable.isArray) {
@@ -266,7 +262,7 @@ export class Formatter {
         }
     }
 
-    private makeVariablePart(trg: Trigger | Function): string {
+    private makeLocalVariablePart(trg: Trigger | Function): string {
         if (trg instanceof Trigger) {
             return 'local v = variable:new()\n';
         } else {
@@ -283,7 +279,7 @@ export class Formatter {
         }
     }
 
-    private makeVariableDefine(trg: Trigger | Function): string | undefined {
+    private makeLocalVariableDefine(trg: Trigger | Function): string | undefined {
         if (trg.variables.length === 0) {
             return undefined;
         }
@@ -301,9 +297,32 @@ export class Formatter {
         return results.join('\n') + '\n\n';
     }
 
+    private makeGroupVariablePart(trg: Trigger | Function): string {
+        return 'local g = group_variable:group(params)\n';
+    }
+
+    private makeGroupVariableDefine(ecaGroup: ECAGroup): string | undefined {
+        if (ecaGroup.variables.length === 0) {
+            return undefined;
+        }
+
+        let results = [];
+
+        results.push('local group_variable = y3.rt.variable {');
+
+        for (let variable of ecaGroup.variables) {
+            results.push(`    ${y3.lua.getValidName(variable.name)} = ${this.getVariableInitValue(variable)},`);
+        }
+
+        results.push('}');
+
+        return results.join('\n') + '\n\n';
+    }
+
     private makeConditionPart(trg: Trigger): string {
         return trg.conditions.map((condition) => `not ${condition.make(this)}`).join('\nor ');
     }
+
     private makeBody(trg: Trigger | Function): string {
         let result = '';
         if ('conditions' in trg && trg.conditions.length > 0) {
@@ -313,47 +332,73 @@ export class Formatter {
             result += `end\n`;
         }
 
-        result += this.makeVariablePart(trg);
+        if (this.usingGroupVariable(trg)) {
+            result += this.makeGroupVariablePart(trg);
+        }
+
+        if (trg.variables.length > 0 && this.usingLocalVariable(trg)) {
+            result += this.makeLocalVariablePart(trg);
+        }
 
         if (trg.actions.length > 0) {
             result += `${this.makeActionPart(trg)}`;
         }
         return result;
     }
+
+    private usingLocalVariable(trg: Trigger | Function): boolean {
+        return trg.eachNode(node => {
+            if (node instanceof VarRef && node.scope === 'local') {
+                return true;
+            } else {
+                return false;
+            }
+        });
+    }
+
+    private usingGroupVariable(trg: Trigger | Function): boolean {
+        return trg.eachNode(node => {
+            if (node instanceof VarRef && node.scope === 'actor') {
+                return true;
+            } else {
+                return false;
+            }
+        });
+    }
     
     public formatTrigger(trg: Trigger) {
-            if (!trg.enabled) {
-                return `-- 触发器 ${trg.name} 已禁用`;
-            }
-            let group = trg.eca.group;
-            let eventTarget = group
-                ? `y3.object.${y3.consts.Table.runtime.fromCN[group.objectType]}[${trg.groupID}]`
-                : 'y3.game';
-            let result = '';
-            result += this.makeVariableDefine(trg) ?? '';
-            if (trg.events.length === 1) {
-                result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
-                result += this.increaseTab(this.makeBody(trg));
-                result += `\nend)`;
-            } else {
-                if (trg.events.length > 1) {
-                    let types = [];
-                    for (let event of trg.events) {
-                        let cnName = this.eventInfo[event.name]?.name;
-                        if (cnName) {
-                            types.push(`EventParam.` + cnName);
-                        }
-                    }
-                    result += `---@param params ${types.join('|')}\n`;
-                }
-                result += `local function action(_, params)\n`;
-                result += this.increaseTab(this.makeBody(trg));
-                result += `\nend\n\n`;
+        if (!trg.enabled) {
+            return `-- 触发器 ${trg.name} 已禁用`;
+        }
+        let group = trg.eca.group;
+        let eventTarget = group
+            ? `y3.object.${y3.consts.Table.runtime.fromCN[group.objectType]}[${trg.groupID}]`
+            : 'y3.game';
+        let result = '';
+        result += this.makeLocalVariableDefine(trg) ?? '';
+        if (trg.events.length === 1) {
+            result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
+            result += this.increaseTab(this.makeBody(trg));
+            result += `\nend)`;
+        } else {
+            if (trg.events.length > 1) {
+                let types = [];
                 for (let event of trg.events) {
-                    result += `${eventTarget}:event(${event.make(this)}, action)\n`;
+                    let cnName = this.eventInfo[event.name]?.name;
+                    if (cnName) {
+                        types.push(`EventParam.` + cnName);
+                    }
                 }
+                result += `---@param params ${types.join('|')}\n`;
             }
-            return result;
+            result += `local function action(_, params)\n`;
+            result += this.increaseTab(this.makeBody(trg));
+            result += `\nend\n\n`;
+            for (let event of trg.events) {
+                result += `${eventTarget}:event(${event.make(this)}, action)\n`;
+            }
+        }
+        return result;
     }
 
     public formatFunction(func: Function) {
@@ -363,12 +408,23 @@ export class Formatter {
             result += `Func[${y3.lua.encode(func.name)}] = function (...) end`;
             return result;
         }
-        result += this.makeVariableDefine(func) ?? '';
+        result += this.makeLocalVariableDefine(func) ?? '';
         const params = func.params.map((param) => y3.lua.getValidName(param.name)).join(', ');
         result += `Func[${y3.lua.encode(func.name)}] = function (${params})\n`;
         result += this.increaseTab(this.makeBody(func));
         result += `\nend`;
         return result;
+    }
+
+    public formatECAGroup(ecaGroup: ECAGroup) {
+        let buffer: string[] = [];
+        buffer.push(this.makeGroupVariableDefine(ecaGroup) ?? '');
+        for (const eca of ecaGroup.ecas) {
+            buffer.push(eca.make(this));
+            buffer.push('\n\n');
+        }
+        let content = buffer.join('');
+        return content;
     }
 
     private funcNameRecord: Record<string, string> = {};
