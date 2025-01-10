@@ -389,6 +389,13 @@
                     "minimum": 0,
                     "maximum": 65535,
                     "scope": "resource"
+                },
+                "Y3-Helper.ECAOverridePath": {
+                    "title": "（开发）用于ECA转Lua配置导表的工程路径",
+                    "description": "填编辑器工程路径即可，如 `D:/up1`",
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource"
                 }
             }
         },

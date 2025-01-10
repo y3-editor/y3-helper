@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { fillStatic, fillMapDefined } from './testConfig';
 import { Process, Progress } from './process';
+import { ExcelConfig } from './excelConfig';
 
 const formatter = new Formatter();
 
@@ -46,6 +47,19 @@ class ProgressHandle implements Progress {
     }
 }
 
+async function fillFromLocalExcel(formatter: Formatter) {
+    let excelConfig = new ExcelConfig();
+    let config = await excelConfig.loadConfig();
+    if (!config) {
+        return;
+    }
+    formatter.clearWeakRule();
+    for (const key in config) {
+        let value = config[key].replace(/{#(\d+)}/g, (_, id) => `{${Number(id) + 1}}`);
+        formatter.setWeakRule(key, value);
+    }
+}
+
 export function init() {
     vscode.commands.registerCommand('y3-helper.compileECA', async () => {
         await y3.env.mapReady();
@@ -62,6 +76,7 @@ export function init() {
 
             await fillStatic(formatter);
             await fillMapDefined(formatter);
+            await fillFromLocalExcel(formatter);
 
             let process = new Process(y3.env.currentTriggerMap, y3.env.currentMap, formatter, new ProgressHandle(token, (increment, message) => {
                 progress.report({ increment, message });

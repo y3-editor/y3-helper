@@ -78,7 +78,7 @@ class RuleHandler {
                         curDefault++;
                         continue;
                     }
-                    const index = Number(match[0]);
+                    const index = Number(argName);
                     if (!isNaN(index)) {
                         parts.push(index);
                         continue;
@@ -206,14 +206,26 @@ let NilRuleHandler = new RuleHandler('nil');
 
 export class Formatter {
     public rules = new Map<string | number, RuleHandler>();
+    public weakRules = new Map<string | number, RuleHandler>();
     public eventInfo: Record<string, { key: string, name: string }> = {};
     public setRule(name: string | number, rule: Rule, argNames?: string[]) {
         this.rules.set(name, new RuleHandler(rule, argNames));
         return this;
     }
+    public setWeakRule(name: string | number, rule: Rule, argNames?: string[]) {
+        this.weakRules.set(name, new RuleHandler(rule, argNames));
+        return this;
+    }
+    public getRule(name: string | number) {
+        return this.rules.get(name) ?? this.weakRules.get(name);
+    }
+
+    public clearWeakRule() {
+        this.weakRules.clear();
+    }
 
     public formatCall(name: string, node: Node) {
-        let rule = this.rules.get(name);
+        let rule = this.getRule(name);
         if (rule) {
             return rule.format(this, node);
         }
@@ -226,13 +238,13 @@ export class Formatter {
     }
 
     public formatEvent(name: string, node: Node) {
-        let rule = this.rules.get(name);
+        let rule = this.getRule(name);
         let str = rule?.format(this, node) ?? name;
         return str;
     }
 
     public formatValue(type: number | string, node: Value) {
-        let rule = this.rules.get(type);
+        let rule = this.getRule(type);
         if (!rule) {
             return y3.lua.encode(node.value);
         }
