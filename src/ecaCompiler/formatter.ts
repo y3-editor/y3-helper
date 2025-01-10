@@ -310,7 +310,7 @@ export class Formatter {
     }
 
     private makeGroupVariablePart(trg: Trigger | Function): string {
-        return 'local g = group_variable:group(params)\n';
+        return 'local g = group_variable:with(params)\n';
     }
 
     private makeGroupVariableDefine(ecaGroup: ECAGroup): string | undefined {
