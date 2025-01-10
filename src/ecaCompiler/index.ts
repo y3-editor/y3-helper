@@ -55,7 +55,7 @@ async function fillFromLocalExcel(formatter: Formatter) {
     }
     formatter.clearWeakRule();
     for (const key in config) {
-        let value = config[key].replace(/{#(\d+)}/g, (_, id) => `{${Number(id) + 1}}`);
+        let value = config[key];
         formatter.setWeakRule(key, value);
     }
 }

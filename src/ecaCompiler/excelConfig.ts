@@ -21,7 +21,10 @@ export class ExcelConfig {
             for (const key in table) {
                 const value = table[key]['lua文本'];
                 if (value !== '') {
-                    result[key] = table[key]['lua文本'];
+                    let params = table[key]['参数'].split(';');
+                    result[key] = value
+                        .replace(/{#(\d+)}/g, (_, id) => `{${Number(id) + 1}}`)
+                        .replace(/<\$(\d+)>/g, (_, id) => `{${Number(id) + 1 + params.length}}`);
                 }
             }
         }
