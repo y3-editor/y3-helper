@@ -159,7 +159,13 @@ export class 功能 extends TreeNode {
                     },
                     iconPath: new vscode.ThemeIcon('play'),
                     update: async (node) => {
-                        node.description = `${env.project?.entryMap?.description}@${env.project?.entryMap?.name}`;
+                        let name = env.project?.entryMap?.name;
+                        let description = env.project?.entryMap?.description;
+                        if (name === description) {
+                            node.description = `${name}`;
+                        } else {
+                            node.description = `${description}@${name}`;
+                        }
                     }
                 }),
                 new TreeNode('启动游戏并附加调试器', {

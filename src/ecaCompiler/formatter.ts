@@ -244,7 +244,7 @@ export class Formatter {
     }
 
     public getVariableName(name: string, isGlobal = false) {
-        return y3.lua.getValidName((isGlobal ? 'V_' : 'v_') + name);
+        return (isGlobal ? 'V.' : 'v.') + y3.lua.getValidName(name);
     }
 
     public getVariableInitValue(variable: Variable): string {
@@ -266,35 +266,39 @@ export class Formatter {
         }
     }
 
-    private makeVariablePart(trg: Trigger | Function): string | undefined {
-        let results = [];
-
-        function getParam(name: string) {
-            if (!(trg instanceof Function)) {
-                return undefined;
+    private makeVariablePart(trg: Trigger | Function): string {
+        if (trg instanceof Trigger) {
+            return 'local v = variable:new()\n';
+        } else {
+            let args = trg.params;
+            if (args.length === 0) {
+                return 'local v = variable:new()\n';
             }
-            let param = trg.params.find((param) => param.name === name);
-            return param;
-        }
-        
-        for (let variable of trg.variables) {
-            let param = getParam(variable.name);
-            if (param) {
-                if (param.required) {
-                    continue;
-                } else {
-                    results.push(`if ${this.getVariableName(variable.name)} == nil then ${this.getVariableName(variable.name)} = ${this.getVariableInitValue(variable)} end`);
-                }
-            } else {
-                results.push(`local ${this.getVariableName(variable.name)} = ${this.getVariableInitValue(variable)}`);
+            let argPart = '';
+            for (let arg of args) {
+                let name = y3.lua.getValidName(arg.name);
+                argPart += `    ${name} = ${name},\n`;
             }
+            return `local v = variable:new {\n${argPart}}\n`;
         }
+    }
 
-        if (results.length === 0) {
+    private makeVariableDefine(trg: Trigger | Function): string | undefined {
+        if (trg.variables.length === 0) {
             return undefined;
         }
 
-        return results.join('\n') + '\n';
+        let results = [];
+
+        results.push('local variable = y3.rt.variable {');
+
+        for (let variable of trg.variables) {
+            results.push(`    ${y3.lua.getValidName(variable.name)} = ${this.getVariableInitValue(variable)},`);
+        }
+
+        results.push('}');
+
+        return results.join('\n') + '\n\n';
     }
 
     private makeConditionPart(trg: Trigger): string {
@@ -309,7 +313,7 @@ export class Formatter {
             result += `end\n`;
         }
 
-        result += this.makeVariablePart(trg) ?? '';
+        result += this.makeVariablePart(trg);
 
         if (trg.actions.length > 0) {
             result += `${this.makeActionPart(trg)}`;
@@ -326,6 +330,7 @@ export class Formatter {
                 ? `y3.object.${y3.consts.Table.runtime.fromCN[group.objectType]}[${trg.groupID}]`
                 : 'y3.game';
             let result = '';
+            result += this.makeVariableDefine(trg) ?? '';
             if (trg.events.length === 1) {
                 result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
                 result += this.increaseTab(this.makeBody(trg));
@@ -358,7 +363,8 @@ export class Formatter {
             result += `Func[${y3.lua.encode(func.name)}] = function (...) end`;
             return result;
         }
-        const params = func.params.map((param) => this.getVariableName(param.name)).join(', ');
+        result += this.makeVariableDefine(func) ?? '';
+        const params = func.params.map((param) => y3.lua.getValidName(param.name)).join(', ');
         result += `Func[${y3.lua.encode(func.name)}] = function (${params})\n`;
         result += this.increaseTab(this.makeBody(func));
         result += `\nend`;

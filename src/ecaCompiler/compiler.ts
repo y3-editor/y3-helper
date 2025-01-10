@@ -141,9 +141,9 @@ class VarRef extends Node {
     make(formatter: Formatter): string {
         switch (this.scope) {
             case 'local':
-                return y3.lua.getValidName('l_' + this.name, reservedNames);
+                return 'v.' + y3.lua.getValidName(this.name, reservedNames);
             case 'global':
-                return y3.lua.getValidName('V_' + this.name, reservedNames);
+                return 'V.' + y3.lua.getValidName(this.name, reservedNames);
             case 'actor':
                 return 'y3.rt.storage(params).' + y3.lua.getValidName(this.name, reservedNames);
         }
@@ -398,6 +398,7 @@ export class GlobalVariables {
 
     make(formatter: Formatter) {
         let buffer: string[] = [];
+        buffer.push('V = {}\n\n');
         for (const variable of this.variables.values()) {
             buffer.push(`${formatter.getVariableName(variable.name, true)} = ${formatter.getVariableInitValue(variable)}`);
             buffer.push('\n');
