@@ -1,7 +1,7 @@
 import { Formatter } from './formatter';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
-import { fillStatic, fillMapDefined } from './testConfig';
+import { fillStatic, fillMapDefined } from './fillConfig';
 import { Process, Progress } from './process';
 import { ExcelConfig } from './excelConfig';
 

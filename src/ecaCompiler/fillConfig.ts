@@ -100,6 +100,11 @@ export async function fillStatic(formatter: Formatter) {
             1: '法术',
             2: '真实',
         }))
+        . setRule(100175, {
+            1: 'error',
+            2: 'warn',
+            3: 'info',
+        })
         // 预设可破坏物
         . setRule(100205, 'y3.destructible.get_by_id({})')
         . setRule(200220, wrapLuaValue({
@@ -258,6 +263,11 @@ export async function fillStatic(formatter: Formatter) {
                 'text_type', 'text_track', 'attack_type', 'pos_socket',
             ]
         )
+        . setRule('RUN_LOOP_TIMER_NO_SAVE', ''
+            + 'y3.timer.loop({1}, function (timer)\n'
+            + '    {3}\n'
+            + 'end, nil, {2})'
+        )
         . setRule('NONE_ABILITY', null)
         . setRule('DISPLAY_INFO_TO_PLAYER', '{}:display_info({}, {})')
         . setRule('ANY_VAR_TO_STR', 'tostring({})')
@@ -324,4 +334,5 @@ export async function fillStatic(formatter: Formatter) {
             let args = node.args?.[0]?.makeArgs(formatter);
             return `Func[${y3.lua.encode(name)}](${args?.join(', ')})`;
         })
+        . setRule('PRINT_MESSAGE_ACTION_TO_DIALOG', 'log.{}({})')
 }

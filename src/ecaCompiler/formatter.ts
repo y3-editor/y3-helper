@@ -179,7 +179,25 @@ class RuleHandler {
                 optionalGaurd = undefined;
             }
         };
+        this.alignIndent(buf);
         return buf.join('');
+    }
+
+    // 对齐缩进
+    private alignIndent(buf: string[]) {
+        for (let i = 0; i < buf.length; i++) {
+            let line = buf[i];
+            // 检查此行是以 `\n    ` 结尾
+            let match = line.match(/\n([ \t]+)$/);
+            if (match) {
+                let indent = match[1];
+                // 将下一行中所有的换行符后面都添加相同的缩进
+                let nextLine = buf[i + 1];
+                if (nextLine) {
+                    buf[i + 1] = nextLine.replaceAll('\n', '\n' + indent);
+                }
+            }
+        }
     }
 
     private clearLastEmptyLine(buf: string[]) {
