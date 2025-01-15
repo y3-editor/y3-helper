@@ -161,12 +161,15 @@ export class Process {
 
     private validNameCache = new Map<string, string>();
     private validNameDualCache = new Map<string, string>();
-    private makeValidFileName(name: string) {
+    private makeValidFileName(name: string, includeSlash = false) {
         let trim = name.replace(/\.json$/, '');
         if (this.validNameCache.has(trim)) {
             return this.validNameCache.get(trim)!;
         }
-        let validName = trim.replace(/[\.\\\/\:\*\?\"\<\>\|\n]/g, '_');
+        let validName = trim.replace(/[\.\:\*\?\"\<\>\|\n]/g, '_');
+        if (includeSlash) {
+            validName = validName.replace(/[\\/]/g, '_');
+        }
         if (this.validNameDualCache.has(validName)) {
             for (let i = 1; ; i++) {
                 let newValidName = `${validName}_${i}`;
@@ -197,7 +200,7 @@ export class Process {
                     continue;
                 }
                 results.push({
-                    fileName: this.makeValidFileName(`${nameCN} - ${object.name}`),
+                    fileName: this.makeValidFileName(`${nameCN} - ${object.name}`, true),
                     content: file.string,
                     uri,
                     objectType: nameCN,
@@ -343,9 +346,9 @@ export class Process {
 
         if (removeTask.length > 0) {
             Promise.all(removeTask).then(async () => {
-                y3.log.debug('【编译ECA】删除多余文件完成，清理空文件夹');
+                y3.log.info('【编译ECA】删除多余文件完成，清理空文件夹');
                 await y3.fs.deleteEmptyDir(baseDir);
-                y3.log.debug('【编译ECA】空文件夹清理完成');
+                y3.log.info('【编译ECA】空文件夹清理完成');
             });
         }
     }
