@@ -388,9 +388,9 @@ export async function fillStatic(formatter: Formatter) {
             if (realArgs.length === 0) {
                 return '""';
             } else if (realArgs.length === 1) {
-                return realArgs[0];
+                return `${realArgs[0]} or ''`;
             } else {
-                return '(' + realArgs.join(' .. ') + ')';
+                return 'y3.rt.string(' + realArgs.join(', ') + ')';
             }
         })
 }
