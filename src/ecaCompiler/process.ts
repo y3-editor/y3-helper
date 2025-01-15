@@ -200,7 +200,7 @@ export class Process {
                     continue;
                 }
                 results.push({
-                    fileName: this.makeValidFileName(`${nameCN} - ${object.name}`, true),
+                    fileName: `${nameCN}/${this.makeValidFileName(object.name, true)}`,
                     content: file.string,
                     uri,
                     objectType: nameCN,
