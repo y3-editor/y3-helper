@@ -88,6 +88,21 @@ export async function fillStatic(formatter: Formatter) {
     formatter
         // 预设单位
         . setRule(100006, 'y3.unit.get_by_res_id({})')
+        . setRule(100015, {
+            '==': '==',
+            '!=': '~=',
+            '>': '>',
+            '<': '<',
+            '>=': '>=',
+            '<=': '<=',
+        })
+        . setRule(100016, {
+            '+': '+',
+            '-': '-',
+            '*': '*',
+            '/': '/',
+            '%': '%',
+        })
         // 玩家
         . setRule(100025, 'y3.player({})')
         . setRule(100035, {
@@ -301,6 +316,7 @@ export async function fillStatic(formatter: Formatter) {
             return '';
         })
         . setRule('$100002', '{}[{}]')
+        . setRule('$100009', '{}')
         . setRule('$100028', '{}[{}]')
         . setRule('$100148', '{}[{}]')
         . setRule('OR', (node) => {
@@ -335,4 +351,46 @@ export async function fillStatic(formatter: Formatter) {
             return `Func[${y3.lua.encode(name)}](${args?.join(', ')})`;
         })
         . setRule('PRINT_MESSAGE_ACTION_TO_DIALOG', 'log.{}({})')
+        . setRule('GET_PLAYER_KV', '{}:kv_load({}, "Player")')
+        . setRule('SET_ENTITY_KV', '{}:kv_save({}, {})')
+        . setRule('GET_INTEGER_KV', '{}:kv_load({}, "integer")')
+        . setRule('RUN_ONCE_TIMER_BY_FRAME_NO_SAVE', ``
+            + `y3.ltimer.wait_frame({}, function (timer)\n`
+            + `    {}\n`
+            + `end)`
+        )
+        . setRule('RUN_ONCE_TIMER_NO_SAVE', ``
+            + `y3.timer.wait({}, function (timer)\n`
+            + `    {}\n`
+            + `end)`
+        )
+        . setRule('MATH_OPERATION', '{} {} {}')
+        . setRule('FOR_INT_DO_ACTION', ``
+            + `for i = {2}, {3} do\n`
+            + `    {1} = i\n`
+            + `    {4}\n`
+            + `    ::continue::\n`
+            + `end`
+        )
+        . setRule('FOR_INT_DO_ACTION_NEW', ``
+            + `for i = {2}, {3}, {4} or 1 do\n`
+            + `    {1} = i\n`
+            + `    {5}\n`
+            + `    ::continue::\n`
+            + `end`
+        )
+        . setRule('STR_JOIN', (node) => {
+            let args = node.makeArgs(formatter);
+            if (!args) {
+                return '""';
+            }
+            let realArgs = args.filter((arg) => arg !== 'nil');
+            if (realArgs.length === 0) {
+                return '""';
+            } else if (realArgs.length === 1) {
+                return realArgs[0];
+            } else {
+                return '(' + realArgs.join(' .. ') + ')';
+            }
+        })
 }
