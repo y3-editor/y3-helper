@@ -49,6 +49,17 @@ class RunButtonProvider implements vscode.CodeLensProvider {
 
 let runButtonProvider = new RunButtonProvider();
 
+export async function hasInited() {
+    await y3.env.mapReady();
+    if (!y3.env.pluginUri) {
+        return false;
+    }
+    if (!await y3.fs.isDirectory(y3.env.pluginUri)) {
+        return false;
+    }
+    return true;
+}
+
 async function initPlugin() {
     await y3.env.mapReady();
     if (!y3.env.pluginUri) {
@@ -71,6 +82,9 @@ async function initPlugin() {
 async function updatePluginDTS(showme = false) {
     await y3.env.mapReady();
     if (!y3.env.pluginUri) {
+        return;
+    }
+    if (!showme && !await hasInited()) {
         return;
     }
     const templateUri = y3.extensionPath('template/plugin', 'y3-helper.d.ts');

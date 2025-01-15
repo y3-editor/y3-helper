@@ -1,5 +1,6 @@
 import { define } from "../customDefine";
 import { BaseBuilder } from "./baseBuilder";
+import * as y3 from 'y3-helper';
 
 const template = `// 自动生成的代码，请勿修改
 declare interface MapUnit {
@@ -16,7 +17,11 @@ export class TS extends BaseBuilder {
         });
     }
 
-    async make(): Promise<string> {
+    override async isValid(): Promise<boolean> {
+        return await y3.plugin.hasInited();
+    }
+
+    async make(): Promise<string | undefined> {
         let attrs = await define().单位属性.getAttrs();
         return template.replace('%{UNIT_ATTRS}', attrs.map(attr => {
             return `    ${JSON.stringify(attr.name)}: number,`;

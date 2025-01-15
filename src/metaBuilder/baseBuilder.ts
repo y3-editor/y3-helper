@@ -11,6 +11,9 @@ export abstract class BaseBuilder {
         if (!env.scriptUri) {
             return;
         }
+        if (!await this.isValid()) {
+            return;
+        }
         let code = await this.make();
         if (code === undefined) {
             if (await tools.fs.isExists(env.scriptUri, this.path)) {
@@ -21,6 +24,10 @@ export abstract class BaseBuilder {
         } else if (code !== (await tools.fs.readFile(env.scriptUri))?.string) {
             await tools.fs.writeFile(env.scriptUri, this.path, code);
         }
+    }
+
+    protected async isValid() {
+        return true;
     }
 
     protected abstract make(): Promise<string | undefined>;
