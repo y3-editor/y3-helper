@@ -333,12 +333,12 @@ export async function fillStatic(formatter: Formatter) {
             let result = '';
             result += `if ${filters ?? 'false'} then\n`;
             if (thens !== undefined && thens !== '') {
-                result += formatter.increaseTab(thens);
+                result += thens;
                 result += '\n';
             }
             if (elses !== undefined && elses !== '') {
                 result += 'else\n';
-                result += formatter.increaseTab(elses);
+                result += elses;
                 result += '\n';
             }
             result += 'end';

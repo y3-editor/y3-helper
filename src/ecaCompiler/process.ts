@@ -5,8 +5,8 @@ import * as vscode from 'vscode';
 
 export interface Progress {
     message: (message: string) => void,
-    total: (total: number) => void,
-    update: (value?: number) => void,
+    total: (total?: number) => void,
+    update: (value?: number) => Promise<void>,
     isCanceled: () => boolean,
 }
 
@@ -38,24 +38,19 @@ export class Process {
     constructor(private inMap: y3.Map, private outMap: y3.Map, private formatter: Formatter, private progress?: Progress) { }
 
     public async fullCompile() {
-        let total = 0;
         this.progress?.message('搜索触发器文件...');
         y3.log.info('【编译ECA】搜索触发器文件...');
         let searchedTriggers = await this.scanTriggers(y3.uri(this.inMap.uri, this.inTriggerDir));
-        total += searchedTriggers.length;
         
         this.progress?.message('搜索函数文件...');
         y3.log.info('【编译ECA】搜索函数文件...');
         let searchedFunctions = await this.scanTriggers(y3.uri(this.inMap.uri, this.inFunctionDir));
-        total += searchedFunctions.length;
 
         this.progress?.message('搜索物编触发器文件...');
         y3.log.info('【编译ECA】搜索物编触发器文件...');
         let searchedObjects = await this.scanObjects(this.inMap.uri);
-        total += searchedObjects.length;
 
-        this.progress?.total(total * 3 + 1);
-
+        this.progress?.total(1);
         await this.compileGlobalVariables();
 
         let compileResults: CompileResult[] = [];
@@ -66,8 +61,8 @@ export class Process {
             }
             this.progress?.message(`触发器: ${searchedTriggers[i].fileName}`);
             y3.log.info(`【编译ECA】正在解析触发器文件(${i + 1}/${searchedTriggers.length}): ${searchedTriggers[i].fileName}`);
-            this.progress?.update();
-            let compileResult = await this.compileOneTrigger(searchedTriggers[i]);
+            await this.progress?.update(0.2);
+            let compileResult = this.compileOneTrigger(searchedTriggers[i]);
             if (compileResult) {
                 compileResults.push(compileResult);
             }
@@ -79,14 +74,16 @@ export class Process {
             }
             this.progress?.message(`函数: ${searchedFunctions[i].fileName}`);
             y3.log.info(`【编译ECA】正在解析函数文件(${i + 1}/${searchedFunctions.length}): ${searchedFunctions[i].fileName}`);
-            this.progress?.update();
-            let compileResult = await this.compileOneFunction(searchedFunctions[i]);
+            await this.progress?.update(0.2);
+            let compileResult = this.compileOneFunction(searchedFunctions[i]);
             if (compileResult) {
                 compileResults.push(compileResult);
 
-                let main = compileResult.eca.main;
-                if ('id' in main) {
-                    this.formatter.setFuncName(main.id, main.name);
+                if ('main' in compileResult.eca) {
+                    let main = compileResult.eca.main;
+                    if ('id' in main) {
+                        this.formatter.setFuncName(main.id, main.name);
+                    }
                 }
             }
         }
@@ -97,8 +94,8 @@ export class Process {
             }
             this.progress?.message(`物编触发器: ${searchedObjects[i].fileName}`);
             y3.log.info(`【编译ECA】正在解析物编触发器文件(${i + 1}/${searchedObjects.length}): ${searchedObjects[i].fileName}`);
-            this.progress?.update();
-            let compileResult = await this.compileOneObject(searchedObjects[i]);
+            await this.progress?.update(0.2);
+            let compileResult = this.compileOneObject(searchedObjects[i]);
             if (compileResult) {
                 compileResults.push(compileResult);
             }
@@ -110,8 +107,8 @@ export class Process {
             }
             let result = compileResults[i];
             this.progress?.message(`生成: ${result.fileName}`);
-            y3.log.info(`【编译ECA】正在生成代码(${i + 1}/${compileResults.length}): ${result.fileName}`);
-            this.progress?.update();
+            y3.log.debug(`【编译ECA】正在生成代码(${i + 1}/${compileResults.length}): ${result.fileName}`);
+            await this.progress?.update(0.2);
             try {
                 let content = result.eca.make(this.formatter);
                 this.includeFiles.push(result.includeName);
@@ -153,6 +150,7 @@ export class Process {
                 content: file.string,
                 uri,
             });
+            this.progress?.total();
         }
 
         y3.log.info(`【编译ECA】读取${results.length}个json文件`);
@@ -205,12 +203,13 @@ export class Process {
                     uri,
                     objectType: nameCN,
                 });
+                this.progress?.total();
             }
         }
         return results;
     }
 
-    public async compileOneTrigger(searched: SearchResult): Promise<CompileResult | undefined> {
+    public compileOneTrigger(searched: SearchResult): CompileResult | undefined {
         try {
             let eca = this.compiler.compileECA(searched.content);
 
@@ -230,7 +229,7 @@ export class Process {
         }
     }
 
-    public async compileOneFunction(searched: SearchResult) {
+    public compileOneFunction(searched: SearchResult): CompileResult | undefined {
         try {
             let eca = this.compiler.compileECA(searched.content);
 
@@ -250,7 +249,7 @@ export class Process {
         }
     }
 
-    public async compileOneObject(searched: SearchResult) {
+    public compileOneObject(searched: SearchResult): CompileResult | undefined {
         try {
             let eca = this.compiler.compileObject(searched.content, searched.objectType!);
 
@@ -280,6 +279,7 @@ export class Process {
                 return;
             }
 
+            await this.progress?.update(0.4);
             const includeName = [this.outBasseDir, '全局变量.lua'].join('/');
             this.includeFiles.push(includeName);
             this.write(includeName, content);
@@ -335,13 +335,13 @@ export class Process {
             let file = await y3.fs.readFile(uri);
             if (file?.string === content) {
                 y3.log.debug(`【编译ECA】跳过相同的文件：${includeName}`);
-                this.progress?.update();
+                await this.progress?.update(0.6);
                 continue;
             }
             this.progress?.message(`正在写入硬盘：${includeName}`);
             y3.log.debug(`【编译ECA】写入文件：${includeName}`);
             await y3.fs.writeFile(uri, content);
-            this.progress?.update();
+            await this.progress?.update(0.6);
         }
 
         if (removeTask.length > 0) {

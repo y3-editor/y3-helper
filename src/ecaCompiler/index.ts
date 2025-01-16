@@ -15,7 +15,7 @@ class ProgressHandle implements Progress {
     constructor(private token: vscode.CancellationToken, private report: (increment: number, message: string) => void) { }
 
     makeMessage() {
-        const curStr = this.cur.toString().padStart(this.max.toString().length, '0');
+        const curStr = this.cur.toFixed().padStart(this.max.toString().length, '0');
         return `(${curStr}/${this.max})${this.msg}`;
     }
 
@@ -24,11 +24,12 @@ class ProgressHandle implements Progress {
         this.report(0, this.makeMessage());
     }
 
-    total(value: number) {
-        this.max = value;
+    total(value: number = 1) {
+        this.max += value;
+        this.report(0, this.makeMessage());
     }
 
-    update(value = 1) {
+    async update(value = 1) {
         this.cur += value;
         if (this.max === 0) {
             return;
@@ -40,6 +41,7 @@ class ProgressHandle implements Progress {
         const increment = percent - this.lastPercent;
         this.lastPercent = percent;
         this.report(increment, this.makeMessage());
+        await new Promise(resolve => setImmediate(resolve));
     }
 
     isCanceled() {

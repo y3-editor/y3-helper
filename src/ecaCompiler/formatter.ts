@@ -179,25 +179,7 @@ class RuleHandler {
                 optionalGaurd = undefined;
             }
         };
-        this.alignIndent(buf);
         return buf.join('');
-    }
-
-    // 对齐缩进
-    private alignIndent(buf: string[]) {
-        for (let i = 0; i < buf.length; i++) {
-            let line = buf[i];
-            // 检查此行是以 `\n    ` 结尾
-            let match = line.match(/\n([ \t]+)$/);
-            if (match) {
-                let indent = match[1];
-                // 将下一行中所有的换行符后面都添加相同的缩进
-                let nextLine = buf[i + 1];
-                if (nextLine) {
-                    buf[i + 1] = nextLine.replaceAll('\n', '\n' + indent);
-                }
-            }
-        }
     }
 
     private clearLastEmptyLine(buf: string[]) {
@@ -324,7 +306,7 @@ export class Formatter {
 
         results.push('}');
 
-        return results.join('\n') + '\n\n';
+        return results.join('\n') + '\n';
     }
 
     private makeGroupVariablePart(trg: Trigger | Function): string {
@@ -408,7 +390,7 @@ export class Formatter {
         result += this.makeLocalVariableDefine(trg) ?? '';
         if (trg.events.length === 1) {
             result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
-            result += this.increaseTab(this.makeBody(trg));
+            result += this.makeBody(trg);
             result += `\nend)`;
         } else {
             if (trg.events.length > 1) {
@@ -422,7 +404,7 @@ export class Formatter {
                 result += `---@param params ${types.join('|')}\n`;
             }
             result += `local function action(_, params)\n`;
-            result += this.increaseTab(this.makeBody(trg));
+            result += this.makeBody(trg);
             result += `\nend\n\n`;
             for (let event of trg.events) {
                 result += `${eventTarget}:event(${event.make(this)}, action)\n`;
@@ -441,7 +423,7 @@ export class Formatter {
         result += this.makeLocalVariableDefine(func) ?? '';
         const params = func.params.map((param) => y3.lua.getValidName(param.name)).join(', ');
         result += `Func[${y3.lua.encode(func.name)}] = function (${params})\n`;
-        result += this.increaseTab(this.makeBody(func));
+        result += this.makeBody(func);
         result += `\nend`;
         return result;
     }
@@ -467,10 +449,6 @@ export class Formatter {
         return this.funcNameRecord[id];
     }
 
-    public increaseTab(content: string, tab: string = '    '): string {
-        return content.split('\n').map((line) => tab + line).join('\n');
-    }
-
     private ensureEndWithNL(content: string): string {
         return content.endsWith('\n') ? content : content + '\n';
     }
@@ -480,7 +458,76 @@ export class Formatter {
         return content.replace(/\n/g, '\r\n');
     }
 
+    static increaseIndent = new Set(['else', 'function', 'then', 'do', 'repeat', 'elseif', '[', '{', '(']);
+    static decreaseIndent = new Set(['end', 'until', ']', '}', ')']);
+
+    private getIncreseDelta(line: string): [number, number] {
+        if (line.startsWith('--')) {
+            return [0, 0];
+        }
+        let current = 0;
+        let next = 0;
+        const wordAndSymbolRegex = /\w+|[^\s\w]/g;
+        let hasOther = false;
+        // 遍历每个完整的单词和单个的符号
+        let match;
+        while ((match = wordAndSymbolRegex.exec(line)) !== null) {
+            let wordOrSymbol = match[0];
+            if (Formatter.increaseIndent.has(wordOrSymbol)) {
+                next++;
+            } else if (Formatter.decreaseIndent.has(wordOrSymbol)) {
+                if (hasOther) {
+                    next--;
+                } else {
+                    current--;
+                }
+            } else {
+                hasOther = true;
+            }
+        }
+        return [current, next];
+    }
+    
+    private formatIdent(content: string) {
+        let lines = content.split('\n');
+        let level = 0;
+        let levels: number[] = [];
+
+        function 整理缩进(current: number) {
+            let lastLevel = levels[levels.length - 1] ?? 0;
+            if (current === lastLevel) {
+                return;
+            } else if (current > lastLevel) {
+                levels.push(current);
+                return;
+            } else {
+                levels.pop();
+                整理缩进(current);
+                return;
+            }
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            line = line.trimStart();
+
+            if (line !== '') {
+                let [current, next] = this.getIncreseDelta(line);
+                level += current;
+                整理缩进(level);
+                line = '    '.repeat(levels.length) + line;
+                level += next;
+                整理缩进(level);
+            }
+
+            lines[i] = line;
+        }
+
+        return lines.join('\n');
+    }
+
     public asFileContent(content: string): string {
+        content = this.formatIdent(content);
         content = this.ensureEndWithNL(content);
         content = this.ensureNLisCRLF(content);
         return content;

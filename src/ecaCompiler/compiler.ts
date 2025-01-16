@@ -278,12 +278,19 @@ export class Trigger {
     conditions: Exp[] = [];
     actions: Action[] = [];
     variables: Variable[] = [];
-    constructor(public eca: ECA, private json: any) {
+    constructor(public eca: ECA, private json: any, isClosure = false) {
         this.name = json.trigger_name as string;
         this.groupID = json.group_id as number;
-        if (!json.enabled || !json.valid || !json.call_enabled) {
-            this.enabled = false;
-            return;
+        if (isClosure) {
+            if (!json.call_enabled || !json.valid) {
+                this.enabled = false;
+                return;
+            }
+        } else {
+            if (!json.enabled || !json.valid) {
+                this.enabled = false;
+                return;
+            }
         }
         if (json.event) {
             for (let event of json.event as any[]) {
@@ -342,7 +349,7 @@ export class Function {
     constructor(private eca: ECA, private json: any) {
         this.name = json.func_name as string;
         this.id = json.func_id as string;
-        if (!json.enabled) {
+        if (!json.call_enabled || !json.valid) {
             this.enabled = false;
             return;
         }
@@ -393,7 +400,7 @@ export class ECA {
     constructor(private json: y3.json.JObject, public group?: ECAGroup) {
         if (y3.is.object(json.sub_trigger)) {
             for (let [id, closure] of Object.entries(json.sub_trigger as Record<string, y3.json.JObject>)) {
-                this.closures[id] = new Trigger(this, closure);
+                this.closures[id] = new Trigger(this, closure, true);
             }
         }
         if (json.is_func) {
