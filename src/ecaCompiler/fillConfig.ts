@@ -373,9 +373,9 @@ export async function fillStatic(formatter: Formatter) {
             + `end`
         )
         . setRule('FOR_INT_DO_ACTION_NEW', ``
-            + `for i = {2}, {3}, {4} or 1 do\n`
+            + `for i = {2}, {3}<?, {5}?> do\n`
             + `    {1} = i\n`
-            + `    {5}\n`
+            + `    {4}\n`
             + `    ::continue::\n`
             + `end`
         )

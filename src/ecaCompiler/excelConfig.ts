@@ -37,9 +37,22 @@ export class ExcelConfig {
                 const value = table[key]['lua文本'];
                 if (value !== '') {
                     let params = table[key]['参数'].split(';');
+                    let optionals = table[key]['可选参数'].split(';');
                     result[key] = value
-                        .replace(/{#(\d+)}/g, (_, id) => `{${Number(id) + 1}}`)
-                        .replace(/<\$(\d+)>/g, (_, id) => `{${Number(id) + 1 + params.length}}`);
+                        . replace(/{#(\d+)}/g, (_, id) => {
+                            let str = `{${Number(id) + 1}}`;
+                            if (params[Number(id)] === 'ACTION_LIST') {
+                                str = '\n' + str + '\n';
+                            }
+                            return str;
+                        })
+                        . replace(/<\$(\d+)>/g, (_, id) => {
+                            let str = `{${Number(id) + 1 + params.length}}`;
+                            if (optionals[Number(id)] === 'ACTION_LIST') {
+                                str = '\n' + str + '\n';
+                            }
+                            return str;
+                        });
                 }
             }
         }
