@@ -395,6 +395,7 @@
                     "description": "填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录",
                     "type": "string",
                     "default": "",
+                    "ignoreSync": true,
                     "scope": "resource"
                 }
             }
