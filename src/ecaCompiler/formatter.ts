@@ -458,36 +458,42 @@ export class Formatter {
         return content.replace(/\n/g, '\r\n');
     }
 
-    static increaseIndent = new Set(['else', 'function', 'then', 'do', 'repeat', 'elseif', '[', '{', '(']);
-    static decreaseIndent = new Set(['end', 'until', ']', '}', ')']);
+    static increaseNextIndent = new Set(['else', 'function', 'then', 'do', 'repeat', 'elseif', '[', '{', '(']);
+    static decreaseNextIndent = new Set(['end', 'until', ']', '}', ')']);
+    static decreaseCurrentIndent = new Set(['else', 'elseif', 'end', 'until', ']', '}', ')']);
 
-    private getIncreseDelta(line: string): [number, number] {
+    private getDelta(line: string): [number, number] {
         if (line.startsWith('--')) {
             return [0, 0];
         }
         let current = 0;
         let next = 0;
+        let isHead = true;
         const wordAndSymbolRegex = /\w+|[^\s\w]/g;
-        let hasOther = false;
         // 遍历每个完整的单词和单个的符号
         let match;
         while ((match = wordAndSymbolRegex.exec(line)) !== null) {
             let wordOrSymbol = match[0];
-            if (Formatter.increaseIndent.has(wordOrSymbol)) {
-                next++;
-            } else if (Formatter.decreaseIndent.has(wordOrSymbol)) {
-                if (hasOther) {
-                    next--;
-                } else {
+            if (isHead) {
+                if (Formatter.decreaseCurrentIndent.has(wordOrSymbol)) {
                     current--;
+                } else {
+                    isHead = false;
+                }
+                if (Formatter.increaseNextIndent.has(wordOrSymbol)) {
+                    next++;
                 }
             } else {
-                hasOther = true;
+                if (Formatter.increaseNextIndent.has(wordOrSymbol)) {
+                    next++;
+                } else if (Formatter.decreaseNextIndent.has(wordOrSymbol)) {
+                    next--;
+                }
             }
         }
         return [current, next];
     }
-    
+
     private formatIdent(content: string) {
         let lines = content.split('\n');
         let level = 0;
@@ -512,15 +518,15 @@ export class Formatter {
             line = line.trimStart();
 
             if (line !== '') {
-                let [current, next] = this.getIncreseDelta(line);
+                let [current, next] = this.getDelta(line);
                 level += current;
                 整理缩进(level);
-                line = '    '.repeat(levels.length) + line;
+                lines[i] = '    '.repeat(levels.length) + line;
                 level += next;
                 整理缩进(level);
+            } else {
+                lines[i] = '';
             }
-
-            lines[i] = line;
         }
 
         return lines.join('\n');
