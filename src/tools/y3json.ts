@@ -1,5 +1,16 @@
 import * as jsonc from 'jsonc-parser';
 
+function formatNumber(value: number): string {
+    // 将数字转换为字符串
+    let valueStr = value.toString();
+    // 检查是否包含小数点
+    if (valueStr.includes('.')) {
+        return valueStr;
+    } else {
+        return value.toFixed(1);
+    }
+}
+
 /**
  * 编辑器使用的 JSON 格式，读写时会遵循编辑器的格式规范
  */
@@ -106,12 +117,12 @@ export class Y3Json {
                 };
                 case 'number': {
                     if (fixed) {
-                        return value.toFixed(1);
+                        return formatNumber(value);
                     } else {
-                        if (typeof currentData2 === 'bigint') {
-                            return value.toString();
+                        if (typeof currentData2 === 'number') {
+                            return formatNumber(value);
                         } else {
-                            return value.toFixed(1);
+                            return value.toString();
                         }
                     }
                 };
