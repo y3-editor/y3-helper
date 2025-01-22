@@ -64,6 +64,7 @@ export class Map {
                 }
                 this.description = descJson.name;
             })(),
+            vscode.workspace.fs.createDirectory(y3.uri(this.scriptUri, '.log')),
         ]);
     }
 }
