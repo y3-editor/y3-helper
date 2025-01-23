@@ -469,11 +469,24 @@ export class Formatter {
         let current = 0;
         let next = 0;
         let isHead = true;
+        let stringMark = undefined;
         const wordAndSymbolRegex = /\w+|[^\s\w]/g;
         // 遍历每个完整的单词和单个的符号
         let match;
         while ((match = wordAndSymbolRegex.exec(line)) !== null) {
             let wordOrSymbol = match[0];
+            if (stringMark) {
+                if (wordOrSymbol === stringMark) {
+                    stringMark = undefined;
+                } else if (wordOrSymbol === '\\') {
+                    match.index++;
+                }
+                continue;
+            }
+            if (wordOrSymbol === '"' || wordOrSymbol === "'") {
+                stringMark = wordOrSymbol;
+                continue;
+            }
             if (isHead) {
                 if (Formatter.decreaseCurrentIndent.has(wordOrSymbol)) {
                     current--;
