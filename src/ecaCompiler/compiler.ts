@@ -160,7 +160,7 @@ export class VarRef extends Node {
             case 'local':
                 return 'v.' + y3.lua.getValidName(this.name, reservedNames);
             case 'global':
-                return 'V.' + y3.lua.getValidName(this.name, reservedNames);
+                return 'G.' + y3.lua.getValidName(this.name, reservedNames);
             case 'actor':
                 return 'g.' + y3.lua.getValidName(this.name, reservedNames);
         }
@@ -454,9 +454,9 @@ export class GlobalVariables {
 
     make(formatter: Formatter) {
         let buffer: string[] = [];
-        buffer.push('V = {}\n\n');
+        buffer.push('G = {}\n\n');
         for (const variable of this.variables.values()) {
-            buffer.push(`V.${y3.lua.getValidName(variable.name)} = ${formatter.getVariableInitValue(variable)}`);
+            buffer.push(`G.${y3.lua.getValidName(variable.name)} = ${formatter.getVariableInitValue(variable)}`);
             buffer.push('\n');
         }
         let content = buffer.join('');
