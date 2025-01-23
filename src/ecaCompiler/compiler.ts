@@ -278,7 +278,7 @@ export class Trigger {
     conditions: Exp[] = [];
     actions: Action[] = [];
     variables: Variable[] = [];
-    constructor(public eca: ECA, private json: any, isClosure = false) {
+    constructor(public eca: ECA, private json: any, public isClosure = false) {
         this.name = json.trigger_name as string;
         this.groupID = json.group_id as number;
         if (isClosure) {

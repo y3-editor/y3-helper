@@ -348,7 +348,7 @@ export class Formatter {
             result += this.makeGroupVariablePart(trg);
         }
 
-        if (trg.variables.length > 0 && this.usingLocalVariable(trg)) {
+        if (trg.variables.length > 0) {
             result += this.makeLocalVariablePart(trg);
         }
 
@@ -356,16 +356,6 @@ export class Formatter {
             result += `${this.makeActionPart(trg)}`;
         }
         return result;
-    }
-
-    private usingLocalVariable(trg: Trigger | Function): boolean {
-        return trg.eachNode(node => {
-            if (node instanceof VarRef && node.scope === 'local') {
-                return true;
-            } else {
-                return false;
-            }
-        });
     }
 
     private usingGroupVariable(trg: Trigger | Function): boolean {
