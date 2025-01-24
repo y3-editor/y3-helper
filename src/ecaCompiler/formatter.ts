@@ -256,10 +256,6 @@ export class Formatter {
         return y3.lua.getValidName(name, Formatter.reservedWords);
     }
 
-    private makeActionPart(trg: Trigger | Function): string {
-        return trg.trunk?.actions.map((action) => action.make(this)).join('\n') ?? '';
-    }
-
     public getVariableInitValue(variable: Variable): string {
         const value = this.formatValue(variable.type, variable.value);
         if (variable.isArray) {
@@ -277,26 +273,6 @@ export class Formatter {
         } else {
             return `${value}`;
         }
-    }
-
-    private makeLocalVariablePart(trg: Trigger | Function): string {
-        let result = '';
-        let params = new Set<string>();
-        if (trg instanceof Function) {
-            for (let param of trg.params) {
-                params.add(param.name);
-            }
-        }
-        for (let variable of trg.trunk?.variables ?? []) {
-            let defaultValue = this.getVariableInitValue(variable);
-            let name = this.getVariableName(variable.name);
-            if (params.has(variable.name)) {
-                result += `${name} = y3.util.default(${name}, ${defaultValue})\n`;
-            } else {
-                result += `local ${name} = ${defaultValue}\n`;
-            }
-        }
-        return result;
     }
 
     private makeGroupVariablePart(trg: Trigger | Function): string {
@@ -339,12 +315,7 @@ export class Formatter {
         }
 
         if (trg.trunk) {
-            if (trg.trunk.variables.length > 0) {
-                result += this.makeLocalVariablePart(trg);
-            }
-            if (trg.trunk.actions.length > 0) {
-                result += `${this.makeActionPart(trg)}`;
-            }
+            result += trg.trunk.make(this);
         }
         return result;
     }
@@ -406,7 +377,7 @@ export class Formatter {
             result += `Func[${y3.lua.encode(func.name)}] = function (...) end`;
             return result;
         }
-        const params = func.params.map((param) => this.getVariableName(param.name)).join(', ');
+        const params = func.trunk?.params.map((param) => this.getVariableName(param.name)).join(', ') ?? '';
         result += `Func[${y3.lua.encode(func.name)}] = function (${params})\n`;
         result += this.makeBody(func);
         result += `\nend`;

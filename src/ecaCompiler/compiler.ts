@@ -6,7 +6,9 @@ export abstract class Node {
     name?: string;
     args?: (Exp | null)[];
     abstract make(formatter: Formatter): string;
-    abstract makeArgs(formatter: Formatter): string[] | undefined;
+    makeArgs(formatter: Formatter): string[] | undefined {
+        return undefined;
+    };
 }
 
 export class Event extends Node {
@@ -39,10 +41,6 @@ export class Value extends Node {
 
     make(formatter: Formatter): string {
         return formatter.formatValue(this.type, this);
-    }
-
-    makeArgs(formatter: Formatter) {
-        return undefined;
     }
 }
 
@@ -122,10 +120,6 @@ class Comment extends Node {
     make(formatter: Formatter): string {
         return '-- ' + this.content.replace(/\n/g, '\n-- ');
     }
-
-    makeArgs(formatter: Formatter) {
-        return undefined;
-    }
 }
 
 export class Variable extends Node {
@@ -135,10 +129,6 @@ export class Variable extends Node {
 
     make(formatter: Formatter): string {
         return formatter.getVariableName(this.name);
-    }
-
-    makeArgs(formatter: Formatter) {
-        return undefined;
     }
 }
 
@@ -163,10 +153,6 @@ export class VarRef extends Node {
                 return 'g.' + formatter.getVariableName(this.name);
         }
     }
-
-    makeArgs(formatter: Formatter) {
-        return undefined;
-    }
 }
 
 class TriggerRef extends Node {
@@ -183,10 +169,6 @@ class TriggerRef extends Node {
         }
     }
 
-    makeArgs(formatter: Formatter) {
-        return undefined;
-    }
-
     eachNode(callback: (node: Node) => boolean) {
         let closure = this.eca.closures[this.id];
         if (closure) {
@@ -201,10 +183,6 @@ class TriggerRef extends Node {
 class NilNode extends Node {
     make(formatter: Formatter): string {
         return 'nil';
-    }
-
-    makeArgs(formatter: Formatter) {
-        return undefined;
     }
 }
 
@@ -268,7 +246,7 @@ function parseVarData(dict: Record<string, Record<string, any>>, length: Record<
     return variables;
 }
 
-export class Trigger {
+export class Trigger extends Node {
     name: string;
     groupID = 0;
     enabled: boolean = true;
@@ -276,6 +254,7 @@ export class Trigger {
     conditions: Exp[] = [];
     trunk?: Trunk;
     constructor(public eca: ECA, private json: any, public isClosure = false) {
+        super();
         this.name = json.trigger_name as string;
         this.groupID = json.group_id as number;
         if (isClosure) {
@@ -316,10 +295,12 @@ type Param = {
     required: boolean;
 };
 
-class Trunk {
+class Trunk extends Node {
     actions: Action[] = [];
+    params: Param[] = [];
     variables: Variable[] = [];
     constructor(private eca: ECA, private json: any) {
+        super();
         if (json.action) {
             for (let action of json.action as any) {
                 let result = parseAction(this.eca, action);
@@ -330,6 +311,12 @@ class Trunk {
         }
         if (json.var_data) {
             this.variables = parseVarData(json.var_data[0], json.var_data[1], json.var_data[2]);
+        }
+        if (json.func_param_list) {
+            this.params = (json.func_param_list as any[]).map((param: [string, boolean]) => {
+                param = toArray(param) as [string, boolean];
+                return { name: param[0], required: param[1] };
+            });
         }
     }
 
@@ -346,15 +333,45 @@ class Trunk {
         }
         return false;
     }
+
+    private makeLocalVariablePart(formatter: Formatter): string {
+        let result = '';
+        let params = new Set<string>(this.params.map(param => param.name));
+        for (let variable of this.variables) {
+            let defaultValue = formatter.getVariableInitValue(variable);
+            let name = formatter.getVariableName(variable.name);
+            if (params.has(variable.name)) {
+                result += `${name} = y3.util.default(${name}, ${defaultValue})\n`;
+            } else {
+                result += `local ${name} = ${defaultValue}\n`;
+            }
+        }
+        return result;
+    }
+
+    private makeActionPart(formatter: Formatter): string {
+        return this.actions.map((action) => action.make(formatter)).join('\n') ?? '';
+    }
+
+    make(formatter: Formatter): string {
+        let result = '';
+        if (this.variables.length > 0) {
+            result += this.makeLocalVariablePart(formatter);
+        }
+        if (this.actions.length > 0) {
+            result += `${this.makeActionPart(formatter)}`;
+        }
+        return result;
+    }
 }
 
-export class Function {
+export class Function extends Node {
     name: string;
     id: string;
     enabled: boolean = true;
-    params: Param[] = [];
     trunk?: Trunk;
     constructor(private eca: ECA, private json: any) {
+        super();
         this.name = json.func_name as string;
         this.id = json.func_id as string;
         if (!json.call_enabled || !json.valid) {
@@ -362,12 +379,6 @@ export class Function {
             return;
         }
         this.trunk = new Trunk(eca, json);
-        if (json.func_param_list) {
-            this.params = (json.func_param_list as any[]).map((param: [string, boolean]) => {
-                param = toArray(param) as [string, boolean];
-                return { name: param[0], required: param[1] };
-            });
-        }
     }
 
     eachNode(callback: (node: Node) => boolean) {
