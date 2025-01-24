@@ -9,6 +9,9 @@ export abstract class Node {
     makeArgs(formatter: Formatter): string[] | undefined {
         return undefined;
     };
+    eachNode(callback: (node: Node) => boolean): boolean {
+        return false;
+    }
 }
 
 export class Event extends Node {
@@ -100,10 +103,8 @@ export class Call extends Node {
             if (callback(arg)) {
                 return true;
             }
-            if ('eachNode' in arg) {
-                if (arg.eachNode(callback)) {
-                    return true;
-                }
+            if (arg.eachNode(callback)) {
+                return true;
             }
         }
         return false;
@@ -136,6 +137,7 @@ export class VarRef extends Node {
     name: string;
     type: string;
     scope: 'local' | 'global' | 'actor';
+    def?: Variable;
     constructor(json: [string, string, 'local' | 'global' | 'actor']) {
         super();
         this.type = json[0];
@@ -325,10 +327,8 @@ class Trunk extends Node {
             if (callback(action)) {
                 return true;
             }
-            if ('eachNode' in action) {
-                if (action.eachNode(callback)) {
-                    return true;
-                }
+            if (action.eachNode(callback)) {
+                return true;
             }
         }
         return false;
