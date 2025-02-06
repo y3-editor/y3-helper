@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
+
 type Row = Record<string, string>;
 
 /**
@@ -334,7 +336,7 @@ export class Rule<N extends y3.consts.Table.NameCN> {
     public async apply() {
         let fileName = this.path.path.match(/([^/\\]+)$/)?.[1] ?? this.path.fsPath;
         const ruleName = `${this.tableName}: ${fileName}@${this.sheetName ?? 1}`;
-        y3.log.info(`正在执行规则："${ruleName}"`);
+        y3.log.info(l10n.t('正在执行规则："{0}"', ruleName));
         try {
             let sheet = await y3.excel.loadFile(this.path, this.sheetName);
             let sheetTable = this.multi ? sheet.makeMultiTable(this.offset, this.skip) : sheet.makeTable(this.offset, this.skip);
@@ -347,7 +349,7 @@ export class Rule<N extends y3.consts.Table.NameCN> {
                 let objectKey = Number(key);
                 let templateKey: number | undefined = Number(template);
                 if (isNaN(objectKey)) {
-                    throw new Error(`对象的 key(${this.key ?? '<第一列>'}) 不是数字：${key}`);
+                    throw new Error(l10n.t('对象的 key({0}) 不是数字：{1}', this.key ?? l10n.t('<第一列>'), key));
                 }
                 if (templateKey === objectKey || !templateKey) {
                     templateKey = undefined;
@@ -360,7 +362,7 @@ export class Rule<N extends y3.consts.Table.NameCN> {
                                     copyFrom: templateKey,
                                 });
                 if (!editorObject) {
-                    throw new Error(`创建对象失败：${objectKey}`);
+                    throw new Error(l10n.t('创建对象失败：{0}', objectKey));
                 }
 
                 for (const action of this.rule._actions) {
@@ -375,8 +377,8 @@ export class Rule<N extends y3.consts.Table.NameCN> {
                 }
             }
         } catch (e) {
-            y3.log.error(`执行规则失败："${ruleName}"\n${(e as Error)?.stack}`);
-            vscode.window.showErrorMessage(`执行规则失败："${ruleName}"\n${e}`);
+            y3.log.error(l10n.t('执行规则失败："{0}"\n{1}', ruleName, String((e as Error)?.stack)));
+            vscode.window.showErrorMessage(l10n.t('执行规则失败："{0}"\n{1}', ruleName, String(e)));
         }
     }
 
@@ -395,6 +397,6 @@ export class Rule<N extends y3.consts.Table.NameCN> {
         if (value instanceof ReaderRule) {
             return value.applyReader(rows, source);
         }
-        throw new Error('未知的值类型: ' + String(value));
+        throw new Error(l10n.t('未知的值类型: {0}', String(value)));
     }
 }

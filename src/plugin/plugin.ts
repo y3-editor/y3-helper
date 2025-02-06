@@ -7,6 +7,8 @@ import { queue, throttle } from '../utility/decorators';
 declare const __non_webpack_require__: NodeRequire | undefined;
 const rawRequire = __non_webpack_require__ ?? require;
 
+const l10n = vscode.l10n;
+
 interface ExportInfo {
     name: string;
     async: boolean;
@@ -64,7 +66,7 @@ export class Plugin {
         }
         let code = (await y3.fs.readFile(this.uri))?.string ?? null;
         if (!code) {
-            this.parseError = '读取文件失败';
+            this.parseError = l10n.t('读取文件失败');
             return;
         }
         this.setCode(code);
@@ -80,7 +82,7 @@ export class Plugin {
     public async run(funcName: string, sandbox: vm.Context) {
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `正在执行 “${this.name}/${funcName}”`,
+            title: l10n.t('正在执行 “{0}/{1}”', this.name, funcName),
         }, async () => {
             try {
                 this.running = true;
@@ -91,7 +93,7 @@ export class Plugin {
                 }
                 if (!this.script) {
                     if (!this.fixedCode) {
-                        this.parseError = '代码解析失败';
+                        this.parseError = l10n.t('代码解析失败');
                         throw new Error(this.parseError);
                     }
                     try {
@@ -105,7 +107,7 @@ export class Plugin {
                 }
                 let exports = this.script!.runInNewContext(sandbox);
                 if (typeof exports[funcName] !== 'function') {
-                    throw new Error(`没有找到要执行的函数${funcName}`);
+                    throw new Error(l10n.t('没有找到要执行的函数{0}', funcName));
                 }
                 let result = exports[funcName]();
                 await this.fireDidRun(funcName, result);
@@ -279,11 +281,11 @@ export class PluginManager extends vscode.Disposable {
     public async run(uri: vscode.Uri, funcName: string) {
         let plugin = await this.findPlugin(uri);
         if (!plugin) {
-            throw new Error('没有找到插件');
+            throw new Error(l10n.t('没有找到插件'));
         }
-        y3.log.info(`开始运行插件 "${plugin.name}/${funcName}"`);
+        y3.log.info(l10n.t('开始运行插件 "{0}/{1}"', plugin.name, funcName));
         await plugin.run(funcName, this.makeSandbox());
-        y3.log.info(`运行插件 "${plugin.name}/${funcName}" 成功`);
+        y3.log.info(l10n.t('运行插件 "{0}/{1}" 成功', plugin.name, funcName));
     }
 
     public async getAll() {
@@ -294,9 +296,9 @@ export class PluginManager extends vscode.Disposable {
     public async runAll(funcName: string): Promise<number> {
         return await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `正在执行所有插件的"${funcName}"函数`,
+            title: l10n.t('正在执行所有插件的"{0}"函数', funcName),
         }, async () => {
-            y3.log.info(`开始运行所有插件的"${funcName}"函数`);
+            y3.log.info(l10n.t('开始运行所有插件的"{0}"函数', funcName));
             let plugins = await this.getAll();
             let errors = [];
             let count = 0;
@@ -310,13 +312,13 @@ export class PluginManager extends vscode.Disposable {
                     count++;
                 } catch (error) {
                     let errorMessage = String(error).replace(/Error: /, '');
-                    errors.push(`"${plugin.name}/${funcName}":${errorMessage}`);
+                    errors.push(l10n.t('"{0}/{1}":{2}', plugin.name, funcName, errorMessage));
                 }
             }
             if (errors.length > 0) {
                 throw new Error(errors.join('\n'));
             }
-            y3.log.info(`所有插件的"${funcName}"函数运行完成`);
+            y3.log.info(l10n.t('所有插件的"{0}"函数运行完成', funcName));
             return count;
         });
     }

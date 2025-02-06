@@ -4,6 +4,8 @@ import * as y3 from 'y3-helper';
 import { hash, SpinLock } from '../utility';
 import { throttle } from '../utility/decorators';
 
+const l10n = vscode.l10n;
+
 export class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
     public uri: vscode.Uri;
@@ -39,9 +41,9 @@ export class Language extends vscode.Disposable {
         }
         try {
             await this._ioLock.acquire();
-            y3.log.debug('开始读取语言文件');
+            y3.log.debug(l10n.t('开始读取语言文件'));
             let languageFile = await y3.fs.readFile(this.uri);
-            y3.log.debug('语言文件读取完成');
+            y3.log.debug(l10n.t('语言文件读取完成'));
             this._ioLock.release();
             if (!languageFile) {
                 return;
@@ -54,7 +56,7 @@ export class Language extends vscode.Disposable {
                 this._mapLanguage = new y3.json.Json(languageFile.string);
                 this._mapReverse = undefined;
             } catch(e) {
-                y3.log.warn(`解析中文语言文件失败：${e}`);
+                y3.log.warn(l10n.t('解析中文语言文件失败：{0}', String(e)));
             }
         } finally {
             this.onDidChangeEmitter.fire();
@@ -82,7 +84,7 @@ export class Language extends vscode.Disposable {
         if (this.get(key) === value) {
             return;
         }
-        y3.log.debug(`设置中文文本：${key} => ${value}`);
+        y3.log.debug(l10n.t('设置中文文本：{0} => {1}', key, value));
         this._mapLanguage?.set(key, value);
         if (this._mapReverse) {
             this._mapReverse[value] = key;
@@ -142,9 +144,9 @@ export class Language extends vscode.Disposable {
         }
         await this._ioLock.acquire();
         this._lastWriteTime = Date.now();
-        y3.log.debug('开始写入语言文件');
+        y3.log.debug(l10n.t('开始写入语言文件'));
         await y3.fs.writeFile(this.uri!, content);
-        y3.log.debug('语言文件写入完成');
+        y3.log.debug(l10n.t('语言文件写入完成'));
         this._ioLock.release();
         this._lastWriteTime = Date.now();
     }

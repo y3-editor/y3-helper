@@ -3,16 +3,18 @@ import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
+
 export class EditorLauncher {
     private async runPlugin() {
         try {
             await y3.plugin.runAllPlugins('onEditor');
         } catch (error) {
-            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
+            let res = await vscode.window.showErrorMessage(l10n.t("运行插件时发生错误"), {
                 detail: String(error).replace(/Error: /, ''),
                 modal: true,
-            }, '仍要启动');
-            if (res !== '仍要启动') {
+            }, l10n.t('仍要启动'));
+            if (res !== l10n.t('仍要启动')) {
                 return false;
             }
         }
@@ -24,11 +26,11 @@ export class EditorLauncher {
         let projectUri = env.projectUri;
         let editorExeUri = env.editorExeUri;
         if (!projectUri) {
-            vscode.window.showErrorMessage("没有指定地图目录！");
+            vscode.window.showErrorMessage(l10n.t("没有指定地图目录！"));
             return false;
         }
         if (!editorExeUri) {
-            vscode.window.showErrorMessage("未找到编辑器！");
+            vscode.window.showErrorMessage(l10n.t("未找到编辑器！"));
             return false;
         }
 
@@ -52,7 +54,7 @@ export class EditorLauncher {
             }
         }
         await runShell(
-            "启动游戏",
+            l10n.t("启动游戏"),
             editorExeUri.fsPath,
             [
                 "--dx11",

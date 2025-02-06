@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 
+const l10n = vscode.l10n;
+
 type Node = {
     name: string,
     uid: string,
@@ -30,7 +32,7 @@ class UINode extends TreeNode {
             update: async (node) => {
                 node.tooltip = ui.uid;
                 node.childs = ui.childs.length > 0
-                    ? ui.childs.map(ui => new UINode(ui, '画板'))
+                    ? ui.childs.map(ui => new UINode(ui, l10n.t('画板')))
                     : undefined;
             }
         });
@@ -39,7 +41,7 @@ class UINode extends TreeNode {
 
 export class 界面 extends TreeNode {
     constructor() {
-        super('界面', {
+        super(l10n.t('界面'), {
             iconPath: new vscode.ThemeIcon('layout'),
             show: async () => {
                 await env.mapReady();
@@ -47,7 +49,7 @@ export class 界面 extends TreeNode {
             },
 
             childs: [
-                new TreeNode('画板', {
+                new TreeNode(l10n.t('画板'), {
                     iconPath: new vscode.ThemeIcon('layout-statusbar'),
 
                     show: async () => {
@@ -61,10 +63,10 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define().界面.getUIPackage())
                             .画板
-                            .map(ui => new UINode(ui, '画板'));
+                            .map(ui => new UINode(ui, l10n.t('画板')));
                     }
                 }),
-                new TreeNode('场景UI', {
+                new TreeNode(l10n.t('场景UI'), {
                     iconPath: new vscode.ThemeIcon('smiley'),
 
                     show: async () => {
@@ -78,10 +80,10 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define().界面.getUIPackage())
                             .场景UI
-                            .map(ui => new UINode(ui, '场景UI'));
+                            .map(ui => new UINode(ui, l10n.t('场景UI')));
                     }
                 }),
-                new TreeNode('元件', {
+                new TreeNode(l10n.t('元件'), {
                     iconPath: new vscode.ThemeIcon('extensions'),
 
                     show: async () => {
@@ -95,7 +97,7 @@ export class 界面 extends TreeNode {
 
                         node.childs = (await define().界面.getUIPackage())
                             .元件
-                            .map(ui => new UINode(ui, '元件'));
+                            .map(ui => new UINode(ui, l10n.t('元件')));
                     }
                 }),
             ],
@@ -118,7 +120,7 @@ vscode.commands.registerCommand('y3-helper.copyUIPath', (node: TreeNode) => {
     let paths: string[] = [];
     // 递归父节点将所有的label拼接起来
     let curNode = node;
-    while (curNode.contextValue === '画板') {
+    while (curNode.contextValue === l10n.t('画板')) {
         paths.unshift(curNode.label as string);
         if (curNode.parent === undefined) {
             break;

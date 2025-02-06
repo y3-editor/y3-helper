@@ -4,6 +4,7 @@ import * as tools from './tools';
 import { config } from './config';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
 const debuggerPath = '3rd/debugger';
 
 let debugSessions: vscode.DebugSession[] = [];
@@ -48,13 +49,13 @@ export function init(context: vscode.ExtensionContext) {
     });
 
     let launch = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-    launch.text = '✨启动';
-    launch.tooltip = '启动游戏并附加调试器';
+    launch.text = l10n.t('✨启动');
+    launch.tooltip = l10n.t('启动游戏并附加调试器');
     launch.command = 'y3-helper.launchGameAndAttach';
 
     let attach = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-    attach.text = '💡附加';
-    attach.tooltip = '附加调试器';
+    attach.text = l10n.t('💡附加');
+    attach.tooltip = l10n.t('附加调试器');
     attach.command = 'y3-helper.attach';
 
     function updateItems() {
@@ -110,7 +111,7 @@ async function startWaitDebuggerHelper() {
 }
 
 function getName(id?: number) {
-    return id ? `💡附加【${id}】` : "💡附加";
+    return id ? l10n.t('💡附加【{0}】', id) : l10n.t('💡附加');
 }
 
 function findDebugSession(id?: number) {
@@ -119,7 +120,7 @@ function findDebugSession(id?: number) {
 }
 
 async function attachForOnePlayer(id?: number) {
-    y3.log.info(`正在启动调试器(${getName(id)})`);
+    y3.log.info(l10n.t('正在启动调试器({0})', getName(id)));
     const port = 12399 - (id ?? 0);
     let suc = vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), {
         "type": "y3lua",
@@ -134,11 +135,11 @@ async function attachForOnePlayer(id?: number) {
 }
 
 function prepareReconnect(session: vscode.DebugSession, timeout: number) {
-    y3.log.info(`准备重连调试器(${session.name})`);
+    y3.log.info(l10n.t('准备重连调试器({0})', session.name));
     let trg = vscode.debug.onDidTerminateDebugSession((e) => {
         if (e === session) {
             trg.dispose();
-            y3.log.info(`正在重连调试器(${session.name})`);
+            y3.log.info(l10n.t('正在重连调试器({0})', session.name));
             vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(env.scriptUri!), session.configuration);
         }
     });

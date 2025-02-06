@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 
+const l10n = vscode.l10n;
+
 export class 玩家属性 extends TreeNode {
     constructor() {
-        super('玩家属性', {
+        super(l10n.t('玩家属性'), {
             iconPath: new vscode.ThemeIcon('organization'),
             show: async () => {
                 await env.mapReady();
@@ -15,7 +17,7 @@ export class 玩家属性 extends TreeNode {
             update: async (node) => {
                 node.childs = (await define().玩家属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
-                    contextValue: '玩家属性',
+                    contextValue: l10n.t('玩家属性'),
                 }));
             },
         });

@@ -11,6 +11,9 @@ import { TechData as Tech } from "../helper_meta/editor/tech";
 import * as y3 from 'y3-helper';
 import { hash } from "../utility";
 import * as MapData from 'map-declare';
+import * as vscode from 'vscode';
+
+const l10n = vscode.l10n;
 
 type KV = Record<string, string|number|boolean>;
 
@@ -119,7 +122,7 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
 
 function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = false) {
     if (!fieldInfo.type) {
-        throw new Error(`未知字段类型:'${fieldInfo.field}'`);
+        throw new Error(l10n.t("未知字段类型:'{0}'", fieldInfo.field));
     }
     switch (fieldInfo.type) {
         case 'PLocalizeText': {
@@ -127,7 +130,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 return value?.toString() ?? '';
             }
             if (typeof value !== 'string') {
-                throw new Error(`'${fieldInfo.field}'字段应为字符串`);
+                throw new Error(l10n.t("'{0}'字段应为字符串", fieldInfo.field));
             }
             return value;
         }
@@ -136,7 +139,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 return !!value;
             }
             if (typeof value !== 'boolean') {
-                throw new Error(`'${fieldInfo.field}'字段应为布尔值`);
+                throw new Error(l10n.t("'{0}'字段应为布尔值", fieldInfo.field));
             }
             return value;
         }
@@ -148,7 +151,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 }
             }
             if (typeof value !== 'number' || isNaN(value)) {
-                throw new Error(`'${fieldInfo.field}'字段应为数字`);
+                throw new Error(l10n.t("'{0}'字段应为数字", fieldInfo.field));
             }
             return value;
         }
@@ -158,7 +161,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 try {
                     value = BigInt(value);
                 } catch {
-                    throw new Error(`'${fieldInfo.field}'字段应为整数`);
+                    throw new Error(l10n.t("'{0}'字段应为整数", fieldInfo.field));
                 }
             }
             return value;
@@ -168,7 +171,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 return value?.toString() ?? '';
             }
             if (typeof value !== 'string') {
-                throw new Error(`'${fieldInfo.field}'字段应为字符串`);
+                throw new Error(l10n.t("'{0}'字段应为字符串", fieldInfo.field));
             }
             return value;
         }
@@ -176,13 +179,13 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
 
     if (fieldInfo.type.endsWith('List')) {
         if (!Array.isArray(value)) {
-            throw new Error(`'${fieldInfo.field}'字段应为数组`);
+            throw new Error(l10n.t("'{0}'字段应为数组", fieldInfo.field));
         }
         return value;
     }
     if (fieldInfo.type.endsWith('Formula')) {
         if (!Array.isArray(value)) {
-            throw new Error(`'${fieldInfo.field}'字段应为数组`);
+            throw new Error(l10n.t("'{0}'字段应为数组", fieldInfo.field));
         }
         for (let i = 0; i < value.length; i++) {
             let item = value[i];
@@ -190,7 +193,7 @@ function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = fal
                 item = item?.toString() ?? '';
             }
             if (typeof item !== 'string') {
-                throw new Error(`'${fieldInfo.field}'字段的第${i}项应为字符串`);
+                throw new Error(l10n.t("'{0}'字段的第{1}项应为字符串", fieldInfo.field, i));
             }
         }
         return value;

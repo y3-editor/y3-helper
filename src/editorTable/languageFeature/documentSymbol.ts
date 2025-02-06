@@ -3,6 +3,8 @@ import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { getObject } from './documentManager';
 
+const l10n = vscode.l10n;
+
 class Provider implements vscode.DocumentSymbolProvider {
     private makeSymbole(document: vscode.TextDocument, object: y3.table.EditorObject<any>, child: jsonc.Node) {
         if (child.type !== 'property') {
@@ -56,6 +58,6 @@ export function init() {
         scheme: 'file',
         language: 'json',
     }, new Provider(), {
-        label: 'Y3开发助手：物编字段',
+        label: l10n.t('Y3开发助手：物编字段'),
     });
 }

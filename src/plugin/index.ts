@@ -3,6 +3,8 @@ import * as y3 from 'y3-helper';
 import * as plugin from './plugin';
 import * as mainMenu from '../mainMenu';
 
+const l10n = vscode.l10n;
+
 let pluginManager: plugin.PluginManager | undefined;
 
 class RunButtonProvider implements vscode.CodeLensProvider {
@@ -18,23 +20,23 @@ class RunButtonProvider implements vscode.CodeLensProvider {
         for (const name in infos) {
             const info = infos[name];
             codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                title: `$(debug-start)运行 "${name}"`,
+                title: l10n.t('$(debug-start)运行 "{0}"', name),
                 command: 'y3-helper.runPlugin',
                 arguments: [document.uri, name],
             }));
             if (name === 'onGame') {
                 codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: `使用《Y3开发助手》启动游戏时自动运行`,
+                    title: l10n.t('使用《Y3开发助手》启动游戏时自动运行'),
                     command: '',
                 }));
             } else if (name === 'onEditor') {
                 codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: `使用《Y3开发助手》的“在编辑器中打开”时自动运行`,
+                    title: l10n.t('使用《Y3开发助手》的“在编辑器中打开”时自动运行'),
                     command: '',
                 }));
             } else if (name === 'onSave') {
                 codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: `使用《Y3编辑器》保存地图后自动运行`,
+                    title: l10n.t('使用《Y3编辑器》保存地图后自动运行'),
                     command: '',
                 }));
             }
@@ -71,12 +73,12 @@ async function initPlugin() {
         recursive: true,
         nameMap: 'listfile.json',
     });
-    const needOpen = y3.uri(y3.env.pluginUri, '1-使用代码修改物编.js');
+    const needOpen = y3.uri(y3.env.pluginUri, l10n.t('1-使用代码修改物编.js'));
     if (!await y3.fs.isFile(needOpen)) {
         return;
     }
     await vscode.commands.executeCommand('vscode.open', needOpen);
-    mainMenu.refresh('插件');
+    mainMenu.refresh(l10n.t('插件'));
 }
 
 async function updatePluginDTS(showme = false) {
@@ -96,9 +98,9 @@ async function updatePluginDTS(showme = false) {
         overwrite: true,
     });
     if (suc && showme) {
-        vscode.window.showInformationMessage('插件定义文件更新成功');
+        vscode.window.showInformationMessage(l10n.t('插件定义文件更新成功'));
         y3.open(targetUri);
-        mainMenu.refresh('插件');
+        mainMenu.refresh(l10n.t('插件'));
     }
 }
 
@@ -192,14 +194,14 @@ export async function init() {
             }
         }
         if (!pluginManager) {
-            vscode.window.showErrorMessage(`未找到插件目录`);
+            vscode.window.showErrorMessage(l10n.t('未找到插件目录'));
             return;
         }
         y3.log.show();
         try {
             await pluginManager.run(uri, funcName ?? 'main');
         } catch (error: any) {
-            vscode.window.showErrorMessage(`运行插件脚本出错：${error}`);
+            vscode.window.showErrorMessage(l10n.t('运行插件脚本出错：{0}', error));
             if (error.stack) {
                 y3.log.error(error.stack);
                 y3.log.show();

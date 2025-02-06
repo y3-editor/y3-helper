@@ -13,14 +13,16 @@ import { 地图管理 } from './pages/mapManager';
 import { 跳字 } from './pages/jumpword';
 import { 字体 } from './pages/font';
 
+const l10n = vscode.l10n;
+
 function makeMainNode() {
-    return new TreeNode('主菜单', {
+    return new TreeNode(l10n.t('主菜单'), {
         childs: [
             new 功能,
             new 地图管理,
             new 插件列表,
             new 界面,
-            new TreeNode('枚举', {
+            new TreeNode(l10n.t('枚举'), {
                 iconPath: new vscode.ThemeIcon('list-tree'),show: async () => {
                     await env.mapReady();
                     return env.mapUri !== undefined;
@@ -35,10 +37,10 @@ function makeMainNode() {
                 ]
             }),
             new 环境,
-            new TreeNode('重新选择Y3地图路径', {
+            new TreeNode(l10n.t('重新选择Y3地图路径'), {
                 command: {
                     command: 'y3-helper.selectAnotherMap',
-                    title: '重新选择Y3地图路径',
+                    title: l10n.t('重新选择Y3地图路径'),
                 },
                 iconPath: new vscode.ThemeIcon('search'),
             }),
@@ -78,7 +80,7 @@ class MainMenu {
         if (env.scriptUri) {
             this.view.message = undefined;
         } else {
-            this.view.message = '未找到Y3地图，请重新选择Y3地图路径！';
+            this.view.message = l10n.t('未找到Y3地图，请重新选择Y3地图路径！');
         }
         if (path) {
             let paths = path.split('/');

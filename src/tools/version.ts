@@ -2,6 +2,8 @@ import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 import { runShell } from '../runShell';
 
+const l10n = vscode.l10n;
+
 interface Version {
     version: number;
     display: string;
@@ -126,14 +128,14 @@ export async function askUpdate(): Promise<boolean> {
     if (!await needUpdate()) {
         return false;
     }
-    const ok = '更新';
-    const no = '仍要运行';
-    let res = await vscode.window.showInformationMessage('编辑器有新版本', {
+    const ok = l10n.t('更新');
+    const no = l10n.t('仍要运行');
+    let res = await vscode.window.showInformationMessage(l10n.t('编辑器有新版本'), {
         modal: true,
-        detail: '如果选择“仍要运行”，那么在VSCode重启前都不会再提醒。',
+        detail: l10n.t('如果选择“仍要运行”，那么在VSCode重启前都不会再提醒。'),
     }, ok, no);
     if (res === ok) {
-        await runShell('更新编辑器', 'start', [y3.env.editorUri!.fsPath]);
+        await runShell(l10n.t('更新编辑器'), 'start', [y3.env.editorUri!.fsPath]);
         return true;
     } else if (res === no) {
         dontAskUpdate = true;

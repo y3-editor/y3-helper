@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+const l10n = vscode.l10n;
+
 export interface TreeNodeOptional {
     command?: typeof vscode.TreeItem.prototype.command;
     iconPath?: typeof vscode.TreeItem.prototype.iconPath;
@@ -65,10 +67,10 @@ export class TreeNode extends vscode.TreeItem {
 
 export class ViewInExplorerNode extends TreeNode {
     constructor(uri: vscode.Uri) {
-        super('在Windows中浏览', {
+        super(l10n.t('在Windows中浏览'), {
             command: {
                 command: 'revealFileInOS',
-                title: '在Windows中浏览',
+                title: l10n.t('在Windows中浏览'),
                 arguments: [ uri ]
             },
             iconPath: new vscode.ThemeIcon('folder-opened'),
@@ -78,10 +80,10 @@ export class ViewInExplorerNode extends TreeNode {
 
 export class ViewInVSCode extends TreeNode {
     constructor(uri: vscode.Uri, titile?: string) {
-        super(titile ?? '在VSCode中打开', {
+        super(titile ?? l10n.t('在VSCode中打开'), {
             command: {
                 command: "vscode.openFolder",
-                title: '在当前VSCode中打开',
+                title: l10n.t('在当前VSCode中打开'),
                 arguments: [
                     uri,
                 ]
@@ -98,10 +100,10 @@ export class ViewInVSCode extends TreeNode {
 
 export class ViewInNewVSCode extends TreeNode {
     constructor(uri: vscode.Uri) {
-        super('在新的VSCode窗口中打开', {
+        super(l10n.t('在新的VSCode窗口中打开'), {
             command: {
                 command: "vscode.openFolder",
-                title: '在新的VSCode窗口中打开',
+                title: l10n.t('在新的VSCode窗口中打开'),
                 arguments: [
                     uri,
                     true,

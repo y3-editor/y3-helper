@@ -2,9 +2,11 @@ import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
+
 export class 插件管理 extends TreeNode {
     constructor() {
-        super('插件', {
+        super(l10n.t('插件'), {
             iconPath: new vscode.ThemeIcon('extensions'),
             show: async () => {
                 await y3.env.mapReady();
@@ -12,14 +14,14 @@ export class 插件管理 extends TreeNode {
             },
             update: async (node) => {
                 node.childs = [
-                    new TreeNode('初始化', {
+                    new TreeNode(l10n.t('初始化'), {
                         iconPath: new vscode.ThemeIcon('cloud-download'),
                         command: {
                             command: 'y3-helper.initPlugin',
-                            title: '初始化插件',
+                            title: l10n.t('初始化插件'),
                         },
                     }),
-                    new TreeNode('更新定义文件', {
+                    new TreeNode(l10n.t('更新定义文件'), {
                         iconPath: new vscode.ThemeIcon('sync'),
                         show: async () => {
                             if (!y3.env.pluginUri) {
@@ -29,7 +31,7 @@ export class 插件管理 extends TreeNode {
                         },
                         command: {
                             command: 'y3-helper.updatePlugin',
-                            title: '更新插件定义文件',
+                            title: l10n.t('更新插件定义文件'),
                         },
                     }),
                 ];
@@ -41,7 +43,7 @@ export class 插件管理 extends TreeNode {
 export class 插件列表 extends TreeNode {
     constructor() {
         let event: vscode.Disposable | undefined;
-        super('插件', {
+        super(l10n.t('插件'), {
             iconPath: new vscode.ThemeIcon('extensions'),
             show: async () => {
                 let pluginManager = y3.plugin.getManager();
@@ -82,7 +84,7 @@ export class 插件列表 extends TreeNode {
                                 title: exp.name,
                                 arguments: [plugin.uri, exp.name],
                             },
-                            contextValue: '插件列表',
+                            contextValue: l10n.t('插件列表'),
                             data: {
                                 uri: plugin.uri,
                                 line: exp.line,
@@ -97,7 +99,7 @@ export class 插件列表 extends TreeNode {
                 }
 
                 if (autos.length > 0) {
-                    node.childs.push(new TreeNode('------- 以下会自动运行 -------'));
+                    node.childs.push(new TreeNode(l10n.t('------- 以下会自动运行 -------')));
                     node.childs.push(...autos);
                 }
             },

@@ -4,15 +4,17 @@ import { define } from "../../customDefine";
 import { env } from "../../env";
 import * as Events from "../../customDefine/event";
 
+const l10n = vscode.l10n;
+
 export class 自定义事件 extends TreeNode {
     constructor() {
         let mode = 'list';
-        super('自定义事件', {
+        super(l10n.t('自定义事件'), {
             iconPath: new vscode.ThemeIcon('group-by-ref-type'),
 
             command: {
                 command: 'y3-helper.changeEventMode',
-                title: '切换显示模式',
+                title: l10n.t('切换显示模式'),
             },
 
             show: async () => {
@@ -22,15 +24,15 @@ export class 自定义事件 extends TreeNode {
 
             update: async (node) => {
                 node.description = mode === 'list'
-                                ? '平铺模式（点击切换）'
-                                : '文件夹模式（点击切换）';
+                                ? l10n.t('平铺模式（点击切换）')
+                                : l10n.t('文件夹模式（点击切换）');
                 if (mode === 'list') {
                     node.childs = (await define().自定义事件.getEvents()).map(event => {
                         let args = event.args.map(arg => arg.name);
                         return new TreeNode(event.name, {
                             iconPath: new vscode.ThemeIcon('symbol-event'),
                             description: `${event.id.toString()}(${args.join(',')})`,
-                            contextValue: '自定义事件',
+                            contextValue: l10n.t('自定义事件'),
                             data: event.id,
                             childs: args.length > 0 ? event.args.map(arg => new TreeNode(arg.name, {
                                 description: `${arg.desc}(${arg.luaType})`,
@@ -53,7 +55,7 @@ export class 自定义事件 extends TreeNode {
                                 return new TreeNode(name, {
                                     iconPath: new vscode.ThemeIcon('symbol-event'),
                                     description: `${event.id.toString()}(${args.join(',')})`,
-                                    contextValue: '自定义事件',
+                                    contextValue: l10n.t('自定义事件'),
                                     data: event.id,
                                     childs: args.length > 0 ? event.args.map(arg => new TreeNode(arg.name, {
                                         description: `${arg.desc}(${arg.luaType})`,

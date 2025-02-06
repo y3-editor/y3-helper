@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { runShell } from './runShell';
 
+const l10n = vscode.l10n;
+
 type Doc = DocClass[];
 type DocClass = {
     name: string,
@@ -46,13 +48,13 @@ export class LuaDocMaker {
         this.context = context;
         let sumneko = vscode.extensions.getExtension('sumneko.lua');
         if (!sumneko) {
-            vscode.window.showErrorMessage('请先安装 sumneko.lua 扩展！');
+            vscode.window.showErrorMessage(l10n.t('请先安装 sumneko.lua 扩展！'));
             return;
         }
         let exeUri = vscode.Uri.joinPath(sumneko.extensionUri, 'server/bin/lua-language-server');
         let currentUri = vscode.workspace.workspaceFolders?.[0].uri;
         if (!currentUri) {
-            vscode.window.showErrorMessage('请先打开工作目录！');
+            vscode.window.showErrorMessage(l10n.t('请先打开工作目录！'));
             return;
         }
         let y3Uri = vscode.Uri.joinPath(currentUri, 'y3');
@@ -69,7 +71,7 @@ export class LuaDocMaker {
         let logUri = vscode.Uri.joinPath(this.context.globalStorageUri, 'doc');
 
         await runShell(
-            "导出文档",
+            l10n.t("导出文档"),
             this.exeUri!.fsPath,
             [
                 "--doc=" + this.y3Uri!.fsPath,

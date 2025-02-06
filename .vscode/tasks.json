@@ -22,6 +22,13 @@
                 "node dts-post.js",
             ],
             
+        },
+        {
+            "type": "shell",
+            "label": "🆎提取文本",
+            "command": [
+                "npx @vscode/l10n-dev export -o ./dist ./src",
+            ],
         }
     ]
 }

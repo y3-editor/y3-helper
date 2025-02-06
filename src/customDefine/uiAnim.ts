@@ -2,14 +2,16 @@ import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
 import * as y3 from 'y3-helper';
 import * as tools from '../tools';
+import * as vscode from 'vscode';
 
 const fileName = 'uianim.json';
+const l10n = vscode.l10n;
 
 const playMode = {
-    0: '保持',
-    1: '常规',
-    2: '往复',
-    3: '循环',
+    0: l10n.t('保持'),
+    1: l10n.t('常规'),
+    2: l10n.t('往复'),
+    3: l10n.t('循环'),
 } as const;
 
 type PlayMode = typeof playMode;

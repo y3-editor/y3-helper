@@ -2,7 +2,7 @@ import { define } from "../customDefine";
 import { BaseBuilder } from "./baseBuilder";
 import * as y3 from 'y3-helper';
 
-const template = `// 自动生成的代码，请勿修改
+const template = `
 declare interface MapUnit {
 %{UNIT_ATTRS}
 }

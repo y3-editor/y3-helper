@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 
+const l10n = vscode.l10n;
+
 export class 时间轴动画 extends TreeNode {
     constructor() {
-        super('时间轴动画', {
+        super(l10n.t('时间轴动画'), {
             iconPath: new vscode.ThemeIcon('history'),
             show: async () => {
                 await env.mapReady();
@@ -17,12 +19,12 @@ export class 时间轴动画 extends TreeNode {
                     return new TreeNode(anim.name, {
                         data: anim.uid,
                         description: `${anim.uid}`,
-                        contextValue: '时间轴动画',
+                        contextValue: l10n.t('时间轴动画'),
                         tooltip: 
-`名称: ${anim.name}
-帧率: ${anim.frame}
-帧数: ${anim.maxFrame}
-模式: ${anim.playMode}`
+`${l10n.t('名称')}: ${anim.name}
+${l10n.t('帧率')}: ${anim.frame}
+${l10n.t('帧数')}: ${anim.maxFrame}
+${l10n.t('模式')}: ${anim.playMode}`
                     });
                 });
             },

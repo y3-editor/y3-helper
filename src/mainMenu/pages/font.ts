@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 
+const l10n = vscode.l10n;
+
 export class 字体 extends TreeNode {
     constructor() {
-        super('字体', {
+        super(l10n.t('字体'), {
             iconPath: new vscode.ThemeIcon('whole-word'),
             show: async () => {
                 await env.mapReady();

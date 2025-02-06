@@ -6,6 +6,8 @@ import { Rule } from './rule';
 
 export * from './excel';
 
+const l10n = vscode.l10n;
+
 let baseDir: vscode.Uri;
 
 /**
@@ -19,15 +21,14 @@ export async function loadFile(path: vscode.Uri | string, sheetName?: number | s
     const exc = new excel.Excel();
     const suc = await exc.loadFile(path);
     if (!suc) {
-        throw new Error('Excel打开失败：' + path.fsPath);
+        throw new Error(l10n.t('Excel打开失败：') + path.fsPath);
     }
     const sheet = exc.getSheet(sheetName);
     if (!sheet) {
-        throw new Error('找不到工作表：' + sheetName);
+        throw new Error(l10n.t('找不到工作表：') + sheetName);
     }
     return sheet;
 }
-
 
 /**
  * 加载excel文件，并返回它的所有sheet
@@ -39,7 +40,7 @@ export async function loadFileWithAllSheets(path: vscode.Uri | string) {
     const exc = new excel.Excel();
     const suc = await exc.loadFile(path);
     if (!suc) {
-        throw new Error('Excel打开失败：' + path.fsPath);
+        throw new Error(l10n.t('Excel打开失败：') + path.fsPath);
     }
     const sheets = exc.getAllSheets();
     return sheets;

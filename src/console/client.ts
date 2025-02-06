@@ -4,6 +4,8 @@ import { Terminal } from "./terminal";
 import { TreeViewManager } from "./treeView";
 import * as y3 from "y3-helper";
 
+const l10n = vscode.l10n;
+
 type RequestHandler = (client: Client, params: any) => Promise<any>;
 type ResponseHandler = (result: any) => void;
 
@@ -45,8 +47,8 @@ class Buttons extends vscode.Disposable {
             }
         });
 
-        let rd = this.addButton('🍉重载Lua');
-        rd.tooltip = '省的你输入 `.rd`';
+        let rd = this.addButton(l10n.t('🍉重载Lua'));
+        rd.tooltip = l10n.t('省的你输入 `.rd`');
         rd.command = 'y3-helper.reloadLua';
     }
 
@@ -82,7 +84,7 @@ export class Client extends vscode.Disposable {
                 Client.terminalHistory[this.name]?.dispose();
                 Client.terminalHistory[this.name] = this.terminal;
                 this.terminal.disableInput();
-                this.terminal.print('\n⛔ 客户端已断开。下次启动游戏会复用此控制台。 ⛔\n');
+                this.terminal.print(l10n.t('\n⛔ 客户端已断开。下次启动游戏会复用此控制台。 ⛔\n'));
             }
             this.treeViewManager.dispose();
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
@@ -91,7 +93,7 @@ export class Client extends vscode.Disposable {
         Client.allClients.push(this);
         Client.updateButton();
 
-        this.createTerminal('Y3控制台');
+        this.createTerminal(l10n.t('Y3控制台'));
     }
 
     public name = '默认客户端';
@@ -148,7 +150,7 @@ export class Client extends vscode.Disposable {
     readonly onDidUpdateName = this.didUpdateName.event;
 
     setName(name: string) {
-        y3.log.info(`客户端【${this.name}】名称更改为：${name}`);
+        y3.log.info(l10n.t('客户端【{0}】名称更改为：{1}', this.name, name));
         this.name = name;
         this.createTerminal(name);
         this.didUpdateName.fire(name);
@@ -255,7 +257,7 @@ export class Client extends vscode.Disposable {
 }
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
-    let terminal = new Terminal('测试客户端');
+    let terminal = new Terminal(l10n.t('测试客户端'));
     terminal.setApplyHandler(async (obj) => {
         // await new Promise((resolve) => {
         //    setTimeout(resolve, 2000);

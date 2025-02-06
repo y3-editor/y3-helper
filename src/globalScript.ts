@@ -1,6 +1,7 @@
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
-import { folder } from 'jszip';
+
+const l10n = vscode.l10n;
 
 function mergeArray(a: any, b: any[]): any[] {
     if (!Array.isArray(a)) {
@@ -37,7 +38,7 @@ async function rcAddGlobalPath(rcUri: vscode.Uri) {
         ]));
         await y3.fs.writeFile(rcUri, tree.text);
     } catch (error) {
-        y3.log.error(`修改${rcUri.fsPath}时发生错误: ${error}`);
+        y3.log.error(l10n.t('修改{0}时发生错误: {1}', rcUri.fsPath, String(error)));
         return;
     }
 }
@@ -58,7 +59,7 @@ async function rcRemoveGlobalPath(rcUri: vscode.Uri) {
         ]));
         await y3.fs.writeFile(rcUri, tree.text);
     } catch (error) {
-        y3.log.error(`修改${rcUri.fsPath}时发生错误: ${error}`);
+        y3.log.error(l10n.t('修改{0}时发生错误: {1}', rcUri.fsPath, String(error)));
         return;
     }
 }
@@ -75,17 +76,17 @@ export async function isEnabled() {
 
 export async function enable() {
     if (!y3.env.globalScriptUri) {
-        y3.log.error("没有找到全局脚本目录");
+        y3.log.error(l10n.t("没有找到全局脚本目录"));
         return false;
     }
     let entryMap = y3.env.project?.entryMap;
     if (!entryMap) {
-        y3.log.error("没有找到入口地图");
+        y3.log.error(l10n.t("没有找到入口地图"));
         return false;
     }
     let y3Uri = vscode.Uri.joinPath(entryMap.uri, 'script/y3');
     if (!await y3.fs.isExists(y3Uri)) {
-        y3.log.error("请先初始化地图");
+        y3.log.error(l10n.t("请先初始化地图"));
         return false;
     }
     // 把Y3库复制到全局脚本目录
@@ -173,10 +174,10 @@ export async function openGlobalScript() {
     }
     vscode.workspace.updateWorkspaceFolders(0, vscode.workspace.workspaceFolders.length, {
         uri: y3.env.scriptUri,
-        name: `地图脚本(${y3.env.currentMap?.name})`,
+        name: l10n.t('地图脚本({0})', String(y3.env.currentMap?.name)),
     }, {
         uri: y3.env.globalScriptUri,
-        name: '全局脚本',
+        name: l10n.t('全局脚本'),
     });
 }
 

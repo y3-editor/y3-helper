@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 
+const l10n = vscode.l10n;
+
 export class 跳字 extends TreeNode {
     constructor() {
-        super('跳字', {
+        super(l10n.t('跳字'), {
             iconPath: new vscode.ThemeIcon('text-size'),
             show: async () => {
                 await env.mapReady();

@@ -9,6 +9,8 @@ import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { EditorManager } from './editorTable/editorTable';
 
+const l10n = vscode.l10n;
+
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
 export class Map {
@@ -126,8 +128,8 @@ class Project extends vscode.Disposable {
                 }
                 this.setting = jsonc.parse(settingFile.string);
             } catch (error) {
-                y3.log.error(`读取项目设置失败: ${error}`);
-                vscode.window.showErrorMessage(`读取项目设置失败: ${error}`);
+                y3.log.error(l10n.t('读取项目设置失败: {0}', String(error)));
+                vscode.window.showErrorMessage(l10n.t('读取项目设置失败: {0}', String(error)));
             }
         };
 
@@ -207,9 +209,9 @@ class Env {
         while (askUser) {
             let selectedFiles = await vscode.window.showOpenDialog({
                 canSelectFiles: true,
-                openLabel: '选择Y3编辑器路径',
+                openLabel: l10n.t('选择Y3编辑器路径'),
                 filters: {
-                    '编辑器': ['exe']
+                    [l10n.t('编辑器')]: ['exe']
                 }
             });
             let selectedExe = selectedFiles?.[0];
@@ -269,9 +271,9 @@ class Env {
                 canSelectFiles: true,
                 canSelectFolders: false, // 竟然不能同时选择文件和文件夹
                 canSelectMany: false,
-                openLabel: '选择Y3地图路径',
+                openLabel: l10n.t('选择Y3地图路径'),
                 filters: {
-                    '地图': ['map', 'project']
+                    [l10n.t('地图')]: ['map', 'project']
                 }
             });
     

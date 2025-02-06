@@ -7,6 +7,8 @@ import { define } from "../customDefine";
 export { EditorData } from "./editorData";
 import { Y3Json } from "../tools/y3json";
 
+const l10n = vscode.l10n;
+
 const templateDir = 'template\\json_template';
 const metaDir = 'src\\helper_meta\\editor';
 
@@ -218,7 +220,7 @@ export class EditorObject<N extends Table.NameCN = Table.NameCN> {
             }
         }
         if (this._name === undefined) {
-            this._name = '<未知名称>';
+            this._name = l10n.t('<未知名称>');
         }
         return this._name;
     }
@@ -279,14 +281,14 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
             this.watcher?.dispose();
         });
         if (!manager.rootUri) {
-            throw new Error('未选择地图路径');
+            throw new Error(l10n.t('未选择地图路径'));
         }
         this.nameEN = Table.name.fromCN[name];
         this.uri = vscode.Uri.joinPath(manager.rootUri, Table.path.fromCN[name]);
     }
 
     toString() {
-        return `<物编表|${this.name}>`;
+        return l10n.t('<物编表|{0}>', this.name);
     }
 
     /**
@@ -393,7 +395,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
      * @returns 
      */
     public async create(options?: CreateOptions<N>): Promise<EditorObject<N> | undefined>{
-        let name = options?.name ?? `新建${this.name}`;
+        let name = options?.name ?? l10n.t("新建{0}", this.name);
 
         let key: number;
         if (options?.key) {

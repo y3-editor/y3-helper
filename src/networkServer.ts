@@ -1,6 +1,8 @@
 import * as net from "net";
 import * as vscode from "vscode";
 
+const l10n = vscode.l10n;
+
 export class NetworkServer extends vscode.Disposable {
     private server1: net.Server;
     private server2: net.Server;
@@ -11,7 +13,7 @@ export class NetworkServer extends vscode.Disposable {
             this.server2.close();
             this.channel.dispose();
         });
-        this.channel = vscode.window.createOutputChannel('Y3-网络服务器');
+        this.channel = vscode.window.createOutputChannel(l10n.t('Y3-网络服务器'));
         this.channel.show();
 
         this.server1 = this.runServer1(port1);
@@ -21,35 +23,38 @@ export class NetworkServer extends vscode.Disposable {
     private runServer1(port: number) {
         return net.createServer()
             .on('connection', (socket) => {
-                socket.write('欢迎，你已连接到服务器');
-                this.channel.appendLine(`有客户端连接到服务器1`);
+                socket.write(l10n.t('欢迎，你已连接到服务器'));
+                this.channel.appendLine(l10n.t('有客户端连接到服务器1'));
 
                 socket.on('data', (data) => {
-                    this.channel.appendLine(`收到来自客户端的消息：${data}`);
-                    socket.write(`你发送了：${data}`);
+                    this.channel.appendLine(l10n.t('收到来自客户端的消息：{0}', data));
+                    socket.write(l10n.t('你发送了：{0}', data));
 
-                    if (data.toString().trim() === '再见！') {
-                        socket.end('马达捏~');
+                    if (data.toString().trim() === l10n.t('再见！')) {
+                        socket.end(l10n.t('马达捏~'));
                     }
                 });
 
                 socket.on('close', () => {
-                    this.channel.appendLine(`客户端已断开服务器1`);
+                    this.channel.appendLine(l10n.t('客户端已断开服务器1'));
                 });
 
                 socket.on('error', (err) => {
-                    this.channel.appendLine(`客户端错误：${err}`);
+                    this.channel.appendLine(l10n.t('客户端错误：{0}', err));
                 });
             })
             .on('error', (err) => {
-                this.channel.appendLine(`服务器1错误：${err}`);
+                this.channel.appendLine(l10n.t('服务器1错误：{0}', err));
             })
             .listen(port, '127.0.0.1', () => {
-                this.channel.appendLine(`服务器1已启动：127.0.0.1:${port}`);
+                this.channel.appendLine(l10n.t('服务器1已启动：127.0.0.1:{0}', port));
                 this.channel.appendLine(
-`客户端发送消息后，会回复“你发送了：<收到的消息>”
+                    l10n.t(
+                        `客户端发送消息后，会回复“你发送了：<收到的消息>”
 客户端发送“再见！”会断开连接
-`);
+`
+                    )
+                );
             });
     }
 
@@ -62,7 +67,7 @@ export class NetworkServer extends vscode.Disposable {
         }
         return net.createServer()
             .on('connection', (socket) => {
-                this.channel.appendLine(`有客户端连接到服务器2`);
+                this.channel.appendLine(l10n.t('有客户端连接到服务器2'));
 
                 let count = 0;
                 let timer = setInterval(() => {
@@ -77,23 +82,26 @@ export class NetworkServer extends vscode.Disposable {
                 }, 1000);
                 
                 socket.on('close', () => {
-                    this.channel.appendLine(`客户端已断开服务器2`);
+                    this.channel.appendLine(l10n.t('客户端已断开服务器2'));
                 });
 
                 socket.on('error', (err) => {
-                    this.channel.appendLine(`客户端错误：${err}`);
+                    this.channel.appendLine(l10n.t('客户端错误：{0}', err));
                 });
             })
             .on('error', (err) => {
-                this.channel.appendLine(`服务器2错误：${err}`);
+                this.channel.appendLine(l10n.t('服务器2错误：{0}', err));
             })
             .listen(port, '127.0.0.1', () => {
-                this.channel.appendLine(`服务器2已启动：127.0.0.1:${port}`);
+                this.channel.appendLine(l10n.t('服务器2已启动：127.0.0.1:{0}', port));
                 this.channel.appendLine(
-`会在10秒内发送10个数据包给客户端，格式为：
+                    l10n.t(
+                        `会在10秒内发送10个数据包给客户端，格式为：
 * 4个字节的包头，表示包体的长度（大端）
 * Json表示的包体，包含2个字段“count”和“time”
-`);
+`
+                    )
+                );
             });
     }
 }

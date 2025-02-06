@@ -1,7 +1,7 @@
 import moduleAlias from 'module-alias';
 
 moduleAlias.addAliases({
-  'y3-helper': __dirname + '/y3-helper'
+    'y3-helper': __dirname + '/y3-helper'
 });
 
 import * as tools from "./tools";
@@ -25,6 +25,8 @@ import * as globalScript from './globalScript';
 import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
 
+const l10n = vscode.l10n;
+
 class Helper {
     private context: vscode.ExtensionContext;
 
@@ -35,7 +37,7 @@ class Helper {
     private reloadEnvWhenConfigChange() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('Y3-Helper.EditorPath')) {
-                tools.log.info('配置已更新，已重新加载环境');
+                tools.log.info(l10n.t('配置已更新，已重新加载环境'));
                 await env.updateEditor();
             }
         });
@@ -49,7 +51,7 @@ class Helper {
             }
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
-            runShell("执行命令", args[0], args.slice(1));
+            runShell(l10n.t("执行命令"), args[0], args.slice(1));
         });
     }
 
@@ -70,11 +72,11 @@ class Helper {
             running = true;
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: '正在初始化Y3项目...',
+                title: l10n.t('正在初始化Y3项目...'),
             }, async (progress, token) => {
                 await env.mapReady(true);
                 if (!env.scriptUri) {
-                    vscode.window.showErrorMessage('未找到Y3地图路径，请先用编辑器创建地图或重新指定！');
+                    vscode.window.showErrorMessage(l10n.t('未找到Y3地图路径，请先用编辑器创建地图或重新指定！'));
                     return;
                 };
 
@@ -83,7 +85,7 @@ class Helper {
 
                 try {
                     if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type === vscode.FileType.Directory) {
-                        vscode.window.showErrorMessage('此项目已经初始化过了！');
+                        vscode.window.showErrorMessage(l10n.t('此项目已经初始化过了！'));
                         return;
                     }
                 } catch {}
@@ -97,40 +99,41 @@ class Helper {
                                 recursive: true,
                                 useTrash: true,
                             });
-                            vscode.window.showInformationMessage(`已将原有的 ${y3Uri.fsPath} 目录移至回收站`);
+                            vscode.window.showInformationMessage(l10n.t('已将原有的 {0} 目录移至回收站', y3Uri.fsPath));
                         } catch (error) {
-                            vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
+                            vscode.window.showErrorMessage(l10n.t('{0} 已被占用，请手动删除它！', y3Uri.fsPath));
                             return;
                         }
                     } else {
-                        vscode.window.showErrorMessage(`${y3Uri.fsPath} 已被占用，请手动删除它！`);
+                        vscode.window.showErrorMessage(l10n.t('{0} 已被占用，请手动删除它！', y3Uri.fsPath));
                         return;
                     };
                 } catch (error) {
                     // ignore
                 }
 
-                let result = await vscode.window.showInformationMessage('请选择仓库来源：\n'
-                    + 'Github (可能需要代理）\n'
-                    + 'Gitee (国内镜像）',
+                let result = await vscode.window.showInformationMessage(
+                    l10n.t('请选择仓库来源：\n') +
+                    l10n.t('Github (可能需要代理）\n') +
+                    l10n.t('Gitee (国内镜像）'),
                 {
                     modal: true,
-                }, 'Github', 'Gitee');
+                }, l10n.t('Github'), l10n.t('Gitee'));
 
                 if (!result) {
-                    vscode.window.showWarningMessage('已取消初始化项目');
+                    vscode.window.showWarningMessage(l10n.t('已取消初始化项目'));
                     return;
                 }
 
                 if (result === 'Github') {
                     // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
-                    await runShell("初始化Y3项目（Github）", "git", [
+                    await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
                         "clone",
                         "https://github.com/y3-editor/y3-lualib.git",
                         y3Uri.fsPath,
                     ]);
                 } else {
-                    await runShell("初始化Y3项目（Gitee）", "git", [
+                    await runShell(l10n.t("初始化Y3项目（Gitee）"), "git", [
                         "clone",
                         "https://gitee.com/tsukiko/y3-lualib.git",
                         y3Uri.fsPath,
@@ -138,14 +141,14 @@ class Helper {
                 }
 
                 if (!y3.fs.isExists(y3Uri, 'README.md')) {
-                    vscode.window.showWarningMessage('仓库拉取失败！');
+                    vscode.window.showWarningMessage(l10n.t('仓库拉取失败！'));
                     return;
                 }
 
                 // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
                 let editorVersion = env.editorVersion;
                 if (editorVersion === '1.0') {
-                    await runShell("初始化Y3项目", "git", [
+                    await runShell(l10n.t("初始化Y3项目"), "git", [
                         "checkout",
                         "-b",
                         "1.0",
@@ -183,7 +186,7 @@ class Helper {
     private registerCommandOfMakeLuaDoc() {
         vscode.commands.registerCommand('y3-helper.makeLuaDoc', async () => {
             await vscode.window.withProgress({
-                title: '正在生成文档...',
+                title: l10n.t('正在生成文档...'),
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let luaDocMaker = new LuaDocMaker(this.context);
@@ -201,7 +204,7 @@ class Helper {
             }
 
             await vscode.window.withProgress({
-                title: '正在启动游戏...',
+                title: l10n.t('正在启动游戏...'),
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
@@ -217,7 +220,7 @@ class Helper {
     private registerCommandOfLaunchGameAndAttach() {
         vscode.commands.registerCommand('y3-helper.launchGameAndAttach', async () => {
             await vscode.window.withProgress({
-                title: '正在启动游戏...',
+                title: l10n.t('正在启动游戏...'),
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
@@ -228,7 +231,7 @@ class Helper {
                     luaArgs['lua_multi_wait_debugger'] = 'true';
                     luaArgs['lua_multi_debug_players'] = config.debugPlayers.sort().join('#');
                     if (config.multiPlayers.length === 0) {
-                        vscode.window.showErrorMessage('请至少选择一个玩家才能启动游戏！');
+                        vscode.window.showErrorMessage(l10n.t('请至少选择一个玩家才能启动游戏！'));
                         return;
                     }
                 } else {
@@ -256,7 +259,7 @@ class Helper {
     private registerCommandOfLaunchEditor() {
         vscode.commands.registerCommand('y3-helper.launchEditor', async () => {
             await vscode.window.withProgress({
-                title: '正在启动编辑器...',
+                title: l10n.t('正在启动编辑器...'),
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let editorLauncher = new EditorLauncher();
@@ -290,7 +293,7 @@ class Helper {
                     'vscode.open',
                     vscode.Uri.joinPath(workspaceUri, 'main.lua'),
                 );
-                vscode.window.showInformationMessage("欢迎使用Y3编辑器！");
+                vscode.window.showInformationMessage(l10n.t("欢迎使用Y3编辑器！"));
             });
         };
     }

@@ -4,6 +4,8 @@ import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 import { updateHelperPortFile } from './console';
 
+const l10n = vscode.l10n;
+
 interface LaunchOptions {
     luaArgs?: {[key: string]: string};
     multi?: number[];
@@ -16,11 +18,11 @@ export class GameLauncher {
         try {
             await y3.plugin.runAllPlugins('onGame');
         } catch (error) {
-            let res = await vscode.window.showErrorMessage("运行插件时发生错误", {
+            let res = await vscode.window.showErrorMessage(l10n.t("运行插件时发生错误"), {
                 detail: String(error).replace(/Error: /, ''),
                 modal: true,
-            }, '仍要启动');
-            if (res !== '仍要启动') {
+            }, l10n.t('仍要启动'));
+            if (res !== l10n.t('仍要启动')) {
                 return false;
             }
             return true;
@@ -34,11 +36,11 @@ export class GameLauncher {
         let projectUri = env.projectUri;
         let editorExeUri = env.editorExeUri;
         if (!projectUri) {
-            vscode.window.showErrorMessage("没有指定地图目录！");
+            vscode.window.showErrorMessage(l10n.t("没有指定地图目录！"));
             return false;
         }
         if (!editorExeUri) {
-            vscode.window.showErrorMessage("未找到编辑器！");
+            vscode.window.showErrorMessage(l10n.t("未找到编辑器！"));
             return false;
         }
 
@@ -70,13 +72,13 @@ export class GameLauncher {
             }
         }
         if (options?.multi) {
-            vscode.window.showInformationMessage("正在以多开模式启动，若无法启动或看到“错误码：54”，请手动启动编辑器登录（并选择30天免登录）再使用此功能");
+            vscode.window.showInformationMessage(l10n.t("正在以多开模式启动，若无法启动或看到“错误码：54”，请手动启动编辑器登录（并选择30天免登录）再使用此功能"));
         }
 
         await updateHelperPortFile();
 
         let code = await runShell(
-            "启动游戏",
+            l10n.t("启动游戏"),
             editorExeUri.fsPath,
             [
                 '--dx11',
@@ -90,7 +92,7 @@ export class GameLauncher {
             vscode.Uri.joinPath(editorExeUri, "..")
         );
         if (code !== 0) {
-            vscode.window.showErrorMessage("启动游戏失败！");
+            vscode.window.showErrorMessage(l10n.t("启动游戏失败！"));
             return false;
         }
 

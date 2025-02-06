@@ -3,7 +3,9 @@ import { env } from "../env";
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 import { Table } from "../constants";
+import * as vscode from 'vscode';
 
+const l10n = vscode.l10n;
 const filePath = 'customevent.json';
 
 type Event = {
@@ -104,7 +106,7 @@ export class Events extends BaseDefine {
                         name,
                         type,
                         luaType: Table.type.toLuaType[type] ?? 'any',
-                        desc: Table.type.toName[type] ?? '不支持的类型',
+                        desc: Table.type.toName[type] ?? l10n.t('不支持的类型'),
                     });
                 }
             }

@@ -5,6 +5,8 @@ import * as editorTable from './editorTable';
 import { throttle } from '../utility/decorators';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
+
 class FileNode extends vscode.TreeItem {
     readonly contextValue = 'json';
     constructor(
@@ -12,7 +14,7 @@ class FileNode extends vscode.TreeItem {
         public tableName: Table.NameCN,
         public key: number,
     ) {
-        super(`加载中...(${key})`);
+        super(l10n.t('加载中...({0})', key));
 
         this.id = `${tableName}/${key}`;
     }
@@ -22,7 +24,7 @@ class FileNode extends vscode.TreeItem {
         let object = table.fetch(this.key);
         this.command = {
             command: 'vscode.open',
-            title: '打开文件',
+            title: l10n.t('打开文件'),
             arguments: [table.getUri(this.key)],
         };
         if (object) {
@@ -49,7 +51,7 @@ class DirNode extends vscode.TreeItem {
     constructor(
         public tableName: Table.NameCN,
     ) {
-        super(`${tableName}(加载中...)`);
+        super(l10n.t('{0}(加载中...)', tableName));
 
         this.table = editorTable.openTable(tableName);
         this.resourceUri = this.table.uri;
@@ -59,7 +61,7 @@ class DirNode extends vscode.TreeItem {
     public update(): void | Promise<void> {
         let list = this.table.fetchList();
         if (list) {
-            this.label = `${this.tableName}(${list.length})`;
+            this.label = l10n.t('{0}({1})', this.tableName, list.length);
             return;
         } else {
             return new Promise<void>(async resolve => {
@@ -210,12 +212,12 @@ class TreeView extends vscode.Disposable {
                 return;
             }
             const inputOptions: vscode.InputBoxOptions = {
-                prompt: '修改后的新名称',
+                prompt: l10n.t('修改后的新名称'),
                 value: object.name,
-                placeHolder: '新名称',
+                placeHolder: l10n.t('新名称'),
                 validateInput: (text: string) => {
                     if (text.length === 0) {
-                        return "输入的内容为空";
+                        return l10n.t("输入的内容为空");
                     }
                     return null;
                 }
@@ -234,29 +236,29 @@ class TreeView extends vscode.Disposable {
                 return;
             }
             let name = object.name;
-            if (name.match(/（复制）/)) {
-                name = name.replace(/（复制）/, '（复制 2）');
-            } else if (name.match(/（复制 \d+）/)) {
-                name = name.replace(/（复制 (\d+)）/, (match, num) => `（复制 ${Number(num) + 1}）`);
+            if (name.match(l10n.t("（复制）"))) {
+                name = name.replace(l10n.t("（复制）"), l10n.t('（复制 2）'));
+            } else if (name.match(l10n.t("（复制 \\d+"))) {
+                name = name.replace(l10n.t("（复制 \\d+"), (match, num) => l10n.t('（复制 {0}）', Number(num) + 1));
             } else {
-                name += '（复制）';
+                name += l10n.t('（复制）');
             }
 
             let newObj = await this.createObject(fileNode.tableName, name, object.key);
 
             if (!newObj) {
-                y3.log.error('复制失败');
-                vscode.window.showErrorMessage('复制失败');
+                y3.log.error(l10n.t('复制失败'));
+                vscode.window.showErrorMessage(l10n.t('复制失败'));
             }
         });
 
         // 新建对象
         vscode.commands.registerCommand("y3-helper.addNewEditorTableItem", async (dirNode: DirNode) => {
-            let newObj = await this.createObject(dirNode.tableName, '新建对象');
+            let newObj = await this.createObject(dirNode.tableName, l10n.t('新建对象'));
 
             if (!newObj) {
-                y3.log.error('新建失败');
-                vscode.window.showErrorMessage('新建失败');
+                y3.log.error(l10n.t('新建失败'));
+                vscode.window.showErrorMessage(l10n.t('新建失败'));
             }
         });
     }
@@ -276,12 +278,12 @@ class TreeView extends vscode.Disposable {
 
     private async createObject(tableName: Table.NameCN, defaultName: string, copyFrom?: number) {
         let newName = await vscode.window.showInputBox({
-            prompt: '新名称',
+            prompt: l10n.t('新名称'),
             value: defaultName,
-            placeHolder: '新名称',
+            placeHolder: l10n.t('新名称'),
             validateInput: (text: string) => {
                 if (text.length === 0) {
-                    return "输入的内容为空";
+                    return l10n.t("输入的内容为空");
                 }
                 return null;
             }
@@ -292,22 +294,22 @@ class TreeView extends vscode.Disposable {
 
         let table = editorTable.openTable(tableName);
         let newKey = await vscode.window.showInputBox({
-            prompt: 'key',
+            prompt: l10n.t('key'),
             value: (await table.makeNewKey()).toString(),
-            placeHolder: 'key',
+            placeHolder: l10n.t('key'),
             validateInput: async (text: string) => {
                 if (text.length === 0) {
-                    return "输入的内容为空";
+                    return l10n.t("输入的内容为空");
                 }
                 if (text.match(/\D/)) {
-                    return "key只能是正整数";
+                    return l10n.t("key只能是正整数");
                 }
                 let key = Number(text);
                 if (!Number.isSafeInteger(key) || key <= 0) {
-                    return "此数字不可用";
+                    return l10n.t("此数字不可用");
                 }
                 if ((await table.getList()).includes(key)) {
-                    return "此key已存在";
+                    return l10n.t("此key已存在");
                 }
 
                 return null;

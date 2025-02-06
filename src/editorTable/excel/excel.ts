@@ -2,6 +2,8 @@ import * as exceljs from 'exceljs';
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 
+const l10n = vscode.l10n;
+
 type Cells = Record<string, string>;
 type TableKey = string | number;
 export type Table = Record<TableKey, Record<string, string>>;
@@ -29,7 +31,7 @@ export class Sheet {
     private createCells() {
         return new Proxy({}, {
             set: () => {
-                throw new Error('不允许修改excel！');
+                throw new Error(l10n.t('不允许修改excel！'));
             },
             get: (target, key) => {
                 if (typeof key !== 'string') {
@@ -80,7 +82,7 @@ export class Sheet {
         if (!offset) {
             offset = this.guessTableOffset();
             if (!offset) {
-                throw new Error('无法猜测出锚点位置，请手动指定锚点');
+                throw new Error(l10n.t('无法猜测出锚点位置，请手动指定锚点'));
             }
         }
         const cell = this.sheet.getCell(offset);
@@ -143,7 +145,7 @@ export class Sheet {
         if (!offset) {
             offset = this.guessTableOffset();
             if (!offset) {
-                throw new Error('无法猜测出锚点位置，请手动指定锚点');
+                throw new Error(l10n.t('无法猜测出锚点位置，请手动指定锚点'));
             }
         }
         const cell = this.sheet.getCell(offset);

@@ -1,6 +1,11 @@
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 import * as y3 from 'y3-helper';
+import * as vscode from 'vscode';
+
+const l10n = vscode.l10n;
+
+const eventName = '游戏-消息';
 
 const template =
 `---@class ECAHelper
@@ -94,7 +99,7 @@ end)`;
                     +  `end)`;
             }).join('\r\n'))
             .replace('%{ALIAS}', events.map(event => {
-                return `---@alias EventParam.游戏-消息.${y3.lua.getValidName(event.name)} { ${[
+                return `---@alias EventParam.${eventName}.${y3.lua.getValidName(event.name)} { ${[
                     `c_param_1: ${event.id}`,
                     'c_param_dict: py.Dict',
                     `event: ${y3.lua.encode(event.name)}`,
@@ -105,7 +110,7 @@ end)`;
             }).join('\r\n'))
             .replace('%{CLASS_FIELDS}', events.map(event => {
                 return '---@diagnostic disable-next-line: duplicate-doc-field\r\n'
-                    +  `---@field event fun(self: Game, event: "游戏-消息", event_id: ${y3.lua.encode(event.name)}, callback: fun(trigger: Trigger, data: EventParam.游戏-消息.${y3.lua.getValidName(event.name)}))`;
+                    +  `---@field event fun(self: Game, event: "${eventName}", event_id: ${y3.lua.encode(event.name)}, callback: fun(trigger: Trigger, data: EventParam.${eventName}.${y3.lua.getValidName(event.name)}))`;
             }).join('\r\n'));
     }
 
