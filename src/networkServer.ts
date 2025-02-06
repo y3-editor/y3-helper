@@ -48,13 +48,8 @@ export class NetworkServer extends vscode.Disposable {
             })
             .listen(port, '127.0.0.1', () => {
                 this.channel.appendLine(l10n.t('服务器1已启动：127.0.0.1:{0}', port));
-                this.channel.appendLine(
-                    l10n.t(
-                        `客户端发送消息后，会回复“你发送了：<收到的消息>”
-客户端发送“再见！”会断开连接
-`
-                    )
-                );
+                this.channel.appendLine(l10n.t("客户端发送消息后，会回复“你发送了：<收到的消息>”"));
+                this.channel.appendLine(l10n.t("客户端发送“再见！”会断开连接"));
             });
     }
 
@@ -94,14 +89,9 @@ export class NetworkServer extends vscode.Disposable {
             })
             .listen(port, '127.0.0.1', () => {
                 this.channel.appendLine(l10n.t('服务器2已启动：127.0.0.1:{0}', port));
-                this.channel.appendLine(
-                    l10n.t(
-                        `会在10秒内发送10个数据包给客户端，格式为：
-* 4个字节的包头，表示包体的长度（大端）
-* Json表示的包体，包含2个字段“count”和“time”
-`
-                    )
-                );
+                this.channel.appendLine(l10n.t("会在10秒内发送10个数据包给客户端，格式为："));
+                this.channel.appendLine(l10n.t("* 4个字节的包头，表示包体的长度（大端）"));
+                this.channel.appendLine(l10n.t("* Json表示的包体，包含2个字段“count”和“time”"));
             });
     }
 }

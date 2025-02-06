@@ -113,8 +113,8 @@ class Helper {
                 }
 
                 let result = await vscode.window.showInformationMessage(
-                    l10n.t('请选择仓库来源：\n') +
-                    l10n.t('Github (可能需要代理）\n') +
+                    l10n.t('请选择仓库来源：') + '\n' +
+                    l10n.t('Github (可能需要代理）') + '\n' +
                     l10n.t('Gitee (国内镜像）'),
                 {
                     modal: true,
