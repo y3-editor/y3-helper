@@ -5,8 +5,8 @@ import * as y3 from 'y3-helper';
 import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
 import * as globalScript from '../../globalScript';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 function 多开模式() {
     let node = new TreeNode(l10n.t('多开模式'), {

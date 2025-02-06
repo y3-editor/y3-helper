@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { getObject } from './documentManager';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 class Provider implements vscode.DocumentSymbolProvider {
     private makeSymbole(document: vscode.TextDocument, object: y3.table.EditorObject<any>, child: jsonc.Node) {

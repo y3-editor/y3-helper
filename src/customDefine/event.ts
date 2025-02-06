@@ -4,8 +4,8 @@ import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 import { Table } from "../constants";
 import * as vscode from 'vscode';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 const filePath = 'customevent.json';
 
 type Event = {

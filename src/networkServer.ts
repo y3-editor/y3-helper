@@ -1,7 +1,6 @@
 import * as net from "net";
 import * as vscode from "vscode";
-
-const l10n = vscode.l10n;
+import * as l10n from '@vscode/l10n';
 
 export class NetworkServer extends vscode.Disposable {
     private server1: net.Server;
@@ -27,8 +26,8 @@ export class NetworkServer extends vscode.Disposable {
                 this.channel.appendLine(l10n.t('有客户端连接到服务器1'));
 
                 socket.on('data', (data) => {
-                    this.channel.appendLine(l10n.t('收到来自客户端的消息：{0}', data));
-                    socket.write(l10n.t('你发送了：{0}', data));
+                    this.channel.appendLine(l10n.t('收到来自客户端的消息：{0}', String(data)));
+                    socket.write(l10n.t('你发送了：{0}', String(data)));
 
                     if (data.toString().trim() === l10n.t('再见！')) {
                         socket.end(l10n.t('马达捏~'));
@@ -40,11 +39,11 @@ export class NetworkServer extends vscode.Disposable {
                 });
 
                 socket.on('error', (err) => {
-                    this.channel.appendLine(l10n.t('客户端错误：{0}', err));
+                    this.channel.appendLine(l10n.t('客户端错误：{0}', String(err)));
                 });
             })
             .on('error', (err) => {
-                this.channel.appendLine(l10n.t('服务器1错误：{0}', err));
+                this.channel.appendLine(l10n.t('服务器1错误：{0}', String(err)));
             })
             .listen(port, '127.0.0.1', () => {
                 this.channel.appendLine(l10n.t('服务器1已启动：127.0.0.1:{0}', port));
@@ -81,11 +80,11 @@ export class NetworkServer extends vscode.Disposable {
                 });
 
                 socket.on('error', (err) => {
-                    this.channel.appendLine(l10n.t('客户端错误：{0}', err));
+                    this.channel.appendLine(l10n.t('客户端错误：{0}', String(err)));
                 });
             })
             .on('error', (err) => {
-                this.channel.appendLine(l10n.t('服务器2错误：{0}', err));
+                this.channel.appendLine(l10n.t('服务器2错误：{0}', String(err)));
             })
             .listen(port, '127.0.0.1', () => {
                 this.channel.appendLine(l10n.t('服务器2已启动：127.0.0.1:{0}', port));

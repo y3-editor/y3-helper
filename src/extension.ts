@@ -24,8 +24,7 @@ import { config } from './config';
 import * as globalScript from './globalScript';
 import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
-
-const l10n = vscode.l10n;
+import * as l10n from '@vscode/l10n';
 
 class Helper {
     private context: vscode.ExtensionContext;
@@ -327,8 +326,13 @@ class Helper {
     }
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     y3.setContext(context);
+    if (vscode.env.language !== 'zh-cn') {
+        await l10n.config({
+            uri: y3.uri(context.extensionUri, 'l10n/bundle.l10n.json').toString(),
+        });
+    }
     let helper = new Helper(context);
 
     helper.start();

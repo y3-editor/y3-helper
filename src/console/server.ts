@@ -3,8 +3,8 @@ import * as tools from "../tools";
 import { Client } from "./client";
 import * as vscode from "vscode";
 import { Protocol } from "./protocol";
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class ConsoleServer extends vscode.Disposable {
     private server: net.Server;

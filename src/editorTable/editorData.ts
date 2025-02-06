@@ -12,8 +12,8 @@ import * as y3 from 'y3-helper';
 import { hash } from "../utility";
 import * as MapData from 'map-declare';
 import * as vscode from 'vscode';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 type KV = Record<string, string|number|boolean>;
 

@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as excel from './excel';
 import * as languageFeature from './languageFeature';
 import * as treeView from './treeView';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 class Item implements vscode.QuickPickItem {
     constructor(public label: string) {}

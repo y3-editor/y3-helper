@@ -3,8 +3,8 @@ import { Map } from '../env';
 import * as y3 from 'y3-helper';
 import { hash, SpinLock } from '../utility';
 import { throttle } from '../utility/decorators';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];

@@ -3,8 +3,8 @@ import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 import { updateHelperPortFile } from './console';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 interface LaunchOptions {
     luaArgs?: {[key: string]: string};

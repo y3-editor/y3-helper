@@ -2,8 +2,8 @@ import { TreeNode, ViewInVSCode } from "../treeNode";
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as globalScript from '../../globalScript';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class 地图管理 extends TreeNode {
     constructor() {

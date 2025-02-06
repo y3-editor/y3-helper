@@ -3,8 +3,8 @@ import { TreeNode, ViewInExplorerNode, ViewInNewVSCode, ViewInVSCode } from "../
 import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { 插件管理 } from './plugin';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class 环境 extends TreeNode {
     constructor() {

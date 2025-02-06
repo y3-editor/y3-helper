@@ -6,8 +6,8 @@ import { EditorData, valueOnGet, valueOnSet } from "./editorData";
 import { define } from "../customDefine";
 export { EditorData } from "./editorData";
 import { Y3Json } from "../tools/y3json";
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 const templateDir = 'template\\json_template';
 const metaDir = 'src\\helper_meta\\editor';

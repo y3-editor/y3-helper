@@ -6,8 +6,8 @@ import { queue, throttle } from '../utility/decorators';
 
 declare const __non_webpack_require__: NodeRequire | undefined;
 const rawRequire = __non_webpack_require__ ?? require;
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 interface ExportInfo {
     name: string;

@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
 import * as Events from "../../customDefine/event";
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class 自定义事件 extends TreeNode {
     constructor() {

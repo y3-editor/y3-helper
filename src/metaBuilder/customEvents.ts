@@ -2,8 +2,8 @@ import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 const eventName = '游戏-消息';
 

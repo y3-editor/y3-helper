@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 export class EditorLauncher {
     private async runPlugin() {

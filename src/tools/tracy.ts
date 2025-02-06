@@ -1,8 +1,8 @@
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 import { runShell } from '../runShell';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 let paths = [
     '../LocalData/Patch/ExternalResource/tracy/Tracy.exe',

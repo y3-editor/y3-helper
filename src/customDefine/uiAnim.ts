@@ -4,8 +4,8 @@ import * as y3 from 'y3-helper';
 import * as tools from '../tools';
 import * as vscode from 'vscode';
 
-const fileName = 'uianim.json';
-const l10n = vscode.l10n;
+const fileName = 'uianim.json';import * as l10n from '@vscode/l10n';
+
 
 const playMode = {
     0: l10n.t('保持'),

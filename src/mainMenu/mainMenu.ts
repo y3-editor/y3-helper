@@ -12,8 +12,8 @@ import { 插件列表 } from './pages/plugin';
 import { 地图管理 } from './pages/mapManager';
 import { 跳字 } from './pages/jumpword';
 import { 字体 } from './pages/font';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 function makeMainNode() {
     return new TreeNode(l10n.t('主菜单'), {

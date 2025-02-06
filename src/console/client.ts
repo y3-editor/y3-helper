@@ -3,8 +3,8 @@ import * as tools from "../tools";
 import { Terminal } from "./terminal";
 import { TreeViewManager } from "./treeView";
 import * as y3 from "y3-helper";
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 type RequestHandler = (client: Client, params: any) => Promise<any>;
 type ResponseHandler = (result: any) => void;

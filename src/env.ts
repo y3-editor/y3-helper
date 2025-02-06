@@ -8,8 +8,8 @@ import { queue, throttle } from './utility/decorators';
 import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { EditorManager } from './editorTable/editorTable';
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 

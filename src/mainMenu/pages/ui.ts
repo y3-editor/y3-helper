@@ -2,8 +2,8 @@ import { TreeNode } from "../treeNode";
 import * as vscode from 'vscode';
 import { define } from "../../customDefine";
 import { env } from "../../env";
+import * as l10n from '@vscode/l10n';
 
-const l10n = vscode.l10n;
 
 type Node = {
     name: string,
