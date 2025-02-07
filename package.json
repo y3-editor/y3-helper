@@ -1,6 +1,6 @@
 {
     "name": "y3-helper",
-    "displayName": "Y3开发助手",
+    "displayName": "%Y3开发助手%",
     "description": "",
     "publisher": "sumneko",
     "version": "1.19.3",
@@ -15,6 +15,7 @@
     ],
     "activationEvents": [
         "workspaceContains:y3/更新日志.md",
+        "workspaceContains:y3/CHANGELOG.md",
         "onDebugResolve:y3lua"
     ],
     "main": "./dist/extension.js",
@@ -28,17 +29,17 @@
             "explorer": [
                 {
                     "id": "y3-helper.editorTableView",
-                    "name": "Y3开发助手：物编数据"
+                    "name": "%Y3开发助手：物编数据%"
                 }
             ],
             "y3-helper": [
                 {
                     "id": "y3-helper.mainMenu",
-                    "name": "Y3开发助手"
+                    "name": "%Y3开发助手%"
                 },
                 {
                     "id": "y3-helper.custom",
-                    "name": "自定义视图"
+                    "name": "%自定义视图%"
                 }
             ]
         },
@@ -157,7 +158,7 @@
             "activitybar": [
                 {
                     "id": "y3-helper",
-                    "title": "Y3开发助手",
+                    "title": "%Y3开发助手%",
                     "icon": "image/logo.png"
                 }
             ]
@@ -167,199 +168,199 @@
                 "command": "y3-helper.initProject",
                 "title": "初始化开发环境",
                 "icon": "image/logo.png",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.makeLuaDoc",
                 "title": "生成接口文档",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.launchGame",
                 "title": "启动游戏",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.launchGameAndAttach",
                 "title": "启动游戏并附加调试",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.launchEditor",
                 "title": "在编辑器中打开",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.editorTableView.refresh",
                 "title": "刷新物编数据",
                 "shortTitle": "刷新",
-                "category": "Y3开发助手",
+                "category": "%Y3开发助手%",
                 "icon": "$(refresh)"
             },
             {
                 "command": "y3-helper.addNewEditorTableItem",
                 "title": "新建对象",
                 "enablement": "view == y3-helper.editorTableView",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.deleteEditorTableItem",
                 "title": "删除",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.renameEditorTableItem",
                 "title": "重命名",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyTableItemKey",
                 "title": "复制Key",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyTableItemName",
                 "title": "复制名称",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyFromEditorTableItem",
                 "title": "复制为新的对象",
                 "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.openFile",
                 "title": "打开文件",
                 "enablement": "view == y3-helper.editorTableView",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.revealInFileExplorer",
                 "title": "在系统文件浏览器中打开",
                 "enablement": "view == y3-helper.editorTableView",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUnitAttrKey",
                 "title": "复制key",
                 "enablement": "viewItem == 单位属性",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUnitAttrName",
                 "title": "复制名称",
                 "enablement": "viewItem == 单位属性",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyPlayerAttrKey",
                 "title": "复制key",
                 "enablement": "viewItem == 玩家属性",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyPlayerAttrName",
                 "title": "复制名称",
                 "enablement": "viewItem == 玩家属性",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyEventID",
                 "title": "复制ID",
                 "enablement": "viewItem == 自定义事件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyEventName",
                 "title": "复制名称",
                 "enablement": "viewItem == 自定义事件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUIAnimID",
                 "title": "复制ID",
                 "enablement": "viewItem == 时间轴动画",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUIAnimName",
                 "title": "复制名称",
                 "enablement": "viewItem == 时间轴动画",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUIName",
                 "title": "复制名称",
                 "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUIPath",
                 "title": "复制路径",
                 "enablement": "viewItem == 画板",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.copyUIUID",
                 "title": "复制ID",
                 "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.networkServer",
                 "title": "启动网络服务器（用于测试`network`库）",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.testTerminal",
                 "title": "测试游戏控制台",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.testExcel",
                 "title": "测试导表",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.initPlugin",
                 "title": "初始化插件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.updatePlugin",
                 "title": "更新插件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.runPlugin",
                 "title": "运行插件",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.openPlugin",
                 "title": "打开插件",
                 "enablement": "viewItem == 插件列表",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.changeMap",
                 "title": "切换地图",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.enableGlobalScript",
                 "title": "启用全局脚本",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             },
             {
                 "command": "y3-helper.compileECA",
                 "title": "编译ECA",
-                "category": "Y3开发助手"
+                "category": "%Y3开发助手%"
             }
         ],
         "configuration": {
@@ -367,8 +368,8 @@
             "type": "object",
             "properties": {
                 "Y3-Helper.EditorPath": {
-                    "title": "Y3编辑器路径",
-                    "description": "Y3编辑器的完整路径。如果为空则会从注册表中获取。",
+                    "title": "%Y3编辑器路径%",
+                    "description": "%Y3编辑器的完整路径。如果为空则会从注册表中获取。%",
                     "type": "string",
                     "default": "",
                     "ignoreSync": true,
@@ -376,15 +377,15 @@
                     "scope": "resource"
                 },
                 "Y3-Helper.ShowStatusBarItem": {
-                    "title": "显示状态栏按钮",
-                    "description": "在状态栏中显示“启动”和“附加”按钮",
+                    "title": "%显示状态栏按钮%",
+                    "description": "%在状态栏中显示“启动”和“附加”按钮%",
                     "type": "boolean",
                     "default": true,
                     "scope": "resource"
                 },
                 "Y3-Helper.ServerPort": {
-                    "title": "客户端连接端口",
-                    "description": "使用0表示随机端口",
+                    "title": "%客户端连接端口%",
+                    "description": "%使用0表示随机端口%",
                     "type": "number",
                     "default": 0,
                     "minimum": 0,
@@ -392,8 +393,8 @@
                     "scope": "resource"
                 },
                 "Y3-Helper.ECAOverridePath": {
-                    "title": "（开发）用于ECA转Lua配置导表的工程路径",
-                    "description": "填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录",
+                    "title": "用于ECA转Lua配置导表的工程路径",
+                    "description": "%（内部开发用）填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录%",
                     "type": "string",
                     "default": "",
                     "ignoreSync": true,

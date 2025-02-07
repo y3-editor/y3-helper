@@ -1,0 +1,12 @@
+{
+    "Y3开发助手": "Y3-Helper",
+    "自定义视图": "Custom View",
+    "Y3开发助手：物编数据": "Y3-Helper: Object Data",
+    "Y3编辑器路径": "Y3 Editor Path",
+    "Y3编辑器的完整路径。如果为空则会从注册表中获取。": "The full path of the Y3 editor. If empty, it will be retrieved from the registry.",
+    "显示状态栏按钮": "Show Status Bar Buttons",
+    "在状态栏中显示“启动”和“附加”按钮": "Show 'Start' and 'Attach' buttons in the status bar",
+    "客户端连接端口": "Client Connection Port",
+    "使用0表示随机端口": "Use 0 for a random port",
+    "（内部开发用）填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录": "(For internal development) Fill in the editor project path, such as `D:/up1`, or the directory where the excel file is located"
+}

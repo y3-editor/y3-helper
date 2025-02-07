@@ -116,12 +116,14 @@ export class 功能 extends TreeNode {
                     },
                     update: async (node) => {
                         node.iconPath = new vscode.ThemeIcon('cloud-download');
-                        if (await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, l10n.t('更新日志.md')))) {
+                        if (await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md')) ||
+                            await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, 'CHANGELOG.md'))) {
                             node.iconPath = new vscode.ThemeIcon('check');
                         }
                     },
                     show: async () => {
-                        return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, l10n.t('更新日志.md')))
+                        return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'))
+                            && !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, 'CHANGELOG.md'))
                             && !await globalScript.isEnabled();
                     }
                 }),
