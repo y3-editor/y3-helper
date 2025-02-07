@@ -1,5 +1,3 @@
-// TODO 怎么翻译？
-
 export namespace Table {
     export const path = {
         toCN: {

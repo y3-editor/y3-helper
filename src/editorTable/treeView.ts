@@ -51,7 +51,7 @@ class DirNode extends vscode.TreeItem {
     constructor(
         public tableName: Table.NameCN,
     ) {
-        super(l10n.t('{0}(加载中...)', tableName));
+        super(l10n.t('{0}(加载中...)', l10n.t(tableName)));
 
         this.table = editorTable.openTable(tableName);
         this.resourceUri = this.table.uri;
@@ -61,7 +61,7 @@ class DirNode extends vscode.TreeItem {
     public update(): void | Promise<void> {
         let list = this.table.fetchList();
         if (list) {
-            this.label = l10n.t('{0}({1})', this.tableName, list.length);
+            this.label = l10n.t('{0}({1})', l10n.t(this.tableName), list.length);
             return;
         } else {
             return new Promise<void>(async resolve => {

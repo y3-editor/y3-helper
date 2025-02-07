@@ -233,5 +233,14 @@
   "\n⛔ 客户端已断开。下次启动游戏会复用此控制台。 ⛔\n": "\n⛔ Client disconnected. This console will be reused next time the game starts. ⛔\n",
   "Y3控制台": "Y3 Console",
   "客户端【{0}】名称更改为：{1}": "Client 【{0}】 name changed to: {1}",
-  "测试客户端": "Test Client"
+  "测试客户端": "Test Client",
+  "单位": "Unit",
+  "装饰物": "Decoration",
+  "物品": "Item",
+  "技能": "Ability",
+  "魔法效果": "Buff",
+  "投射物": "Projectile",
+  "科技": "Technology",
+  "可破坏物": "Destructible",
+  "声音": "Sound"
 }
