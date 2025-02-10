@@ -111,32 +111,45 @@ class Helper {
                     // ignore
                 }
 
-                let result = await vscode.window.showInformationMessage(
-                    l10n.t('请选择仓库来源：') + '\n' +
-                    l10n.t('Github (可能需要代理）') + '\n' +
-                    l10n.t('Gitee (国内镜像）'),
+                const optionsGithubCN = l10n.t('Github (中文，可能需要代理）');
+                const optionsGithubEN = l10n.t('Github (英文，可能需要代理）');
+                const optionsGitee    = l10n.t('Gitee (中文，国内镜像）');
+                let options = [optionsGithubCN, optionsGithubEN, optionsGitee];
+                if (vscode.env.language === 'zh-cn') {
+                    options.splice(options.indexOf(optionsGithubEN), 1);
+                }
+                let result = await vscode.window.showInformationMessage(l10n.t('请选择仓库来源：'),
                 {
                     modal: true,
-                }, l10n.t('Github'), l10n.t('Gitee'));
+                }, ...options);
 
                 if (!result) {
                     vscode.window.showWarningMessage(l10n.t('已取消初始化项目'));
                     return;
                 }
 
-                if (result === 'Github') {
+                if (result === optionsGithubCN) {
                     // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
                     await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
                         "clone",
                         "https://github.com/y3-editor/y3-lualib.git",
                         y3Uri.fsPath,
                     ]);
-                } else {
+                } else if (result === optionsGithubEN) {
+                    await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
+                        "clone",
+                        "https://github.com/CliCli-Editor/y3-lualib.git",
+                        y3Uri.fsPath,
+                    ]);
+                } else if (result === optionsGitee)  {
                     await runShell(l10n.t("初始化Y3项目（Gitee）"), "git", [
                         "clone",
                         "https://gitee.com/tsukiko/y3-lualib.git",
                         y3Uri.fsPath,
                     ]);
+                } else {
+                    vscode.window.showWarningMessage(l10n.t('已取消初始化项目'));
+                    return;
                 }
 
                 if (!y3.fs.isExists(y3Uri, 'README.md')) {
