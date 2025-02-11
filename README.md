@@ -1,3 +1,7 @@
+# English Version
+
+[README-EN.md](./README-EN.md)
+
 # Y3开发助手
 
 ## 初始化项目（给新建的地图使用，老地图勿用！）
