@@ -1,9 +1,9 @@
 {
-    "Y3开发助手": "Y3-Helper",
+    "Y3开发助手": "CliCli-Helper",
     "自定义视图": "Custom View",
-    "Y3开发助手：物编数据": "Y3-Helper: Object Data",
-    "Y3编辑器路径": "Y3 Editor Path",
-    "Y3编辑器的完整路径。如果为空则会从注册表中获取。": "The full path of the Y3 editor. If empty, it will be retrieved from the registry.",
+    "Y3开发助手：物编数据": "CliCli-Helper: Object Data",
+    "Y3编辑器路径": "CliCli Editor Path",
+    "Y3编辑器的完整路径。如果为空则会从注册表中获取。": "The full path of the CliCli editor. If empty, it will be retrieved from the registry.",
     "显示状态栏按钮": "Show Status Bar Buttons",
     "在状态栏中显示“启动”和“附加”按钮": "Show 'Start' and 'Attach' buttons in the status bar",
     "客户端连接端口": "Client Connection Port",

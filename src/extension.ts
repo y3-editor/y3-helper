@@ -138,7 +138,7 @@ class Helper {
                 } else if (result === optionsGithubEN) {
                     await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
                         "clone",
-                        "https://github.com/CliCli-Editor/y3-lualib.git",
+                        "https://github.com/CliCli-Editor/lualib.git",
                         y3Uri.fsPath,
                     ]);
                 } else if (result === optionsGitee)  {
