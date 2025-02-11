@@ -128,6 +128,9 @@ export class Variable extends Node {
         super();
     }
 
+    refs: VarRef[] = [];
+    trunk?: Trunk;
+
     make(formatter: Formatter): string {
         return formatter.getVariableName(this.name);
     }
@@ -138,6 +141,7 @@ export class VarRef extends Node {
     type: string;
     scope: 'local' | 'global' | 'actor';
     def?: Variable;
+    trunk?: Trunk;
     constructor(json: [string, string, 'local' | 'global' | 'actor']) {
         super();
         this.type = json[0];
@@ -157,18 +161,21 @@ export class VarRef extends Node {
     }
 }
 
-class TriggerRef extends Node {
+class ClosureRef extends Node {
     constructor(public eca: ECA, public id: string) {
         super();
     }
 
     make(formater: Formatter): string {
-        let closure = this.eca.closures[this.id];
-        if (closure) {
-            return closure.make(formater);
+        if (this.closure) {
+            return this.closure.make(formater);
         } else {
             return '-- 未找到函数： ' + this.id;
         }
+    }
+
+    get closure(): Trigger | undefined {
+        return this.eca.closures[this.id];
     }
 
     eachNode(callback: (node: Node) => boolean) {
@@ -204,7 +211,7 @@ function parseAction(eca: ECA, action: y3.json.JObject | y3.json.JArray | number
     if (Array.isArray(action)) {
         return new Comment(action as any);
     } else if (typeof action === 'number') {
-        return new TriggerRef(eca, String(action));
+        return new ClosureRef(eca, String(action));
     } else {
         return new Call(eca, action as any);
     }
@@ -215,7 +222,7 @@ function parseExp(eca: ECA, exp: any): Exp {
         return Nil;
     }
     if (typeof exp === 'number') {
-        return new TriggerRef(eca, String(exp));
+        return new ClosureRef(eca, String(exp));
     }
     if (toArray(exp)) {
         return new VarRef(toArray(exp) as any);
@@ -338,6 +345,9 @@ class Trunk extends Node {
         let result = '';
         let params = new Set<string>(this.params.map(param => param.name));
         for (let variable of this.variables) {
+            if (variable.refs.length === 0) {
+                continue;
+            }
             let defaultValue = formatter.getVariableInitValue(variable);
             let name = formatter.getVariableName(variable.name);
             if (params.has(variable.name)) {
@@ -390,8 +400,8 @@ export class Function extends Node {
     }
 }
 
-type Exp = Value | Call | VarRef | TriggerRef | NilNode;
-type Action = Call | Comment | TriggerRef;
+type Exp = Value | Call | VarRef | ClosureRef | NilNode;
+type Action = Call | Comment | ClosureRef;
 
 export class ECA {
     closures: Record<string, Trigger> = {};
@@ -407,6 +417,55 @@ export class ECA {
         } else {
             this.main = new Trigger(this, json);
         }
+        this.bindVaraiables();
+    }
+
+    private bindVaraiables() {
+        if (!this.main.trunk) {
+            return;
+        }
+
+        let visibleVariables: Record<string, Variable[]> = {};
+
+        function processTrunk(trunk: Trunk) {
+            const variables = trunk.variables;
+
+            for (let variable of variables) {
+                variable.trunk = trunk;
+                if (visibleVariables[variable.name]) {
+                    visibleVariables[variable.name].push(variable);
+                } else {
+                    visibleVariables[variable.name] = [variable];
+                }
+            }
+
+            for (let action of trunk.actions) {
+                if (action instanceof ClosureRef) {
+                    const closure = action.closure;
+                    if (closure?.trunk) {
+                        processTrunk(closure.trunk);
+                    }
+                } else {
+                    action.eachNode((node) => {
+                        if (node instanceof VarRef) {
+                            node.trunk = trunk;
+                            let variables = visibleVariables[node.name];
+                            if (variables) {
+                                node.def = variables[variables.length - 1];
+                                node.def.refs.push(node);
+                            }
+                        }
+                        return false;
+                    });
+                }
+            }
+
+            for (let variable of variables) {
+                visibleVariables[variable.name].pop();
+            }
+        }
+
+        processTrunk(this.main.trunk);
     }
 
     make(formatter: Formatter) {
