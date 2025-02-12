@@ -2,6 +2,8 @@ import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 import { Formatter } from './formatter';
 
+type EachNodeCallback = (node: Node) => 'stop' | 'continue' | void;
+
 export abstract class Node {
     name?: string;
     args?: (Exp | null)[];
@@ -9,9 +11,7 @@ export abstract class Node {
     makeArgs(formatter: Formatter): string[] | undefined {
         return undefined;
     };
-    eachNode(callback: (node: Node) => boolean): boolean {
-        return false;
-    }
+    eachNode(callback: EachNodeCallback): ReturnType<EachNodeCallback> { }
 }
 
 export class Event extends Node {
@@ -95,19 +95,23 @@ export class Call extends Node {
         });
     }
 
-    eachNode(callback: (node: Node) => boolean) {
+    eachNode(callback: EachNodeCallback) {
         for (let arg of this.args) {
             if (arg === null) {
                 continue;
             }
-            if (callback(arg)) {
-                return true;
+            let result = callback(arg);
+            if (result === 'stop') {
+                return 'stop';
             }
-            if (arg.eachNode(callback)) {
-                return true;
+            if (result === 'continue') {
+                continue;
+            }
+            if (arg.eachNode(callback) === 'stop') {
+                return 'stop';
             }
         }
-        return false;
+        return;
     }
 }
 
@@ -178,14 +182,14 @@ class ClosureRef extends Node {
         return this.eca.closures[this.id];
     }
 
-    eachNode(callback: (node: Node) => boolean) {
+    eachNode(callback: EachNodeCallback) {
         let closure = this.eca.closures[this.id];
         if (closure) {
-            if (closure.eachNode(callback)) {
-                return true;
+            if (closure.eachNode(callback) === 'stop') {
+                return 'stop';
             }
         }
-        return false;
+        return;
     }
 }
 
@@ -290,8 +294,10 @@ export class Trigger extends Node {
         this.trunk = new Trunk(eca, json);
     }
 
-    eachNode(callback: (node: Node) => boolean) {
-        return this.trunk?.eachNode(callback) ?? false;
+    eachNode(callback: EachNodeCallback) {
+        if (this.trunk?.eachNode(callback) === 'stop') {
+            return 'stop';
+        }
     }
 
     make(formatter: Formatter): string {
@@ -329,16 +335,20 @@ class Trunk extends Node {
         }
     }
 
-    eachNode(callback: (node: Node) => boolean) {
+    eachNode(callback: EachNodeCallback) {
         for (let action of this.actions) {
-            if (callback(action)) {
-                return true;
+            let result = callback(action);
+            if (result === 'stop') {
+                return 'stop';
             }
-            if (action.eachNode(callback)) {
-                return true;
+            if (result === 'continue') {
+                continue;
+            }
+            if (action.eachNode(callback) === 'stop') {
+                return 'stop';
             }
         }
-        return false;
+        return;
     }
 
     private makeLocalVariablePart(formatter: Formatter): string {
@@ -391,8 +401,10 @@ export class Function extends Node {
         this.trunk = new Trunk(eca, json);
     }
 
-    eachNode(callback: (node: Node) => boolean) {
-        return this.trunk?.eachNode(callback) ?? false;
+    eachNode(callback: EachNodeCallback) {
+        if (this.trunk?.eachNode(callback) === 'stop') {
+            return 'stop';
+        }
     }
 
     make(formatter: Formatter): string {
@@ -439,26 +451,21 @@ export class ECA {
                 }
             }
 
-            for (let action of trunk.actions) {
-                if (action instanceof ClosureRef) {
-                    const closure = action.closure;
-                    if (closure?.trunk) {
-                        processTrunk(closure.trunk);
+            trunk.eachNode((node) => {
+                if (node instanceof VarRef) {
+                    node.trunk = trunk;
+                    let variables = visibleVariables[node.name];
+                    if (variables) {
+                        node.def = variables[variables.length - 1];
+                        node.def.refs.push(node);
                     }
-                } else {
-                    action.eachNode((node) => {
-                        if (node instanceof VarRef) {
-                            node.trunk = trunk;
-                            let variables = visibleVariables[node.name];
-                            if (variables) {
-                                node.def = variables[variables.length - 1];
-                                node.def.refs.push(node);
-                            }
-                        }
-                        return false;
-                    });
+                } else if (node instanceof ClosureRef) {
+                    if (node.closure?.trunk) {
+                        processTrunk(node.closure.trunk);
+                    }
+                    return 'continue';
                 }
-            }
+            });
 
             for (let variable of variables) {
                 visibleVariables[variable.name].pop();

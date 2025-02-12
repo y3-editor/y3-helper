@@ -321,13 +321,12 @@ export class Formatter {
     }
 
     private usingGroupVariable(trg: Trigger | Function): boolean {
-        return trg.eachNode(node => {
+        let result = trg.eachNode(node => {
             if (node instanceof VarRef && node.scope === 'actor') {
-                return true;
-            } else {
-                return false;
+                return 'stop';
             }
         });
+        return result === 'stop';
     }
     
     public formatTrigger(trg: Trigger) {
@@ -444,20 +443,15 @@ export class Formatter {
                 continue;
             }
             if (isHead) {
+                isHead = false;
                 if (Formatter.decreaseCurrentIndent.has(wordOrSymbol)) {
                     current--;
-                } else {
-                    isHead = false;
                 }
-                if (Formatter.increaseNextIndent.has(wordOrSymbol)) {
-                    next++;
-                }
-            } else {
-                if (Formatter.increaseNextIndent.has(wordOrSymbol)) {
-                    next++;
-                } else if (Formatter.decreaseNextIndent.has(wordOrSymbol)) {
-                    next--;
-                }
+            }
+            if (Formatter.increaseNextIndent.has(wordOrSymbol)) {
+                next++;
+            } else if (Formatter.decreaseNextIndent.has(wordOrSymbol)) {
+                next--;
             }
         }
         return [current, next];
@@ -488,9 +482,11 @@ export class Formatter {
 
             if (line !== '') {
                 let [current, next] = this.getDelta(line);
-                level += current;
-                整理缩进(level);
-                lines[i] = '    '.repeat(levels.length) + line;
+                if (current < 0 && levels.length > 0) {
+                    lines[i] = '    '.repeat(levels.length - 1) + line;
+                } else {
+                    lines[i] = '    '.repeat(levels.length) + line;
+                }
                 level += next;
                 整理缩进(level);
             } else {
