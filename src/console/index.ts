@@ -10,11 +10,13 @@ import * as treeView from './treeView';
 
 let currentPort: number | undefined;
 async function setPort(port: number) {
-    if (!env.scriptUri) {
+    currentPort = port;
+    if (!env.project) {
         return;
     }
-    currentPort = port;
-    await tools.fs.writeFile(env.scriptUri, 'log/helper_port.lua', `return ${port}`);
+    for (const map of env.project.maps) {
+        await tools.fs.writeFile(map.scriptUri, 'log/helper_port.lua', `return ${port}`);
+    }
 }
 
 let server: ConsoleServer | undefined;

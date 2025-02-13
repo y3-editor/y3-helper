@@ -37,10 +37,12 @@ export function init(context: vscode.ExtensionContext) {
     debug.activate(debuggerContext);
 
     function updateDebuggerPath() {
-        if (!env.scriptUri) {
+        if (!env.project) {
             return;
         }
-        tools.fs.writeFile(env.scriptUri, 'log/debugger_path.lua', `return [[${debuggerContext.extensionUri.fsPath}]]`);
+        for (const map of env.project.maps) {
+            tools.fs.writeFile(map.scriptUri, 'log/debugger_path.lua', `return [[${debuggerContext.extensionUri.fsPath}]]`);
+        }
     }
 
     updateDebuggerPath();
