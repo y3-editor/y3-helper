@@ -305,6 +305,8 @@ class Env {
     public scriptUri?: vscode.Uri;
     public globalScriptUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
+    public helperUri?: vscode.Uri;
+    public metaUri?: vscode.Uri;
     public pluginUri?: vscode.Uri;
     public projectUri?: vscode.Uri;
     public excelUri?: vscode.Uri;// excel表格路径
@@ -373,10 +375,12 @@ class Env {
         this.currentMap = map;
         this.mapUri = map.uri;
         this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
-        this.y3Uri = vscode.Uri.joinPath(this.scriptUri, 'y3');
-        this.pluginUri = vscode.Uri.joinPath(this.scriptUri, '/y3-helper/plugin');
-        this.excelUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel/");
-        this.ruleUri = vscode.Uri.joinPath(this.scriptUri, "./y3-helper/excel_rule/");
+        this.y3Uri = vscode.Uri.joinPath(this.scriptUri, l10n.t('y3'));
+        this.helperUri = vscode.Uri.joinPath(this.scriptUri, `/${l10n.t("y3-helper")}`);
+        this.metaUri = vscode.Uri.joinPath(this.helperUri, 'meta');
+        this.pluginUri = vscode.Uri.joinPath(this.helperUri, 'plugin');
+        this.excelUri = vscode.Uri.joinPath(this.helperUri, 'excel');
+        this.ruleUri = vscode.Uri.joinPath(this.helperUri, 'excel_rule');
         tools.log.info(`mapUri: ${this.mapUri}`);
         tools.log.info(`projectUri: ${this.projectUri}`);
         tools.log.info(`scriptUri: ${this.scriptUri?.fsPath}`);

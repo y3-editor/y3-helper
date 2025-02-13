@@ -57,7 +57,7 @@ export class LuaDocMaker {
             vscode.window.showErrorMessage(l10n.t('请先打开工作目录！'));
             return;
         }
-        let y3Uri = vscode.Uri.joinPath(currentUri, 'y3');
+        let y3Uri = vscode.Uri.joinPath(currentUri, l10n.t('y3'));
         this.exeUri = exeUri;
         this.y3Uri = y3Uri;
     }
@@ -148,7 +148,7 @@ export class LuaDocMaker {
         for (let index = 0; index < doc.length; index++) {
             const docClass = doc[index];
             let name = docClass.name;
-            if (name.startsWith('y3.Const')) {
+            if (name.startsWith('y3.Const') || name.startsWith('clicli.Const')) {
                 name = 'Const';
             } else if (name.includes('.')) {
                 name = name.split('.')[0];

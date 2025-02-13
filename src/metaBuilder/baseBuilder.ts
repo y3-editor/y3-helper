@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import { env } from '../env';
 import * as tools from '../tools';
 import { throttle } from '../utility/decorators';
@@ -8,7 +7,7 @@ export abstract class BaseBuilder {
 
     @throttle(500)
     public async update() {
-        if (!env.scriptUri) {
+        if (!env.helperUri) {
             return;
         }
         if (!await this.isValid()) {
@@ -16,13 +15,13 @@ export abstract class BaseBuilder {
         }
         let code = await this.make();
         if (code === undefined) {
-            if (await tools.fs.isExists(env.scriptUri, this.path)) {
+            if (await tools.fs.isExists(env.helperUri, this.path)) {
                 return;
             } else {
-                await tools.fs.writeFile(env.scriptUri, this.path, '');
+                await tools.fs.writeFile(env.helperUri, this.path, '');
             }
-        } else if (code !== (await tools.fs.readFile(env.scriptUri))?.string) {
-            await tools.fs.writeFile(env.scriptUri, this.path, code);
+        } else if (code !== (await tools.fs.readFile(env.helperUri))?.string) {
+            await tools.fs.writeFile(env.helperUri, this.path, code);
         }
     }
 

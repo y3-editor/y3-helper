@@ -9,9 +9,10 @@ import { JumpWord } from './jumpword';
 import { Font } from './font';
 import { Objects } from './objects';
 import { TS } from './tsMeta';
+import * as l10n from '@vscode/l10n';
 
-let luaPath = 'y3-helper/meta';
-let tsPath  = 'y3-helper/plugin';
+let luaPath = 'meta';
+let tsPath  = 'plugin';
 
 class InitBuilder extends BaseBuilder {
     private builders: BaseBuilder[] = [];
@@ -29,7 +30,7 @@ class InitBuilder extends BaseBuilder {
                 let name = builder.path
                     .replace(/\.lua$/, '')
                     .replace(/[\\/]/g, '.');
-                return `include '${name}'`;
+                return `include '${l10n.t("y3-helper")}.${name}'`;
             });
         if (codes.length === 0) {
             return;

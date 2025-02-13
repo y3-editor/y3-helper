@@ -69,7 +69,7 @@ export async function isEnabled() {
         return false;
     }
     let rcUri = vscode.Uri.joinPath(y3.env.globalScriptUri, '.luarc.json');
-    let y3Uri = vscode.Uri.joinPath(y3.env.globalScriptUri, 'y3');
+    let y3Uri = vscode.Uri.joinPath(y3.env.globalScriptUri, l10n.t('y3'));
     return (await y3.fs.stat(rcUri))?.type === vscode.FileType.File
         && (await y3.fs.stat(y3Uri))?.type === vscode.FileType.Directory;
 }
@@ -84,13 +84,13 @@ export async function enable() {
         y3.log.error(l10n.t("没有找到入口地图"));
         return false;
     }
-    let y3Uri = vscode.Uri.joinPath(entryMap.uri, 'script/y3');
+    let y3Uri = vscode.Uri.joinPath(entryMap.uri, `script/${l10n.t('y3')}`);
     if (!await y3.fs.isExists(y3Uri)) {
         y3.log.error(l10n.t("请先初始化地图"));
         return false;
     }
     // 把Y3库复制到全局脚本目录
-    let globalY3Uri = vscode.Uri.joinPath(y3.env.globalScriptUri, 'y3');
+    let globalY3Uri = vscode.Uri.joinPath(y3.env.globalScriptUri, l10n.t('y3'));
     if (!await y3.fs.isExists(globalY3Uri)) {
         await y3.fs.copy(y3Uri, globalY3Uri, {
             recursive: true,
@@ -113,7 +113,7 @@ export async function enable() {
     await rcRemoveGlobalPath(globalRcUri);
     // 遍历所有地图，删除他们的y3文件夹
     for (const map of y3.env.project!.maps) {
-        let y3Uri = vscode.Uri.joinPath(map.uri, 'script/y3');
+        let y3Uri = vscode.Uri.joinPath(map.uri, `script/${l10n.t('y3')}`);
         await y3.fs.removeFile(y3Uri, {
             recursive: true,
             useTrash: true,
@@ -131,7 +131,7 @@ async function updateRC() {
     }
     let rcUri = vscode.Uri.joinPath(y3.env.scriptUri, '.luarc.json');
     if (!await y3.fs.isExists(rcUri)) {
-        await y3.fs.copy(vscode.Uri.joinPath(y3.env.globalScriptUri, 'y3/演示/项目配置/.luarc.json'), rcUri);
+        await y3.fs.copy(vscode.Uri.joinPath(y3.env.globalScriptUri, l10n.t('y3'), '演示/项目配置/.luarc.json'), rcUri);
     }
     await rcAddGlobalPath(rcUri);
 }
@@ -141,14 +141,14 @@ function syncY3() {
         if (!y3.env.globalScriptUri || !y3.env.scriptUri) {
             return;
         }
-        let globalY3 = await y3.fs.readFile(y3.env.globalScriptUri, 'y3/init.lua');
+        let globalY3 = await y3.fs.readFile(y3.uri(y3.env.globalScriptUri, l10n.t('y3'), 'init.lua'));
         if (!globalY3) {
             return;
         }
-        let myY3 = await y3.fs.readFile(y3.env.scriptUri, 'y3/init.lua');
+        let myY3 = await y3.fs.readFile(y3.uri(y3.env.scriptUri, l10n.t('y3'), 'init.lua'));
 
         if (!myY3 || globalY3.string !== myY3.string) {
-            await y3.fs.writeFile(y3.env.scriptUri, 'y3/init.lua', globalY3.string);
+            await y3.fs.writeFile(y3.uri(y3.env.scriptUri, l10n.t('y3'), 'init.lua'), globalY3.string);
         }
     }, 1000);
 }

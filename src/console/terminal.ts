@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as iconv from "iconv-lite";
+import * as l10n from '@vscode/l10n';
 
 export const COLOR = {
     RESET: '\x1b[0m',
@@ -414,7 +415,7 @@ export class Terminal extends vscode.Disposable {
         });
         this.updateStartSymbol();
         this.terminal = vscode.window.createTerminal({
-           name: `Y3: ${name}`,
+           name: `${l10n.t('Y3')}: ${name}`,
            pty: this.pseudoterminal,
         });
         this.terminal.show();

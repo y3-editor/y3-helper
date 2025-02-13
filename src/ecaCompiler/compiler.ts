@@ -314,6 +314,7 @@ class Trunk extends Node {
     actions: Action[] = [];
     params: Param[] = [];
     variables: Variable[] = [];
+    upvalues: Variable[] = [];
     constructor(private eca: ECA, private json: any) {
         super();
         if (json.action) {

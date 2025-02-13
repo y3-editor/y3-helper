@@ -241,5 +241,8 @@
   "投射物": "Projectile",
   "科技": "Technology",
   "可破坏物": "Destructible",
-  "声音": "Sound"
+  "声音": "Sound",
+  "y3": "clicli",
+  "Y3": "CliCli",
+  "y3-helper": "clicli-helper"
 }
