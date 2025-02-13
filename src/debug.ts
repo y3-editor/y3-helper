@@ -98,6 +98,9 @@ async function startWaitDebuggerHelper() {
         if (!env.project) {
             continue;
         }
+        if (debugSessions.length > 0) {
+            continue;
+        }
         let needAttach = false;
         for (const map of env.project.maps) {
             const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
@@ -106,7 +109,7 @@ async function startWaitDebuggerHelper() {
                 needAttach = true;
             }
         }
-        if (needAttach && debugSessions.length === 0) {
+        if (needAttach) {
             await attach();
         }
     }
