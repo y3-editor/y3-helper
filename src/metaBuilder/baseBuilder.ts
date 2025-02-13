@@ -1,6 +1,7 @@
 import { env } from '../env';
 import * as tools from '../tools';
 import { throttle } from '../utility/decorators';
+import * as l10n from '@vscode/l10n';
 
 export abstract class BaseBuilder {
     constructor(public path: string) { }
@@ -20,8 +21,12 @@ export abstract class BaseBuilder {
             } else {
                 await tools.fs.writeFile(env.helperUri, this.path, '');
             }
-        } else if (code !== (await tools.fs.readFile(env.helperUri))?.string) {
-            await tools.fs.writeFile(env.helperUri, this.path, code);
+        } else {
+            code = code.replace(/\by3\b/g, l10n.t('y3'));
+            code = code.replace(/\bY3\b/g, l10n.t('Y3'));
+            if (code !== (await tools.fs.readFile(env.helperUri))?.string) {
+                await tools.fs.writeFile(env.helperUri, this.path, code);
+            }
         }
     }
 

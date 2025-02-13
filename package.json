@@ -399,6 +399,18 @@
                     "default": "",
                     "ignoreSync": true,
                     "scope": "resource"
+                },
+                "Y3-Helper.Language": {
+                    "title": "%语言%",
+                    "description": "%设置显示语言%",
+                    "type": "string",
+                    "default": "default",
+                    "enum": [
+                        "default",
+                        "zh-cn",
+                        "en"
+                    ],
+                    "scope": "resource"
                 }
             }
         },

@@ -150,6 +150,7 @@ class Project extends vscode.Disposable {
 class Env {
     private envChangeEmitter = new vscode.EventEmitter<void>();
     public onDidChange = this.envChangeEmitter.event;
+    language: 'zh-cn' | 'en' = 'zh-cn';
 
     private async searchEditorUriByReg(): Promise<vscode.Uri | undefined> {
         let platform = os.platform();
@@ -376,7 +377,7 @@ class Env {
         this.mapUri = map.uri;
         this.scriptUri = vscode.Uri.joinPath(this.mapUri, 'script');
         this.y3Uri = vscode.Uri.joinPath(this.scriptUri, l10n.t('y3'));
-        this.helperUri = vscode.Uri.joinPath(this.scriptUri, `/${l10n.t("y3-helper")}`);
+        this.helperUri = vscode.Uri.joinPath(this.scriptUri, `${l10n.t("y3-helper")}`);
         this.metaUri = vscode.Uri.joinPath(this.helperUri, 'meta');
         this.pluginUri = vscode.Uri.joinPath(this.helperUri, 'plugin');
         this.excelUri = vscode.Uri.joinPath(this.helperUri, 'excel');

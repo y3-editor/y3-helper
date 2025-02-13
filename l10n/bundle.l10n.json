@@ -43,9 +43,6 @@
   "已将原有的 {0} 目录移至回收站": "Moved the original {0} directory to the recycle bin",
   "{0} 已被占用，请手动删除它！": "{0} is occupied, please delete it manually!",
   "请选择仓库来源：": "Please select the repository source:",
-  "Github (中文，可能需要代理）": "Github (中文)",
-  "Github (英文，可能需要代理）": "Github (English)",
-  "Gitee (中文，国内镜像）": "Gitee (中文)",
   "已取消初始化项目": "Project initialization canceled",
   "初始化Y3项目（Github）": "Initialize CliCli project (Github)",
   "初始化Y3项目（Gitee）": "Initialize CliCli project (Gitee)",
@@ -244,5 +241,6 @@
   "声音": "Sound",
   "y3": "clicli",
   "Y3": "CliCli",
-  "y3-helper": "clicli-helper"
+  "y3-helper": "clicli-helper",
+  "'演示/项目配置'": "'Demo/Project Configuration'"
 }
