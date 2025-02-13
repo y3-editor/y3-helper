@@ -86,32 +86,37 @@ export function init(context: vscode.ExtensionContext) {
         let idx = debugSessions.indexOf(e);
         if (idx !== -1) {
             debugSessions.splice(idx, 1);
+            checkNeedAttach();
         }
     });
 
     startWaitDebuggerHelper();
 }
 
+async function checkNeedAttach() {
+    if (!env.project) {
+        return;
+    }
+    if (debugSessions.length > 0) {
+        return;
+    }
+    let needAttach = false;
+    for (const map of env.project.maps) {
+        const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
+        if (await y3.fs.isExists(logPath)) {
+            await y3.fs.removeFile(logPath);
+            needAttach = true;
+        }
+    }
+    if (needAttach) {
+        await attach();
+    }
+}
+
 async function startWaitDebuggerHelper() {
     while (true) {
         await y3.sleep(1000);
-        if (!env.project) {
-            continue;
-        }
-        if (debugSessions.length > 0) {
-            continue;
-        }
-        let needAttach = false;
-        for (const map of env.project.maps) {
-            const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
-            if (await y3.fs.isExists(logPath)) {
-                await y3.fs.removeFile(logPath);
-                needAttach = true;
-            }
-        }
-        if (needAttach) {
-            await attach();
-        }
+        await checkNeedAttach();
     }
 }
 
