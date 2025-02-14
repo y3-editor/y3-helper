@@ -314,7 +314,7 @@ class Trunk extends Node {
     actions: Action[] = [];
     params: Param[] = [];
     variables: Variable[] = [];
-    upvalues: Variable[] = [];
+    upvalues = new Set<Variable>();
     constructor(private eca: ECA, private json: any) {
         super();
         if (json.action) {
@@ -430,17 +430,32 @@ export class ECA {
         } else {
             this.main = new Trigger(this, json);
         }
-        this.bindVaraiables();
+        this.bindVariables();
     }
 
-    private bindVaraiables() {
+    private bindVariables() {
         if (!this.main.trunk) {
             return;
         }
 
         let visibleVariables: Record<string, Variable[]> = {};
+        let trunkStack: Trunk[] = [];
+
+        function markUpvalues(variable: Variable) {
+            for (let i = trunkStack.length - 1; i >= 0; i--) {
+                let trunk = trunkStack[i];
+                if (trunk === variable.trunk) {
+                    return;
+                }
+                if (trunk.upvalues.has(variable)) {
+                    return;
+                }
+                trunk.upvalues.add(variable);
+            }
+        }
 
         function processTrunk(trunk: Trunk) {
+            trunkStack.push(trunk);
             const variables = trunk.variables;
 
             for (let variable of variables) {
@@ -457,8 +472,10 @@ export class ECA {
                     node.trunk = trunk;
                     let variables = visibleVariables[node.name];
                     if (variables) {
-                        node.def = variables[variables.length - 1];
-                        node.def.refs.push(node);
+                        let variable = variables[variables.length - 1];
+                        node.def = variable;
+                        variable.refs.push(node);
+                        markUpvalues(variable);
                     }
                 } else if (node instanceof ClosureRef) {
                     if (node.closure?.trunk) {
@@ -471,6 +488,7 @@ export class ECA {
             for (let variable of variables) {
                 visibleVariables[variable.name].pop();
             }
+            trunkStack.pop();
         }
 
         processTrunk(this.main.trunk);

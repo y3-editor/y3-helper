@@ -341,6 +341,11 @@ export class Formatter {
         if (trg.isClosure) {
             result += 'do\n';
         }
+        if (trg.trunk) {
+            for (let upvalue of trg.trunk.upvalues) {
+                result += `local ${upvalue.make(this)} = ${upvalue.make(this)}\n`;
+            }
+        }
         if (trg.events.length === 1) {
             result += `${eventTarget}:event(${trg.events[0].make(this)}, function(_, params)\n`;
             result += this.makeBody(trg);
