@@ -95,6 +95,10 @@
         "key": "ET_ABILITY_PS_START",
         "name": "施法-开始"
     },
+    "ET_ABILITY_SEND_CUE_EVENT": {
+        "key": "ET_ABILITY_SEND_CUE_EVENT",
+        "name": "技能-自定义动画轴"
+    },
     "ET_ABILITY_SP_END": {
         "key": "ET_ABILITY_SP_END",
         "name": "施法-出手"
@@ -310,6 +314,10 @@
     "ET_UNIT_TRY_ACQUIRE_TARGET": {
         "key": "ET_UNIT_TRY_ACQUIRE_TARGET",
         "name": "单位-即将索敌"
+    },
+    "ET_UNIT_TRY_PICK_ITEM": {
+        "key": "ET_UNIT_TRY_PICK_ITEM",
+        "name": "单位-即将拾取物品"
     },
     "ET_UPGRADE_UNIT": {
         "key": "ET_UPGRADE_UNIT",

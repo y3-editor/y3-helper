@@ -2,6 +2,7 @@
     "async_effect": {
         "desc": "区分敌我特效显示",
         "key": "async_effect",
+        "tips": "开启后可以配置该特效在所属单位的敌人眼中的表现。通常用于处理不同颜色的警示圈或不对敌方显示特效。",
         "type": "PBool"
     },
     "description": {
@@ -12,6 +13,7 @@
     "effect_destroy_way_is_immediately": {
         "desc": "是否立即移除表现",
         "key": "effect_destroy_way_is_immediately",
+        "tips": "开启后，该投射物被销毁时会立即移除所有表现（适用于没有制作销毁过渡的特效资源）",
         "type": "PBool"
     },
     "effect_foes": {
@@ -32,6 +34,7 @@
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "投射物的ID",
         "type": "PInt"
     },
     "kv": {
@@ -42,18 +45,19 @@
     "max_duration": {
         "desc": "最大持续时间",
         "key": "max_duration",
+        "tips": "投射物会在到达最大持续时间后强制删除。摆放在场景上的投射物不会受到限制。",
         "type": "PFloat"
     },
     "move_channel": {
         "desc": "移动类型",
         "key": "move_channel",
-        "tips": "单位的移动类型，决定单位究竟是在地面移动还是在空中移动。",
+        "tips": "影响可用的可移动通道。",
         "type": "PEnum"
     },
     "move_limitation": {
         "desc": "可移动通道",
         "key": "move_limitation",
-        "tips": "对单位移动类型的补充，决定单位究竟是在哪些通道移动。任意通道被碰撞阻挡该单位均无法通过。",
+        "tips": "当投射物作为运动器的运动对象且开启地形阻挡时，作为是否会触发碰撞静态碰撞事件的条件。",
         "type": "PCheckBoxBit"
     },
     "name": {
@@ -62,18 +66,21 @@
         "type": "PLocalizeText"
     },
     "poolable": {
-        "desc": "开启对象池",
+        "desc": "是否开启对象池",
         "key": "poolable",
+        "tips": "开启对象池后投射物默认立即移除表现且投射物不会销毁，会以休眠状态进入对象池从而优化性能，重新使用这些对象时自定义属性不会清除，需要手动初始化一遍。",
         "type": "PBool"
     },
     "sfx_loop": {
         "desc": "是否循环播放",
         "key": "sfx_loop",
+        "tips": "勾选后投射物会在播放完成后重复播放",
         "type": "PBool"
     },
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
         "type": "PSoundList"
     },
     "suffix": {
@@ -89,6 +96,7 @@
     "uid": {
         "desc": "字符串ID",
         "key": "uid",
+        "tips": "投射物的UID",
         "type": "PText"
     }
 }

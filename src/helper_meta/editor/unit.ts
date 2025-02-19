@@ -7,6 +7,8 @@ export interface UnitData {
     dodge_rate: number; // PFloat
     /**
      * 普攻类型
+     *
+     * 单位普通攻击的类型，选择自定义需要绑定技能
      */
     common_atk_type: any; // PEnum
     /**
@@ -21,6 +23,10 @@ export interface UnitData {
      * 穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透
      */
     pene_mag: number; // PFloat
+    /**
+     * nil
+     */
+    billboard_offset: any; // PVector3
     /**
      * 智力
      *
@@ -56,7 +62,9 @@ export interface UnitData {
      */
     icon: any; // PResource
     /**
-     * 开启对象池
+     * 是否开启对象池
+     *
+     * 开启对象池后对象不会销毁，会以休眠状态进入对象池从而优化性能，重新使用这些对象时自定义属性不会清除，需要手动初始化一遍。
      */
     poolable: boolean; // PBool
     /**
@@ -300,6 +308,8 @@ export interface UnitData {
     attack_phy: number; // PFloat
     /**
      * 攻击间隔
+     *
+     * 两次普通攻击之间的间隔时间
      */
     attack_interval_grow: number; // PFloat
     /**
@@ -332,6 +342,8 @@ export interface UnitData {
     sell_res_list: any[]; // PResList
     /**
      * 是否开启透视
+     *
+     * 勾选后如果该单位被遮挡，会看到该单位的描边
      */
     is_open_Xray: boolean; // PBool
     /**
@@ -351,10 +363,6 @@ export interface UnitData {
      */
     billboard_scale_y: number; // PFloat
     /**
-     * 物理主控行走速度
-     */
-    cc_walk_speed: number; // PFloat
-    /**
      * 死亡
      *
      * 死亡状态下会播放的动画
@@ -367,13 +375,11 @@ export interface UnitData {
      */
     tags: any[]; // PList
     /**
-     * nil
+     * 物理主控行走速度
      */
-    height_offset: number; // PFloat
+    cc_walk_speed: number; // PFloat
     /**
      * 被治疗效果提升(%)
-     *
-     * 提高接受治疗时受到的治疗效果
      */
     healing_effect_grow: number; // PFloat
     /**
@@ -383,9 +389,11 @@ export interface UnitData {
      */
     view_type: any; // PEnum
     /**
-     * 物理主控跳跃高度
+     * 法术吸血(%)
+     *
+     * 造成法术伤害后可以恢复自身生命值
      */
-    cc_jump_height: number; // PFloat
+    vampire_mag: number; // PFloat
     /**
      * 暴击伤害(%)
      *
@@ -409,15 +417,19 @@ export interface UnitData {
      */
     attack_phy_grow: number; // PFloat
     /**
+     * 物理主控跳跃高度
+     */
+    cc_jump_height: number; // PFloat
+    /**
+     * 动态碰撞半径
+     */
+    collision_radius_2: number; // PFloat
+    /**
      * 描述
      *
      * 单位的介绍说明，用在编辑器内和游戏内的Tips显示上
      */
     description: string; // PLocalizeText
-    /**
-     * 动态碰撞半径
-     */
-    collision_radius_2: number; // PFloat
     /**
      * 血条样式
      *
@@ -425,17 +437,13 @@ export interface UnitData {
      */
     blood_bar: any; // PEnum
     /**
-     * 单位血条高度偏移
+     * 预览血量
      */
-    billboard_height_offset: number; // PFloat
+    preview_billboard_health_value: number; // PFloat
     /**
      * 物理
      */
     physics_composite: any; // PropertyDict
-    /**
-     * 是否开启描边
-     */
-    is_open_outline_pass: boolean; // PBool
     /**
      * 死亡后是否销毁单位
      *
@@ -443,13 +451,13 @@ export interface UnitData {
      */
     destroy_after_die: boolean; // PBool
     /**
+     * 是否开启描边
+     */
+    is_open_outline_pass: boolean; // PBool
+    /**
      * 菲涅尔颜色
      */
     fresnel_color: any; // PAst
-    /**
-     * 启用菲涅尔效果
-     */
-    use_fresnel: boolean; // PBool
     /**
      * 最大技能资源
      *
@@ -469,17 +477,17 @@ export interface UnitData {
      */
     pene_phy_ratio_grow: number; // PFloat
     /**
-     * 是否应用玩家颜色光圈
+     * 启用菲涅尔效果
      */
-    is_apply_role_color: boolean; // PBool
+    use_fresnel: boolean; // PBool
     /**
      * 寻路碰撞额外范围
      */
     path_finding_external_size: number; // PInt
     /**
-     * 碰撞格点
+     * 玩家颜色缩放
      */
-    collision_points: any; // PAst
+    role_color_scale: number; // PFloat
     /**
      * 扇形视野夜晚夹角
      *
@@ -487,9 +495,9 @@ export interface UnitData {
      */
     vision_sector_angle_night: number; // PFloat
     /**
-     * 玩家颜色缩放
+     * 碰撞格点
      */
-    role_color_scale: number; // PFloat
+    collision_points: any; // PAst
     /**
      * 单位状态列表
      */
@@ -506,6 +514,8 @@ export interface UnitData {
     use_virtual_light: boolean; // PBool
     /**
      * 攻击范围
+     *
+     * 普通攻击的攻击范围
      */
     attack_range_grow: number; // PFloat
     /**
@@ -521,13 +531,13 @@ export interface UnitData {
      */
     hp_max: number; // PFloat
     /**
+     * 是否应用玩家颜色光圈
+     */
+    is_apply_role_color: boolean; // PBool
+    /**
      * 单位初始状态
      */
     state_init: any; // PEnum
-    /**
-     * 声音事件列表
-     */
-    sound_event_list: any[]; // PSoundList
     /**
      * 法术穿透(%)
      *
@@ -543,6 +553,12 @@ export interface UnitData {
      */
     shop_camp_args: any; // PAst
     /**
+     * 声音事件列表
+     *
+     * 可以设置触发指定事件时播放的声音
+     */
+    sound_event_list: any[]; // PSoundList
+    /**
      * 玩家自定义
      */
     kv: any; // PAst
@@ -550,12 +566,6 @@ export interface UnitData {
      * 救援类型
      */
     rescuer_type: any; // PEnum
-    /**
-     * 法术吸血(%)
-     *
-     * 造成法术伤害后可以恢复自身生命值
-     */
-    vampire_mag: number; // PFloat
     /**
      * nil
      */
@@ -569,15 +579,16 @@ export interface UnitData {
      */
     anim_state_name: string; // PText
     /**
+     * nil
+     */
+    height_offset: number; // PFloat
+    /**
      * 建造时忽略动态碰撞
+     *
+     * 使用建造技能建造该单位时，是否忽略其他单位的动态碰撞。
+若需要建造在其他单位脚下（如陷阱类），可勾选该开关。
      */
     build_ignore_dyn_collision: boolean; // PBool
-    /**
-     * 资源消耗
-     *
-     * 单位作为建筑时建造会消耗的资源
-     */
-    build_res_cost_list: any[]; // PList
     /**
      * 扇形视野白天夹角
      *
@@ -603,9 +614,11 @@ export interface UnitData {
      */
     vision_true: number; // PFloat
     /**
-     * 是否敌友方显示不同头像
+     * 资源消耗
+     *
+     * 单位作为建筑时建造会消耗的资源
      */
-    separate_enemy_icon: boolean; // PBool
+    build_res_cost_list: any[]; // PList
     /**
      * 物理吸血(%)
      *
@@ -613,11 +626,9 @@ export interface UnitData {
      */
     vampire_phy_grow: number; // PFloat
     /**
-     * 应用科技
-     *
-     * 单位的可应用科技（会受到该科技的影响）
+     * 是否敌友方显示不同头像
      */
-    affect_techs: any[]; // PExplorerList
+    separate_enemy_icon: boolean; // PBool
     /**
      * 真实视野
      *
@@ -631,9 +642,11 @@ export interface UnitData {
      */
     hp_rec_percent: number; // PFloat
     /**
-     * 出售阵营类型
+     * 应用科技
+     *
+     * 单位的可应用科技（会受到该科技的影响）
      */
-    shop_sell_type: any; // PEnum
+    affect_techs: any[]; // PExplorerList
     /**
      * 物理穿透
      *
@@ -647,9 +660,9 @@ export interface UnitData {
      */
     hit_rate_grow: number; // PFloat
     /**
-     * 商店
+     * 出售阵营类型
      */
-    shop_edit: any; // PButton
+    shop_sell_type: any; // PEnum
     /**
      * 头顶名称字体
      *
@@ -663,11 +676,11 @@ export interface UnitData {
      */
     move_limitation: any; // PCheckBoxBit
     /**
-     * 是否做为商店
+     * 商店
      *
-     * 开启后单位可以作为商店编辑出售的物品
+     * 可以编辑商店能出售哪些单位与物品，以及允许的出售对象和出售范围
      */
-    is_shop: boolean; // PBool
+    shop_edit: any; // PButton
     /**
      * 悬浮信息显示内容
      */
@@ -685,6 +698,12 @@ export interface UnitData {
      */
     has_mp: boolean; // PBool
     /**
+     * 是否做为商店
+     *
+     * 开启后单位可以作为商店编辑出售的物品
+     */
+    is_shop: boolean; // PBool
+    /**
      * 购买所需资源
      *
      * 单位作为商品的购买所需资源
@@ -692,14 +711,10 @@ export interface UnitData {
     buy_res_list: any[]; // PResList
     /**
      * 攻击范围
+     *
+     * 单位可以攻击攻击范围内的可见单位，当普攻技能替换为自定义类型时，会使用技能的释放范围
      */
     attack_range: number; // PFloat
-    /**
-     * 库存恢复间隔
-     *
-     * 单位作为商品的库存恢复间隔
-     */
-    refresh_interval: number; // PFloat
     /**
      * 夜晚视野
      *
@@ -713,9 +728,11 @@ export interface UnitData {
      */
     bar_slot_size: number; // PInt
     /**
-     * 编辑简易普攻
+     * 库存恢复间隔
+     *
+     * 单位作为商品的库存恢复间隔
      */
-    jump_to_display: any; // PButton
+    refresh_interval: number; // PFloat
     /**
      * 通用技能
      *
@@ -723,17 +740,17 @@ export interface UnitData {
      */
     common_ability_list: any[]; // PExplorerList
     /**
+     * 编辑简易普攻
+     *
+     * 前往表现页编辑详细的简易普攻效果
+     */
+    jump_to_display: any; // PButton
+    /**
      * 普通攻击
      *
      * 单位的普通攻击，唯一，单位对目标普通攻击时释放的技能
      */
     common_atk: any; // PSingleSelectExplorer
-    /**
-     * 允许移动的角度差
-     *
-     * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
-     */
-    angle_tolerance: number; // PFloat
     /**
      * 编辑器后缀
      *
@@ -747,17 +764,17 @@ export interface UnitData {
      */
     collision_box_turning_enable: boolean; // PBool
     /**
+     * 允许移动的角度差
+     *
+     * 当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。
+     */
+    angle_tolerance: number; // PFloat
+    /**
      * 移动类型
      *
      * 单位的移动类型，决定单位究竟是在地面移动还是在空中移动。
      */
     move_channel: any; // PEnum
-    /**
-     * 掉落物品
-     *
-     * 单位死亡后会掉落的物品
-     */
-    drop_items_tuple: any[]; // PExplorerList
     /**
      * 是否显示血条刻度
      *
@@ -775,17 +792,17 @@ export interface UnitData {
      */
     rescue_seeker_type: any; // PEnum
     /**
+     * 掉落物品
+     *
+     * 单位死亡后会掉落的物品
+     */
+    drop_items_tuple: any[]; // PExplorerList
+    /**
      * 取消警戒范围(AI)
      *
      * 单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方
      */
     cancel_alarm_range: number; // PFloat
-    /**
-     * 背包栏
-     *
-     * 单位的背包栏格数
-     */
-    pkg_slot_size: number; // PInt
     /**
      * 法术防御力
      *
@@ -797,13 +814,22 @@ export interface UnitData {
      */
     uid: string; // PText
     /**
+     * 背包栏
+     *
+     * 单位的背包栏格数
+     */
+    pkg_slot_size: number; // PInt
+    /**
+     * 开启物品背包栏
+     *
+     * 关闭后，单位将不会激活物品栏和背包栏。
+（对不需要背包的单位，关闭此属性可有助于提升地图性能）
+     */
+    enable_item_slots: boolean; // PBool
+    /**
      * 防御塔仇恨持续时间
      */
     tower_hatred_duration: number; // PFloat
-    /**
-     * 开启物品背包栏
-     */
-    enable_item_slots: boolean; // PBool
     /**
      * 所有伤害加成(%)
      *
@@ -819,13 +845,9 @@ export interface UnitData {
     /**
      * 经验
      *
-     * 单位被敌方击杀后，敌方可获得的经验
+     * 该单位被击杀后提供的经验奖励
      */
     reward_exp: number; // PInt
-    /**
-     * 预览血量
-     */
-    preview_billboard_health_value: number; // PFloat
     /**
      * 最大平衡角度
      */
@@ -864,12 +886,12 @@ export interface UnitData {
     precondition_list: any[]; // PreconditionList
     /**
      * 白天视野
-     *
-     * 单位在白天可以看到（驱散战争迷雾）的范围
      */
     vision_rng_grow: number; // PFloat
     /**
      * 攻击间隔
+     *
+     * 单位两次普通攻击之前间隔的秒数，当普攻技能替换为自定义类型时，会使用技能的冷却时间
      */
     attack_interval: number; // PFloat
     /**
@@ -892,8 +914,6 @@ export interface UnitData {
     vision_sector_night_grow: number; // PFloat
     /**
      * 夜晚视野
-     *
-     * 单位在夜晚可以看到（驱散战争迷雾）的范围
      */
     vision_night_grow: number; // PFloat
     /**
@@ -1063,7 +1083,7 @@ export interface UnitData {
     /**
      * 被治疗效果加成(%)
      *
-     * 提高接受治疗时受到的治疗效果
+     * 当单位受到治疗效果时，提升治疗量
      */
     healing_effect: number; // PFloat
     /**

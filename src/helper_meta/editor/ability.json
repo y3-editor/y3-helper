@@ -2,6 +2,7 @@
     "ability_break_cast_range": {
         "desc": "施法打断范围",
         "key": "ability_break_cast_range",
+        "tips": "当技能施法开始或施法出手阶段结束时，如果与施法目标的距离超过该值，会打断技能释放。",
         "type": "PAbilityFormula"
     },
     "ability_build_subtype": {
@@ -12,71 +13,90 @@
     "ability_bw_point": {
         "desc": "施法完成",
         "key": "ability_bw_point",
+        "tips": "施法完成时长（也可以叫做技能后摇）",
         "type": "PFloat"
     },
     "ability_cast_point": {
         "desc": "施法开始",
         "key": "ability_cast_point",
+        "tips": "施法开始时长（也可以叫做技能前摇）",
         "type": "PFloat"
     },
     "ability_cast_range": {
         "desc": "释放范围",
         "key": "ability_cast_range",
+        "tips": "以角色为圆心，以该值为半径的圆形区域。是角色不需要移动即可释放技能的最远距离。",
         "type": "PAbilityFormula"
     },
     "ability_cast_type": {
         "desc": "技能释放类型",
         "key": "ability_cast_type",
+        "tips": "技能的释放类型。",
         "type": "PEnum"
     },
     "ability_channel_time": {
         "desc": "施法出手",
         "key": "ability_channel_time",
+        "tips": "施法出手时长",
         "type": "PFloat"
     },
     "ability_cost": {
         "desc": "技能消耗",
         "key": "ability_cost",
+        "tips": "释放技能消耗的MP(会根据单位自身的技能资源进行变化)数值",
         "type": "PAbilityFormula"
     },
     "ability_damage": {
         "desc": "技能伤害值",
         "key": "ability_damage",
+        "tips": "技能造成的伤害，可使用公式编辑，需在触发内引用才可生效",
         "type": "PAbilityFormula"
     },
     "ability_damage_range": {
         "desc": "技能影响范围",
         "key": "ability_damage_range",
+        "tips": "当前技能的影响范围，",
         "type": "PAbilityFormula"
     },
     "ability_hp_cost": {
         "desc": "生命值消耗",
         "key": "ability_hp_cost",
+        "tips": "使用该技能时会消耗的生命值",
         "type": "PAbilityFormula"
     },
     "ability_icon": {
         "desc": "图标",
         "key": "ability_icon",
+        "tips": "技能的图标，会在编辑器和游戏的ui上显示",
         "type": "PResource"
+    },
+    "ability_joystick_check_range": {
+        "desc": "摇杆指示器索敌范围",
+        "key": "ability_joystick_check_range",
+        "type": "PFloat"
     },
     "ability_max_level": {
         "desc": "技能最大等级",
         "key": "ability_max_level",
+        "tips": "技能的等级上限",
         "type": "PInt"
     },
     "ability_max_stack_count": {
         "desc": "最大充能数",
         "key": "ability_max_stack_count",
+        "tips": "技能的最大充能数，必须满足充能数大于0且不在冷却状态才能施放该技能",
         "type": "PAbilityFormula"
     },
     "ability_prepare_time": {
         "desc": "施法引导",
         "key": "ability_prepare_time",
+        "tips": "施法引导时长",
         "type": "PFloat"
     },
     "ability_stack_cd": {
         "desc": "充能时间",
         "key": "ability_stack_cd",
+        "tips": "每增加一层充能数所需的时间（单位为秒）",
         "type": "PAbilityFormula"
     },
     "ability_stage_config": {
@@ -92,11 +112,13 @@
     "arrow_length": {
         "desc": "长度",
         "key": "arrow_length",
+        "tips": "箭头指示器的长度",
         "type": "PAbilityFormula"
     },
     "arrow_width": {
         "desc": "宽度",
         "key": "arrow_width",
+        "tips": "箭头指示器的宽度",
         "type": "PAbilityFormula"
     },
     "art_resource_btn": {
@@ -107,11 +129,13 @@
     "auto_pick": {
         "desc": "自动拾取",
         "key": "auto_pick",
+        "tips": "当采集到的资源是物品时，是否自动将物品拾取。如果不自动拾取则物品会创建在地面。",
         "type": "PBool"
     },
     "bs_sfx_list": {
         "desc": "后摇特效",
         "key": "bs_sfx_list",
+        "tips": "技能执行到该阶段时，在自身处显示的特效，技能被打断后会立即停止该特效",
         "type": "PList"
     },
     "bs_sound_effect": {
@@ -122,6 +146,7 @@
     "build_list": {
         "desc": "建造单位",
         "key": "build_list",
+        "tips": "建造技能建造的单位类型",
         "type": "PExplorerList"
     },
     "build_rotate": {
@@ -132,206 +157,257 @@
     "building_attack_range_sfx": {
         "desc": "攻击范围预览特效",
         "key": "building_attack_range_sfx",
+        "tips": "攻击范围预览的特效，大小参考ID为101492的特效资源",
         "type": "PResource"
     },
     "camp_priority_enemy": {
         "desc": "敌人",
         "key": "camp_priority_enemy",
+        "tips": "阵营值越小，优先级越高，如果阵营值相同，则距离近优先。",
         "type": "PInt"
     },
     "camp_priority_friend": {
         "desc": "队友",
         "key": "camp_priority_friend",
+        "tips": "阵营值越小，优先级越高，如果阵营值相同，则距离近优先。",
         "type": "PInt"
     },
     "camp_priority_neutral": {
         "desc": "中立",
         "key": "camp_priority_neutral",
+        "tips": "阵营值越小，优先级越高，如果阵营值相同，则距离近优先。",
         "type": "PInt"
     },
     "camp_priority_self": {
         "desc": "己方",
         "key": "camp_priority_self",
+        "tips": "阵营值越小，优先级越高，如果阵营值相同，则距离近优先。",
         "type": "PInt"
     },
     "can_autocast_when_attack_target": {
         "desc": "攻击命令触发自动施法",
         "key": "can_autocast_when_attack_target",
+        "tips": "勾选后攻击命令能触发自动施法。",
         "type": "PBool"
     },
     "can_bs_interrupt": {
         "desc": "施法完成可以被打断",
         "key": "can_bs_interrupt",
+        "tips": "技能施法完成阶段能否被其他技能或者移动打断",
         "type": "PBool"
     },
     "can_cache": {
         "desc": "可以缓存",
         "key": "can_cache",
+        "tips": "开启时，被控制时，控制结束 依旧可以继续释放（例如被禁止施法时发布施放命令，禁止施法解除后就会自动施放出来）",
         "type": "PBool"
     },
     "can_cast_interrupt": {
         "desc": "施法出手可以被打断",
         "key": "can_cast_interrupt",
+        "tips": "技能施法出手阶段能否被其他技能或者移动打断",
         "type": "PBool"
     },
     "can_cast_when_hp_insufficient": {
         "desc": "生命不足能否施放",
         "key": "can_cast_when_hp_insufficient",
+        "tips": "如果单位当前生命值不满足消耗时，能否施放技能",
         "type": "PBool"
     },
     "can_cost_hp": {
         "desc": "消耗生命值施放",
         "key": "can_cost_hp",
+        "tips": "开启后可以配置消耗生命值相关的技能参数。如无需要请勿开启该配置，会增加系统消耗。",
         "type": "PBool"
     },
     "can_interrupt_others": {
         "desc": "技能可以打断其他技能",
         "key": "can_interrupt_others",
+        "tips": "释放该技能时候会尝试打断当前正在释放的技能",
         "type": "PBool"
     },
     "can_prepare_interrupt": {
         "desc": "施法引导可以被打断",
         "key": "can_prepare_interrupt",
+        "tips": "技能施法引导阶段能否被其他技能或者移动打断",
         "type": "PBool"
     },
     "can_ps_interrupt": {
         "desc": "施法开始可以被打断",
         "key": "can_ps_interrupt",
+        "tips": "技能施法开始阶段能否被其他技能或者移动打断",
         "type": "PBool"
     },
     "circle_radius": {
         "desc": "圆形半径",
         "key": "circle_radius",
+        "tips": "圆形指示器的半径",
         "type": "PAbilityFormula"
     },
     "cold_down_time": {
         "desc": "冷却时间",
         "key": "cold_down_time",
+        "tips": "技能的冷却时间，释放一次技能后需要等待该时间才可继续释放（单位为秒）",
         "type": "PAbilityFormula"
     },
     "collection_animation": {
         "desc": "采集动画",
         "key": "collection_animation",
+        "tips": "使用采集技能时会播放的动画。会在技能施法开始时播放，施法停止时停止。",
         "type": "PText"
     },
     "collection_animation_loop": {
         "desc": "循环播放动画",
         "key": "collection_animation_loop",
+        "tips": "采集技能时播放的采集动画是否会循环播放。",
         "type": "PBool"
     },
     "collection_continuously": {
         "desc": "连续施法",
         "key": "collection_continuously",
+        "tips": "是否在采集完成后继续采集（仅在技能冷却时间为0时生效）",
         "type": "PBool"
     },
     "collection_destructible_tags": {
         "desc": "可破坏物标签要求",
         "key": "collection_destructible_tags",
+        "tips": "技能索敌时只会搜索带有指定标签的可破坏物",
         "type": "PTags"
     },
     "cost_hp_can_die": {
         "desc": "消耗生命是否致死",
         "key": "cost_hp_can_die",
+        "tips": "如果单位当前生命值不满足消耗时施放技能，则该项为true时单位会死亡，为false时会保留1点生命值",
         "type": "PBool"
     },
     "cst_sfx_list": {
         "desc": "施法特效",
         "key": "cst_sfx_list",
+        "tips": "技能执行到该阶段时，在自身处显示的特效，技能被打断后会立即停止该特效",
         "type": "PList"
     },
     "cst_sound_effect": {
         "desc": "施法音效",
         "key": "cst_sound_effect",
+        "tips": "技能执行到该阶段时，在自身处播放的音效内容，技能被打断后会立即停止该音效",
         "type": "PList"
+    },
+    "customized_pointer_sfx": {
+        "desc": "自定义特效选择",
+        "key": "customized_pointer_sfx",
+        "type": "PResource"
     },
     "description": {
         "desc": "描述",
         "key": "description",
+        "tips": "技能的介绍说明，用在编辑器内和游戏内的Tips显示上",
         "type": "PLocalizeText"
+    },
+    "enable_customized_pointer_sfx": {
+        "desc": "自定义指示器特效",
+        "key": "enable_customized_pointer_sfx",
+        "type": "PBool"
     },
     "end_sfx_list": {
         "desc": "结束特效",
         "key": "end_sfx_list",
+        "tips": "技能执行到该阶段时，在自身处显示的特效，技能被打断后会立即停止该特效",
         "type": "PList"
     },
     "end_sound_effect": {
         "desc": "结束音效",
         "key": "end_sound_effect",
+        "tips": "技能执行到该阶段时，在自身处播放的音效内容，技能被打断后会立即停止该音效",
         "type": "PList"
     },
     "filter_condition_camp": {
         "desc": "阵营",
         "key": "filter_condition_camp",
+        "tips": "按阵营选取目标。",
         "type": "PCheckBoxBit"
     },
     "filter_condition_move_channel_type": {
         "desc": "单位移动类型",
         "key": "filter_condition_move_channel_type",
+        "tips": "技能索敌时只会搜索指定移动类型的单位",
         "type": "PEnum"
     },
     "filter_condition_type": {
         "desc": "类型",
         "key": "filter_condition_type",
+        "tips": "按种类选取目标。",
         "type": "PCheckBoxBit"
     },
     "filter_item_tags": {
         "desc": "物品标签要求",
         "key": "filter_item_tags",
+        "tips": "技能索敌时只会搜索带有指定标签的物品",
         "type": "PTags"
     },
     "filter_unit_tags": {
         "desc": "单位标签要求",
         "key": "filter_unit_tags",
+        "tips": "技能索敌时只会搜索带有指定标签的单位",
         "type": "PTags"
     },
     "forbid_unit_tags": {
         "desc": "单位排除标签",
         "key": "forbid_unit_tags",
+        "tips": "技能索敌时不会搜索带有指定标签的单位",
         "type": "PTags"
     },
     "hit_sfx_list": {
         "desc": "受击特效",
         "key": "hit_sfx_list",
+        "tips": "技能命中时，在命中目标处显示的特效",
         "type": "PList"
     },
     "hit_sound_effect": {
         "desc": "击中音效",
         "key": "hit_sound_effect",
+        "tips": "技能命中时，会在命中者处播放的音效内容",
         "type": "PList"
     },
     "influenced_by_cd_reduce": {
         "desc": "技能受冷却影响",
         "key": "influenced_by_cd_reduce",
+        "tips": "技能受到单位属性中的冷却缩短的影响",
         "type": "PBool"
     },
     "influenced_by_move": {
         "desc": "移动会对技能产生影响",
         "key": "influenced_by_move",
+        "tips": "勾选后移动会尝试打断当前技能，不勾选则可以实现移动施法",
         "type": "PBool"
     },
     "is_autocast": {
         "desc": "自动施法",
         "key": "is_autocast",
+        "tips": "优先按照阵营选取目标，其次按类别，如果都相同，则距离近优先。",
         "type": "PBool"
     },
     "is_charge_ability": {
         "desc": "是否为蓄力技能",
         "key": "is_charge_ability",
+        "tips": "蓄力技能专属，为true时，引导时间会作为蓄力技能一阶段的引导时间。【施法开始阶段需要配置为0】",
         "type": "PBool"
     },
     "is_immediate": {
         "desc": "立刻施法",
         "key": "is_immediate",
+        "tips": "释放这个技能是否需要施法过程，开启时可以在单位存活的任何时期发动该技能，即使被禁止施法也可以正常释放。",
         "type": "PEnum"
     },
     "is_meele": {
         "desc": "近战",
         "key": "is_meele",
+        "tips": "开启时，标记这个技能造成的伤害为近战伤害",
         "type": "PBool"
     },
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "技能的ID",
         "type": "PInt"
     },
     "kv": {
@@ -342,137 +418,213 @@
     "magicbook_list": {
         "desc": "魔法书技能",
         "key": "magicbook_list",
+        "tips": "魔法书中存放的技能list",
         "type": "PList"
     },
     "name": {
         "desc": "名称",
         "key": "name",
+        "tips": "当前技能的名称",
         "type": "PLocalizeText"
     },
     "need_turn_to_target": {
         "desc": "是否转身",
         "key": "need_turn_to_target",
+        "tips": "开启时，技能释放后单位会自动转到技能释放的方向（转身速度为单位的转身速度）",
         "type": "PBool"
     },
     "pick_count": {
         "desc": "采集获得量",
         "key": "pick_count",
+        "tips": "每次使用采集技能时获取到的资源数量。如果采集的是玩家属性，则获得对应的玩家属性值，如果采集的是物品，则获得对应数量的物品。",
         "type": "PInt"
     },
     "player_props_cost": {
         "desc": "玩家属性消耗",
         "key": "player_props_cost",
+        "tips": "施放技能消耗的玩家属性，技能拥有者的玩家该属性不足时无法施放技能",
         "type": "PResList"
+    },
+    "pointer_can_block": {
+        "desc": "指示器可被阻挡",
+        "key": "pointer_can_block",
+        "type": "PBool"
+    },
+    "pointer_channel": {
+        "desc": "指示器类型",
+        "key": "pointer_channel",
+        "type": "PEnum"
+    },
+    "pointer_limitation": {
+        "desc": "被阻挡类型",
+        "key": "pointer_limitation",
+        "type": "PCheckBoxBit"
     },
     "precondition_list": {
         "desc": "前置条件",
         "key": "precondition_list",
-        "tips": "训练、购买、建造该单位的前置条件",
+        "tips": "释放技能的前置条件",
         "type": "PreconditionList"
     },
     "ps_sfx_list": {
         "desc": "前摇特效",
         "key": "ps_sfx_list",
+        "tips": "技能执行到该阶段时，在自身处显示的特效，技能被打断后会立即停止该特效",
         "type": "PList"
     },
     "ps_sound_effect": {
         "desc": "前摇音效",
         "key": "ps_sound_effect",
+        "tips": "技能执行到该阶段时，在自身处播放的音效内容，技能被打断后会立即停止该音效",
         "type": "PList"
     },
     "release_immediately_out_of_range": {
         "desc": "可以超出范围施法",
         "key": "release_immediately_out_of_range",
+        "tips": "如果技能目标点超出施法范围，会在施法范围内离目标最近的点施放",
         "type": "PBool"
     },
     "required_level": {
         "desc": "允许学习等级",
         "key": "required_level",
+        "tips": "单位学习该技能所需要的等级",
         "type": "PRequiredLevel"
     },
     "sector_angle": {
         "desc": "角度",
         "key": "sector_angle",
+        "tips": "扇形指示器的角度",
         "type": "PAbilityFormula"
     },
     "sector_radius": {
         "desc": "扇形半径",
         "key": "sector_radius",
+        "tips": "扇形指示器的边长",
         "type": "PAbilityFormula"
     },
     "show_building_attack_range": {
         "desc": "攻击范围预览",
         "key": "show_building_attack_range",
+        "tips": "开启后，建造时的模型会附带攻击范围预览",
         "type": "PBool"
     },
     "sight_type": {
         "desc": "指示器类型",
         "key": "sight_type",
+        "tips": "释放技能时的鼠标指示器的样式",
         "type": "PEnum"
     },
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
         "type": "PSoundList"
     },
     "sp_count_down": {
         "desc": "显示准备倒计时",
         "key": "sp_count_down",
+        "tips": "开启时，会根据技能的施法时间显示相应的进度条",
         "type": "PBool"
     },
     "sp_sfx_list": {
         "desc": "准备特效",
         "key": "sp_sfx_list",
+        "tips": "技能执行到该阶段时，在自身处显示的特效，技能被打断后会立即停止该特效",
         "type": "PList"
     },
     "sp_sound_effect": {
         "desc": "准备音效",
         "key": "sp_sound_effect",
+        "tips": "技能执行到该阶段时，在自身处播放的音效内容，技能被打断后会立即停止该音效",
         "type": "PList"
     },
     "suffix": {
         "desc": "编辑器后缀",
         "key": "suffix",
+        "tips": "只在编辑器中使用，用于区分相同名字的物品。并不会影响到游戏内的显示内容",
         "type": "PText"
     },
     "tags": {
         "desc": "标签",
         "key": "tags",
+        "tips": "用于对技能的分类处理。为技能贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：所有拥有XX标签的技能等级+1",
         "type": "PList"
+    },
+    "target_arrow_length": {
+        "desc": "目标长度",
+        "key": "target_arrow_length",
+        "type": "PAbilityFormula"
+    },
+    "target_arrow_width": {
+        "desc": "目标宽度",
+        "key": "target_arrow_width",
+        "type": "PAbilityFormula"
     },
     "target_attribute": {
         "desc": "特殊筛选",
         "key": "target_attribute",
+        "tips": "配置技能索敌时的特殊筛选规则（如排除自己、允许无敌等）",
         "type": "PCheckBoxBit"
+    },
+    "target_circle_radius": {
+        "desc": "目标圆形半径",
+        "key": "target_circle_radius",
+        "type": "PAbilityFormula"
+    },
+    "target_sector_angle": {
+        "desc": "目标角度",
+        "key": "target_sector_angle",
+        "type": "PAbilityFormula"
+    },
+    "target_sector_radius": {
+        "desc": "目标扇形半径",
+        "key": "target_sector_radius",
+        "type": "PAbilityFormula"
+    },
+    "transition_duration": {
+        "desc": "过渡时间",
+        "key": "transition_duration",
+        "type": "PFloat"
+    },
+    "transition_start_time": {
+        "desc": "过渡起始时间",
+        "key": "transition_start_time",
+        "type": "PFloat"
     },
     "type_priority_building": {
         "desc": "建筑",
         "key": "type_priority_building",
+        "tips": "类别值越小，优先级越高，如果类别值相同，则距离近优先。",
         "type": "PInt"
     },
     "type_priority_creature": {
         "desc": "生物",
         "key": "type_priority_creature",
+        "tips": "类别值越小，优先级越高，如果类别值相同，则距离近优先。",
         "type": "PInt"
     },
     "type_priority_destructible": {
         "desc": "可破坏物",
         "key": "type_priority_destructible",
+        "tips": "类别值越小，优先级越高，如果类别值相同，则距离近优先。",
         "type": "PInt"
     },
     "type_priority_hero": {
         "desc": "英雄",
         "key": "type_priority_hero",
+        "tips": "类别值越小，优先级越高，如果类别值相同，则距离近优先。",
         "type": "PInt"
     },
     "type_priority_item": {
         "desc": "物品",
         "key": "type_priority_item",
+        "tips": "类别值越小，优先级越高，如果类别值相同，则距离近优先。",
         "type": "PInt"
     },
     "uid": {
         "desc": "UID",
         "key": "uid",
+        "tips": "技能的唯一id",
         "type": "PText"
     }
 }

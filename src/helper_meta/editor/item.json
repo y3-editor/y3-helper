@@ -8,6 +8,7 @@
     "attached_passive_abilities": {
         "desc": "被动技能",
         "key": "attached_passive_abilities",
+        "tips": "携带该物品时会获得的被动技能",
         "type": "PExplorerList"
     },
     "auto_use": {
@@ -44,6 +45,12 @@
         "tips": "该物品所在的CD组，物品使用时会使单位持有的相同CD组内所有物品进入使用物品的主动技能冷却",
         "type": "PText"
     },
+    "click_name_pick_up": {
+        "desc": "点击名称面板拾取",
+        "key": "click_name_pick_up",
+        "tips": "开启后，该物品的名字面板可以响应点击，点击后触发拾取道具逻辑。",
+        "type": "PBool"
+    },
     "compose_list": {
         "desc": "合成素材",
         "key": "compose_list",
@@ -53,16 +60,19 @@
     "cur_charge": {
         "desc": "默认充能数",
         "key": "cur_charge",
+        "tips": "物品创建后的初始充能层数",
         "type": "PInt"
     },
     "cur_stack": {
         "desc": "默认堆叠数",
         "key": "cur_stack",
+        "tips": "物品创建后的初始堆叠层数",
         "type": "PInt"
     },
     "delete_on_discard": {
         "desc": "未拾取时间到期消失",
         "key": "delete_on_discard",
+        "tips": "物品在地面上是否会自动销毁",
         "type": "PBool"
     },
     "description": {
@@ -74,6 +84,7 @@
     "disable_overlapping": {
         "desc": "开启碰撞",
         "key": "disable_overlapping",
+        "tips": "开启后物品与物品之间会发生碰撞，可以防止物品堆叠在一起。碰撞范围设置在游戏规则-通用-物品碰撞范围中。",
         "type": "PBool"
     },
     "discard_enable": {
@@ -135,6 +146,7 @@
     "item_billboard_type": {
         "desc": "名称显示方式",
         "key": "item_billboard_type",
+        "tips": "鼠标悬浮到物品上时显示的名称样式",
         "type": "PEnum"
     },
     "key": {
@@ -208,17 +220,54 @@
         "key": "name",
         "type": "PLocalizeText"
     },
+    "name_margin": {
+        "desc": "名称面板外边距",
+        "key": "name_margin",
+        "tips": "以名称面板中所有图片计算最大范围，并向外扩展指定的数值",
+        "type": "PFourDirMargin"
+    },
+    "name_not_occlusion": {
+        "desc": "名称面板不遮挡",
+        "key": "name_not_occlusion",
+        "tips": "开启后，该物品的名称面板将不会与其他开启了该属性的物品的名称面板重叠。",
+        "type": "PBool"
+    },
+    "name_offset_based_on_root": {
+        "key": "name_offset_based_on_root",
+        "type": "PAst"
+    },
+    "offset": {
+        "desc": "偏移",
+        "key": "offset",
+        "type": "PAst"
+    },
     "precondition_list": {
         "desc": "前置条件",
         "key": "precondition_list",
-        "tips": "训练、购买、建造该单位的前置条件",
+        "tips": "只有满足对应条件之后物品才会在商店中可购买。",
         "type": "PreconditionList"
+    },
+    "preview_name_click_range": {
+        "desc": "预览面板判定区域",
+        "key": "preview_name_click_range",
+        "tips": "勾选后可预览面板在进行点击判定和堆叠时的区域大小",
+        "type": "PBool"
+    },
+    "preview_name_stack": {
+        "desc": "预览堆叠效果",
+        "key": "preview_name_stack",
+        "tips": "勾选后可预览面板在进行平铺堆叠时效果",
+        "type": "PBool"
     },
     "refresh_interval": {
         "desc": "库存恢复间隔",
         "key": "refresh_interval",
         "tips": "当前物品作为商品时，商店库存增加的间隔时间",
         "type": "PFloat"
+    },
+    "rotation": {
+        "key": "rotation",
+        "type": "PAst"
     },
     "sale_enable": {
         "desc": "可以被抵押",
@@ -235,6 +284,7 @@
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
         "type": "PSoundList"
     },
     "stack_type": {

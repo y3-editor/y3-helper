@@ -17,6 +17,7 @@
     "cast_shadow": {
         "desc": "是否产生阴影",
         "key": "cast_shadow",
+        "tips": "勾选后该装饰物将会计算光照效果形成阴影",
         "type": "PBool"
     },
     "collision_box": {
@@ -81,6 +82,7 @@
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "装饰物的ID",
         "type": "PInt"
     },
     "kv": {
@@ -126,6 +128,7 @@
     "receive_decal": {
         "desc": "接收贴花",
         "key": "receive_decal",
+        "tips": "是否允许贴花特效显示在该装饰物上方",
         "type": "PBool"
     },
     "scale": {
@@ -141,6 +144,7 @@
     "uid": {
         "desc": "UID",
         "key": "uid",
+        "tips": "装饰物的UID",
         "type": "PText"
     },
     "use_base_tint_color": {
@@ -156,6 +160,7 @@
     "use_physics": {
         "desc": "可通行",
         "key": "use_physics",
+        "tips": "勾选后该装饰物如果可通行，将允许单位踩在装饰物上。",
         "type": "PBool"
     },
     "use_virtual_light": {

@@ -43,11 +43,13 @@
     "attack_interval": {
         "desc": "攻击间隔",
         "key": "attack_interval",
+        "tips": "单位两次普通攻击之前间隔的秒数，当普攻技能替换为自定义类型时，会使用技能的冷却时间",
         "type": "PFloat"
     },
     "attack_interval_grow": {
         "desc": "攻击间隔",
         "key": "attack_interval_grow",
+        "tips": "两次普通攻击之间的间隔时间",
         "type": "PFloat"
     },
     "attack_mag": {
@@ -77,11 +79,13 @@
     "attack_range": {
         "desc": "攻击范围",
         "key": "attack_range",
+        "tips": "单位可以攻击攻击范围内的可见单位，当普攻技能替换为自定义类型时，会使用技能的释放范围",
         "type": "PFloat"
     },
     "attack_range_grow": {
         "desc": "攻击范围",
         "key": "attack_range_grow",
+        "tips": "普通攻击的攻击范围",
         "type": "PFloat"
     },
     "attack_speed": {
@@ -130,16 +134,15 @@
         "key": "base_tint_color",
         "type": "PAst"
     },
-    "billboard_height_offset": {
-        "desc": "单位血条高度偏移",
-        "key": "billboard_height_offset",
-        "type": "PFloat"
-    },
     "billboard_name_font": {
         "desc": "头顶名称字体",
         "key": "billboard_name_font",
         "tips": "在单位头顶显示的文字字体",
         "type": "PEnum"
+    },
+    "billboard_offset": {
+        "key": "billboard_offset",
+        "type": "PVector3"
     },
     "billboard_scale_x": {
         "desc": "x轴缩放",
@@ -172,6 +175,7 @@
     "build_ignore_dyn_collision": {
         "desc": "建造时忽略动态碰撞",
         "key": "build_ignore_dyn_collision",
+        "tips": "使用建造技能建造该单位时，是否忽略其他单位的动态碰撞。\n若需要建造在其他单位脚下（如陷阱类），可勾选该开关。",
         "type": "PBool"
     },
     "build_res_cost_list": {
@@ -276,6 +280,7 @@
     "common_atk_type": {
         "desc": "普攻类型",
         "key": "common_atk_type",
+        "tips": "单位普通攻击的类型，选择自定义需要绑定技能",
         "type": "PEnum"
     },
     "counterattack_range": {
@@ -399,6 +404,7 @@
     "enable_item_slots": {
         "desc": "开启物品背包栏",
         "key": "enable_item_slots",
+        "tips": "关闭后，单位将不会激活物品栏和背包栏。\n（对不需要背包的单位，关闭此属性可有助于提升地图性能）",
         "type": "PBool"
     },
     "enable_strict_facing_mode": {
@@ -465,13 +471,12 @@
     "healing_effect": {
         "desc": "被治疗效果加成(%)",
         "key": "healing_effect",
-        "tips": "提高接受治疗时受到的治疗效果",
+        "tips": "当单位受到治疗效果时，提升治疗量",
         "type": "PFloat"
     },
     "healing_effect_grow": {
         "desc": "被治疗效果提升(%)",
         "key": "healing_effect_grow",
-        "tips": "提高接受治疗时受到的治疗效果",
         "type": "PFloat"
     },
     "height_offset": {
@@ -576,6 +581,7 @@
     "is_open_Xray": {
         "desc": "是否开启透视",
         "key": "is_open_Xray",
+        "tips": "勾选后如果该单位被遮挡，会看到该单位的描边",
         "type": "PBool"
     },
     "is_open_disk_shadow": {
@@ -605,6 +611,7 @@
     "jump_to_display": {
         "desc": "编辑简易普攻",
         "key": "jump_to_display",
+        "tips": "前往表现页编辑详细的简易普攻效果",
         "type": "PButton"
     },
     "keep_dead_body_time": {
@@ -846,8 +853,9 @@
         "type": "PInt"
     },
     "poolable": {
-        "desc": "开启对象池",
+        "desc": "是否开启对象池",
         "key": "poolable",
+        "tips": "开启对象池后对象不会销毁，会以休眠状态进入对象池从而优化性能，重新使用这些对象时自定义属性不会清除，需要手动初始化一遍。",
         "type": "PBool"
     },
     "precondition_list": {
@@ -901,7 +909,7 @@
     "reward_exp": {
         "desc": "经验",
         "key": "reward_exp",
-        "tips": "单位被敌方击杀后，敌方可获得的经验",
+        "tips": "该单位被击杀后提供的经验奖励",
         "type": "PInt"
     },
     "role_color_scale": {
@@ -940,6 +948,7 @@
     "shop_edit": {
         "desc": "商店",
         "key": "shop_edit",
+        "tips": "可以编辑商店能出售哪些单位与物品，以及允许的出售对象和出售范围",
         "type": "PButton"
     },
     "shop_range": {
@@ -966,6 +975,7 @@
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
         "type": "PSoundList"
     },
     "special_idle_anim": {
@@ -1102,7 +1112,6 @@
     "vision_night_grow": {
         "desc": "夜晚视野",
         "key": "vision_night_grow",
-        "tips": "单位在夜晚可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_rng": {
@@ -1114,7 +1123,6 @@
     "vision_rng_grow": {
         "desc": "白天视野",
         "key": "vision_rng_grow",
-        "tips": "单位在白天可以看到（驱散战争迷雾）的范围",
         "type": "PFloat"
     },
     "vision_sector_angle_day": {

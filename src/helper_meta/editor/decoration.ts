@@ -1,6 +1,8 @@
 export interface DecorationData {
     /**
      * UID
+     *
+     * 装饰物的UID
      */
     uid: string; // PText
     /**
@@ -33,6 +35,8 @@ export interface DecorationData {
     attach_models: any; // PAst
     /**
      * 接收贴花
+     *
+     * 是否允许贴花特效显示在该装饰物上方
      */
     receive_decal: boolean; // PBool
     /**
@@ -69,6 +73,8 @@ export interface DecorationData {
     fresnel_color: any; // PAst
     /**
      * 是否产生阴影
+     *
+     * 勾选后该装饰物将会计算光照效果形成阴影
      */
     cast_shadow: boolean; // PBool
     /**
@@ -77,6 +83,8 @@ export interface DecorationData {
     enable_camera_collision: boolean; // PBool
     /**
      * 可通行
+     *
+     * 勾选后该装饰物如果可通行，将允许单位踩在装饰物上。
      */
     use_physics: boolean; // PBool
     /**
@@ -105,6 +113,8 @@ export interface DecorationData {
     model_opacity: number; // PFloat
     /**
      * ID
+     *
+     * 装饰物的ID
      */
     key: number; // PInt
     /**

@@ -7,6 +7,7 @@
     "cycle_time": {
         "desc": "循环周期",
         "key": "cycle_time",
+        "tips": "每隔多长时间触发一次循环周期到期事件",
         "type": "PFloat"
     },
     "description": {
@@ -17,6 +18,7 @@
     "disappear_when_dead": {
         "desc": "是否死亡时消失",
         "key": "disappear_when_dead",
+        "tips": "死亡时是否销毁这个魔法效果。永久型的魔法效果不要勾选该选项。",
         "type": "PBool"
     },
     "get_effect_list": {
@@ -27,36 +29,43 @@
     "halo_effect": {
         "desc": "光环效果",
         "key": "halo_effect",
+        "tips": "光环会对附近符合条件的单位添加该光环效果",
         "type": "PSingleSelectExplorer"
     },
     "ign_inf_unit_tag": {
         "desc": "不影响单位标签",
         "key": "ign_inf_unit_tag",
+        "tips": "不会对拥有指定标签的单位施加光环效果。\n只有满足所有判断条件时，单位才会获得光环效果。",
         "type": "PList"
     },
     "ign_inf_unit_type": {
         "desc": "不影响单位类型",
         "key": "ign_inf_unit_type",
+        "tips": "不会对指定类型的单位施加光环效果。\n只有满足所有判断条件时，单位才会获得光环效果。",
         "type": "PCheckBoxBit"
     },
     "inf_unit_tag": {
         "desc": "影响单位标签",
         "key": "inf_unit_tag",
+        "tips": "会对拥有指定标签的单位施加光环效果。\n只有满足所有判断条件时，单位才会获得光环效果。",
         "type": "PList"
     },
     "influence_rng": {
         "desc": "影响范围",
         "key": "influence_rng",
+        "tips": "对多大范围内的单位添加光环效果",
         "type": "PFloat"
     },
     "is_influence_self": {
         "desc": "是否影响自己",
         "key": "is_influence_self",
+        "tips": "是否对光环的拥有者添加光环效果",
         "type": "PBool"
     },
     "key": {
         "desc": "ID",
         "key": "key",
+        "tips": "魔法效果的ID",
         "type": "PInt"
     },
     "kv": {
@@ -67,11 +76,13 @@
     "layer_change_of_cover": {
         "desc": "覆盖层数变化",
         "key": "layer_change_of_cover",
+        "tips": "不变会保留旧的魔法效果对象（事件中获取），覆盖会保留新的对象。 ",
         "type": "PEnum"
     },
     "layer_max": {
         "desc": "层数上限",
         "key": "layer_max",
+        "tips": "魔法效果的最大层数，如果最大层数为1则魔法效果在局内的属性面板中不会显示层数",
         "type": "PInt"
     },
     "lose_effect_list": {
@@ -87,6 +98,7 @@
     "material_change": {
         "desc": "材质变化",
         "key": "material_change",
+        "tips": "影响魔法效果携带者的材质",
         "type": "PEnum"
     },
     "material_color": {
@@ -102,11 +114,13 @@
     "modifier_cover_type": {
         "desc": "覆盖类型",
         "key": "modifier_cover_type",
+        "tips": "用于决定单位获得相同的魔法效果时，是否进行覆盖以及如何进行覆盖。",
         "type": "PEnum"
     },
     "modifier_effect": {
         "desc": "效果影响",
         "key": "modifier_effect",
+        "tips": "仅用于标记，用来进行效果分类，在ECA中可以对单位身上同一分类的魔法效果统一处理",
         "type": "PEnum"
     },
     "modifier_icon": {
@@ -117,6 +131,7 @@
     "modifier_type": {
         "desc": "效果类别",
         "key": "modifier_type",
+        "tips": "不同类别的魔法效果将会有",
         "type": "PEnum"
     },
     "name": {
@@ -127,31 +142,37 @@
     "same_origin_cover": {
         "desc": "同源覆盖",
         "key": "same_origin_cover",
+        "tips": "“同源”指覆盖发生时2个魔法效果的关联技能类型和来源单位相同\n\n当同源覆盖要求为是，2个不同源的魔法效果不会发生覆盖，走不覆盖规则",
         "type": "PBool"
     },
     "shield_change_of_cover": {
         "desc": "覆盖护盾变化",
         "key": "shield_change_of_cover",
+        "tips": "护盾发生覆盖时的护盾值的处理方式",
         "type": "PEnum"
     },
     "shield_type": {
         "desc": "护盾类型",
         "key": "shield_type",
+        "tips": "通用类可以抵挡物理或法术伤害，物理和法术护盾只能抵挡对应的伤害",
         "type": "PEnum"
     },
     "shield_value": {
         "desc": "护盾值",
         "key": "shield_value",
+        "tips": "护盾可以抵挡的伤害值",
         "type": "PInt"
     },
     "show_on_ui": {
         "desc": "显示图标",
         "key": "show_on_ui",
+        "tips": "勾选后会在局内单位的魔法效果栏中显示该魔法效果",
         "type": "PBool"
     },
     "sound_event_list": {
         "desc": "声音事件列表",
         "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
         "type": "PSoundList"
     },
     "suffix": {
@@ -167,16 +188,19 @@
     "target_allow": {
         "desc": "目标允许",
         "key": "target_allow",
+        "tips": "根据敌我关系决定是否对单位施加光环效果",
         "type": "PCheckBoxBit"
     },
     "time_change_of_cover": {
         "desc": "覆盖时间变化",
         "key": "time_change_of_cover",
+        "tips": "若覆盖类型为覆盖时，不变会保留旧的持续时间，覆盖会保留新的持续时间，若覆盖类型为叠加时，规则相反。",
         "type": "PEnum"
     },
     "uid": {
         "desc": "UID",
         "key": "uid",
+        "tips": "魔法效果的UID",
         "type": "PText"
     }
 }
