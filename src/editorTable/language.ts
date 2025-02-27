@@ -18,7 +18,7 @@ export class Language extends vscode.Disposable {
     }
 
     async start() {
-        let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, "zhlanguage.json"));
+        let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, "*"));
         watcher.onDidChange(() => this.reload());
         watcher.onDidCreate(() => this.reload());
         watcher.onDidDelete(() => this.reload());
