@@ -1,5 +1,6 @@
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
+import * as y3 from 'y3-helper';
 
 const template =
 `y3.const.PlayerAttr = y3.const.PlayerAttr or {}
@@ -16,14 +17,17 @@ y3.const.CustomPlayerAttr = {
 export class PlayerAttrs extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().玩家属性.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    initMap(map: y3.Map) {
+        define(map).玩家属性.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let attrs = await define().玩家属性.getAttrs();
+    async make(map: y3.Map) {
+        let attrs = await define(map).玩家属性.getAttrs();
         if (attrs.length === 0) {
             return;
         }

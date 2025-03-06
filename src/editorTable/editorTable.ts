@@ -36,15 +36,14 @@ type FieldMeta = {
 type TableMeta = { [key: string]: FieldMeta };
 
 let tableMeta: { [key: string]: TableMeta } = {};
-let customTableMeta: { [key: string]: TableMeta };
 
 export class FieldInfo {
     desc?: string;
     tips?: string;
     type?: string;
 
-    constructor(public tableName: Table.NameCN, public field: string) {
-        let meta = customTableMeta?.[tableName]?.[field]
+    constructor(editorTable: EditorTable, public tableName: Table.NameCN, public field: string) {
+        let meta = editorTable.manager.customTableMeta[tableName]?.[field]
                 ?? tableMeta[tableName]?.[field];
         if (!meta) {
             return;
@@ -56,26 +55,7 @@ export class FieldInfo {
     }
 }
 
-async function updateCustomFields() {
-    customTableMeta = {
-        ["单位"]: {},
-    };
-    let attrs = await define().单位属性.getAttrs();
-    for (let attr of attrs) {
-        customTableMeta["单位"][attr.name] = {
-            key: attr.key,
-            type: 'number',
-            desc: attr.name,
-        };
-        customTableMeta["单位"][attr.key] = {
-            key: attr.key,
-            type: 'number',
-            desc: attr.name,
-        };
-    }
-}
-
-export async function ready() {
+async function ready() {
     for (const tableName in Table.name.fromCN) {
         if (tableMeta[tableName] === undefined) {
             let nameEN = Table.name.fromCN[tableName as Table.NameCN];
@@ -88,10 +68,6 @@ export async function ready() {
             }
         }
     }
-    await updateCustomFields();
-    define().单位属性.onDidChange(async () => {
-        await updateCustomFields();
-    });
 }
 
 export class EditorObject<N extends Table.NameCN = Table.NameCN> {
@@ -276,7 +252,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
     public nameEN;
     private _objectCache: { [key: number]: EditorObject<N> | null | undefined } = {};
     private watcher?: vscode.FileSystemWatcher;
-    constructor(private manager: EditorManager, public name: N) {
+    constructor(public manager: EditorManager, public name: N) {
         super(() => {
             this.watcher?.dispose();
         });
@@ -451,7 +427,7 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
     }
 
     public getFieldInfo(field: string): FieldInfo {
-        return new FieldInfo(this.name, field);
+        return new FieldInfo(this, this.name, field);
     }
 
     public listFields(): string[] {
@@ -603,7 +579,7 @@ export async function getObject(uri: vscode.Uri | string): Promise<EditorObject 
 }
 
 export class EditorManager {
-    constructor(public rootUri: vscode.Uri) {}
+    constructor(public map: y3.Map, public rootUri: vscode.Uri) {}
 
     editorTables: Map<Table.NameCN, EditorTable<Table.NameCN>> = new Map();
 
@@ -614,7 +590,7 @@ export class EditorManager {
         if (!file) {
             return null;
         }
-        await ready();
+        await this.ready();
         try {
             let obj = new EditorObject(this, tableName, key);
             obj.uri = uri;
@@ -622,6 +598,37 @@ export class EditorManager {
             return obj;
         } catch {
             return null;
+        }
+    }
+
+    private _ready = false;
+    public async ready() {
+        if (this._ready) {
+            return;
+        }
+        this._ready = true;
+        await ready();
+        await this.updateCustomFields();
+        define(this.map).单位属性.onDidChange(async () => {
+            await this.updateCustomFields();
+        });
+    }
+    public customTableMeta: Record<string, TableMeta> = {};
+
+    private async updateCustomFields() {
+        this.customTableMeta['单位'] = {};
+        let attrs = await define(this.map).单位属性.getAttrs();
+        for (let attr of attrs) {
+            this.customTableMeta['单位'][attr.name] = {
+                key: attr.key,
+                type: 'number',
+                desc: attr.name,
+            };
+            this.customTableMeta['单位'][attr.key] = {
+                key: attr.key,
+                type: 'number',
+                desc: attr.name,
+            };
         }
     }
 

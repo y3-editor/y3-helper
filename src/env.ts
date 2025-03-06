@@ -18,10 +18,14 @@ export class Map {
     private _editorTable: EditorManager;
     description: string;
     scriptUri: vscode.Uri;
+    y3Uri: vscode.Uri;
+    helperUri: vscode.Uri;
     language;
     constructor(public name: string, public uri: vscode.Uri) {
-        this._editorTable = new EditorManager(vscode.Uri.joinPath(this.uri, 'editor_table'));
+        this._editorTable = new EditorManager(this, vscode.Uri.joinPath(this.uri, 'editor_table'));
         this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
+        this.y3Uri = vscode.Uri.joinPath(this.scriptUri, l10n.t('y3'));
+        this.helperUri = vscode.Uri.joinPath(this.scriptUri, `${l10n.t("y3-helper")}`);
         this.description = name;
         this.language = new Language(this);
         this.language.onDidChange(() => {
@@ -34,6 +38,14 @@ export class Map {
             return env.project?.entryMap?._editorTable ?? this._editorTable;
         } else {
             return this._editorTable;
+        }
+    }
+
+    get triggerMapUri(): vscode.Uri {
+        if (env.project?.setting?.use_main_level_trigger_and_object) {
+            return env.project.entryMap?.uri ?? this.uri;
+        } else {
+            return this.uri;
         }
     }
 

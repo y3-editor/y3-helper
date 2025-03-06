@@ -1,6 +1,5 @@
 import { UnitAttrs } from './unitAttrs';
 import { BaseBuilder } from './baseBuilder';
-import { env } from '../env';
 import { PlayerAttrs } from './playerAttrs';
 import { CustomEvents } from './customEvents';
 import { UI } from './ui';
@@ -10,6 +9,7 @@ import { Font } from './font';
 import { Objects } from './objects';
 import { TS } from './tsMeta';
 import * as l10n from '@vscode/l10n';
+import * as y3 from 'y3-helper';
 
 let luaPath = 'meta';
 let tsPath  = 'plugin';
@@ -20,10 +20,7 @@ class InitBuilder extends BaseBuilder {
         this.builders.push(builder);
     }
 
-    async make() {
-        if (!env.scriptUri) {
-            return;
-        }
+    async make(map: y3.Map) {
         let codes = this.builders
             .map((builder) => {
                 // 将正斜杠和反斜杠替换为点号
@@ -56,8 +53,9 @@ export function init() {
     initBuilder.addChild(Font, 'font.lua');
     //initBuilder.addChild(Objects, 'objects.lua');
 
-    env.onDidChange(() => {
-        initBuilder.update();
+    y3.env.onDidChange(async () => {
+        await y3.sleep(0.1);
+        initBuilder.updateAll();
     });
 
     new TS(tsPath + '/map-declare.d.ts');

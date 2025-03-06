@@ -42,9 +42,12 @@ function wrapLuaValue(t: Record<any, any>) {
 }
 
 export async function fillMapDefined(formatter: Formatter) {
+    if (!y3.env.currentMap) {
+        return;
+    }
     await fillEvents(formatter);
     // 自定义事件
-    formatter.setRule(100238, (await define().自定义事件.getEvents()).reduce((map, event) => {
+    formatter.setRule(100238, (await define(y3.env.currentMap).自定义事件.getEvents()).reduce((map, event) => {
         map[event.id] = y3.lua.encode(event.name);
         return map;
     }, {} as Record<string, string>))
@@ -67,13 +70,13 @@ export async function fillMapDefined(formatter: Formatter) {
         'HKYuanW7': '华康圆体W7',
         'HKYuanW9': '华康圆体W9',
         // 从配置里读取自定义字体
-        ...(await define().字体.get()).reduce((map, font) => {
+        ...(await define(y3.env.currentMap).字体.get()).reduce((map, font) => {
             map[font.uid] = font.name;
             return map;
         }, {} as Record<string, string>),
     }))
     // 从配置里读取跳字类型
-    formatter.setRule(100333, (await define().跳字.get()).reduce((map, word) => {
+    formatter.setRule(100333, (await define(y3.env.currentMap).跳字.get()).reduce((map, word) => {
         map[word.uid] = y3.lua.encode(word.name);
         return map;
     }, {} as Record<string, string>))

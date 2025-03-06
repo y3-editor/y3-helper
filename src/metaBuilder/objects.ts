@@ -9,9 +9,9 @@ const template =
 export class Objects extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
+        this.updateAll();
         y3.env.onDidChange(() => {
-            this.update();
+            this.updateAll();
             this.updateTables();
         });
     }
@@ -25,7 +25,7 @@ export class Objects extends BaseBuilder {
                 let table = y3.table.openTable(name);
                 this.tables.set(name, table);
                 table.onDidChange(() => {
-                    this.update();
+                    this.updateAll();
                     this.updateTables();
                 });
             }

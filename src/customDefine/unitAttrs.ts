@@ -14,7 +14,7 @@ type Attr = {
 
 export class UnitAttrs extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.loadAttrs.bind(this), []);

@@ -12,7 +12,7 @@ type Word = {
 
 export class JumpWord extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.makeWords.bind(this), []);
@@ -23,17 +23,11 @@ export class JumpWord extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!y3.env.mapUri) {
-            return;
-        }
-        return new RelativePattern(y3.env.mapUri, fileName);
+        return new RelativePattern(this.map.uri, fileName);
     }
 
     private async makeWords(): Promise<Word[]> {
-        if (!y3.env.mapUri) {
-            return [];
-        }
-        let file = await y3.fs.readFile(y3.env.mapUri, fileName);
+        let file = await y3.fs.readFile(this.map.uri, fileName);
         if (!file) {
             return [];
         }

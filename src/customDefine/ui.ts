@@ -1,6 +1,6 @@
 import { RelativePattern } from "vscode";
 import * as vscode from 'vscode';
-import { env } from "../env";
+import * as y3 from 'y3-helper';
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 
@@ -22,7 +22,7 @@ type UIPackage = {
 
 export class UI extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.loadUIPackage.bind(this), {
@@ -37,10 +37,7 @@ export class UI extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!env.mapUri) {
-            return;
-        }
-        return new RelativePattern(env.mapUri, dirPath + '/*.json');
+        return new RelativePattern(this.map.uri, dirPath + '/*.json');
     }
 
     private makeNode(object: any): Node | undefined {
@@ -120,10 +117,7 @@ export class UI extends BaseDefine {
             场景UI: [],
             元件: [],
         };
-        if (!env.mapUri) {
-            return uiPackage;
-        }
-        let dir = vscode.Uri.joinPath(env.mapUri, dirPath);
+        let dir = vscode.Uri.joinPath(this.map.uri, dirPath);
         let files = await vscode.workspace.fs.readDirectory(dir);
         for (let [fileName, fileType] of files) {
             if (fileType !== vscode.FileType.File) {
@@ -149,7 +143,7 @@ export class UI extends BaseDefine {
                 }
             }
         }
-        let prefabDir = vscode.Uri.joinPath(env.mapUri, prefabPath);
+        let prefabDir = vscode.Uri.joinPath(this.map.uri, prefabPath);
         let prefabFiles = await vscode.workspace.fs.readDirectory(prefabDir);
         for (let [fileName, fileType] of prefabFiles) {
             if (fileType !== vscode.FileType.File) {

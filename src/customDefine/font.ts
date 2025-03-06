@@ -12,7 +12,7 @@ type Data = {
 
 export class Font extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.makeWords.bind(this), []);

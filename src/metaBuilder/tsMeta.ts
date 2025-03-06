@@ -11,9 +11,12 @@ declare interface MapUnit {
 export class TS extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().单位属性.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    protected initMap(map: y3.Map): void {
+        define(map).单位属性.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
@@ -21,8 +24,8 @@ export class TS extends BaseBuilder {
         return await y3.plugin.hasInited();
     }
 
-    async make(): Promise<string | undefined> {
-        let attrs = await define().单位属性.getAttrs();
+    async make(map: y3.Map): Promise<string | undefined> {
+        let attrs = await define(map).单位属性.getAttrs();
         return template.replace('%{UNIT_ATTRS}', attrs.map(attr => {
             return `    ${JSON.stringify(attr.name)}: number,`;
         }).join('\r\n'));

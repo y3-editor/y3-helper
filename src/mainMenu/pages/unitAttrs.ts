@@ -11,19 +11,24 @@ export class 单位属性 extends TreeNode {
             iconPath: new vscode.ThemeIcon('account'),
             show: async () => {
                 await env.mapReady();
-                return env.projectUri !== undefined;
+                return env.currentMap !== undefined;
             },
 
             update: async (node) => {
-                node.childs = (await define().单位属性.getAttrs()).map(attr => new TreeNode(attr.name, {
+                node.childs = (await define(env.currentMap!).单位属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
                     contextValue: l10n.t('单位属性'),
                 }));
             },
         });
 
-        define().单位属性.onDidChange(() => {
-            this.refresh();
+        env.onDidChange(() => {
+            if (env.currentMap) {
+                this.refresh();
+                define(env.currentMap).单位属性.onDidChange(() => {
+                    this.refresh();
+                });
+            }
         });
     }
 };

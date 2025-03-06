@@ -53,15 +53,15 @@ export class 界面 extends TreeNode {
                     iconPath: new vscode.ThemeIcon('layout-statusbar'),
 
                     show: async () => {
-                        return env.mapUri !== undefined;
+                        return env.currentMap !== undefined;
                     },
 
                     update: async (node) => {
-                        if (env.mapUri === undefined) {
+                        if (env.currentMap === undefined) {
                             return;
                         }
 
-                        node.childs = (await define().界面.getUIPackage())
+                        node.childs = (await define(env.currentMap).界面.getUIPackage())
                             .画板
                             .map(ui => new UINode(ui, l10n.t('画板')));
                     }
@@ -70,15 +70,15 @@ export class 界面 extends TreeNode {
                     iconPath: new vscode.ThemeIcon('smiley'),
 
                     show: async () => {
-                        return env.mapUri !== undefined;
+                        return env.currentMap !== undefined;
                     },
 
                     update: async (node) => {
-                        if (env.mapUri === undefined) {
+                        if (env.currentMap === undefined) {
                             return;
                         }
 
-                        node.childs = (await define().界面.getUIPackage())
+                        node.childs = (await define(env.currentMap).界面.getUIPackage())
                             .场景UI
                             .map(ui => new UINode(ui, l10n.t('场景UI')));
                     }
@@ -87,15 +87,15 @@ export class 界面 extends TreeNode {
                     iconPath: new vscode.ThemeIcon('extensions'),
 
                     show: async () => {
-                        return env.mapUri !== undefined;
+                        return env.currentMap !== undefined;
                     },
 
                     update: async (node) => {
-                        if (env.mapUri === undefined) {
+                        if (env.currentMap === undefined) {
                             return;
                         }
 
-                        node.childs = (await define().界面.getUIPackage())
+                        node.childs = (await define(env.currentMap).界面.getUIPackage())
                             .元件
                             .map(ui => new UINode(ui, l10n.t('元件')));
                     }
@@ -103,8 +103,13 @@ export class 界面 extends TreeNode {
             ],
         });
 
-        define().界面.onDidChange(() => {
-            this.refresh();
+        env.onDidChange(() => {
+            if (env.currentMap) {
+                this.refresh();
+                define(env.currentMap).界面.onDidChange(() => {
+                    this.refresh();
+                });
+            }
         });
     }
 };

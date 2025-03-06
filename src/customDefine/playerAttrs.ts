@@ -1,5 +1,5 @@
 import { RelativePattern } from "vscode";
-import { env } from "../env";
+import * as y3 from 'y3-helper';
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 
@@ -12,7 +12,7 @@ type Attr = {
 
 export class PlayerAttrs extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.loadAttrs.bind(this), []);
@@ -23,18 +23,18 @@ export class PlayerAttrs extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!env.projectUri) {
+        if (!y3.env.projectUri) {
             return;
         }
-        return new RelativePattern(env.projectUri, filePath);
+        return new RelativePattern(y3.env.projectUri, filePath);
     }
 
     private async loadAttrs() {
         let attrs: Attr[] = [];
-        if (!env.projectUri) {
+        if (!y3.env.projectUri) {
             return attrs;
         }
-        let jsonFile = await tools.fs.readFile(env.projectUri, filePath);
+        let jsonFile = await tools.fs.readFile(y3.env.projectUri, filePath);
         if (!jsonFile) {
             return attrs;
         }

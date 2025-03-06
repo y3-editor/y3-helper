@@ -1,8 +1,6 @@
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 import * as y3 from 'y3-helper';
-import * as vscode from 'vscode';
-import * as l10n from '@vscode/l10n';
 
 
 const eventName = '游戏-消息';
@@ -43,14 +41,17 @@ function isBasicType(luaType: string) {
 export class CustomEvents extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().自定义事件.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    initMap(map: y3.Map) {
+        define(map).自定义事件.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let events = await define().自定义事件.getEvents();
+    async make(map: y3.Map) {
+        let events = await define(map).自定义事件.getEvents();
         if (events.length === 0) {
             return;
         }

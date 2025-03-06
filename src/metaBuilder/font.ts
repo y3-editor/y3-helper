@@ -1,3 +1,4 @@
+import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
@@ -16,14 +17,17 @@ local FloatTextType = {
 export class Font extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().字体.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    protected initMap(map: y3.Map): void {
+        define(map).字体.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let datas = await define().字体.get();
+    async make(map: y3.Map) {
+        let datas = await define(map).字体.get();
         if (datas.length === 0) {
             return;
         }

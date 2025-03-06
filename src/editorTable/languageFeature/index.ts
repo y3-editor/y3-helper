@@ -6,7 +6,6 @@ import * as hover from './hover';
 import * as inlayHints from './inlayHints';
 
 export async function init() {
-    await y3.table.ready();
     documentManager.init();
     documentSymbol.init();
     workspaceSymbol.init();

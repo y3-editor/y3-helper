@@ -1,3 +1,4 @@
+import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
@@ -16,14 +17,17 @@ local UIAnimKey = {
 export class UIAnim extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().时间轴动画.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    protected initMap(map: y3.Map): void {
+        define(map).时间轴动画.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let anims = await define().时间轴动画.get();
+    async make(map: y3.Map) {
+        let anims = await define(map).时间轴动画.get();
         if (anims.length === 0) {
             return;
         }

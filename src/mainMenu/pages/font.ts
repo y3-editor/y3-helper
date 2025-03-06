@@ -11,11 +11,11 @@ export class 字体 extends TreeNode {
             iconPath: new vscode.ThemeIcon('whole-word'),
             show: async () => {
                 await env.mapReady();
-                return env.mapUri !== undefined;
+                return env.currentMap !== undefined;
             },
 
             update: async (node) => {
-                node.childs = (await define().字体.get()).map(word => {
+                node.childs = (await define(env.currentMap!).字体.get()).map(word => {
                     return new TreeNode(word.name, {
                         description: `${word.uid}`,
                     });
@@ -23,8 +23,13 @@ export class 字体 extends TreeNode {
             },
         });
 
-        define().字体.onDidChange(() => {
-            this.refresh();
+        env.onDidChange(() => {
+            if (env.currentMap) {
+                this.refresh();
+                define(env.currentMap).字体.onDidChange(() => {
+                    this.refresh();
+                });
+            }
         });
     }
 };

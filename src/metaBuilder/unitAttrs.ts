@@ -1,3 +1,4 @@
+import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
@@ -16,14 +17,17 @@ y3.const.CustomUnitAttr = {
 export class UnitAttrs extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().单位属性.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    protected initMap(map: y3.Map): void {
+        define(map).单位属性.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let attrs = await define().单位属性.getAttrs();
+    async make(map: y3.Map) {
+        let attrs = await define(map).单位属性.getAttrs();
         if (attrs.length === 0) {
             return;
         }

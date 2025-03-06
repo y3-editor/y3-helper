@@ -11,11 +11,11 @@ export class 跳字 extends TreeNode {
             iconPath: new vscode.ThemeIcon('text-size'),
             show: async () => {
                 await env.mapReady();
-                return env.mapUri !== undefined;
+                return env.currentMap !== undefined;
             },
 
             update: async (node) => {
-                node.childs = (await define().跳字.get()).map(word => {
+                node.childs = (await define(env.currentMap!).跳字.get()).map(word => {
                     return new TreeNode(word.name, {
                         description: `${word.uid}`,
                     });
@@ -23,8 +23,13 @@ export class 跳字 extends TreeNode {
             },
         });
 
-        define().跳字.onDidChange(() => {
-            this.refresh();
+        env.onDidChange(() => {
+            if (env.currentMap) {
+                this.refresh();
+                define(env.currentMap).跳字.onDidChange(() => {
+                    this.refresh();
+                });
+            }
         });
     }
 };

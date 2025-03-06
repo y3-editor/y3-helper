@@ -11,11 +11,11 @@ export class 时间轴动画 extends TreeNode {
             iconPath: new vscode.ThemeIcon('history'),
             show: async () => {
                 await env.mapReady();
-                return env.mapUri !== undefined;
+                return env.currentMap !== undefined;
             },
 
             update: async (node) => {
-                node.childs = (await define().时间轴动画.get()).map(anim => {
+                node.childs = (await define(env.currentMap!).时间轴动画.get()).map(anim => {
                     return new TreeNode(anim.name, {
                         data: anim.uid,
                         description: `${anim.uid}`,
@@ -30,8 +30,13 @@ ${l10n.t('模式')}: ${anim.playMode}`
             },
         });
 
-        define().时间轴动画.onDidChange(() => {
-            this.refresh();
+        env.onDidChange(() => {
+            if (env.currentMap) {
+                this.refresh();
+                define(env.currentMap).时间轴动画.onDidChange(() => {
+                    this.refresh();
+                });
+            }
         });
     }
 };

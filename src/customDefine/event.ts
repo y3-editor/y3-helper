@@ -1,9 +1,8 @@
 import { RelativePattern } from "vscode";
-import { env } from "../env";
+import * as y3 from 'y3-helper';
 import * as tools from '../tools';
 import { BaseDefine } from "./baseDefine";
 import { Table } from "../constants";
-import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
 
 const filePath = 'customevent.json';
@@ -30,7 +29,7 @@ export type Folder = {
 export class Events extends BaseDefine {
     private eventsCache;
     private folderCache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.eventsCache = new tools.Cache(this.loadEvents.bind(this), []);
@@ -46,18 +45,12 @@ export class Events extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!env.triggerMapUri) {
-            return;
-        }
-        return new RelativePattern(env.triggerMapUri, filePath);
+        return new RelativePattern(this.map.triggerMapUri, filePath);
     }
 
     private async loadEvents() {
         let events: Event[] = [];
-        if (!env.triggerMapUri) {
-            return events;
-        }
-        let jsonFile = await tools.fs.readFile(env.triggerMapUri, filePath);
+        let jsonFile = await tools.fs.readFile(this.map.triggerMapUri, filePath);
         if (!jsonFile) {
             return events;
         }

@@ -1,3 +1,4 @@
+import * as y3 from 'y3-helper';
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
 
@@ -15,14 +16,17 @@ local SceneUI = {
 export class UI extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().界面.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    protected initMap(map: y3.Map): void {
+        define(map).界面.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let uiPackage = await define().界面.getUIPackage();
+    async make(map: y3.Map) {
+        let uiPackage = await define(map).界面.getUIPackage();
         let sceneUIs = uiPackage.场景UI;
         if (sceneUIs.length === 0) {
             return;

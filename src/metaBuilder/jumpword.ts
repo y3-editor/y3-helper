@@ -1,5 +1,6 @@
 import { define } from '../customDefine';
 import { BaseBuilder } from './baseBuilder';
+import * as y3 from 'y3-helper';
 
 const template =
 `y3.const.FloatTextJumpType = y3.const.FloatTextJumpType or {}
@@ -16,14 +17,17 @@ local FloatTextJumpType = {
 export class JumpWord extends BaseBuilder {
     constructor(path: string) {
         super(path);
-        this.update();
-        define().跳字.onDidChange(() => {
-            this.update();
+        this.updateAll();
+    }
+
+    initMap(map: y3.Map) {
+        define(map).跳字.onDidChange(() => {
+            this.updateMap(map);
         });
     }
 
-    async make() {
-        let datas = await define().跳字.get();
+    async make(map: y3.Map) {
+        let datas = await define(map).跳字.get();
         if (datas.length === 0) {
             return;
         }

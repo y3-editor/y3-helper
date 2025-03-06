@@ -2,7 +2,6 @@ import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
 import * as y3 from 'y3-helper';
 import * as tools from '../tools';
-import * as vscode from 'vscode';
 
 const fileName = 'uianim.json';import * as l10n from '@vscode/l10n';
 
@@ -28,7 +27,7 @@ type Anim = {
 
 export class UIAnim extends BaseDefine {
     private cache;
-    constructor() {
+    constructor(private map: y3.Map) {
         super();
 
         this.cache = new tools.Cache(this.makeAnims.bind(this), []);
@@ -39,17 +38,11 @@ export class UIAnim extends BaseDefine {
     }
 
     get watchPattern() {
-        if (!y3.env.mapUri) {
-            return;
-        }
-        return new RelativePattern(y3.env.mapUri, fileName);
+        return new RelativePattern(this.map.uri, fileName);
     }
 
     private async makeAnims(): Promise<Anim[]> {
-        if (!y3.env.mapUri) {
-            return [];
-        }
-        let file = await y3.fs.readFile(y3.env.mapUri, fileName);
+        let file = await y3.fs.readFile(this.map.uri, fileName);
         if (!file) {
             return [];
         }
