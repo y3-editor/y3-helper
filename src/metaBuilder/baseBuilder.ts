@@ -9,6 +9,10 @@ export abstract class BaseBuilder {
     @throttle(500)
     public async updateAll() {
         if (!y3.env.project) {
+            let dispose = y3.env.onDidChange(() => {
+                dispose.dispose();
+                this.updateAll();
+            });
             return;
         }
         for (const map of y3.env.project.maps) {
@@ -16,14 +20,14 @@ export abstract class BaseBuilder {
         }
     }
 
-    private _mapInited = false;
+    private _mapInited: Set<y3.Map> = new Set();
 
     public async updateMap(map: y3.Map) {
         if (!await this.isValid(map)) {
             return;
         }
-        if (!this._mapInited) {
-            this._mapInited = true;
+        if (!this._mapInited.has(map)) {
+            this._mapInited.add(map);
             this.initMap(map);
         }
         let code = await this.make(map);

@@ -4,7 +4,7 @@ export class VersionCache<T> {
     constructor(private maker: () => T | Promise<T>, private cache: T) { }
 
     private version = 0;
-    private hasNew = false;
+    private hasNew = true;
 
     public updateVersion() {
         this.version++;
