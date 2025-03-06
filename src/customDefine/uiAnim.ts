@@ -27,8 +27,8 @@ type Anim = {
 
 export class UIAnim extends BaseDefine {
     private cache;
-    constructor(private map: y3.Map) {
-        super();
+    constructor(map: y3.Map) {
+        super(map);
 
         this.cache = new tools.Cache(this.makeAnims.bind(this), []);
 

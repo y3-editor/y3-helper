@@ -15,7 +15,10 @@ export class 玩家属性 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define(env.currentMap!).玩家属性.getAttrs()).map(attr => new TreeNode(attr.name, {
+                if (!env.currentMap) {
+                    return;
+                }
+                node.childs = (await define(env.currentMap).玩家属性.getAttrs()).map(attr => new TreeNode(attr.name, {
                     description: attr.key,
                     contextValue: l10n.t('玩家属性'),
                 }));

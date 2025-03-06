@@ -22,8 +22,8 @@ type UIPackage = {
 
 export class UI extends BaseDefine {
     private cache;
-    constructor(private map: y3.Map) {
-        super();
+    constructor(map: y3.Map) {
+        super(map);
 
         this.cache = new tools.Cache(this.loadUIPackage.bind(this), {
             画板: [],

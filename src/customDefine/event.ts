@@ -29,8 +29,8 @@ export type Folder = {
 export class Events extends BaseDefine {
     private eventsCache;
     private folderCache;
-    constructor(private map: y3.Map) {
-        super();
+    constructor(map: y3.Map) {
+        super(map);
 
         this.eventsCache = new tools.Cache(this.loadEvents.bind(this), []);
         this.folderCache = new tools.Cache(this.loadEventsFolder.bind(this), {

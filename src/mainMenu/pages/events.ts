@@ -27,7 +27,10 @@ export class 自定义事件 extends TreeNode {
                                 ? l10n.t('平铺模式（点击切换）')
                                 : l10n.t('文件夹模式（点击切换）');
                 if (mode === 'list') {
-                    node.childs = (await define(env.currentMap!).自定义事件.getEvents()).map(event => {
+                    if (!env.currentMap) {
+                        return;
+                    }
+                    node.childs = (await define(env.currentMap).自定义事件.getEvents()).map(event => {
                         let args = event.args.map(arg => arg.name);
                         return new TreeNode(event.name, {
                             iconPath: new vscode.ThemeIcon('symbol-event'),
@@ -65,7 +68,10 @@ export class 自定义事件 extends TreeNode {
                         });
                     }
 
-                    node.childs = makeChilds(await define(env.currentMap!).自定义事件.getEventsFolder());
+                    if (!env.currentMap) {
+                        return;
+                    }
+                    node.childs = makeChilds(await define(env.currentMap).自定义事件.getEventsFolder());
                 }
             },
         });

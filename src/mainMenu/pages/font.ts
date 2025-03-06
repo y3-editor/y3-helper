@@ -15,7 +15,10 @@ export class 字体 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define(env.currentMap!).字体.get()).map(word => {
+                if (!env.currentMap) {
+                    return;
+                }
+                node.childs = (await define(env.currentMap).字体.get()).map(word => {
                     return new TreeNode(word.name, {
                         description: `${word.uid}`,
                     });

@@ -13,7 +13,7 @@ type Attr = {
 export class PlayerAttrs extends BaseDefine {
     private cache;
     constructor(map: y3.Map) {
-        super();
+        super(map);
 
         this.cache = new tools.Cache(this.loadAttrs.bind(this), []);
         

@@ -1,8 +1,9 @@
 import { env } from "../env";
 import * as vscode from 'vscode';
+import * as y3 from 'y3-helper';
 
 export abstract class BaseDefine {
-    constructor() {
+    constructor(public map: y3.Map) {
         env.onDidChange(() => {
             this.update();
         });

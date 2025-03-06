@@ -15,7 +15,10 @@ export class 时间轴动画 extends TreeNode {
             },
 
             update: async (node) => {
-                node.childs = (await define(env.currentMap!).时间轴动画.get()).map(anim => {
+                if (!env.currentMap) {
+                    return;
+                }
+                node.childs = (await define(env.currentMap).时间轴动画.get()).map(anim => {
                     return new TreeNode(anim.name, {
                         data: anim.uid,
                         description: `${anim.uid}`,
