@@ -3,53 +3,7 @@ import * as y3 from 'y3-helper';
 import * as plugin from './plugin';
 import * as mainMenu from '../mainMenu';
 import * as l10n from '@vscode/l10n';
-
-
-let pluginManager: plugin.PluginManager | undefined;
-
-class RunButtonProvider implements vscode.CodeLensProvider {
-    private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
-    onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
-    public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[] | undefined> {
-        let pluginInstance = await pluginManager?.findPlugin(document.uri);
-        if (!pluginInstance) {
-            return undefined;
-        }
-        let codeLens: vscode.CodeLens[] = [];
-        let infos = await pluginInstance.getExports();
-        for (const name in infos) {
-            const info = infos[name];
-            codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                title: l10n.t('$(debug-start)运行 "{0}"', name),
-                command: 'y3-helper.runPlugin',
-                arguments: [document.uri, name],
-            }));
-            if (name === 'onGame') {
-                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: l10n.t('使用《Y3开发助手》启动游戏时自动运行'),
-                    command: '',
-                }));
-            } else if (name === 'onEditor') {
-                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: l10n.t('使用《Y3开发助手》的“在编辑器中打开”时自动运行'),
-                    command: '',
-                }));
-            } else if (name === 'onSave') {
-                codeLens.push(new vscode.CodeLens(new vscode.Range(info.line, 0, info.line, 0), {
-                    title: l10n.t('使用《Y3编辑器》保存地图后自动运行'),
-                    command: '',
-                }));
-            }
-        }
-        return codeLens;
-    }
-
-    public notifyChange() {
-        this._onDidChangeCodeLenses.fire();
-    }
-}
-
-let runButtonProvider = new RunButtonProvider();
+import { RunButtonProvider } from './codeLen';
 
 export async function hasInited() {
     await y3.env.mapReady();
@@ -83,36 +37,27 @@ async function initPlugin() {
 
 async function updatePluginDTS(showme = false) {
     await y3.env.mapReady();
-    if (!y3.env.pluginUri) {
+    if (!y3.env.project) {
         return;
     }
     if (!showme && !await hasInited()) {
         return;
     }
     const templateUri = y3.extensionPath('template/plugin', 'y3-helper.d.ts');
-    const targetUri = y3.uri(y3.env.pluginUri, 'y3-helper.d.ts');
     if (!await y3.fs.isFile(templateUri)) {
         return;
     }
-    let suc = await y3.fs.copy(templateUri, targetUri, {
-        overwrite: true,
-    });
-    if (suc && showme) {
-        vscode.window.showInformationMessage(l10n.t('插件定义文件更新成功'));
-        y3.open(targetUri);
-        mainMenu.refresh(l10n.t('插件'));
+    for (const map of y3.env.project.maps) {
+        const targetUri = y3.uri(map.pluginManager.uri, 'y3-helper.d.ts');
+        let suc = await y3.fs.copy(templateUri, targetUri, {
+            overwrite: true,
+        });
+        if (suc && showme && map === y3.env.currentMap) {
+            vscode.window.showInformationMessage(l10n.t('插件定义文件更新成功'));
+            y3.open(targetUri);
+            mainMenu.refresh(l10n.t('插件'));
+        }
     }
-}
-
-function updatePluginManager() {
-    pluginManager?.dispose();
-    if (!y3.env.pluginUri) {
-        return;
-    }
-    pluginManager = new plugin.PluginManager(y3.env.pluginUri);
-    pluginManager.onDidChange(() => {
-        runButtonProvider.notifyChange();
-    });
 }
 
 let watcher: vscode.FileSystemWatcher | undefined;
@@ -131,18 +76,17 @@ function updateMapSaveWatcher() {
         if (delay) {
             clearTimeout(delay);
         }
-        delay = setTimeout(() => {
+        delay = setTimeout(async () => {
             delay = undefined;
-            runAllPlugins('onSave');
+            for (const map of y3.env.project?.maps ?? []) {
+                await runAllPlugins(map, 'onSave');
+            }
         }, 1000);
     }
 }
 
-export async function runAllPlugins(funcName: string) {
-    if (!pluginManager) {
-        return;
-    }
-    let count = await pluginManager.runAll(funcName);
+export async function runAllPlugins(map: y3.Map, funcName: string) {
+    let count = await map.pluginManager.runAll(funcName);
     if (count > 0) {
         // 等待物编文件写入完成
         await y3.sleep(200);
@@ -150,13 +94,12 @@ export async function runAllPlugins(funcName: string) {
 }
 
 function getRunningPlugin() {
-    if (!pluginManager) {
-        return undefined;
-    }
-    for (const name in pluginManager.plugins) {
-        const plugin = pluginManager.plugins[name];
-        if (plugin.running) {
-            return plugin;
+    for (const map of y3.env.project?.maps ?? []) {
+        for (const name in map.pluginManager.plugins) {
+            const plugin = map.pluginManager.plugins[name];
+            if (plugin.running) {
+                return plugin;
+            }
         }
     }
     return undefined;
@@ -167,18 +110,24 @@ export function onceDidRun(callback: (data: { funcName: string, result: any }) =
     plugin?.onceDidRun(callback);
 }
 
-export function getManager() {
-    return pluginManager;
+export async function findPlugin(uri: vscode.Uri): Promise<plugin.Plugin | undefined> {
+    if (!y3.env.project) {
+        return undefined;
+    }
+    for (const map of y3.env.project.maps) {
+        const plugin = await map.pluginManager.findPlugin(uri);
+        if (plugin) {
+            return plugin;
+        }
+    }
 }
 
 export async function init() {
     await y3.env.mapReady();
 
-    updatePluginManager();
     updateMapSaveWatcher();
     updatePluginDTS();
     y3.env.onDidChange(() => {
-        updatePluginManager();
         updateMapSaveWatcher();
         updatePluginDTS();
     });
@@ -193,13 +142,15 @@ export async function init() {
                 return;
             }
         }
-        if (!pluginManager) {
-            vscode.window.showErrorMessage(l10n.t('未找到插件目录'));
-            return;
-        }
         y3.log.show();
         try {
-            await pluginManager.run(uri, funcName ?? 'main');
+            for (const map of y3.env.project?.maps ?? []) {
+                let plugin = await map.pluginManager.findPlugin(uri);
+                if (plugin) {
+                    await map.pluginManager.run(uri, funcName ?? 'main');
+                    return;
+                }
+            }
         } catch (error: any) {
             vscode.window.showErrorMessage(l10n.t('运行插件脚本出错：{0}', error));
             if (error.stack) {
@@ -209,8 +160,13 @@ export async function init() {
         }
     });
 
+    let runButtonProvider = new RunButtonProvider();
+
     vscode.languages.registerCodeLensProvider({
         scheme: 'file',
         pattern: `**/*.js`,
     }, runButtonProvider);
+    plugin.onDidChange.event(() => {
+        runButtonProvider.notifyChange();
+    });
 }

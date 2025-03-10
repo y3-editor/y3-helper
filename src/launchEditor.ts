@@ -6,9 +6,9 @@ import * as l10n from '@vscode/l10n';
 
 
 export class EditorLauncher {
-    private async runPlugin() {
+    private async runPlugin(map: y3.Map) {
         try {
-            await y3.plugin.runAllPlugins('onEditor');
+            await y3.plugin.runAllPlugins(map, 'onEditor');
         } catch (error) {
             let res = await vscode.window.showErrorMessage(l10n.t("运行插件时发生错误"), {
                 detail: String(error).replace(/Error: /, ''),
@@ -23,9 +23,8 @@ export class EditorLauncher {
     public async launch(luaArgs?: {[key: string]: string|number|boolean}): Promise<boolean> {
         await env.editorReady(true);
         await env.mapReady(true);
-        let projectUri = env.projectUri;
         let editorExeUri = env.editorExeUri;
-        if (!projectUri) {
+        if (!env.project || !env.project.entryMap) {
             vscode.window.showErrorMessage(l10n.t("没有指定地图目录！"));
             return false;
         }
@@ -38,9 +37,9 @@ export class EditorLauncher {
             return false;
         }
 
-        await this.runPlugin();
+        await this.runPlugin(env.project.entryMap);
 
-        let project_path = projectUri.fsPath.replaceAll("\\", "/") + '/header.project';
+        let project_path = env.project.uri.fsPath.replaceAll("\\", "/") + '/header.project';
         let project_path_base64 = Buffer.from(project_path).toString('base64');
         let args = [];
         args.push('type@editor');

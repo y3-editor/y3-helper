@@ -10,19 +10,25 @@ import * as jsonc from 'jsonc-parser';
 import { EditorManager } from './editorTable/editorTable';
 import * as l10n from '@vscode/l10n';
 import { config } from './config';
+import { PluginManager } from './plugin/plugin';
 
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
 
-export class Map {
+export class Map extends vscode.Disposable {
     id: bigint = 0n;
     private _editorTable: EditorManager;
+    private _disposables: vscode.Disposable[] = [];
     description: string;
     scriptUri: vscode.Uri;
     y3Uri: vscode.Uri;
     helperUri: vscode.Uri;
+    pluginManager: PluginManager;
     language;
     constructor(public name: string, public uri: vscode.Uri) {
+        super(() => {
+            this._disposables.forEach(d => d.dispose());
+        });
         this._editorTable = new EditorManager(this, vscode.Uri.joinPath(this.uri, 'editor_table'));
         this.scriptUri = vscode.Uri.joinPath(this.uri, 'script');
         this.y3Uri = vscode.Uri.joinPath(this.scriptUri, l10n.t('y3'));
@@ -32,6 +38,7 @@ export class Map {
         this.language.onDidChange(() => {
             this._editorTable.flushName();
         });
+        this._disposables.push(this.pluginManager = new PluginManager(this));
     }
 
     get editorTable() {
@@ -94,6 +101,7 @@ class Project extends vscode.Disposable {
     constructor(public uri: vscode.Uri, private onDiDChange?: () => void) {
         super(() => {
             this.disposables.forEach(d => d.dispose());
+            this.maps.forEach(map => map.dispose());
         });
     }
 

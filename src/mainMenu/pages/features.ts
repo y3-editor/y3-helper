@@ -211,7 +211,7 @@ export class 功能 extends TreeNode {
                                     });
                                 } else {
                                     let nodeName = name === 'entry'
-                                                ? l10n.t('入口地图')
+                                                ? l10n.t('主地图')
                                                 : l10n.t('当前地图');
                                     return new TreeNode(nodeName, {
                                         description: map.name,
@@ -229,7 +229,10 @@ export class 功能 extends TreeNode {
                             });
                         }
                 
-                        node.childs = makeChilds();
+                        node.childs = [
+                            new TreeNode('⚠️该功能在3月26日编辑器更新后可用⚠️'),
+                            ...makeChilds(),
+                        ];
                     },
                     init: (node) => {
                         env.onDidChange(async () => {

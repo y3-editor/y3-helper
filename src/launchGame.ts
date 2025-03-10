@@ -14,9 +14,9 @@ interface LaunchOptions {
 }
 
 export class GameLauncher {
-    private async runPlugin() {
+    private async runPlugin(map: y3.Map) {
         try {
-            await y3.plugin.runAllPlugins('onGame');
+            await y3.plugin.runAllPlugins(map, 'onGame');
         } catch (error) {
             let res = await vscode.window.showErrorMessage(l10n.t("运行插件时发生错误"), {
                 detail: String(error).replace(/Error: /, ''),
@@ -35,7 +35,8 @@ export class GameLauncher {
         await env.mapReady(true);
         let projectUri = env.projectUri;
         let editorExeUri = env.editorExeUri;
-        if (!projectUri) {
+        let map = env.project?.selectedMap;
+        if (!projectUri || !map) {
             vscode.window.showErrorMessage(l10n.t("没有指定地图目录！"));
             return false;
         }
@@ -48,7 +49,7 @@ export class GameLauncher {
             return false;
         }
 
-        let suc = await this.runPlugin();
+        let suc = await this.runPlugin(map);
         if (!suc) {
             return false;
         }
@@ -64,6 +65,7 @@ export class GameLauncher {
             args.push('subtype@editor_game');
             args.push('editor_map_path@' + projectUri.fsPath);
         }
+        args.push(`level_id@${map.id}`);
         args.push('release@true');
         args.push('lua_dummy@sp ce');
         if (options?.luaArgs) {

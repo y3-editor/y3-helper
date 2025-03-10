@@ -7,6 +7,7 @@ import { queue, throttle } from '../utility/decorators';
 declare const __non_webpack_require__: NodeRequire | undefined;
 const rawRequire = __non_webpack_require__ ?? require;
 import * as l10n from '@vscode/l10n';
+import { on } from 'events';
 
 
 interface ExportInfo {
@@ -131,20 +132,24 @@ export class Plugin {
     }
 }
 
+export let onDidChange = new vscode.EventEmitter<void>();
+
 export class PluginManager extends vscode.Disposable {
     private _ready = false;
     private _disposables: vscode.Disposable[] = [];
     private _onDidChange = new vscode.EventEmitter<void>();
+    public uri: vscode.Uri;
 
-    constructor(public dir: vscode.Uri) {
+    constructor(public map: y3.Map) {
         super(() => {
             for (const disposable of this._disposables) {
                 disposable.dispose();
             }
         });
+        this.uri = y3.uri(this.map.helperUri, 'plugin');
         this.loadPlugins();
         let watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(dir, '**/*.js')
+            new vscode.RelativePattern(this.uri, '**/*.js')
         );
         this._disposables.push(watcher);
         watcher.onDidCreate((e) => {
@@ -154,6 +159,7 @@ export class PluginManager extends vscode.Disposable {
             }
             this.plugins[name] = new Plugin(e, name);
             this.notifyChange();
+            onDidChange.fire();
         });
         watcher.onDidDelete((e) => {
             let name = this.getName(e);
@@ -162,6 +168,7 @@ export class PluginManager extends vscode.Disposable {
             }
             delete this.plugins[name];
             this.notifyChange();
+            onDidChange.fire();
         });
         watcher.onDidChange((e) => {
             let name = this.getName(e);
@@ -170,6 +177,7 @@ export class PluginManager extends vscode.Disposable {
             }
             this.plugins[name]?.reload();
             this.notifyChange();
+            onDidChange.fire();
         });
         this._disposables.push(vscode.workspace.onDidChangeTextDocument(async (e) => {
             let plugin = await this.findPlugin(e.document.uri);
@@ -178,6 +186,7 @@ export class PluginManager extends vscode.Disposable {
             }
             plugin.setCode(e.document.getText());
             this.notifyChange();
+            onDidChange.fire();
         }));
     }
 
@@ -191,10 +200,10 @@ export class PluginManager extends vscode.Disposable {
     public plugins: Record<string, Plugin> = {};
     private async loadPlugins() {
         this._ready = false;
-        for (const [filename, fileType] of await y3.fs.scan(this.dir)) {
+        for (const [filename, fileType] of await y3.fs.scan(this.uri)) {
             if (fileType === vscode.FileType.File && filename.endsWith('.js')) {
                 let name = filename.replace(/\.js$/, '');
-                const plugin = new Plugin(y3.uri(this.dir, filename), name);
+                const plugin = new Plugin(y3.uri(this.uri, filename), name);
                 this.plugins[name] = plugin;
             }
         }
@@ -263,10 +272,10 @@ export class PluginManager extends vscode.Disposable {
     }
 
     public getName(uri: vscode.Uri) {
-        if (!uri.path.toLocaleLowerCase().startsWith(this.dir.path.toLocaleLowerCase())) {
+        if (!uri.path.toLocaleLowerCase().startsWith(this.uri.path.toLocaleLowerCase())) {
             return undefined;
         }
-        return uri.path.slice(this.dir.path.length + 1).replace(/\.js$/, '');
+        return uri.path.slice(this.uri.path.length + 1).replace(/\.js$/, '');
     }
 
     public async findPlugin(uri: vscode.Uri) {

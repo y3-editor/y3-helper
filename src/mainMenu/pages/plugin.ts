@@ -46,7 +46,7 @@ export class 插件列表 extends TreeNode {
         super(l10n.t('插件'), {
             iconPath: new vscode.ThemeIcon('extensions'),
             show: async () => {
-                let pluginManager = y3.plugin.getManager();
+                let pluginManager = y3.env.currentMap?.pluginManager;
                 if (!pluginManager) {
                     return false;
                 }
@@ -54,7 +54,7 @@ export class 插件列表 extends TreeNode {
                 return plugins.length > 0;
             },
             update: async (node) => {
-                let pluginManager = y3.plugin.getManager();
+                let pluginManager = y3.env.currentMap?.pluginManager;
                 if (!pluginManager) {
                     return;
                 }
