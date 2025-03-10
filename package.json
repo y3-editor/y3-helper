@@ -181,11 +181,6 @@
                 "category": "%Y3开发助手%"
             },
             {
-                "command": "y3-helper.launchGameAndAttach",
-                "title": "启动游戏并附加调试",
-                "category": "%Y3开发助手%"
-            },
-            {
                 "command": "y3-helper.launchEditor",
                 "title": "在编辑器中打开",
                 "category": "%Y3开发助手%"
@@ -416,9 +411,9 @@
         },
         "keybindings": [
             {
-                "command": "y3-helper.launchGameAndAttach",
+                "command": "y3-helper.launchGame",
                 "key": "shift+f5",
-                "when": "debuggersAvailable && !inDebugMode"
+                "when": "!inDebugMode"
             }
         ],
         "breakpoints": [

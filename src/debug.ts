@@ -52,8 +52,8 @@ export function init(context: vscode.ExtensionContext) {
 
     let launch = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
     launch.text = l10n.t('✨启动');
-    launch.tooltip = l10n.t('启动游戏并附加调试器');
-    launch.command = 'y3-helper.launchGameAndAttach';
+    launch.tooltip = l10n.t('启动游戏');
+    launch.command = 'y3-helper.launchGame';
 
     let attach = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
     attach.text = l10n.t('💡附加');

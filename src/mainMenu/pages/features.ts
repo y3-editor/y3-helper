@@ -157,11 +157,12 @@ export class 功能 extends TreeNode {
                     }
                 }),
                 new TreeNode(l10n.t('启动游戏'), {
+                    iconPath: new vscode.ThemeIcon('play'),
+                    tooltip: 'Shift + F5',
                     command: {
                         command: 'y3-helper.launchGame',
                         title: l10n.t('启动游戏'),
                     },
-                    iconPath: new vscode.ThemeIcon('play'),
                     update: async (node) => {
                         let name = env.project?.entryMap?.name;
                         let description = env.project?.entryMap?.description;
@@ -170,15 +171,12 @@ export class 功能 extends TreeNode {
                         } else {
                             node.description = `${description}@${name}`;
                         }
-                    }
-                }),
-                new TreeNode(l10n.t('启动游戏并附加调试器'), {
-                    command: {
-                        command: 'y3-helper.launchGameAndAttach',
-                        title: l10n.t('启动游戏并附加调试器'),
                     },
-                    iconPath: new vscode.ThemeIcon('debug-alt'),
-                    description: 'Shift + F5',
+                    init: (node) => {
+                        env.onDidChange(async () => {
+                            node.refresh();
+                        });
+                    },
                 }),
                 new TreeNode(l10n.t('附加调试器'), {
                     command: {
@@ -186,6 +184,16 @@ export class 功能 extends TreeNode {
                         title: l10n.t('附加调试器'),
                     },
                     iconPath: new vscode.ThemeIcon('run-all'),
+                    childs: [
+                        new TreeNode(l10n.t('启动游戏后立即附加'), {
+                            checkboxState: config.attachWhenLaunch
+                                        ? vscode.TreeItemCheckboxState.Checked
+                                        : vscode.TreeItemCheckboxState.Unchecked,
+                            onDidChangeCheckboxState(state) {
+                                config.attachWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
+                            },
+                        })
+                    ],
                 }),
                 new TreeNode(l10n.t('在编辑器中打开'), {
                     command: {

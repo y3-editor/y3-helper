@@ -242,5 +242,6 @@
   "y3": "clicli",
   "Y3": "CliCli",
   "y3-helper": "clicli-helper",
-  "'演示/项目配置'": "'Demo/Project Configuration'"
+  "'演示/项目配置'": "'Demo/Project Configuration'",
+  "启动游戏后立即附加": "Attach immediately after starting the game"
 }

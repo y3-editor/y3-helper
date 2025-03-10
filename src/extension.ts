@@ -207,29 +207,7 @@ class Helper {
                 luaArgs['lua_tracy'] = 'true';
             }
 
-            await vscode.window.withProgress({
-                title: l10n.t('正在启动游戏...'),
-                location: vscode.ProgressLocation.Window,
-            }, async (progress) => {
-                let gameLauncher = new GameLauncher();
-                await gameLauncher.launch({
-                    luaArgs: luaArgs,
-                    multi: config.multiMode ? config.multiPlayers.sort() : undefined,
-                    tracy: config.tracy,
-                });
-            });
-        });
-    }
-
-    private registerCommandOfLaunchGameAndAttach() {
-        vscode.commands.registerCommand('y3-helper.launchGameAndAttach', async () => {
-            await vscode.window.withProgress({
-                title: l10n.t('正在启动游戏...'),
-                location: vscode.ProgressLocation.Window,
-            }, async (progress) => {
-                let gameLauncher = new GameLauncher();
-
-                let luaArgs: Record<string, string> = {};
+            if (config.attachWhenLaunch) {
                 if (config.multiMode) {
                     luaArgs['lua_multi_mode'] = 'true';
                     luaArgs['lua_multi_wait_debugger'] = 'true';
@@ -241,21 +219,27 @@ class Helper {
                 } else {
                     luaArgs['lua_wait_debugger'] = 'true';
                 }
+            }
 
-                if (config.tracy) {
-                    luaArgs['lua_tracy'] = 'true';
-                }
+            await vscode.window.withProgress({
+                title: l10n.t('正在启动游戏...'),
+                location: vscode.ProgressLocation.Window,
+            }, async (progress) => {
+                let gameLauncher = new GameLauncher();
 
                 let suc = await gameLauncher.launch({
                     luaArgs: luaArgs,
                     multi: config.multiMode ? config.multiPlayers.sort() : undefined,
                     tracy: config.tracy,
                 });
+
                 if (!suc) {
                     return;
                 }
 
-                await debug.attach();
+                if (config.attachWhenLaunch) {
+                    await debug.attach();
+                }
             });
         });
     }
@@ -306,7 +290,6 @@ class Helper {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
-        this.registerCommandOfLaunchGameAndAttach();
         this.registerCommandOfAttach();
         this.registerCommandOfLaunchEditor();
         
