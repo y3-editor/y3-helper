@@ -7,7 +7,6 @@ import { TreeViewManager } from "../../console/treeView";
 import * as globalScript from '../../globalScript';
 import * as l10n from '@vscode/l10n';
 
-
 function 多开模式() {
     let node = new TreeNode(l10n.t('多开模式'), {
         tooltip: l10n.t('请手动启动编辑器登录（并选择30天免登录）再使用此功能'),
@@ -164,16 +163,80 @@ export class 功能 extends TreeNode {
                         title: l10n.t('启动游戏'),
                     },
                     update: async (node) => {
-                        let name = env.project?.entryMap?.name;
-                        let description = env.project?.entryMap?.description;
+                        let map = env.project?.selectedMap;
+                        let name = map?.name;
+                        let description = map?.description;
                         if (name === description) {
                             node.description = `${name}`;
                         } else {
                             node.description = `${description}@${name}`;
                         }
+
+                        function makeChilds(): TreeNode[] {
+                            if (!env.project) {
+                                return [];
+                            }
+                            let options: ['option' | 'map', string, y3.Map][] = [];
+                            if (env.project.entryMap) {
+                                options.push(['option', 'entry', env.project.entryMap]);
+                            }
+                            if (env.currentMap) {
+                                options.push(['option', 'current', env.currentMap]);
+                            }
+                            for (const map of env.project.maps) {
+                                options.push(['map', map.name, map]);
+                            }
+                
+                            let target: (typeof options[0]) | undefined;
+                            for (const option of options) {
+                                if (config.launchMap[0] === option[0] && config.launchMap[1] === option[1]) {
+                                    target = option;
+                                    break;
+                                }
+                            }
+                
+                            return options.map((option) => {
+                                const [type, name, map] = option;
+                                if (type === 'map') {
+                                    return new TreeNode(map.name, {
+                                        tooltip: map.description,
+                                        iconPath: option === target
+                                                ? new vscode.ThemeIcon('arrow-circle-right')
+                                                : new vscode.ThemeIcon('circle-outline'),
+                                        command: {
+                                            command: 'y3-helper.selectLaunchingMap',
+                                            title: l10n.t('选择启动地图'),
+                                            arguments: [type, name],
+                                        },
+                                    });
+                                } else {
+                                    let nodeName = name === 'entry'
+                                                ? l10n.t('入口地图')
+                                                : l10n.t('当前地图');
+                                    return new TreeNode(nodeName, {
+                                        description: map.name,
+                                        tooltip: map.description,
+                                        iconPath: option === target
+                                                ? new vscode.ThemeIcon('arrow-circle-right')
+                                                : new vscode.ThemeIcon('circle-outline'),
+                                        command: {
+                                            command: 'y3-helper.selectLaunchingMap',
+                                            title: l10n.t('选择启动地图'),
+                                            arguments: [type, name],
+                                        },
+                                    });
+                                }
+                            });
+                        }
+                
+                        node.childs = makeChilds();
                     },
                     init: (node) => {
                         env.onDidChange(async () => {
+                            node.refresh();
+                        });
+                        vscode.commands.registerCommand('y3-helper.selectLaunchingMap', async (type: 'option' | 'map', name: string) => {
+                            config.launchMap = [type, name];
                             node.refresh();
                         });
                     },

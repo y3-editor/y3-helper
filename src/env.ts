@@ -9,6 +9,7 @@ import * as y3 from 'y3-helper';
 import * as jsonc from 'jsonc-parser';
 import { EditorManager } from './editorTable/editorTable';
 import * as l10n from '@vscode/l10n';
+import { config } from './config';
 
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
@@ -156,6 +157,23 @@ class Project extends vscode.Disposable {
 
     findMapByUri(uri: vscode.Uri) {
         return this.maps.find(map => uri.toString().startsWith(map.uri.toString()));
+    }
+
+    
+    get selectedMap(): y3.Map | undefined {
+        if (!y3.env.project) {
+            return undefined;
+        }
+        const [type, name] = config.launchMap;
+        if (type === 'map') {
+            return y3.env.project.maps.find(map => map.name === name) ?? y3.env.project.entryMap;
+        }
+        if (name === 'entry') {
+            return y3.env.project.entryMap;
+        }
+        if (name === 'current') {
+            return y3.env.currentMap;
+        }
     }
 }
 
