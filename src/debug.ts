@@ -97,9 +97,6 @@ async function checkNeedAttach() {
     if (!env.project) {
         return;
     }
-    if (debugSessions.length > 0) {
-        return;
-    }
     let needAttach = false;
     for (const map of env.project.maps) {
         const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
@@ -107,6 +104,9 @@ async function checkNeedAttach() {
             await y3.fs.removeFile(logPath);
             needAttach = true;
         }
+    }
+    if (debugSessions.length > 0) {
+        return;
     }
     if (needAttach) {
         await attach();
