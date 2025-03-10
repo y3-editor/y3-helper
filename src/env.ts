@@ -203,8 +203,9 @@ class Env {
             regKey.get(winreg.DEFAULT_VALUE, (err, item) => {
                 if (err || !item) {
                     resolve(undefined);
+                } else {
+                    resolve(item.value);
                 }
-                resolve(item.value);
             });
         });
         if (typeof editorPath !== 'string') {
