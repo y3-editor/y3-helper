@@ -148,6 +148,20 @@ export class PluginManager extends vscode.Disposable {
         });
         this.uri = y3.uri(this.map.helperUri, 'plugin');
         this.loadPlugins();
+        this.createPluginFileWatcher();
+        this.createMapSaveWatcher();
+        this._disposables.push(vscode.workspace.onDidChangeTextDocument(async (e) => {
+            let plugin = await this.findPlugin(e.document.uri);
+            if (!plugin) {
+                return;
+            }
+            plugin.setCode(e.document.getText());
+            this.notifyChange();
+            onDidChange.fire();
+        }));
+    }
+
+    private createPluginFileWatcher() {
         let watcher = vscode.workspace.createFileSystemWatcher(
             new vscode.RelativePattern(this.uri, '**/*.js')
         );
@@ -179,15 +193,25 @@ export class PluginManager extends vscode.Disposable {
             this.notifyChange();
             onDidChange.fire();
         });
-        this._disposables.push(vscode.workspace.onDidChangeTextDocument(async (e) => {
-            let plugin = await this.findPlugin(e.document.uri);
-            if (!plugin) {
-                return;
+    }
+
+    private createMapSaveWatcher() {
+        let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.map.uri, '*.gmp'));
+        this._disposables.push(watcher);
+    
+        let delay: NodeJS.Timeout | undefined;
+        let onSave = () => {
+            if (delay) {
+                clearTimeout(delay);
             }
-            plugin.setCode(e.document.getText());
-            this.notifyChange();
-            onDidChange.fire();
-        }));
+            delay = setTimeout(async () => {
+                delay = undefined;
+                await this.runAll('onSave');
+            }, 1000);
+        };
+
+        watcher.onDidCreate(onSave);
+        watcher.onDidChange(onSave);
     }
 
     @throttle(100)

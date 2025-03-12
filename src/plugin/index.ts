@@ -60,31 +60,6 @@ async function updatePluginDTS(showme = false) {
     }
 }
 
-let watcher: vscode.FileSystemWatcher | undefined;
-
-function updateMapSaveWatcher() {
-    watcher?.dispose();
-    if (!y3.env.mapUri) {
-        return;
-    }
-    watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(y3.env.mapUri, '*.gmp'));
-    watcher.onDidCreate(onSave);
-    watcher.onDidChange(onSave);
-
-    let delay: NodeJS.Timeout | undefined;
-    function onSave() {
-        if (delay) {
-            clearTimeout(delay);
-        }
-        delay = setTimeout(async () => {
-            delay = undefined;
-            for (const map of y3.env.project?.maps ?? []) {
-                await runAllPlugins(map, 'onSave');
-            }
-        }, 1000);
-    }
-}
-
 export async function runAllPlugins(map: y3.Map, funcName: string) {
     let count = await map.pluginManager.runAll(funcName);
     if (count > 0) {
@@ -125,10 +100,8 @@ export async function findPlugin(uri: vscode.Uri): Promise<plugin.Plugin | undef
 export async function init() {
     await y3.env.mapReady();
 
-    updateMapSaveWatcher();
     updatePluginDTS();
     y3.env.onDidChange(() => {
-        updateMapSaveWatcher();
         updatePluginDTS();
     });
 
