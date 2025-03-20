@@ -23,11 +23,11 @@ export class JumpWord extends BaseDefine {
     }
 
     get watchPattern() {
-        return new RelativePattern(this.map.uri, fileName);
+        return new RelativePattern(this.map.triggerMapUri, fileName);
     }
 
     private async makeWords(): Promise<Word[]> {
-        let file = await y3.fs.readFile(this.map.uri, fileName);
+        let file = await y3.fs.readFile(this.map.triggerMapUri, fileName);
         if (!file) {
             return [];
         }

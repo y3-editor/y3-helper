@@ -37,7 +37,7 @@ export class UI extends BaseDefine {
     }
 
     get watchPattern() {
-        return new RelativePattern(this.map.uri, dirPath + '/*.json');
+        return new RelativePattern(this.map.triggerMapUri, dirPath + '/*.json');
     }
 
     private makeNode(object: any): Node | undefined {
@@ -117,7 +117,7 @@ export class UI extends BaseDefine {
             场景UI: [],
             元件: [],
         };
-        let dir = vscode.Uri.joinPath(this.map.uri, dirPath);
+        let dir = vscode.Uri.joinPath(this.map.triggerMapUri, dirPath);
         let files = await vscode.workspace.fs.readDirectory(dir);
         for (let [fileName, fileType] of files) {
             if (fileType !== vscode.FileType.File) {
@@ -143,7 +143,7 @@ export class UI extends BaseDefine {
                 }
             }
         }
-        let prefabDir = vscode.Uri.joinPath(this.map.uri, prefabPath);
+        let prefabDir = vscode.Uri.joinPath(this.map.triggerMapUri, prefabPath);
         let prefabFiles = await vscode.workspace.fs.readDirectory(prefabDir);
         for (let [fileName, fileType] of prefabFiles) {
             if (fileType !== vscode.FileType.File) {

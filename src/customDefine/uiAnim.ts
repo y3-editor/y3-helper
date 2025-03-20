@@ -2,8 +2,9 @@ import { BaseDefine } from "./baseDefine";
 import { RelativePattern } from "vscode";
 import * as y3 from 'y3-helper';
 import * as tools from '../tools';
+import * as l10n from '@vscode/l10n';
 
-const fileName = 'uianim.json';import * as l10n from '@vscode/l10n';
+const fileName = 'uianim.json';
 
 
 const playMode = {
@@ -38,11 +39,11 @@ export class UIAnim extends BaseDefine {
     }
 
     get watchPattern() {
-        return new RelativePattern(this.map.uri, fileName);
+        return new RelativePattern(this.map.triggerMapUri, fileName);
     }
 
     private async makeAnims(): Promise<Anim[]> {
-        let file = await y3.fs.readFile(this.map.uri, fileName);
+        let file = await y3.fs.readFile(this.map.triggerMapUri, fileName);
         if (!file) {
             return [];
         }
