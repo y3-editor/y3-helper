@@ -215,12 +215,12 @@ class Env {
     }
 
     private async isValidEditorPath(editorPath: string): Promise<boolean> {
-        if (path.basename(editorPath) !== 'Editor.exe') {
-            return false;
-        }
         try {
             let state = await vscode.workspace.fs.stat(vscode.Uri.file(editorPath));
-            if (state.type === vscode.FileType.File) {
+            if (path.basename(editorPath) === 'Editor.exe' && state.type === vscode.FileType.File) {
+                return true;
+            }
+            if (path.basename(editorPath) === 'Engine' && state.type === vscode.FileType.Directory) {
                 return true;
             }
         } catch (error) {

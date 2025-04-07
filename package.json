@@ -376,7 +376,7 @@
                     "type": "string",
                     "default": "",
                     "ignoreSync": true,
-                    "pattern": "(^.*[\\\\/]Editor.exe$)|(^$)",
+                    "pattern": "(^.*[\\\\/](Editor.exe|Engine)$)|(^$)",
                     "scope": "resource"
                 },
                 "Y3-Helper.ShowStatusBarItem": {
