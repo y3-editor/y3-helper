@@ -229,10 +229,7 @@ export class 功能 extends TreeNode {
                             });
                         }
                 
-                        node.childs = [
-                            new TreeNode('⚠️该功能在3月26日编辑器更新后可用⚠️'),
-                            ...makeChilds(),
-                        ];
+                        node.childs = makeChilds();
                     },
                     init: (node) => {
                         env.onDidChange(async () => {
