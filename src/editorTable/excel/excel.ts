@@ -91,7 +91,7 @@ export class Sheet {
         const titleRow = this.sheet.getRow(row);
         const titles: string[] = [];
         const colCount = this.sheet.actualColumnCount;
-        const rowCount = this.sheet.actualRowCount;
+        const rowCount = this.sheet.rowCount;
         for (let c = col; c <= colCount; c++) {
             const cell = titleRow.getCell(c);
             const title = cell.toString();

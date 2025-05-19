@@ -14,14 +14,14 @@ class Item implements vscode.QuickPickItem {
 }
 
 vscode.commands.registerCommand('y3-helper.testExcel', async () => {
-    let result = await vscode.window.showQuickPick<Item>([
-        new Item(l10n.t('测试选项1')),
-        new Item(l10n.t('测试选项2')),
-    ], {
-        matchOnDescription: false,
-        matchOnDetail: false,
-    });
-    result;
+    let uris = await vscode.window.showOpenDialog();
+    let uri = uris?.[0];
+    if (!uri) {
+        return;
+    }
+    let result = await excel.loadFile(uri);
+    let table = result?.makeTable('A2', 2);
+    table;
 });
 
 export function init() {
