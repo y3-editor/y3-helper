@@ -315,10 +315,16 @@ class Helper {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+    let osLocale = await import('os-locale');
     y3.setContext(context);
     let language = vscode.workspace.getConfiguration('Y3-Helper').get('Language');
     if (language === 'default') {
-        language = vscode.env.language;
+        // VSCode的语言或系统语言任意一个是中文，则使用中文
+        if (vscode.env.language === 'zh-cn' || await osLocale.osLocale() === 'zh-CN') {
+            language = 'zh-cn';
+        } else {
+            language = 'en';
+        }
     }
     env.language = language as any;
     if (language !== 'zh-cn') {

@@ -462,6 +462,7 @@
         "jsonc-parser": "^3.3.1",
         "jszip": "^3.10.1",
         "module-alias": "2.2.3",
+        "os-locale": "^6.0.2",
         "uuid": "^9.0.1",
         "winreg": "^1.2.5"
     },
