@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import * as vm from 'vm';
 import * as path from 'path';
+import * as fs from 'fs';
 import { queue, throttle } from '../utility/decorators';
 
 declare const __non_webpack_require__: NodeRequire | undefined;
 const rawRequire = __non_webpack_require__ ?? require;
 import * as l10n from '@vscode/l10n';
-import { on } from 'events';
 
 
 interface ExportInfo {
@@ -19,7 +19,6 @@ interface ExportInfo {
 export class Plugin {
     private rawCode?: string | null;
     private fixedCode?: string;
-    private script?: vm.Script;
     private parseError?: string;
     private exports: Record<string, ExportInfo> = {};
     constructor(public uri: vscode.Uri, public name: string) {
@@ -29,7 +28,6 @@ export class Plugin {
     public setCode(code: string) {
         this.rawCode = code;
         this.fixedCode = undefined;
-        this.script = undefined;
         this.parseError = undefined;
         this.exports = {};
         let lines = code.split('\n');
@@ -54,7 +52,6 @@ export class Plugin {
     public async reload() {
         this.rawCode = undefined;
         this.fixedCode = undefined;
-        this.script = undefined;
         this.parseError = undefined;
         this.exports = {};
         await this.parse();
@@ -92,21 +89,14 @@ export class Plugin {
                 if (this.parseError) {
                     throw new Error(this.parseError);
                 }
-                if (!this.script) {
-                    if (!this.fixedCode) {
-                        this.parseError = l10n.t('代码解析失败');
-                        throw new Error(this.parseError);
-                    }
-                    try {
-                        this.script = new vm.Script(this.fixedCode, {
-                            filename: this.uri.path,
-                        });
-                    } catch (error) {
-                        this.parseError = String(error);
-                        throw new Error(this.parseError);
-                    }
+                if (!this.fixedCode) {
+                    this.parseError = l10n.t('代码解析失败');
+                    throw new Error(this.parseError);
                 }
-                let exports = this.script!.runInNewContext(sandbox);
+                let exports = vm.runInNewContext(this.fixedCode, sandbox, {
+                    filename: this.uri.fsPath,
+                    displayErrors: true,
+                });
                 if (typeof exports[funcName] !== 'function') {
                     throw new Error(l10n.t('没有找到要执行的函数{0}', funcName));
                 }
@@ -276,18 +266,32 @@ export class PluginManager extends vscode.Disposable {
             return null;
         }
 
+        const localCache: Record<string, any> = {};
+
+        const exports = {};
         const sandBox = {
             require: (name: string) => {
                 if (name.startsWith('./') || name.startsWith('../')) {
                     let filePath = getCallerFilePath();
                     let fileDir = path.dirname(filePath!);
                     const resolvedPath = rawRequire.resolve(name, { paths: [fileDir] });
-                    return rawRequire(resolvedPath);
+                    if (localCache[resolvedPath] === undefined) {
+                        let code = fs.readFileSync(resolvedPath, 'utf-8');
+                        let context = this.makeSandbox();
+                        vm.runInNewContext(code, context, {
+                            filename: resolvedPath,
+                            displayErrors: true,
+                        });
+                        localCache[resolvedPath] = context.exports;
+                    }
+                    return localCache[resolvedPath];
                 }
                 return PluginManager.requireCache[name] ?? rawRequire(name);
             },
-            module: { exports: {} },
+            exports,
+            module: { exports },
         };
+
         return vm.createContext(new Proxy(sandBox as any, {
             get(target, prop) {
                 return target[prop] ?? (global as any)[prop];

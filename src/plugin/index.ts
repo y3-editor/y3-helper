@@ -125,7 +125,7 @@ export async function init() {
                 }
             }
         } catch (error: any) {
-            vscode.window.showErrorMessage(l10n.t('运行插件脚本出错：{0}', error));
+            vscode.window.showErrorMessage(l10n.t('运行插件脚本出错：{0}', String(error)));
             if (error.stack) {
                 y3.log.error(error.stack);
                 y3.log.show();
