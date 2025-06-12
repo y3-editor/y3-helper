@@ -8,21 +8,30 @@ import * as l10n from '@vscode/l10n';
 
 export class Language extends vscode.Disposable {
     private disposeList: vscode.Disposable[] = [];
-    public uri: vscode.Uri;
+    public uri1: vscode.Uri;
+    public uri2: vscode.Uri;
 
     constructor(public map: Map) {
         super(() => {
             this.disposeList.forEach(d => d.dispose());
         });
-        this.uri = vscode.Uri.joinPath(this.map.uri, "zhlanguage.json");
+        this.uri1 = vscode.Uri.joinPath(this.map.uri, "zhlanguage.json");
+        this.uri2 = vscode.Uri.joinPath(y3.env.projectUri!, 'language', 'zhlanguage.json');
     }
 
     async start() {
-        let watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, "*"));
-        watcher.onDidChange(() => this.reload());
-        watcher.onDidCreate(() => this.reload());
-        watcher.onDidDelete(() => this.reload());
-        this.disposeList.push(watcher);
+        let watcher1 = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri1, "*"));
+        watcher1.onDidChange(() => this.reload());
+        watcher1.onDidCreate(() => this.reload());
+        watcher1.onDidDelete(() => this.reload());
+        this.disposeList.push(watcher1);
+
+        let watcher2 = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri2, "*"));
+        watcher2.onDidChange(() => this.reload());
+        watcher2.onDidCreate(() => this.reload());
+        watcher2.onDidDelete(() => this.reload());
+        this.disposeList.push(watcher2);
+
         await this.reload();
     }
 
@@ -42,7 +51,7 @@ export class Language extends vscode.Disposable {
         try {
             await this._ioLock.acquire();
             y3.log.debug(l10n.t('开始读取语言文件'));
-            let languageFile = await y3.fs.readFile(this.uri);
+            let languageFile = await y3.fs.readFile(this.uri1) ?? await y3.fs.readFile(this.uri2);
             y3.log.debug(l10n.t('语言文件读取完成'));
             this._ioLock.release();
             if (!languageFile) {
@@ -145,7 +154,7 @@ export class Language extends vscode.Disposable {
         await this._ioLock.acquire();
         this._lastWriteTime = Date.now();
         y3.log.debug(l10n.t('开始写入语言文件'));
-        await y3.fs.writeFile(this.uri!, content);
+        await y3.fs.writeFile(this.uri1!, content);
         y3.log.debug(l10n.t('语言文件写入完成'));
         this._ioLock.release();
         this._lastWriteTime = Date.now();
