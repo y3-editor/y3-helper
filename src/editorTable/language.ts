@@ -154,7 +154,11 @@ export class Language extends vscode.Disposable {
         await this._ioLock.acquire();
         this._lastWriteTime = Date.now();
         y3.log.debug(l10n.t('开始写入语言文件'));
-        await y3.fs.writeFile(this.uri1!, content);
+        if (await y3.fs.isExists(this.uri2)) {
+            await y3.fs.writeFile(this.uri2, content);
+        } else {
+            await y3.fs.writeFile(this.uri1, content);
+        }
         y3.log.debug(l10n.t('语言文件写入完成'));
         this._ioLock.release();
         this._lastWriteTime = Date.now();
