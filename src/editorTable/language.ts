@@ -15,8 +15,8 @@ export class Language extends vscode.Disposable {
         super(() => {
             this.disposeList.forEach(d => d.dispose());
         });
-        this.uri1 = vscode.Uri.joinPath(this.map.uri, "zhlanguage.json");
-        this.uri2 = vscode.Uri.joinPath(y3.env.projectUri!, 'language', 'zhlanguage.json');
+        this.uri1 = vscode.Uri.joinPath(y3.env.projectUri!, 'language', 'zhlanguage.json');
+        this.uri2 = vscode.Uri.joinPath(this.map.uri, "zhlanguage.json");
     }
 
     async start() {
