@@ -122,7 +122,7 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
 
 function checkAndConvertType(fieldInfo: FieldInfo, value: any, convertType = false) {
     if (!fieldInfo.type) {
-        throw new Error(l10n.t("未知字段类型:'{0}'", fieldInfo.field));
+        return value;
     }
     switch (fieldInfo.type) {
         case 'PLocalizeText': {
