@@ -117,6 +117,11 @@ function toKV(kv: KV, raw: Record<string, KVShape>): Record<string, KVShape> {
             };
         }
     }
+    for (const k in result) {
+        if (!(k in kv)) {
+            delete result[k];
+        }
+    }
     return result;
 }
 
