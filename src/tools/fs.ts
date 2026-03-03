@@ -4,11 +4,12 @@ class File {
     private _data = new Uint8Array();
 
     write(data: Uint8Array) {
-        this._data = data;
+        this._data = data as Uint8Array<ArrayBuffer>;
         return this;
     }
 
-    get buffer() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    get buffer(): any {
         return Buffer.from(this._data);
     }
 
