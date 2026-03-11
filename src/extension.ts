@@ -24,6 +24,7 @@ import { config } from './config';
 import * as globalScript from './globalScript';
 import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
+import * as uiFramework from './uiFramework';
 import * as l10n from '@vscode/l10n';
 
 class Helper {
@@ -175,6 +176,27 @@ class Helper {
                     } catch {}
                 }
 
+                // 询问用户是否生成 UI 框架
+                const generateUI = l10n.t('✅ 确认生成');
+                const skipUI = l10n.t('跳过');
+                const uiChoice = await vscode.window.showWarningMessage(
+                    l10n.t('是否生成 UI 开发框架？'),
+                    { modal: true, detail: l10n.t('将在 global_script/game/ 目录下生成 UI 框架文件（UIManager、BasePanel、BaseView、BaseTips 等）。\n\n⚠️ 注意：不会修改 global_main.lua，但如果 game/ 目录下已有同名框架文件，将被覆盖。\n\n生成后需要在 global_main.lua 中手动添加 include \'game.init\' 来启用。') },
+                    generateUI,
+                    skipUI
+                );
+
+                if (uiChoice === generateUI) {
+                    try {
+                        await uiFramework.initUIFramework(this.context, progress);
+                        vscode.window.showInformationMessage(l10n.t('✅ UI 框架已生成到 global_script/ 目录'));
+                    } catch (error) {
+                        y3.log.warn(l10n.t('UI 框架初始化失败: {0}', String(error)));
+                    }
+                } else {
+                    y3.log.info(l10n.t('用户跳过了 UI 框架生成'));
+                }
+
                 // 打开项目
                 await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', scriptUri);
@@ -262,6 +284,36 @@ class Helper {
         });
     }
 
+    private registerCommandOfGenerateUIFramework() {
+        vscode.commands.registerCommand('y3-helper.generateUIFramework', async () => {
+            const generateUI = l10n.t('✅ 确认生成');
+            const choice = await vscode.window.showWarningMessage(
+                l10n.t('是否生成 UI 开发框架？'),
+                {
+                    modal: true,
+                    detail: l10n.t('将在 global_script/game/ 目录下生成 UI 框架文件（UIManager、BasePanel、BaseView、BaseTips 等）。\n\n⚠️ 注意：不会修改 global_main.lua，但如果 game/ 目录下已有同名框架文件，将被覆盖。\n\n生成后需要在 global_main.lua 中手动添加 include \'game.init\' 来启用。')
+                },
+                generateUI
+            );
+
+            if (choice !== generateUI) {
+                return;
+            }
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: l10n.t('正在生成 UI 框架...'),
+            }, async (progress) => {
+                const success = await uiFramework.initUIFramework(this.context, progress);
+                if (success) {
+                    vscode.window.showInformationMessage(l10n.t('✅ UI 框架已生成到 global_script/ 目录'));
+                } else {
+                    vscode.window.showErrorMessage(l10n.t('❌ UI 框架生成失败，请查看输出日志'));
+                }
+            });
+        });
+    }
+
     private checkNewProject() {
         let newProjectPath = this.context.globalState.get("NewProjectPath");
         if (!newProjectPath) {
@@ -292,6 +344,7 @@ class Helper {
         this.registerCommandOfLaunchGame();
         this.registerCommandOfAttach();
         this.registerCommandOfLaunchEditor();
+        this.registerCommandOfGenerateUIFramework();
         
         this.reloadEnvWhenConfigChange();
 
