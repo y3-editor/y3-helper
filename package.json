@@ -189,11 +189,6 @@
                 "category": "%Y3开发助手%"
             },
             {
-                "command": "y3-helper.generateUIFramework",
-                "title": "生成UI框架",
-                "category": "%Y3开发助手%"
-            },
-            {
                 "command": "y3-helper.editorTableView.refresh",
                 "title": "刷新物编数据",
                 "shortTitle": "刷新",

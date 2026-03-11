@@ -5,7 +5,6 @@ import * as y3 from 'y3-helper';
 import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
 import * as globalScript from '../../globalScript';
-import * as uiFramework from '../../uiFramework';
 import * as l10n from '@vscode/l10n';
 
 function 多开模式() {
@@ -292,23 +291,6 @@ export class 功能 extends TreeNode {
                 多开模式(),
                 启用Tracy(),
                 切换自定义视图(),
-                new TreeNode(l10n.t('生成 UI 框架'), {
-                    iconPath: new vscode.ThemeIcon('layout'),
-                    tooltip: l10n.t('在 global_script/ 下生成 UI 开发框架（UIManager、BasePanel、BaseView、BaseTips）'),
-                    command: {
-                        command: 'y3-helper.generateUIFramework',
-                        title: l10n.t('生成 UI 框架'),
-                    },
-                    update: async (node) => {
-                        if (await uiFramework.isUIFrameworkInitialized()) {
-                            node.iconPath = new vscode.ThemeIcon('check');
-                            node.description = l10n.t('已生成');
-                        } else {
-                            node.iconPath = new vscode.ThemeIcon('layout');
-                            node.description = undefined;
-                        }
-                    },
-                }),
             ]
         });
 
