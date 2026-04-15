@@ -1,0 +1,1195 @@
+{
+    "affect_techs": {
+        "desc": "应用科技",
+        "key": "affect_techs",
+        "tips": "单位的可应用科技（会受到该科技的影响）",
+        "type": "PExplorerList"
+    },
+    "agility": {
+        "desc": "敏捷",
+        "key": "agility",
+        "tips": "敏捷",
+        "type": "PFloat"
+    },
+    "agility_grow": {
+        "desc": "敏捷",
+        "key": "agility_grow",
+        "tips": "敏捷",
+        "type": "PFloat"
+    },
+    "alarm_range": {
+        "desc": "警戒范围(AI)",
+        "key": "alarm_range",
+        "tips": "单位的警戒范围(AI)",
+        "type": "PFloat"
+    },
+    "angle_tolerance": {
+        "desc": "允许移动的角度差",
+        "key": "angle_tolerance",
+        "tips": "当单位转向时，如果转向角度小于该值，则会直接朝目标方向移动；反之会边转向，边移动。",
+        "type": "PFloat"
+    },
+    "anim_state_name": {
+        "desc": "动画状态名",
+        "key": "anim_state_name",
+        "type": "PText"
+    },
+    "armor_type": {
+        "desc": "防御类型",
+        "key": "armor_type",
+        "tips": "单位的护甲类型，具体效果可在游戏规则中查看",
+        "type": "PEnum"
+    },
+    "attack_interval": {
+        "desc": "攻击间隔",
+        "key": "attack_interval",
+        "tips": "单位两次普通攻击之前间隔的秒数，当普攻技能替换为自定义类型时，会使用技能的冷却时间",
+        "type": "PFloat"
+    },
+    "attack_interval_grow": {
+        "desc": "攻击间隔",
+        "key": "attack_interval_grow",
+        "tips": "两次普通攻击之间的间隔时间",
+        "type": "PFloat"
+    },
+    "attack_mag": {
+        "desc": "法术攻击力",
+        "key": "attack_mag",
+        "tips": "单位的法术攻击力",
+        "type": "PFloat"
+    },
+    "attack_mag_grow": {
+        "desc": "法术攻击力",
+        "key": "attack_mag_grow",
+        "tips": "单位的法术攻击力",
+        "type": "PFloat"
+    },
+    "attack_phy": {
+        "desc": "物理攻击力",
+        "key": "attack_phy",
+        "tips": "单位的物理攻击力",
+        "type": "PFloat"
+    },
+    "attack_phy_grow": {
+        "desc": "物理攻击力",
+        "key": "attack_phy_grow",
+        "tips": "单位的物理攻击力",
+        "type": "PFloat"
+    },
+    "attack_range": {
+        "desc": "攻击范围",
+        "key": "attack_range",
+        "tips": "单位可以攻击攻击范围内的可见单位，当普攻技能替换为自定义类型时，会使用技能的释放范围",
+        "type": "PFloat"
+    },
+    "attack_range_grow": {
+        "desc": "攻击范围",
+        "key": "attack_range_grow",
+        "tips": "普通攻击的攻击范围",
+        "type": "PFloat"
+    },
+    "attack_speed": {
+        "desc": "攻击速度(%)",
+        "key": "attack_speed",
+        "tips": "单位的攻击速度百分比，局内显示的实际攻速为:1/单位当前普通攻击技能冷却时间*攻击速度",
+        "type": "PFloat"
+    },
+    "attack_speed_grow": {
+        "desc": "攻击速度(%)",
+        "key": "attack_speed_grow",
+        "tips": "攻击速度(倍数)",
+        "type": "PFloat"
+    },
+    "attack_type": {
+        "desc": "攻击类型",
+        "key": "attack_type",
+        "tips": "单位的攻击类型，具体效果可在游戏规则中查看",
+        "type": "PEnum"
+    },
+    "bar_show_name": {
+        "desc": "头顶名称显示方式",
+        "key": "bar_show_name",
+        "tips": "影响游戏内物体上方的文本显示内容。",
+        "type": "PEnum"
+    },
+    "bar_show_scale": {
+        "desc": "是否显示血条刻度",
+        "key": "bar_show_scale",
+        "tips": "单位血条上是否会出现刻度线",
+        "type": "PBool"
+    },
+    "bar_slot_size": {
+        "desc": "物品栏",
+        "key": "bar_slot_size",
+        "tips": "单位的物品栏格数",
+        "type": "PInt"
+    },
+    "base_color_mod": {
+        "desc": "材质颜色叠加类型",
+        "key": "base_color_mod",
+        "type": "PEnum"
+    },
+    "base_tint_color": {
+        "desc": "基础材质变色",
+        "key": "base_tint_color",
+        "type": "PAst"
+    },
+    "billboard_name_font": {
+        "desc": "头顶名称字体",
+        "key": "billboard_name_font",
+        "tips": "在单位头顶显示的文字字体",
+        "type": "PEnum"
+    },
+    "billboard_offset": {
+        "key": "billboard_offset",
+        "type": "PVector3"
+    },
+    "billboard_scale_x": {
+        "desc": "x轴缩放",
+        "key": "billboard_scale_x",
+        "type": "PFloat"
+    },
+    "billboard_scale_y": {
+        "desc": "y轴缩放",
+        "key": "billboard_scale_y",
+        "type": "PFloat"
+    },
+    "blood_bar": {
+        "desc": "血条样式",
+        "key": "blood_bar",
+        "tips": "该单位在游戏内的血条样式",
+        "type": "PEnum"
+    },
+    "blood_show_type": {
+        "desc": "血条显示模式",
+        "key": "blood_show_type",
+        "tips": "该单位在游戏内的血条的显示时机",
+        "type": "PEnum"
+    },
+    "body_size": {
+        "desc": "模型缩放",
+        "key": "body_size",
+        "tips": "对当前物体模型的缩放倍数，用于调整模型大小。",
+        "type": "PFloat"
+    },
+    "build_ignore_dyn_collision": {
+        "desc": "建造时忽略动态碰撞",
+        "key": "build_ignore_dyn_collision",
+        "tips": "使用建造技能建造该单位时，是否忽略其他单位的动态碰撞。\n若需要建造在其他单位脚下（如陷阱类），可勾选该开关。",
+        "type": "PBool"
+    },
+    "build_res_cost_list": {
+        "desc": "资源消耗",
+        "key": "build_res_cost_list",
+        "tips": "单位作为建筑时建造会消耗的资源",
+        "type": "PList"
+    },
+    "build_time": {
+        "desc": "建造时间（秒）",
+        "key": "build_time",
+        "type": "PInt"
+    },
+    "build_upgrade_list": {
+        "desc": "升级列表",
+        "key": "build_upgrade_list",
+        "type": "PExplorerList"
+    },
+    "buy_res_list": {
+        "desc": "购买所需资源",
+        "key": "buy_res_list",
+        "tips": "单位作为商品的购买所需资源",
+        "type": "PResList"
+    },
+    "can_flee": {
+        "desc": "无法反击时会逃跑",
+        "key": "can_flee",
+        "tips": "当单位受到伤害且自身无法反击时，会向伤害来源的相反方向移动一段距离，仅在警戒状态下生效",
+        "type": "PBool"
+    },
+    "cancel_alarm_range": {
+        "desc": "取消警戒范围(AI)",
+        "key": "cancel_alarm_range",
+        "tips": "单位的取消警戒范围(AI)，敌方离开取消警戒范围后会不再主动攻击敌方",
+        "type": "PFloat"
+    },
+    "cc_jump_height": {
+        "desc": "物理主控跳跃高度",
+        "key": "cc_jump_height",
+        "type": "PFloat"
+    },
+    "cc_move_acc": {
+        "desc": "物理主控加速度",
+        "key": "cc_move_acc",
+        "type": "PFloat"
+    },
+    "cc_move_acc_rate": {
+        "desc": "物理主控加速速率",
+        "key": "cc_move_acc_rate",
+        "type": "PFloat"
+    },
+    "cc_run_speed": {
+        "desc": "物理主控跑步速度",
+        "key": "cc_run_speed",
+        "type": "PFloat"
+    },
+    "cc_walk_speed": {
+        "desc": "物理主控行走速度",
+        "key": "cc_walk_speed",
+        "type": "PFloat"
+    },
+    "cd_reduce": {
+        "desc": "冷却缩减(%)",
+        "key": "cd_reduce",
+        "tips": "单位技能进入cd时减少部分冷却时间",
+        "type": "PFloat"
+    },
+    "cd_reduce_grow": {
+        "desc": "冷却缩减(%)",
+        "key": "cd_reduce_grow",
+        "tips": "单位技能进入cd时减少部分冷却时间",
+        "type": "PFloat"
+    },
+    "collision_box_turning_enable": {
+        "desc": "静态碰撞跟随面向",
+        "key": "collision_box_turning_enable",
+        "tips": "仅对建筑类型单位生效。勾选时，单位改变朝向时会使静态碰撞跟随旋转。",
+        "type": "PBool"
+    },
+    "collision_points": {
+        "desc": "碰撞格点",
+        "key": "collision_points",
+        "type": "PAst"
+    },
+    "collision_radius_2": {
+        "desc": "动态碰撞半径",
+        "key": "collision_radius_2",
+        "type": "PFloat"
+    },
+    "common_ability_list": {
+        "desc": "通用技能",
+        "key": "common_ability_list",
+        "tips": "单位的通用技能。在默认UI界面中，会显示在前6个技能栏内，超出的不显示但依然生效。",
+        "type": "PExplorerList"
+    },
+    "common_atk": {
+        "desc": "普通攻击",
+        "key": "common_atk",
+        "tips": "单位的普通攻击，唯一，单位对目标普通攻击时释放的技能",
+        "type": "PSingleSelectExplorer"
+    },
+    "common_atk_type": {
+        "desc": "普攻类型",
+        "key": "common_atk_type",
+        "tips": "单位普通攻击的类型，选择自定义需要绑定技能",
+        "type": "PEnum"
+    },
+    "counterattack_range": {
+        "desc": "允许反击范围",
+        "key": "counterattack_range",
+        "type": "PFloat"
+    },
+    "critical_chance": {
+        "desc": "暴击率(%)",
+        "key": "critical_chance",
+        "tips": "单位普通攻击有概率造成额外伤害",
+        "type": "PFloat"
+    },
+    "critical_chance_grow": {
+        "desc": "暴击率(%)",
+        "key": "critical_chance_grow",
+        "tips": "单位普通攻击有概率造成额外伤害",
+        "type": "PFloat"
+    },
+    "critical_dmg": {
+        "desc": "暴击伤害(%)",
+        "key": "critical_dmg",
+        "tips": "发生暴击时，造成的暴击伤害倍数",
+        "type": "PFloat"
+    },
+    "critical_dmg_grow": {
+        "desc": "暴击伤害(%)",
+        "key": "critical_dmg_grow",
+        "tips": "发生暴击时，造成的暴击伤害倍数",
+        "type": "PFloat"
+    },
+    "default_behaviour_type": {
+        "desc": "默认行为",
+        "key": "default_behaviour_type",
+        "tips": "单位默认状态下会执行的行为",
+        "type": "PEnum"
+    },
+    "defense_mag": {
+        "desc": "法术防御力",
+        "key": "defense_mag",
+        "tips": "单位的法术防御力",
+        "type": "PFloat"
+    },
+    "defense_mag_grow": {
+        "desc": "法术防御力",
+        "key": "defense_mag_grow",
+        "tips": "单位的法术防御力",
+        "type": "PFloat"
+    },
+    "defense_phy": {
+        "desc": "物理防御力",
+        "key": "defense_phy",
+        "tips": "单位的物理防御力",
+        "type": "PFloat"
+    },
+    "defense_phy_grow": {
+        "desc": "物理防御力",
+        "key": "defense_phy_grow",
+        "tips": "单位的物理防御力",
+        "type": "PFloat"
+    },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "tips": "单位的介绍说明，用在编辑器内和游戏内的Tips显示上",
+        "type": "PLocalizeText"
+    },
+    "destroy_after_die": {
+        "desc": "死亡后是否销毁单位",
+        "key": "destroy_after_die",
+        "tips": "死亡后是否会把单位完全销毁。（会在尸体消失时间结束后进行销毁，销毁后将无法再获取单位相关信息）",
+        "type": "PBool"
+    },
+    "die_anim": {
+        "desc": "死亡",
+        "key": "die_anim",
+        "tips": "死亡状态下会播放的动画",
+        "type": "PText"
+    },
+    "disk_shadow_size": {
+        "desc": "圆盘阴影大小",
+        "key": "disk_shadow_size",
+        "type": "PFloat"
+    },
+    "dmg_reduction": {
+        "desc": "伤害减免(%)",
+        "key": "dmg_reduction",
+        "tips": "百分比降低受到的伤害",
+        "type": "PFloat"
+    },
+    "dmg_reduction_grow": {
+        "desc": "伤害减免(%)",
+        "key": "dmg_reduction_grow",
+        "tips": "百分比降低受到的伤害",
+        "type": "PFloat"
+    },
+    "dodge_rate": {
+        "desc": "躲避率(%)",
+        "key": "dodge_rate",
+        "tips": "单位躲避其他单位普通攻击的概率",
+        "type": "PFloat"
+    },
+    "dodge_rate_grow": {
+        "desc": "躲避率(%)",
+        "key": "dodge_rate_grow",
+        "tips": "单位躲避其他单位普通攻击的概率",
+        "type": "PFloat"
+    },
+    "drop_items_tuple": {
+        "desc": "掉落物品",
+        "key": "drop_items_tuple",
+        "tips": "单位死亡后会掉落的物品",
+        "type": "PExplorerList"
+    },
+    "dynamic_collision_r": {
+        "desc": "寻路碰撞网格边长",
+        "key": "dynamic_collision_r",
+        "tips": "碰撞动态半径，每50为1个标准格。",
+        "type": "PFloat"
+    },
+    "enable_item_slots": {
+        "desc": "开启物品背包栏",
+        "key": "enable_item_slots",
+        "tips": "关闭后，单位将不会激活物品栏和背包栏。\n（对不需要背包的单位，关闭此属性可有助于提升地图性能）",
+        "type": "PBool"
+    },
+    "enable_strict_facing_mode": {
+        "desc": "开启面向移动模式",
+        "key": "enable_strict_facing_mode",
+        "type": "PBool"
+    },
+    "enemy_mini_map_icon": {
+        "desc": "敌方小地图头像",
+        "key": "enemy_mini_map_icon",
+        "type": "PResource"
+    },
+    "extra_dmg": {
+        "desc": "所有伤害加成(%)",
+        "key": "extra_dmg",
+        "tips": "百分比提高造成的伤害",
+        "type": "PFloat"
+    },
+    "extra_dmg_grow": {
+        "desc": "所有伤害加成(%)",
+        "key": "extra_dmg_grow",
+        "tips": "百分比提高造成的伤害",
+        "type": "PFloat"
+    },
+    "force_show_on_mini_map": {
+        "desc": "强制显示在小地图",
+        "key": "force_show_on_mini_map",
+        "tips": "勾选后单位将强制显示在小地图上，无视战争阴影",
+        "type": "PBool"
+    },
+    "fresnel_color": {
+        "desc": "菲涅尔颜色",
+        "key": "fresnel_color",
+        "type": "PAst"
+    },
+    "fresnel_emissive_color_strength": {
+        "desc": "菲涅尔强度",
+        "key": "fresnel_emissive_color_strength",
+        "type": "PFloat"
+    },
+    "fresnel_exp": {
+        "desc": "菲涅尔指数",
+        "key": "fresnel_exp",
+        "type": "PFloat"
+    },
+    "has_mp": {
+        "desc": "是否有技能资源条",
+        "key": "has_mp",
+        "tips": "该单位是否有可以用来释放技能的能量",
+        "type": "PBool"
+    },
+    "heal_effect": {
+        "desc": "被治疗效果加成(%)",
+        "key": "heal_effect",
+        "tips": "提高接受治疗时受到的治疗效果",
+        "type": "PFloat"
+    },
+    "heal_effect_grow": {
+        "desc": "被治疗效果提升(%)",
+        "key": "heal_effect_grow",
+        "tips": "提高接受治疗时受到的治疗效果",
+        "type": "PFloat"
+    },
+    "healing_effect": {
+        "desc": "被治疗效果加成(%)",
+        "key": "healing_effect",
+        "tips": "当单位受到治疗效果时，提升治疗量",
+        "type": "PFloat"
+    },
+    "healing_effect_grow": {
+        "desc": "被治疗效果提升(%)",
+        "key": "healing_effect_grow",
+        "type": "PFloat"
+    },
+    "height_offset": {
+        "key": "height_offset",
+        "type": "PFloat"
+    },
+    "hero_ability_list": {
+        "desc": "英雄技能",
+        "key": "hero_ability_list",
+        "tips": "单位的英雄技能，可以通过学习升级，每次学习需要消耗一个技能点（升级时获取）。在默认UI界面中，会显示在后6个技能栏内，超出的不显示但依然生效。",
+        "type": "PExplorerList"
+    },
+    "hit_rate": {
+        "desc": "命中率(%)",
+        "key": "hit_rate",
+        "tips": "单位普通攻击命中其他单位的概率",
+        "type": "PFloat"
+    },
+    "hit_rate_grow": {
+        "desc": "命中率(%)",
+        "key": "hit_rate_grow",
+        "tips": "单位普通攻击命中其他单位的概率",
+        "type": "PFloat"
+    },
+    "hp_max": {
+        "desc": "最大生命值",
+        "key": "hp_max",
+        "tips": "单位的最大生命值",
+        "type": "PFloat"
+    },
+    "hp_max_grow": {
+        "desc": "最大生命值",
+        "key": "hp_max_grow",
+        "tips": "单位的最大生命值",
+        "type": "PFloat"
+    },
+    "hp_rec": {
+        "desc": "生命恢复",
+        "key": "hp_rec",
+        "tips": "单位的每秒生命恢复数值",
+        "type": "PFloat"
+    },
+    "hp_rec_grow": {
+        "desc": "生命恢复",
+        "key": "hp_rec_grow",
+        "tips": "单位的每秒生命恢复数值",
+        "type": "PFloat"
+    },
+    "hp_rec_percent": {
+        "desc": "百分比生命恢复",
+        "key": "hp_rec_percent",
+        "tips": "单位的每秒生命恢复百分比数值",
+        "type": "PFloat"
+    },
+    "hp_rec_percent_grow": {
+        "desc": "百分比生命恢复",
+        "key": "hp_rec_percent_grow",
+        "tips": "单位的每秒生命恢复百分比数值",
+        "type": "PFloat"
+    },
+    "icon": {
+        "desc": "头像",
+        "key": "icon",
+        "tips": "单位在游戏中显示的头像",
+        "type": "PResource"
+    },
+    "idle_anim": {
+        "desc": "默认状态",
+        "key": "idle_anim",
+        "tips": "默认状态下会播放的动画",
+        "type": "PText"
+    },
+    "init_stock": {
+        "desc": "初始库存",
+        "key": "init_stock",
+        "tips": "单位作为商品的初始库存",
+        "type": "PInt"
+    },
+    "intelligence": {
+        "desc": "智力",
+        "key": "intelligence",
+        "tips": "智力",
+        "type": "PFloat"
+    },
+    "intelligence_grow": {
+        "desc": "智力",
+        "key": "intelligence_grow",
+        "tips": "智力",
+        "type": "PFloat"
+    },
+    "is_apply_role_color": {
+        "desc": "是否应用玩家颜色光圈",
+        "key": "is_apply_role_color",
+        "type": "PBool"
+    },
+    "is_mini_map_show": {
+        "desc": "是否在小地图显示",
+        "key": "is_mini_map_show",
+        "tips": "单位是否会在小地图上显示出来",
+        "type": "PBool"
+    },
+    "is_open_Xray": {
+        "desc": "是否开启透视",
+        "key": "is_open_Xray",
+        "tips": "勾选后如果该单位被遮挡，会看到该单位的描边",
+        "type": "PBool"
+    },
+    "is_open_disk_shadow": {
+        "desc": "启用圆盘阴影",
+        "key": "is_open_disk_shadow",
+        "type": "PBool"
+    },
+    "is_open_outline_pass": {
+        "desc": "是否开启描边",
+        "key": "is_open_outline_pass",
+        "type": "PBool"
+    },
+    "is_shop": {
+        "desc": "是否做为商店",
+        "key": "is_shop",
+        "tips": "开启后单位可以作为商店编辑出售的物品",
+        "type": "PBool"
+    },
+    "is_x_offset": {
+        "key": "is_x_offset",
+        "type": "PBool"
+    },
+    "is_z_offset": {
+        "key": "is_z_offset",
+        "type": "PBool"
+    },
+    "jump_to_display": {
+        "desc": "编辑简易普攻",
+        "key": "jump_to_display",
+        "tips": "前往表现页编辑详细的简易普攻效果",
+        "type": "PButton"
+    },
+    "keep_dead_body_time": {
+        "desc": "尸体消失时间",
+        "key": "keep_dead_body_time",
+        "tips": "尸体消失时间",
+        "type": "PFloat"
+    },
+    "keep_target": {
+        "desc": "无法移动时仍然保持目标",
+        "key": "keep_target",
+        "tips": "该字段未勾选时，在目标移动出自身的警戒范围后，且自身不能移动时，会立即开始寻找一个新的攻击目标。多用于定点守卫。",
+        "type": "PBool"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "tips": "单位的唯一表示",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "level": {
+        "desc": "等级",
+        "key": "level",
+        "tips": "单位的默认等级",
+        "type": "PInt"
+    },
+    "main_attr": {
+        "desc": "主属性",
+        "key": "main_attr",
+        "tips": "英雄单位的主要属性，一般主属性的提升会对英雄有额外加成",
+        "type": "PEnum"
+    },
+    "max_balance_angle": {
+        "desc": "最大平衡角度",
+        "key": "max_balance_angle",
+        "type": "PFloat"
+    },
+    "max_stock": {
+        "desc": "最大库存",
+        "key": "max_stock",
+        "tips": "单位作为商品的最大库存",
+        "type": "PInt"
+    },
+    "mini_map_icon": {
+        "desc": "小地图头像",
+        "key": "mini_map_icon",
+        "tips": "单位在小地图上的头像",
+        "type": "PResource"
+    },
+    "mini_map_icon_scale": {
+        "desc": "小地图头像缩放",
+        "key": "mini_map_icon_scale",
+        "tips": "单位在小地图上的头像的缩放",
+        "type": "PFloat"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "tips": "当前单位所使用的的模型",
+        "type": "PResource"
+    },
+    "model_height": {
+        "desc": "离地高度",
+        "key": "model_height",
+        "tips": "单位的离地高度",
+        "type": "PFloat"
+    },
+    "model_opacity": {
+        "desc": "模型不透明度",
+        "key": "model_opacity",
+        "type": "PFloat"
+    },
+    "move_channel": {
+        "desc": "移动类型",
+        "key": "move_channel",
+        "tips": "单位的移动类型，决定单位究竟是在地面移动还是在空中移动。",
+        "type": "PEnum"
+    },
+    "move_limitation": {
+        "desc": "可移动通道",
+        "key": "move_limitation",
+        "tips": "对单位移动类型的补充，决定单位究竟是在哪些通道移动。任意通道被碰撞阻挡该单位均无法通过。",
+        "type": "PCheckBoxBit"
+    },
+    "move_type": {
+        "desc": "移动类型",
+        "key": "move_type",
+        "tips": "影响可用的可移动通道。",
+        "type": "PCheckBoxBit"
+    },
+    "mp_color": {
+        "desc": "技能资源条颜色",
+        "key": "mp_color",
+        "tips": "该单位用来释放技能的能量的颜色",
+        "type": "PEnum"
+    },
+    "mp_key": {
+        "desc": "技能资源名称",
+        "key": "mp_key",
+        "tips": "该单位用来释放技能的能量的名称",
+        "type": "PText"
+    },
+    "mp_max": {
+        "desc": "最大技能资源",
+        "key": "mp_max",
+        "tips": "单位的最大技能资源",
+        "type": "PFloat"
+    },
+    "mp_max_grow": {
+        "desc": "最大技能资源",
+        "key": "mp_max_grow",
+        "tips": "单位的最大技能资源",
+        "type": "PFloat"
+    },
+    "mp_rec": {
+        "desc": "技能资源恢复",
+        "key": "mp_rec",
+        "tips": "单位的每秒技能资源恢复数值",
+        "type": "PFloat"
+    },
+    "mp_rec_grow": {
+        "desc": "技能资源恢复",
+        "key": "mp_rec_grow",
+        "tips": "单位的每秒技能资源恢复数值",
+        "type": "PFloat"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "tips": "当前单位的名称",
+        "type": "PLocalizeText"
+    },
+    "need_preview_billboard": {
+        "desc": "是否预览血条",
+        "key": "need_preview_billboard",
+        "type": "PBool"
+    },
+    "ori_bits": {
+        "desc": "单位状态",
+        "key": "ori_bits",
+        "tips": "进入游戏时,为单位附加的初始状态\n状态会记录层数，初始为1层。每次添加/移除状态会增加/减少一层。",
+        "type": "PCheckBoxBit"
+    },
+    "ori_speed": {
+        "desc": "移动速度",
+        "key": "ori_speed",
+        "tips": "单位每秒移动的距离。",
+        "type": "PFloat"
+    },
+    "ori_speed_grow": {
+        "desc": "移动速度",
+        "key": "ori_speed_grow",
+        "tips": "单位每秒移动的距离。",
+        "type": "PFloat"
+    },
+    "outline_pass_color": {
+        "desc": "描边色值（RGB）",
+        "key": "outline_pass_color",
+        "type": "PVector3"
+    },
+    "outline_pass_width": {
+        "desc": "描边厚度",
+        "key": "outline_pass_width",
+        "type": "PFloat"
+    },
+    "passive_ability_list": {
+        "desc": "隐藏技能",
+        "key": "passive_ability_list",
+        "tips": "隐藏技能，放在这类技能位中的技能将不会被显示在游戏中。",
+        "type": "PExplorerList"
+    },
+    "path_finding_external_size": {
+        "desc": "寻路碰撞额外范围",
+        "key": "path_finding_external_size",
+        "type": "PInt"
+    },
+    "pene_mag": {
+        "desc": "法术穿透",
+        "key": "pene_mag",
+        "tips": "穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_mag_grow": {
+        "desc": "法术穿透",
+        "key": "pene_mag_grow",
+        "tips": "穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_mag_ratio": {
+        "desc": "法术穿透(%)",
+        "key": "pene_mag_ratio",
+        "tips": "百分比穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_mag_ratio_grow": {
+        "desc": "法术穿透(%)",
+        "key": "pene_mag_ratio_grow",
+        "tips": "百分比穿透敌人法术防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_phy": {
+        "desc": "物理穿透",
+        "key": "pene_phy",
+        "tips": "穿透敌人物理防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_phy_grow": {
+        "desc": "物理穿透",
+        "key": "pene_phy_grow",
+        "tips": "穿透敌人物理防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_phy_ratio": {
+        "desc": "物理穿透(%)",
+        "key": "pene_phy_ratio",
+        "tips": "百分比穿透敌人物理防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "pene_phy_ratio_grow": {
+        "desc": "物理穿透(%)",
+        "key": "pene_phy_ratio_grow",
+        "tips": "百分比穿透敌人物理防御力。先计算固定穿透，再计算百分比穿透",
+        "type": "PFloat"
+    },
+    "physics_composite": {
+        "desc": "物理",
+        "key": "physics_composite",
+        "type": "PropertyDict"
+    },
+    "pkg_slot_size": {
+        "desc": "背包栏",
+        "key": "pkg_slot_size",
+        "tips": "单位的背包栏格数",
+        "type": "PInt"
+    },
+    "poolable": {
+        "desc": "是否开启对象池",
+        "key": "poolable",
+        "tips": "开启对象池后对象不会销毁，会以休眠状态进入对象池从而优化性能，重新使用这些对象时自定义属性不会清除，需要手动初始化一遍。",
+        "type": "PBool"
+    },
+    "precondition_list": {
+        "desc": "前置条件",
+        "key": "precondition_list",
+        "tips": "训练、购买、建造该单位的前置条件",
+        "type": "PreconditionList"
+    },
+    "preview_billboard_health_value": {
+        "desc": "预览血量",
+        "key": "preview_billboard_health_value",
+        "type": "PFloat"
+    },
+    "refresh_interval": {
+        "desc": "库存恢复间隔",
+        "key": "refresh_interval",
+        "tips": "单位作为商品的库存恢复间隔",
+        "type": "PFloat"
+    },
+    "rescue_finish_return": {
+        "desc": "救援后返回",
+        "key": "rescue_finish_return",
+        "type": "PBool"
+    },
+    "rescue_seeker_distance": {
+        "desc": "求救距离",
+        "key": "rescue_seeker_distance",
+        "type": "PFloat"
+    },
+    "rescue_seeker_interval": {
+        "desc": "求救间隔",
+        "key": "rescue_seeker_interval",
+        "type": "PFloat"
+    },
+    "rescue_seeker_type": {
+        "desc": "求救类型",
+        "key": "rescue_seeker_type",
+        "type": "PEnum"
+    },
+    "rescuer_type": {
+        "desc": "救援类型",
+        "key": "rescuer_type",
+        "type": "PEnum"
+    },
+    "research_techs": {
+        "desc": "可研发科技",
+        "key": "research_techs",
+        "tips": "这些科技，可以在单位身上研发、升级。",
+        "type": "PExplorerList"
+    },
+    "reward_exp": {
+        "desc": "经验",
+        "key": "reward_exp",
+        "tips": "该单位被击杀后提供的经验奖励",
+        "type": "PInt"
+    },
+    "role_color_scale": {
+        "desc": "玩家颜色缩放",
+        "key": "role_color_scale",
+        "type": "PFloat"
+    },
+    "rotate_speed": {
+        "desc": "转身速度",
+        "key": "rotate_speed",
+        "tips": "单位的转身速度",
+        "type": "PFloat"
+    },
+    "sell_list": {
+        "desc": "出售列表",
+        "key": "sell_list",
+        "tips": "单位作为商店时的出售列表",
+        "type": "PAst"
+    },
+    "sell_res_list": {
+        "desc": "出售获得资源",
+        "key": "sell_res_list",
+        "tips": "单位作为商品的出售获得资源",
+        "type": "PResList"
+    },
+    "separate_enemy_icon": {
+        "desc": "是否敌友方显示不同头像",
+        "key": "separate_enemy_icon",
+        "type": "PBool"
+    },
+    "shop_camp_args": {
+        "desc": "出售阵营参数",
+        "key": "shop_camp_args",
+        "type": "PAst"
+    },
+    "shop_edit": {
+        "desc": "商店",
+        "key": "shop_edit",
+        "tips": "可以编辑商店能出售哪些单位与物品，以及允许的出售对象和出售范围",
+        "type": "PButton"
+    },
+    "shop_range": {
+        "desc": "商店范围",
+        "key": "shop_range",
+        "type": "PFloat"
+    },
+    "shop_sell_type": {
+        "desc": "出售阵营类型",
+        "key": "shop_sell_type",
+        "type": "PEnum"
+    },
+    "show_y3_extra_info": {
+        "desc": "悬浮信息显示",
+        "key": "show_y3_extra_info",
+        "tips": "开启后鼠标悬浮到单位身上时会显示单位名称和等级的文本框",
+        "type": "PBool"
+    },
+    "simple_common_atk": {
+        "desc": "简易普攻",
+        "key": "simple_common_atk",
+        "type": "PAst"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
+        "type": "PSoundList"
+    },
+    "special_idle_anim": {
+        "desc": "特殊状态",
+        "key": "special_idle_anim",
+        "tips": "特殊状态下会播放的动画",
+        "type": "PText"
+    },
+    "speed_ratio_in_turn": {
+        "desc": "转向时移动速度系数",
+        "key": "speed_ratio_in_turn",
+        "tips": "当单位转向时，移动速度会受到一定的影响。",
+        "type": "PFloat"
+    },
+    "standard_walk_rate": {
+        "desc": "移动动画播放速率系数",
+        "key": "standard_walk_rate",
+        "tips": "单位移动时动画的播放速度",
+        "type": "PFloat"
+    },
+    "start_rft": {
+        "desc": "购买开始时间",
+        "key": "start_rft",
+        "tips": "单位作为商品的可购买时间(游戏开始多久后可以购买）",
+        "type": "PFloat"
+    },
+    "state_init": {
+        "desc": "单位初始状态",
+        "key": "state_init",
+        "type": "PEnum"
+    },
+    "state_list": {
+        "desc": "单位状态列表",
+        "key": "state_list",
+        "type": "PExplorerList"
+    },
+    "strength": {
+        "desc": "力量",
+        "key": "strength",
+        "tips": "力量",
+        "type": "PFloat"
+    },
+    "strength_grow": {
+        "desc": "力量",
+        "key": "strength_grow",
+        "tips": "力量",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "tips": "给使用编辑器的用户看的备注，无实际作用",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "标签",
+        "key": "tags",
+        "tips": "用于对物体的分类处理。为单位贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：杀死所有拥有XX标签的单位",
+        "type": "PList"
+    },
+    "tower_hatred_duration": {
+        "desc": "防御塔仇恨持续时间",
+        "key": "tower_hatred_duration",
+        "type": "PFloat"
+    },
+    "type": {
+        "desc": "单位分类",
+        "key": "type",
+        "tips": "单位类型决定了这类单位的一些特性，包括其可编辑的属性和某些属性的默认值。",
+        "type": "PEnum"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_base_tint_color": {
+        "desc": "是否启用基础材质变色",
+        "key": "use_base_tint_color",
+        "type": "PBool"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_simple_mini_map_icon": {
+        "desc": "使用简易小地图头像",
+        "key": "use_simple_mini_map_icon",
+        "tips": "简易小地图头像的表现为一个小点。简易小地图头像的绘制性能消耗相比普通小地图头像更小，如果地图上会出现大量的该类型单位，建议使用简易小地图头像。",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    },
+    "vampire_mag": {
+        "desc": "法术吸血(%)",
+        "key": "vampire_mag",
+        "tips": "造成法术伤害后可以恢复自身生命值",
+        "type": "PFloat"
+    },
+    "vampire_mag_grow": {
+        "desc": "法术吸血(%)",
+        "key": "vampire_mag_grow",
+        "tips": "造成法术伤害后可以恢复自身生命值",
+        "type": "PFloat"
+    },
+    "vampire_phy": {
+        "desc": "物理吸血(%)",
+        "key": "vampire_phy",
+        "tips": "造成物理伤害后可以恢复自身生命值",
+        "type": "PFloat"
+    },
+    "vampire_phy_grow": {
+        "desc": "物理吸血(%)",
+        "key": "vampire_phy_grow",
+        "tips": "造成物理伤害后可以恢复自身生命值",
+        "type": "PFloat"
+    },
+    "view_type": {
+        "desc": "视野类型",
+        "key": "view_type",
+        "tips": "单位与战争迷雾相关的一些属性",
+        "type": "PEnum"
+    },
+    "vision_night": {
+        "desc": "夜晚视野",
+        "key": "vision_night",
+        "tips": "单位在夜晚可以看到（驱散战争迷雾）的范围",
+        "type": "PFloat"
+    },
+    "vision_night_grow": {
+        "desc": "夜晚视野",
+        "key": "vision_night_grow",
+        "type": "PFloat"
+    },
+    "vision_rng": {
+        "desc": "白天视野",
+        "key": "vision_rng",
+        "tips": "单位在白天可以看到（驱散战争迷雾）的范围",
+        "type": "PFloat"
+    },
+    "vision_rng_grow": {
+        "desc": "白天视野",
+        "key": "vision_rng_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_day": {
+        "desc": "扇形视野白天夹角",
+        "key": "vision_sector_angle_day",
+        "tips": "单位在白天拥有的扇形视野夹角。",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_day_grow": {
+        "key": "vision_sector_angle_day_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_night": {
+        "desc": "扇形视野夜晚夹角",
+        "key": "vision_sector_angle_night",
+        "tips": "单位在夜晚拥有的扇形视野夹角。",
+        "type": "PFloat"
+    },
+    "vision_sector_angle_night_grow": {
+        "key": "vision_sector_angle_night_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_night": {
+        "desc": "扇形视野夜晚半径",
+        "key": "vision_sector_night",
+        "tips": "单位在夜晚拥有的扇形视野半径。",
+        "type": "PFloat"
+    },
+    "vision_sector_night_grow": {
+        "key": "vision_sector_night_grow",
+        "type": "PFloat"
+    },
+    "vision_sector_rng": {
+        "desc": "扇形视野白天半径",
+        "key": "vision_sector_rng",
+        "tips": "单位在白天拥有的扇形视野半径。",
+        "type": "PFloat"
+    },
+    "vision_sector_rng_grow": {
+        "key": "vision_sector_rng_grow",
+        "type": "PFloat"
+    },
+    "vision_true": {
+        "desc": "真实视野",
+        "key": "vision_true",
+        "tips": "单位所能侦测到隐身单位的范围",
+        "type": "PFloat"
+    },
+    "vision_true_grow": {
+        "desc": "真实视野",
+        "key": "vision_true_grow",
+        "tips": "单位所能侦测到隐身单位的范围",
+        "type": "PFloat"
+    },
+    "walk_anim": {
+        "desc": "行走",
+        "key": "walk_anim",
+        "tips": "行走状态下会播放的动作",
+        "type": "PText"
+    },
+    "width_offset": {
+        "key": "width_offset",
+        "type": "PFloat"
+    },
+    "y3_extra_info_show_type": {
+        "desc": "悬浮信息显示内容",
+        "key": "y3_extra_info_show_type",
+        "type": "PEnum"
+    }
+}

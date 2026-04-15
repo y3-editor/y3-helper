@@ -1,0 +1,23 @@
+.panel-view {
+  height: calc(100vh - 35px);
+}
+
+.actions-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.actions-wrapper > span {
+  padding: 5px 10px;
+  border: 1px solid;
+  border-radius: 5px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.actions-wrapper > span:hover {
+  opacity: 1;
+}

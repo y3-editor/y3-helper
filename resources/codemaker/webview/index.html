@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css"
+      integrity="sha384-Xi8rHCmBmhbuyyhbI88391ZKP2dmfnOl4rT9ZfRI7mLTdk1wblIUnrIq35nqwEvC"
+      crossorigin="anonymous"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+    <script>
+      // 替换为 nginx 渲染的环境变量
+      try {
+        window.CODEMAKER_API_URL = 'http://localhost:3001'
+        if (!window.CODEMAKER_API_URL.startsWith('http')) {
+          throw('CODEMAKER_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODEMAKER_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODEMAKER_API_URL = 'http://localhost:3001';
+      }
+      try {
+        window.MCP_API_URL = 'http://localhost:3001'
+        if (!window.MCP_API_URL.startsWith('http')) {
+          throw('MCP_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`MCP_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.MCP_API_URL = 'http://localhost:3001';
+      }
+      try {
+        window.SKILLS_HUB_API_URL = 'http://localhost:3001'
+        if (!window.SKILLS_HUB_API_URL.startsWith('http')) {
+          throw('SKILLS_HUB_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`SKILLS_HUB_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.SKILLS_HUB_API_URL = 'http://localhost:3001';
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-dac35dd5.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/utils-vendor-549129c3.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-83e61cab.js">
+    <link rel="stylesheet" href="/assets/react-vendor-385c74cf.css">
+    <link rel="stylesheet" href="/assets/index-d94192f7.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      localStorage.removeItem('chakra-ui-color-mode');
+    </script>
+    
+  </body>
+</html>

@@ -1,0 +1,57 @@
+{
+    "affect_all": {
+        "desc": "影响全部单位",
+        "key": "affect_all",
+        "type": "PBool"
+    },
+    "affect_tags": {
+        "desc": "影响单位标签",
+        "key": "affect_tags",
+        "type": "PList"
+    },
+    "cells": {
+        "desc": "应用科技",
+        "key": "cells",
+        "type": "PAst"
+    },
+    "description": {
+        "desc": "描述信息",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "max_lv": {
+        "desc": "最大等级",
+        "key": "max_lv",
+        "type": "PInt"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    }
+}

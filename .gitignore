@@ -1,0 +1,13 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+*.log
+tmp
+docs
+.claude
+CLAUDE.md
+design
+.worktrees
+resources/webview_source_code/node_modules/

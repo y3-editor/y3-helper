@@ -1,0 +1,65 @@
+name: publish
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  VSIX_NAME: y3-helper-${{ github.ref_name }}.vsix
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '>=24'
+
+      - name: Compile Client
+        shell: bash
+        run: |
+          npm install
+          npm install -g typescript
+          tsc -p ./
+
+      - name: Pack vsix
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.Y3_COMMIT_TOKEN }}
+        run: |
+          npm install -g @vscode/vsce
+          git config --global user.email "sumneko@hotmail.com"
+          git config --global user.name "最萌小汐（宇宙创生）"
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -a -m "更新package-lock.json"
+          fi
+          vsce package -o "${{ env.VSIX_NAME }}" ${{ github.ref_name }}
+          git pull
+          git push
+
+      - name: Upload vsix
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VSIX_NAME }}
+          path: ${{ env.VSIX_NAME }}
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.Y3_COMMIT_TOKEN }}
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.VSIX_NAME }}
+
+      - name: Publish to VSCode Market
+        run: vsce publish -i ${{ env.VSIX_NAME }} -p ${{ secrets.VSCODE_TOKEN }}

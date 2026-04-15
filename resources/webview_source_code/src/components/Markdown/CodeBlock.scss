@@ -1,0 +1,13 @@
+#codeblock-highlighter-markdown {
+  overflow-x: scroll !important;
+
+  div::-webkit-scrollbar {
+    display: block !important;
+  }
+
+  .codeblock-highlighter-code {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-all !important;
+  }
+}

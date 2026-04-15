@@ -1,0 +1,102 @@
+{
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "type": "PLocalizeText"
+    },
+    "fade_in_time": {
+        "desc": "淡入时间",
+        "key": "fade_in_time",
+        "type": "PFloat"
+    },
+    "fade_out_time": {
+        "desc": "淡出时间",
+        "key": "fade_out_time",
+        "type": "PFloat"
+    },
+    "group": {
+        "desc": "分组",
+        "key": "group",
+        "type": "PInt"
+    },
+    "icon": {
+        "desc": "图标",
+        "key": "icon",
+        "type": "PResource"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "max_dist": {
+        "desc": "最大距离",
+        "key": "max_dist",
+        "type": "PFloat"
+    },
+    "min_dist": {
+        "desc": "最小距离",
+        "key": "min_dist",
+        "type": "PFloat"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "priority": {
+        "desc": "优先级",
+        "key": "priority",
+        "type": "PFloat"
+    },
+    "sound_id": {
+        "desc": "2D声音",
+        "key": "sound_id",
+        "type": "PResource"
+    },
+    "sound_id_list": {
+        "desc": "2D声音",
+        "key": "sound_id_list",
+        "type": "PResourceList"
+    },
+    "speed": {
+        "desc": "播放速度",
+        "key": "speed",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "标签",
+        "key": "tags",
+        "type": "PList"
+    },
+    "total_time": {
+        "desc": "总时间",
+        "key": "total_time",
+        "type": "PFloat"
+    },
+    "type": {
+        "desc": "类型",
+        "key": "type",
+        "type": "PInt"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "volume": {
+        "desc": "音量",
+        "key": "volume",
+        "type": "PFloat"
+    }
+}

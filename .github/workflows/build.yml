@@ -1,0 +1,41 @@
+name: build
+
+on: 
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '*'
+
+env:
+  VSIX_NAME: y3-helper-${{ github.sha }}.vsix
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '>=24'
+
+      - name: Compile Client
+        shell: bash
+        run: |
+          npm install
+          npm install -g typescript
+          tsc -p ./
+
+      - name: Pack vsix
+        shell: bash
+        run: |
+          npm install -g @vscode/vsce
+          vsce package -o "${{ env.VSIX_NAME }}"
+
+      - name: Upload vsix
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VSIX_NAME }}
+          path: ${{ env.VSIX_NAME }}

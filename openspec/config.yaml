@@ -1,0 +1,34 @@
+schema: spec-driven
+
+# Project context
+# Y3-Helper VSCode Extension 开发上下文
+context: |
+  Tech stack: TypeScript, Node.js, VSCode Extension API
+  Build: Webpack + TypeScript
+  Domain: Y3游戏编辑器开发辅助工具
+  
+  核心模块:
+  - 物编支持 (editorTable): 单位/技能/物品/投射物等数据编辑
+  - 游戏调试 (console/debug): 启动游戏、热重载、远程终端
+  - ECA编译 (ecaCompiler): 触发器编译
+  - 插件系统 (plugin): JavaScript脚本批量处理
+  - MCP Server (mcp): Claude Code 自动化集成
+  - 元数据构建 (metaBuilder): 类型定义生成
+
+# Per-artifact rules
+# 开发工作流规范 - PM Issue 到实现
+rules:
+  proposal:
+    - "命名格式: <英文描述>-<PM单号>，例如: star-blood-deduction-2224555"
+    - "必须包含 Issue 链接: [#XXXXX](https://up1.pm.netease.com/v6/issues/XXXXX)"
+    - "必须包含 Why 章节: 描述PM Issue的背景和问题"
+    - "必须包含 What Changes 章节: 主要功能变更和影响范围说明"
+    - "必须包含 Capabilities 章节: 新增功能模块和修改的现有功能"
+    - "保持简洁，聚焦于问题和解决方案"
+  tasks:
+    - "任务拆分粒度: 每个任务控制在2小时以内可完成"
+    - "任务需关联到 Proposal 中的具体 Change 点"
+    - "标注任务的模块位置 (src/xxx)"
+  delta-spec:
+    - "描述对现有模块的具体改动"
+    - "说明新增的接口/类型定义"

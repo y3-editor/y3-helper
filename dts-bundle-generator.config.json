@@ -1,0 +1,14 @@
+{
+    "entries": [
+        {
+            "filePath": "./src/y3-helper.ts",
+            "outFile": "./template/plugin/y3-helper.d.ts",
+            "libraries": {
+                "inlinedLibraries": ["exceljs"]
+            },
+            "output": {
+                "exportReferencedTypes": false
+            }
+        }
+    ]
+}

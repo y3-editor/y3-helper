@@ -1,0 +1,556 @@
+{
+    "name": "y3-helper",
+    "displayName": "Y3开发助手",
+    "description": "",
+    "publisher": "sumneko",
+    "version": "2.0.11",
+    "repository": {
+        "url": "https://github.com/y3-editor/y3-helper"
+    },
+    "engines": {
+        "vscode": "^1.96.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "workspaceContains:y3/更新日志.md",
+        "workspaceContains:y3/CHANGELOG.md",
+        "onDebugResolve:y3lua"
+    ],
+    "main": "./dist/extension.js",
+    "capabilities": {
+        "workspaceSymbolProvider": "true",
+        "documentSymbolProvider": "true"
+    },
+    "l10n": "./l10n",
+    "contributes": {
+        "views": {
+            "explorer": [
+                {
+                    "icon": "",
+                    "id": "y3-helper.editorTableView",
+                    "name": "%Y3开发助手：物编数据%"
+                }
+            ],
+            "y3-helper": [
+                {
+                    "icon": "",
+                    "id": "y3-helper.mainMenu",
+                    "name": "%Y3开发助手%"
+                },
+                {
+                    "icon": "",
+                    "id": "y3-helper.custom",
+                    "name": "%自定义视图%"
+                }
+            ],
+            "codemaker-sidebar": [
+                {
+                    "type": "webview",
+                    "id": "codemaker.webview",
+                    "name": "Y3Maker AI"
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+                {
+                    "command": "y3-helper.editorTableView.refresh",
+                    "when": "view == y3-helper.editorTableView",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "y3-helper.openFile",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.revealInFileExplorer",
+                    "when": "view == y3-helper.editorTableView",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.openPlugin",
+                    "when": "viewItem == 插件列表",
+                    "group": "navigation"
+                },
+                {
+                    "command": "y3-helper.renameEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "group": "modification"
+                },
+                {
+                    "command": "y3-helper.deleteEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == json",
+                    "group": "modification"
+                },
+                {
+                    "command": "y3-helper.addNewEditorTableItem",
+                    "when": "view == y3-helper.editorTableView &&  viewItem == directory",
+                    "group": "modification"
+                },
+                {
+                    "command": "y3-helper.copyTableItemKey",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyTableItemName",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyFromEditorTableItem",
+                    "when": "view == y3-helper.editorTableView && viewItem == json",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUnitAttrKey",
+                    "when": "viewItem == 单位属性",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUnitAttrName",
+                    "when": "viewItem == 单位属性",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyPlayerAttrKey",
+                    "when": "viewItem == 玩家属性",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyPlayerAttrName",
+                    "when": "viewItem == 玩家属性",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyEventID",
+                    "when": "viewItem == 自定义事件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyEventName",
+                    "when": "viewItem == 自定义事件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIAnimID",
+                    "when": "viewItem == 时间轴动画",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIAnimName",
+                    "when": "viewItem == 时间轴动画",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIName",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIPath",
+                    "when": "viewItem == 画板",
+                    "group": "copy"
+                },
+                {
+                    "command": "y3-helper.copyUIUID",
+                    "when": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                    "group": "copy"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "y3-helper",
+                    "title": "%Y3开发助手%",
+                    "icon": "image/logo.png"
+                }
+            ],
+            "secondarySidebar": [
+                {
+                    "id": "codemaker-sidebar",
+                    "title": "Y3Maker",
+                    "icon": "$(hubot)"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "y3-helper.initProject",
+                "title": "初始化开发环境",
+                "icon": "image/logo.png",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.makeLuaDoc",
+                "title": "生成接口文档",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.launchGame",
+                "title": "启动游戏",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.launchEditor",
+                "title": "在编辑器中打开",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.editorTableView.refresh",
+                "title": "刷新物编数据",
+                "shortTitle": "刷新",
+                "category": "%Y3开发助手%",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "y3-helper.addNewEditorTableItem",
+                "title": "新建对象",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.deleteEditorTableItem",
+                "title": "删除",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.renameEditorTableItem",
+                "title": "重命名",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyTableItemKey",
+                "title": "复制Key",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyTableItemName",
+                "title": "复制名称",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyFromEditorTableItem",
+                "title": "复制为新的对象",
+                "enablement": "view == y3-helper.editorTableView &&  viewItem == json",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.openFile",
+                "title": "打开文件",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.revealInFileExplorer",
+                "title": "在系统文件浏览器中打开",
+                "enablement": "view == y3-helper.editorTableView",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUnitAttrKey",
+                "title": "复制key",
+                "enablement": "viewItem == 单位属性",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUnitAttrName",
+                "title": "复制名称",
+                "enablement": "viewItem == 单位属性",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyPlayerAttrKey",
+                "title": "复制key",
+                "enablement": "viewItem == 玩家属性",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyPlayerAttrName",
+                "title": "复制名称",
+                "enablement": "viewItem == 玩家属性",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyEventID",
+                "title": "复制ID",
+                "enablement": "viewItem == 自定义事件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyEventName",
+                "title": "复制名称",
+                "enablement": "viewItem == 自定义事件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUIAnimID",
+                "title": "复制ID",
+                "enablement": "viewItem == 时间轴动画",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUIAnimName",
+                "title": "复制名称",
+                "enablement": "viewItem == 时间轴动画",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUIName",
+                "title": "复制名称",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUIPath",
+                "title": "复制路径",
+                "enablement": "viewItem == 画板",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.copyUIUID",
+                "title": "复制ID",
+                "enablement": "viewItem == 画板 || viewItem == 场景UI || viewItem == 元件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.networkServer",
+                "title": "启动网络服务器（用于测试`network`库）",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.testTerminal",
+                "title": "测试游戏控制台",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.testExcel",
+                "title": "测试导表",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.initPlugin",
+                "title": "初始化插件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.updatePlugin",
+                "title": "更新插件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.runPlugin",
+                "title": "运行插件",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.openPlugin",
+                "title": "打开插件",
+                "enablement": "viewItem == 插件列表",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.changeMap",
+                "title": "切换地图",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.enableGlobalScript",
+                "title": "启用全局脚本",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.compileECA",
+                "title": "编译ECA",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.selectLaunchingMap",
+                "title": "选择启动地图",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.codemaker.open",
+                "title": "打开 Y3Maker",
+                "category": "%Y3开发助手%"
+            }
+        ],
+        "configuration": {
+            "title": "Y3-Helper",
+            "type": "object",
+            "properties": {
+                "Y3-Helper.EditorPath": {
+                    "title": "%Y3编辑器路径%",
+                    "description": "%Y3编辑器的完整路径。如果为空则会从注册表中获取。%",
+                    "type": "string",
+                    "default": "",
+                    "ignoreSync": true,
+                    "pattern": "(^.*[\\\\/](Editor.exe|Engine)$)|(^$)",
+                    "scope": "resource"
+                },
+                "Y3-Helper.ShowStatusBarItem": {
+                    "title": "%显示状态栏按钮%",
+                    "description": "%在状态栏中显示“启动”和“附加”按钮%",
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource"
+                },
+                "Y3-Helper.ServerPort": {
+                    "title": "%客户端连接端口%",
+                    "description": "%使用0表示随机端口%",
+                    "type": "number",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535,
+                    "scope": "resource"
+                },
+                "Y3-Helper.ECAOverridePath": {
+                    "title": "用于ECA转Lua配置导表的工程路径",
+                    "description": "%（内部开发用）填编辑器工程路径即可，如 `D:/up1`，也可以填到excel所在的目录%",
+                    "type": "string",
+                    "default": "",
+                    "ignoreSync": true,
+                    "scope": "resource"
+                },
+                "Y3-Helper.Language": {
+                    "title": "%语言%",
+                    "description": "%设置显示语言%",
+                    "type": "string",
+                    "default": "default",
+                    "enum": [
+                        "default",
+                        "zh-cn",
+                        "en"
+                    ],
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatApiKey": {
+                    "title": "Y3Maker API Key",
+                    "description": "Y3Maker AI 聊天使用的 API Key",
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatApiBaseUrl": {
+                    "title": "Y3Maker API Base URL",
+                    "description": "Y3Maker AI 聊天使用的 API 基础地址",
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatModel": {
+                    "title": "Y3Maker 模型名称",
+                    "description": "必填。指定 Y3Maker 聊天使用的 AI 模型名称（如 gpt-4o、claude-3-sonnet 等）。",
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatWireApi": {
+                    "title": "Y3Maker API 协议",
+                    "description": "选择 API 通信协议。chat-completions: 标准 OpenAI Chat Completions API（默认，兼容大多数服务商）；responses: OpenAI Responses API（适用于 RightCode 等服务商）。",
+                    "type": "string",
+                    "enum": [
+                        "chat-completions",
+                        "responses"
+                    ],
+                    "enumDescriptions": [
+                        "Chat Completions API (POST /v1/chat/completions) - 兼容 LinkAPI、OneAPI 等大多数服务商",
+                        "Responses API (POST /v1/responses) - 适用于 RightCode 等使用新协议的服务商"
+                    ],
+                    "default": "chat-completions",
+                    "scope": "resource"
+                }
+            }
+        },
+        "keybindings": [
+            {
+                "command": "y3-helper.launchGame",
+                "key": "shift+f5",
+                "when": "!inDebugMode"
+            }
+        ],
+        "breakpoints": [
+            {
+                "language": "lua"
+            }
+        ],
+        "debuggers": [
+            {
+                "label": "Y3 Lua Debug",
+                "languages": [
+                    "lua"
+                ],
+                "type": "y3lua"
+            }
+        ]
+    },
+    "extensionDependencies": [
+        "sumneko.lua",
+        "sumneko.vscode-operator"
+    ],
+    "icon": "image/logo.png",
+    "scripts": {
+        "vscode:prepublish": "webpack --mode production && webpack --config webpack.mcp.config.js",
+        "compile": "webpack --mode none",
+        "compile:mcp": "webpack --config webpack.mcp.config.js",
+        "watch": "webpack --mode none --watch",
+        "watch:mcp": "webpack --config webpack.mcp.config.js --watch",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "feasibility_test": "node ./out/test/feasibility.test.js",
+        "build:webview": "cd resources/webview_source_code && npm run build"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.13.1",
+        "@msgpack/msgpack": "^3.1.3",
+        "@vscode/l10n": "^0.0.18",
+        "exceljs": "^4.4.0",
+        "fast-deep-equal": "^3.1.3",
+        "fast-xml-parser": "^4.3.5",
+        "fs-extra": "^11.2.0",
+        "iconv-lite": "^0.6.3",
+        "is": "^3.3.0",
+        "jsonc-parser": "^3.3.1",
+        "jszip": "^3.10.1",
+        "module-alias": "2.2.3",
+        "os-locale": "^6.0.2",
+        "uuid": "^9.0.1",
+        "winreg": "^1.2.5",
+        "zod": "^3.24.0",
+        "zstd-codec": "^0.1.5"
+    },
+    "devDependencies": {
+        "@types/fs-extra": "^11.0.4",
+        "@types/is": "^0.0.25",
+        "@types/mocha": "^10.0.3",
+        "@types/module-alias": "^2.0.4",
+        "@types/node": "^25.5.0",
+        "@types/uuid": "^9.0.8",
+        "@types/vscode": "^1.96.0",
+        "@types/winreg": "^1.2.34",
+        "@typescript-eslint/eslint-plugin": "^6.9.0",
+        "@typescript-eslint/parser": "^6.9.0",
+        "@vscode/dts": "^0.4.1",
+        "@vscode/l10n-dev": "^0.0.35",
+        "@vscode/test-electron": "^2.3.6",
+        "dts-bundle-generator": "^9.5.1",
+        "eslint": "^8.57.0",
+        "glob": "^10.3.10",
+        "mocha": "^10.2.0",
+        "ts-loader": "^9.5.1",
+        "tsconfig-paths-webpack-plugin": "^4.1.0",
+        "webpack": "^5.93.0",
+        "webpack-cli": "^5.1.4"
+    }
+}

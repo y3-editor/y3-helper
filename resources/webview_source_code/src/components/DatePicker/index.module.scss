@@ -1,0 +1,27 @@
+.wrapper {
+  background-color: transparent;
+  width: 245px !important;
+
+  :global {
+    .css-lgj0h8 {
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .css-k008qs {
+      justify-content: space-between;
+    }
+
+    .chakra-popover__body {
+      width: 245px;
+    }
+
+    .chakra-heading {
+      font-size: 1rem;
+      text-align: center;
+    }
+  }
+
+  button[aria-current='date'] {
+    color: #786fff;
+  }
+}

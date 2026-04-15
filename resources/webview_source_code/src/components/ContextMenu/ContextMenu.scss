@@ -1,0 +1,39 @@
+.ContextMenu {
+  outline: 0;
+  background: #eaf2fa;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  border-radius: 2px;
+}
+
+.MenuItem {
+  width: 100%;
+  display: block;
+}
+
+.MenuItem {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  background: #eaf2fa;
+  border: none;
+  border-radius: 2px;
+  font-size: 14px;
+  text-align: left;
+  line-height: 1.5;
+  padding: 2px 8px;
+  margin: 0;
+  outline: 0;
+  color: black;
+}
+
+.MenuItem.open {
+  background: #eaf2fa;
+}
+
+.MenuItem:focus,
+.MenuItem:not([disabled]):active {
+  background: royalblue;
+  color: #eaf2fa;
+}

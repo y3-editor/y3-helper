@@ -1,0 +1,30 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "compile",
+            "problemMatcher": "$ts-webpack",
+            "isBackground": false,
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "🍟生成dts",
+            "command": "npx dts-bundle-generator --config dts-bundle-generator.config.json; node dts-post.js",
+            
+        },
+        {
+            "type": "shell",
+            "label": "🆎提取文本",
+            "command": [
+                "npx @vscode/l10n-dev export -o ./dist ./src",
+            ],
+        }
+    ]
+}

@@ -1,0 +1,340 @@
+{
+    "attached_ability": {
+        "desc": "主动技能",
+        "key": "attached_ability",
+        "tips": "使用该物品的时释放的主动技能",
+        "type": "PSingleSelectExplorer"
+    },
+    "attached_passive_abilities": {
+        "desc": "被动技能",
+        "key": "attached_passive_abilities",
+        "tips": "携带该物品时会获得的被动技能",
+        "type": "PExplorerList"
+    },
+    "auto_use": {
+        "desc": "自动使用",
+        "key": "auto_use",
+        "tips": "勾选后获得该物品时会自动使用该物品，如果不满足该物品的主动技能消耗条件则无法拾取",
+        "type": "PBool"
+    },
+    "base_color_mod": {
+        "desc": "材质颜色叠加类型",
+        "key": "base_color_mod",
+        "type": "PEnum"
+    },
+    "base_tint_color": {
+        "desc": "基础材质变色",
+        "key": "base_tint_color",
+        "type": "PColor"
+    },
+    "body_size": {
+        "desc": "尺寸",
+        "key": "body_size",
+        "tips": "物品模型的缩放比例",
+        "type": "PFloat"
+    },
+    "buy_res_list": {
+        "desc": "购买所需资源",
+        "key": "buy_res_list",
+        "tips": "从商店里购买这件物品所需要的资源",
+        "type": "PResList"
+    },
+    "cd_type": {
+        "desc": "CD组",
+        "key": "cd_type",
+        "tips": "该物品所在的CD组，物品使用时会使单位持有的相同CD组内所有物品进入使用物品的主动技能冷却",
+        "type": "PText"
+    },
+    "click_name_pick_up": {
+        "desc": "点击名称面板拾取",
+        "key": "click_name_pick_up",
+        "tips": "开启后，该物品的名字面板可以响应点击，点击后触发拾取道具逻辑。",
+        "type": "PBool"
+    },
+    "compose_list": {
+        "desc": "合成素材",
+        "key": "compose_list",
+        "tips": "合成这件物品所需要的材料，拥有所有合成原料后会自动合成该物品",
+        "type": "PList"
+    },
+    "cur_charge": {
+        "desc": "默认充能数",
+        "key": "cur_charge",
+        "tips": "物品创建后的初始充能层数",
+        "type": "PInt"
+    },
+    "cur_stack": {
+        "desc": "默认堆叠数",
+        "key": "cur_stack",
+        "tips": "物品创建后的初始堆叠层数",
+        "type": "PInt"
+    },
+    "delete_on_discard": {
+        "desc": "未拾取时间到期消失",
+        "key": "delete_on_discard",
+        "tips": "物品在地面上是否会自动销毁",
+        "type": "PBool"
+    },
+    "description": {
+        "desc": "描述",
+        "key": "description",
+        "tips": "物品的描述和介绍",
+        "type": "PLocalizeText"
+    },
+    "disable_overlapping": {
+        "desc": "开启碰撞",
+        "key": "disable_overlapping",
+        "tips": "开启后物品与物品之间会发生碰撞，可以防止物品堆叠在一起。碰撞范围设置在游戏规则-通用-物品碰撞范围中。",
+        "type": "PBool"
+    },
+    "discard_enable": {
+        "desc": "可以遗弃",
+        "key": "discard_enable",
+        "tips": "玩家是否可以将物品丢弃到地面",
+        "type": "PBool"
+    },
+    "discard_when_dead": {
+        "desc": "持有者死亡时掉落",
+        "key": "discard_when_dead",
+        "tips": "物品是否会在携带者死亡时掉落地面",
+        "type": "PBool"
+    },
+    "drop_stay_time": {
+        "desc": "消失时间",
+        "key": "drop_stay_time",
+        "tips": "掉落在地面上的消失时间",
+        "type": "PFloat"
+    },
+    "effect_list": {
+        "desc": "特效列表",
+        "key": "effect_list",
+        "type": "PAst"
+    },
+    "fresnel_color": {
+        "desc": "菲涅尔颜色",
+        "key": "fresnel_color",
+        "type": "PAst"
+    },
+    "fresnel_emissive_color_strength": {
+        "desc": "菲涅尔强度",
+        "key": "fresnel_emissive_color_strength",
+        "type": "PFloat"
+    },
+    "fresnel_exp": {
+        "desc": "菲涅尔指数",
+        "key": "fresnel_exp",
+        "type": "PFloat"
+    },
+    "hp_max": {
+        "desc": "生命值",
+        "key": "hp_max",
+        "tips": "物品的生命值，生命值归零则会被销毁",
+        "type": "PFloat"
+    },
+    "icon": {
+        "desc": "图标",
+        "key": "icon",
+        "tips": "物品的头像",
+        "type": "PResource"
+    },
+    "init_stock": {
+        "desc": "初始库存",
+        "key": "init_stock",
+        "tips": "物品作为商品时在商店中的初始可购买数",
+        "type": "PInt"
+    },
+    "item_billboard_type": {
+        "desc": "名称显示方式",
+        "key": "item_billboard_type",
+        "tips": "鼠标悬浮到物品上时显示的名称样式",
+        "type": "PEnum"
+    },
+    "key": {
+        "desc": "ID",
+        "key": "key",
+        "tips": "物品的ID",
+        "type": "PInt"
+    },
+    "kv": {
+        "desc": "玩家自定义",
+        "key": "kv",
+        "type": "PAst"
+    },
+    "level": {
+        "desc": "等级",
+        "key": "level",
+        "tips": "物品的等级",
+        "type": "PInt"
+    },
+    "material_alpha": {
+        "desc": "不透明度",
+        "key": "material_alpha",
+        "type": "PFloat"
+    },
+    "material_change": {
+        "desc": "材质变化",
+        "key": "material_change",
+        "type": "PEnum"
+    },
+    "material_color": {
+        "desc": "材质变化颜色",
+        "key": "material_color",
+        "type": "PColor"
+    },
+    "material_color_intensity": {
+        "desc": "材质变色强度",
+        "key": "material_color_intensity",
+        "type": "PFloat"
+    },
+    "max_stock": {
+        "desc": "最大库存",
+        "key": "max_stock",
+        "tips": "物品作为商品时在商店中的最大可购买数",
+        "type": "PInt"
+    },
+    "maximum_charging": {
+        "desc": "最大充能数",
+        "key": "maximum_charging",
+        "tips": "物品可以设置的最大充能层数",
+        "type": "PInt"
+    },
+    "maximum_stacking": {
+        "desc": "最大堆叠",
+        "key": "maximum_stacking",
+        "tips": "物品可以叠加的最大堆叠层数。重复获得物品时，在不大于该值的情况下物品会自动堆叠。",
+        "type": "PInt"
+    },
+    "model": {
+        "desc": "模型",
+        "key": "model",
+        "tips": "物品掉落在地面的模型",
+        "type": "PResource"
+    },
+    "model_opacity": {
+        "desc": "模型不透明度",
+        "key": "model_opacity",
+        "type": "PFloat"
+    },
+    "name": {
+        "desc": "名称",
+        "key": "name",
+        "type": "PLocalizeText"
+    },
+    "name_margin": {
+        "desc": "名称面板外边距",
+        "key": "name_margin",
+        "tips": "以名称面板中所有图片计算最大范围，并向外扩展指定的数值",
+        "type": "PFourDirMargin"
+    },
+    "name_not_occlusion": {
+        "desc": "名称面板不遮挡",
+        "key": "name_not_occlusion",
+        "tips": "开启后，该物品的名称面板将不会与其他开启了该属性的物品的名称面板重叠。",
+        "type": "PBool"
+    },
+    "name_offset_based_on_root": {
+        "key": "name_offset_based_on_root",
+        "type": "PAst"
+    },
+    "offset": {
+        "desc": "偏移",
+        "key": "offset",
+        "type": "PAst"
+    },
+    "precondition_list": {
+        "desc": "前置条件",
+        "key": "precondition_list",
+        "tips": "只有满足对应条件之后物品才会在商店中可购买。",
+        "type": "PreconditionList"
+    },
+    "preview_name_click_range": {
+        "desc": "预览面板判定区域",
+        "key": "preview_name_click_range",
+        "tips": "勾选后可预览面板在进行点击判定和堆叠时的区域大小",
+        "type": "PBool"
+    },
+    "preview_name_stack": {
+        "desc": "预览堆叠效果",
+        "key": "preview_name_stack",
+        "tips": "勾选后可预览面板在进行平铺堆叠时效果",
+        "type": "PBool"
+    },
+    "refresh_interval": {
+        "desc": "库存恢复间隔",
+        "key": "refresh_interval",
+        "tips": "当前物品作为商品时，商店库存增加的间隔时间",
+        "type": "PFloat"
+    },
+    "rotation": {
+        "key": "rotation",
+        "type": "PAst"
+    },
+    "sale_enable": {
+        "desc": "可以被抵押",
+        "key": "sale_enable",
+        "tips": "是否可以将该物品出售到商店",
+        "type": "PBool"
+    },
+    "sell_res_list": {
+        "desc": "出售获得资源",
+        "key": "sell_res_list",
+        "tips": "出售到商店时获得的资源",
+        "type": "PResList"
+    },
+    "sound_event_list": {
+        "desc": "声音事件列表",
+        "key": "sound_event_list",
+        "tips": "可以设置触发指定事件时播放的声音",
+        "type": "PSoundList"
+    },
+    "stack_type": {
+        "desc": "堆叠类型",
+        "key": "stack_type",
+        "tips": "物品的堆叠或者充能逻辑。",
+        "type": "PEnum"
+    },
+    "start_rft": {
+        "desc": "购买开始时间",
+        "key": "start_rft",
+        "tips": "游戏开始后多长时间才能购买该类物品",
+        "type": "PFloat"
+    },
+    "suffix": {
+        "desc": "编辑器后缀",
+        "key": "suffix",
+        "tips": "在编辑器下显示在名字后面的后缀，在游戏内不显示",
+        "type": "PText"
+    },
+    "tags": {
+        "desc": "物品标签",
+        "key": "tags",
+        "tips": "用于对物体的分类处理。为单位贴上标签后可以对其进行更方便的关系，例如编写游戏逻辑：杀死所有拥有XX标签的单位",
+        "type": "PList"
+    },
+    "uid": {
+        "desc": "UID",
+        "key": "uid",
+        "type": "PText"
+    },
+    "use_base_tint_color": {
+        "desc": "是否启用基础材质变色",
+        "key": "use_base_tint_color",
+        "type": "PBool"
+    },
+    "use_consume": {
+        "desc": "使用消耗次数",
+        "key": "use_consume",
+        "tips": "物品是堆叠类型时，每次使用该物品消耗的堆叠层数",
+        "type": "PInt"
+    },
+    "use_fresnel": {
+        "desc": "启用菲涅尔效果",
+        "key": "use_fresnel",
+        "type": "PBool"
+    },
+    "use_virtual_light": {
+        "desc": "启用补光效果",
+        "key": "use_virtual_light",
+        "type": "PBool"
+    }
+}

@@ -1,0 +1,26 @@
+.tree-node {
+  display: flex;
+  align-items: center;
+  &:hover {
+    background-color: #ffffff29;
+  }
+  &:global(.selected) {
+    background-color: #ffffff29;
+  }
+}
+
+.tree-node-description {
+  color: #8e8e8e;
+}
+
+.expand-icon {
+  transition: all ease 0.3s;
+
+  &.expanded {
+    transform: rotate(-180deg);
+  }
+}
+
+.children-nodes {
+  transition: all ease 0.1s;
+}

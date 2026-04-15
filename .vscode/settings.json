@@ -1,0 +1,28 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.exclude": {
+        "out": false // set this to true to hide the "out" folder with the compiled JS files
+    },
+    "search.exclude": {
+        "out": true // set this to false to include "out" folder in search results
+    },
+    // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
+    "typescript.tsc.autoDetect": "off",
+    "Lua.workspace.ignoreDir": [
+        ".vscode",
+        "3rd"
+    ],
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#1F2F3B",
+        "titleBar.activeBackground": "#2C4253",
+        "titleBar.activeForeground": "#FBFCFD",
+        "titleBar.inactiveBackground": "#1F2F3B",
+        "titleBar.inactiveForeground": "#FBFCFD",
+        "statusBar.background": "#1F2F3B",
+        "statusBar.foreground": "#FBFCFD",
+        "statusBar.debuggingBackground": "#1F2F3B",
+        "statusBar.debuggingForeground": "#FBFCFD",
+        "statusBar.noFolderBackground": "#1F2F3B",
+        "statusBar.noFolderForeground": "#FBFCFD"
+    },
+}

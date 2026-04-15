@@ -1,0 +1,108 @@
+{
+    "_custom_": true, 
+    "_ref_": 1, 
+    "alive_height_box_data": 0, 
+    "base_color_mod": 1, 
+    "base_tint_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255, 
+            0.5
+        ]
+    }, 
+    "body_size": 1.0, 
+    "collision_box": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "collision_points_alive": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "collision_points_dead": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "dead_height_box_data": 0, 
+    "default_rate": 1.0, 
+    "description": -697610401, 
+    "destroy_delay": 5, 
+    "destroy_on_die": true, 
+    "die_effect_list": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "die_on_source_run_out": false, 
+    "effect_list": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "enable_occlusion_perspective": false, 
+    "fresnel_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255, 
+            0.5
+        ]
+    }, 
+    "fresnel_emissive_color_strength": 1, 
+    "fresnel_exp": 10, 
+    "hp_max": 500.0, 
+    "icon": 100000, 
+    "is_ability_target": true, 
+    "is_attacked": true, 
+    "is_collected": true, 
+    "is_selected": true, 
+    "key": 1, 
+    "kv": {}, 
+    "material_alpha": 0.5, 
+    "material_change": 0, 
+    "material_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255
+        ]
+    }, 
+    "material_color_intensity": 0, 
+    "mini_map_color": {
+        "__tuple__": true, 
+        "items": [
+            255, 
+            255, 
+            255
+        ]
+    }, 
+    "model": 10015, 
+    "model_opacity": 1, 
+    "name": -1650900640, 
+    "passable": false, 
+    "receive_decal": false, 
+    "show_on_mini_map": true, 
+    "sound_event_list": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "source_desc": 2097177405, 
+    "source_item": 10000, 
+    "source_nums_init": 0, 
+    "source_nums_max": 10000.0, 
+    "source_player_prop": "official_res_1", 
+    "source_refresh_count": 0, 
+    "source_refresh_interval": 5, 
+    "source_type": 0, 
+    "suffix": "", 
+    "tags": {
+        "__tuple__": true, 
+        "items": []
+    }, 
+    "uid": "1", 
+    "use_base_tint_color": false, 
+    "use_fresnel": 0, 
+    "use_virtual_light": 0
+}

@@ -1,0 +1,31 @@
+{
+	"include": [
+		"src/**/*.ts",
+		"src/helper_meta/**/*.ts"
+	],
+	// 忽略对template/excel/importRules.ts的编译 因为它只是个模板 生成给用户用
+	"exclude": [
+		"template",
+		"tmp",
+	],
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"module": "Node16",
+		"target": "ES2022",
+		"outDir": "out",
+		"lib": [
+			"ES2022"
+		],
+		"sourceMap": true,
+		"rootDir": "src",
+		"strict": true,
+		"paths": {
+			"y3-helper": ["./src/y3-helper"],
+			"map-declare": ["./src/map-declare"],
+		},
+		"declaration": true,
+		"declarationDir": "./tmp/types",
+		"experimentalDecorators": true,
+		"skipLibCheck": true,
+	},
+}

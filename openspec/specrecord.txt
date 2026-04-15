@@ -1,0 +1,24 @@
+ticket_id,archive_time,ai_lines,total_lines,author,svn_revisions,commit_count,change_name,note
+98274,2026/3/13,0,0,王浩辰,cba9d62,1,docs-vscode-plugin-learning-98274,学习VsCode插件开发流程(文档类)
+98336,2026/3/13,1748,1748,刘冰,832ae44;55ef730,2,feat-ui-framework-98336,UI框架加载重建与优化
+98276,2026/3/13,10,10,王一鑫,dbe1fc2;d6a0dce,2,project-level-workspace-global-script-98276,根据目录层级配置目标环境及global script路径选择
+98275,2026/3/16,0,0,王浩辰,5aeb133,1,phrase-1-integrate-real-ai-api-98275,CodeMaker集成第一阶段使用真实API打通(仅spec)
+98280,2026/3/17,1219,1219,王一鑫,c3b901a,1,vscode-save-gmp-98280,VsCode保存GMP支持直接修改的UI及直接保存
+98275,2026/3/18,1667,1667,王浩辰,26a2d10;c713103;9c69383,3,feat-codemaker-integration-with-y3helper-98275,CodeMaker集成Y3Helper:WebviewProvider+ApiServer+消息桥+聊天历史持久化
+98275,2026/3/19,50,50,王浩辰,0037012,1,feat-codemaker-fixed-model-setting-98275,修复模型设置问题
+98388,2026/3/20,112,112,王一鑫,d7e99b1,1,lua-static-check-mcp-98388,基于LSP的lua代码的静态检查逻辑+通过MCP调用vscodeOperator_readProblems获取Lua诊断信息
+98275,2026/3/23,1600,1600,王浩辰,,1,fix-codemaker-webview-message-handlers,修复CodeMaker集成WebView消息处理:@附加文件+TOOL_CALL+聊天无响应+Rules/MCP配置+API端口冲突+60+消息处理器移植
+98275,2026/3/23,1300,1300,王浩辰,,1,feat-mcp-server-connection-98275,实现MCP Server的实际连接(McpHub)+stdio/sse/streamableHttp传输+UI状态同步+use_mcp_tool调用+配置热更新
+98275,2026/3/24,800,800,王浩辰,,1,fix-toolcall-file-edit-and-terminal,修复TOOL_CALL文件编辑全链路:补齐16个工具+replace_in_file三层匹配引擎+apply API智能合并+终端命令terminalStatus
+98275,2026/3/24,500,500,王浩辰,,1,fix-accept-edit-and-responses-api,ACCEPT_EDIT对齐源码版EditApplyProvider(Document API写入+重复应用检测+空白冲突比较)+Responses API支持function calling(tools转换+tool_call事件+call_id格式)
+98275,2026/3/24,200,200,王浩辰,,1,feat-codemaker-skills-toolbar,移植Skills工具栏功能:GET_SKILLS/CREATE_SKILL_TEMPLATE/INSTALL_BUILTIN_SKILL消息处理+use_skill工具+支持子目录SKILL.md格式+mcp_settings.json默认值+MCP Server默认自动启动
+98275,2026/3/25,500,500,王浩辰,,1,fix-at-panel-current-file,修复@面板无法选中当前文件:移植workspaceTracker(全量文件索引)+openFilesHandler(最近文件追踪)+searchWorkspacePath对齐源码版
+98706,2026/3/31,1694,1694,刘冰,7f67cd0;7173ee6;d1473fe;7bb66b2,4,migrate-ui-framework-to-lualib-98706,UI框架从y3-helper模板迁移到y3-lualib:BasePanel/BaseView/BaseTips/EventBus/UIManager+公开API(y3.ui_manager)+share模块+类级别on_event
+98275,2026/3/31,120,120,王浩辰,b5a025d;6064c81;6ade8f3;9ef4a51,4,fix-terminal-status-display,修复终端命令执行成功但显示失败:对齐源码版TERMINAL_TRANSFER_LOG消息流程+spawn替代exec+terminalId传递修复+ETerminalStatus枚举对齐
+98275,2026/3/31,0,0,王浩辰,,0,fix-anthropic-tools-format-compat,记录Anthropic tools格式兼容问题(低优待修):LinkAPI中转站claudecodecheap分组不兼容OpenAI type:function格式
+98275,2026/4/1,30,30,王浩辰,,1,fix-image-support-with-webview-source,修复图片上传不支持:webview源码纳入仓库管理+App.tsx注入fixedModel到chatModels(parseImgType:BASE64)+Vite编译产物输出适配
+98702,2026/4/3 18:02,236,236,王浩辰,,0,remove-default-model-selection,移除CodeMaker内置默认模型列表:CHAT_MODELS_MAP清空+defaultModel/AI_DEFAULT_MODEL删除+模型选择器锁定+前端请求携带base_url+配置热更新修复
+98702,2026/4/7 10:57,511,511,王浩辰,e8bb318,1,codemaker-session-memory-storage-98702,重构历史记录存储:单文件→索引+单会话文件+支持分页排序过滤+旧数据自动迁移+schema_version预埋
+98702,2026/4/7 15:37,177,185,王浩辰,d508c7c,1,restore-session-topic-generation-98702,恢复会话标题自动生成:generateAndUpdateSessionTopic实现+非流式chatCompletion端点+history.mjs默认值修复
+98754,2026/4/7 19:00,119,119,王一鑫,f45e209,1,mcp-ui-center-position-98754,MCP增加获取UI控件Windows屏幕坐标接口:get_ui_center_in_windows工具
+,2026/4/8 14:46,5222,5222,王浩辰,939b5e7,1,rename-codemaker-to-y3maker,品牌重命名CodeMaker→Y3Maker:UI文本+Settings命名空间+LLM提示词+日志前缀+.codemaker→.y3maker自动迁移+API header/路径(BREAKING CHANGE)
