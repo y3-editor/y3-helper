@@ -65,8 +65,6 @@ export class GameSessionManager extends vscode.Disposable {
      * 启动游戏
      */
     async launchGame(options: any = {}): Promise<any> {
-        // 第一步：保存 GMP（物编 + UI）
-        await this.saveGmpBeforeLaunch();
 
         // 检查是否正在启动中
         if (this.isLaunching) {
@@ -401,8 +399,6 @@ export class GameSessionManager extends vscode.Disposable {
      * 快速重启游戏（.rr 命令）
      */
     async quickRestart(): Promise<any> {
-        // 第一步：保存 GMP（物编 + UI）
-        await this.saveGmpBeforeLaunch();
 
         if (!this.currentSession) {
             throw new MCPError(
