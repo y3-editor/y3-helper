@@ -3,7 +3,7 @@ import { versionCompare } from "../../utils/common";
 import { useChatStore } from "../chat";
 import { useChatConfig } from "../chat-config";
 import { MCPServer } from "../mcp";
-import { useSkillsStore } from "../skills";
+import { useSkillsStore, SkillIndexItem } from "../skills";
 import { generateCodewikiStructure } from "./tools/codewiki";
 import { Tool as PlanTool } from "./tools/plan";
 import { getV2ReadFileTool } from "./tools/read";
@@ -17,6 +17,7 @@ export function getToolsEN(options: {
   enableTerminal?: boolean;
   codeMakerVersion?: string;
   isVSCode: boolean;
+  skills?: SkillIndexItem[];
 }) {
   const {
     workspace,
@@ -372,21 +373,39 @@ Critical rules:
     tools.push(generateCodewikiStructure({ language: 'en' }));
   }
 
-  const skills = useSkillsStore.getState().skills;
+  const skillsStore = useSkillsStore.getState();
+  const skills =
+    options.skills ??
+    skillsStore.skills.filter((s) => skillsStore.isSkillEnabled(s.name));
   if (enableSkills && skills.length > 0) {
-    const skillNames = skills.map(s => s.name);
+    const skillNames = skills.map((s) => s.name);
     tools.push({
       type: 'function',
       function: {
         name: 'use_skill',
-        description: 'Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. Only call this when the user\'s request clearly matches an available skill.',
+        description:
+          "Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. You can activate multiple skills at once by passing an array of skill names. Only call this when the user's request clearly matches an available skill.",
         parameters: {
           type: 'object',
           properties: {
             skill_name: {
-              type: 'string',
-              description: `The name of the skill to activate. Must be one of the available skills: ${skillNames.join(', ')}`,
-              enum: skillNames,
+              oneOf: [
+                {
+                  type: 'string',
+                  enum: skillNames,
+                  description: `A single skill name. Must be one of: ${skillNames.join(', ')}`,
+                },
+                {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: skillNames,
+                  },
+                  minItems: 1,
+                  description: `An array of skill names to activate multiple skills. Each must be one of: ${skillNames.join(', ')}`,
+                },
+              ],
+              description: `The name(s) of the skill(s) to activate. Can be a single skill name or an array of multiple skill names. Available skills: ${skillNames.join(', ')}`,
             },
           },
           required: ['skill_name'],

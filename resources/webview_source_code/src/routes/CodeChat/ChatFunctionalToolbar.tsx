@@ -18,9 +18,10 @@ import { useChatConfig } from '../../store/chat-config';
 import { LuListTodo } from 'react-icons/lu';
 import { IoTerminalOutline } from 'react-icons/io5';
 import MCPConfigCollapse from './MCPConfigCollapse';
-import { TbWand } from 'react-icons/tb';
+import SkillConfigCollapse from './SkillConfigCollapse';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
+import SkillSettingModal from './SkillSettingModal';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { useChatStore } from '../../store/chat';
@@ -31,7 +32,6 @@ import {
 import { usePostMessage } from '../../PostMessageProvider';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
-import { useSkillsStore } from '../../store/skills';
 import MiniButton from '../../components/MiniButton';
 
 enum EAutoConfig {
@@ -44,6 +44,7 @@ enum EAutoConfig {
 function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mcpSettingOpen, setMcpSettingOpen] = useState(false);
+  const [skillSettingOpen, setSkillSettingOpen] = useState(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const syncHistory = useChatStore((state) => state.syncHistory);
@@ -89,11 +90,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     state.enableUserQuestion,
     state.setEnableUserQuestion,
   ]);
-
-  const enableSkills = useChatConfig((state) => state.enableSkills);
-  const setEnableSkills = useChatConfig((state) => state.setEnableSkills);
-
-  const skills = useSkillsStore((state) => state.skills);
 
   useOutsideClick({
     ref: popoverRef,
@@ -254,20 +250,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     });
   }, [compressConfig, renderSwitchItem, setCompressConfig]);
 
-  const renderSkillsItem = useCallback(() => {
-    if (skills.length === 0) return null;
-
-    return renderSwitchItem({
-      title: 'Skills 工具',
-      icon: <TbWand size={16} />,
-      value: enableSkills,
-      lebalTooltips:
-        '加载本地 Skills 文件，根据需求自动匹配并激活对应的专业指导，支持 ~/.claude/skills、.claude/skills、.codemaker/skills 目录',
-      onChange: (val) => {
-        setEnableSkills(val);
-      },
-    });
-  }, [skills.length, enableSkills, renderSwitchItem, setEnableSkills]);
 
   return (
     <Box ref={popoverRef} data-tour="chat-functional-toolbar">
@@ -377,7 +359,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 },
               })}
               {renderAutoMemoryItem()}
-              {renderSkillsItem()}
+              <SkillConfigCollapse setSkillSettingOpen={setSkillSettingOpen} />
               {renderSwitchItem({
                 title: '需求澄清工具',
                 icon: <RiQuestionnaireLine size={'16'} color="white" />,
@@ -396,6 +378,10 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       <MCPSettingModel
         isOpen={mcpSettingOpen}
         onClose={() => setMcpSettingOpen(false)}
+      />
+      <SkillSettingModal
+        isOpen={skillSettingOpen}
+        onClose={() => setSkillSettingOpen(false)}
       />
     </Box>
   );

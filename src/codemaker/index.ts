@@ -3,6 +3,7 @@ import { CodeMakerWebviewProvider } from './webviewProvider';
 import { CodeMakerApiServer } from './apiServer';
 import { initOpenFilesHandler } from './handlers/openFilesHandler';
 import { initWorkspaceTracker } from './handlers/workspaceTracker';
+import SkillsHandler from './skillsHandler';
 
 let webviewProvider: CodeMakerWebviewProvider | undefined;
 let apiServer: CodeMakerApiServer | undefined;
@@ -62,6 +63,12 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
     initOpenFilesHandler(context);
     initWorkspaceTracker();
 
+    // 初始化 SkillsHandler（异步，不阻塞扩展激活）
+    const skillsHandler = SkillsHandler.getInstance();
+    skillsHandler.initialize(context).catch(err => {
+        console.error('[Y3Maker] SkillsHandler initialization failed:', err);
+    });
+
     // 视图关闭状态管理（不涉及自动打开，可立即注册）
     setupDisposeListener(context);
 }
@@ -106,6 +113,10 @@ export function stopCodeMaker() {
         apiServer.stop();
         apiServer = undefined;
     }
+
+    // 清理 SkillsHandler
+    const skillsHandler = SkillsHandler.getInstance();
+    skillsHandler.dispose();
 }
 
 export { webviewProvider, apiServer };

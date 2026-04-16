@@ -22,3 +22,4 @@ ticket_id,archive_time,ai_lines,total_lines,author,svn_revisions,commit_count,ch
 98702,2026/4/7 15:37,177,185,王浩辰,d508c7c,1,restore-session-topic-generation-98702,恢复会话标题自动生成:generateAndUpdateSessionTopic实现+非流式chatCompletion端点+history.mjs默认值修复
 98754,2026/4/7 19:00,119,119,王一鑫,f45e209,1,mcp-ui-center-position-98754,MCP增加获取UI控件Windows屏幕坐标接口:get_ui_center_in_windows工具
 ,2026/4/8 14:46,5222,5222,王浩辰,939b5e7,1,rename-codemaker-to-y3maker,品牌重命名CodeMaker→Y3Maker:UI文本+Settings命名空间+LLM提示词+日志前缀+.codemaker→.y3maker自动迁移+API header/路径(BREAKING CHANGE)
+98837,2026/4/16 17:18,2074,2074,王浩辰,,0,migrate-skill-panel-98837,Skill面板全面升级:SkillsHandler单例(8目录来源扫描+FileSystemWatcher)+SkillConfigCollapse折叠面板+SkillSettingModal设置弹窗+use_skill多Skill激活+Map-based状态管理

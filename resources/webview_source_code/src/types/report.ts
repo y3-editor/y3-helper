@@ -148,6 +148,7 @@ export enum UserEvent {
 
   //mcp相关埋点
   CODE_CHAT_MCP_MANAGE_PANEL = 'CodeChat.mcp_manage_panel',
+  CODE_CHAT_SKILL_MANAGE_PANEL = 'CodeChat.skill_manage_panel',
   CODE_CHAT_MCP_INSTALL_BUILTIN_SERVER = 'CodeChat.mcp_install_builtin_server',
   CODE_CHAT_MCP_ADD_CUSTOM_SERVER = 'CodeChat.mcp_add_custom_server',
   CODE_CHAT_MCP_CONFIG_BUTTON = 'CodeChat.mcp_config_button',

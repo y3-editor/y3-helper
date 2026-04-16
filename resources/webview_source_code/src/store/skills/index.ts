@@ -1,12 +1,30 @@
 import { create } from 'zustand';
 
-export type SkillSource = 'codemaker-user' | 'codemaker-project' | 'claude-project' | 'claude-user';
+export type SkillSource =
+  | 'y3maker-project' | 'y3maker-user'
+  | 'codemaker-project' | 'codemaker-user'
+  | 'claude-project' | 'claude-user'
+  | 'agents-project' | 'agents-user';
 
 export interface SkillIndexItem {
   name: string;
+  display_name?: string;
   description: string;
+  description_cn?: string;
   source: SkillSource;
+  path?: string;
   userInvocable?: boolean;
+  disabled?: boolean;
+  hubSkillId?: string;
+  installedVersion?: string;
+  latestVersion?: string;
+  hasUpdate?: boolean;
+}
+
+export interface SkillConfig {
+  name: string;
+  disabled: boolean;
+  hubSkillId?: string;
 }
 
 export interface SkillResources {
@@ -34,14 +52,22 @@ export function isSkillToolId(toolId?: string): boolean {
 
 export function getSkillSourceLabel(source: SkillSource): string {
   switch (source) {
+    case 'y3maker-user':
+      return '~/.y3maker/skills';
+    case 'y3maker-project':
+      return '.y3maker/skills';
+    case 'codemaker-user':
+      return '~/.codemaker/skills';
+    case 'codemaker-project':
+      return '.codemaker/skills';
     case 'claude-user':
       return '~/.claude/skills';
-    case 'codemaker-user':
-      return '~/.y3maker/skills';
     case 'claude-project':
       return '.claude/skills';
-    case 'codemaker-project':
-      return '.y3maker/skills';
+    case 'agents-user':
+      return '~/.agents/skills';
+    case 'agents-project':
+      return '.agents/skills';
     default:
       return source;
   }
@@ -81,17 +107,51 @@ ${skill.content}
 
 export interface SkillsStore {
   skills: SkillIndexItem[];
+  skillConfigs: Record<string, SkillConfig>;
 
   setSkills: (skills: SkillIndexItem[]) => void;
+  setSkillConfig: (name: string, config: Partial<SkillConfig>) => void;
+  isSkillEnabled: (name: string) => boolean;
+  isHubSkillInstalled: (hubSkillId: string) => boolean;
 }
 
-export const useSkillsStore = create<SkillsStore>((set) => ({
+export const useSkillsStore = create<SkillsStore>((set, get) => ({
   skills: [],
+  skillConfigs: {},
 
   setSkills: (skills) => {
     set(() => ({
       skills,
     }));
+  },
+
+  setSkillConfig: (name, config) => {
+    set((state) => {
+      const existing = state.skillConfigs[name];
+      const merged: SkillConfig = {
+        name,
+        disabled: existing?.disabled ?? false,
+        hubSkillId: existing?.hubSkillId,
+        ...config,
+      };
+      merged.name = name; // name 始终以参数为准
+      return {
+        skillConfigs: {
+          ...state.skillConfigs,
+          [name]: merged,
+        },
+      };
+    });
+  },
+
+  isSkillEnabled: (name) => {
+    const config = get().skillConfigs[name];
+    return !config?.disabled;
+  },
+
+  isHubSkillInstalled: (hubSkillId) => {
+    const { skills } = get();
+    return skills.some(s => s.hubSkillId === hubSkillId);
   },
 }));
 

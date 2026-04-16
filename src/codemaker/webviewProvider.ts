@@ -9,6 +9,7 @@ import { getOpenFilesHandler } from './handlers/openFilesHandler';
 import { isDocsetFile } from './utils/file';
 import { readFileSync } from 'fs';
 import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
+import SkillsHandler from './skillsHandler';
 
 /**
  * CodeMaker WebView 视图提供者
@@ -1043,6 +1044,7 @@ Provide the complete updated code.`;
 
     /**
      * use_skill 工具：加载 skill 内容并返回给 AI
+     * 支持 skill_name 为字符串或字符串数组
      */
     private async _toolUseSkill(params: any): Promise<any> {
         const skillName = params?.skill_name;
@@ -1055,39 +1057,43 @@ Provide the complete updated code.`;
             };
         }
 
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
+        const handler = SkillsHandler.getInstance();
+
+        // 支持数组参数：一次激活多个 skill
+        const names: string[] = Array.isArray(skillName) ? skillName : [skillName];
+        const results: any[] = [];
+
+        for (const name of names) {
+            const result = await handler.activateSkill(name);
+            if (result.success && result.skill) {
+                results.push(result.skill);
+            } else {
+                results.push({ name, error: result.error });
+            }
+        }
+
+        // 如果只有一个 skill，返回单个对象；否则返回数组
+        if (names.length === 1) {
+            const r = results[0];
+            if (r.error) {
+                return {
+                    content: `Error: ${r.error}`,
+                    path: r.name || '',
+                    isError: true,
+                };
+            }
             return {
-                content: `Error: No workspace folder found.`,
-                path: skillName,
-                isError: true,
+                content: JSON.stringify(r),
+                path: r.path || '',
+                isError: false,
             };
         }
 
-        // 动态从文件系统加载最新 skills（不使用缓存）
-        const skillsDir = path.join(workspaceFolder.uri.fsPath, '.y3maker', 'skills');
-        const skills = await loadSkillsFromDir(skillsDir, 'codemaker-project');
-
-        const skill = skills.find(s => s.name === skillName);
-        if (!skill) {
-            const available = skills.map(s => s.name).join(', ') || '(none)';
-            return {
-                content: `Error: Skill "${skillName}" not found. Available skills: ${available}`,
-                path: skillName,
-                isError: true,
-            };
-        }
-
-        // 返回 JSON 格式，匹配前端 parseSkillToolResult 期望
+        // 多 skill：返回 JSON 数组
         return {
-            content: JSON.stringify({
-                name: skill.name,
-                content: skill.content,
-                source: skill.source,
-                path: skill.path,
-            }),
-            path: skill.path,
-            isError: false,
+            content: JSON.stringify(results),
+            path: names.join(', '),
+            isError: results.some(r => r.error),
         };
     }
 

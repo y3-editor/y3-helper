@@ -1184,18 +1184,40 @@ function CodeChat() {
           }
           const { parseSkillToolResult, getSkillSourceLabel } = await import('../../store/skills');
           const { useSkillPromptApp } = await import('../../store/skills/skill-prompt');
-          const skillData = parseSkillToolResult(tool_result?.content || '');
-          if (tool_result?.isError || !skillData) {
+          // 解析skill结果(支持单个对象或数组)
+          let skillsDataArray: unknown[] = [];
+          const content = tool_result?.content?.trim();
+          if (content) {
+            try {
+              const parsed: unknown = JSON.parse(content);
+              skillsDataArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+              console.error('[use_skill] Failed to parse skill result:', e, tool_result?.content);
+              skillsDataArray = [];
+            }
+          } else {
+            console.warn('[use_skill] Empty or invalid skill result content');
+            skillsDataArray = [];
+          }
+
+          if (tool_result?.isError || skillsDataArray.length === 0) {
             useSkillPromptApp.getState().setLoading(false);
           } else {
-            useSkillPromptApp.getState().setRunner(
-              {
-                skillName: skillData.name,
-                title: `/${skillData.name}`,
-                source: getSkillSourceLabel(skillData.source),
-              },
-              skillData
-            );
+            skillsDataArray.forEach((skillDataRaw) => {
+              const skillData = parseSkillToolResult(JSON.stringify(skillDataRaw));
+              if (skillData) {
+                // 如果skill不存在则添加(处理AI直接调用use_skill的情况)
+                if (!useSkillPromptApp.getState().hasSkill(skillData.name)) {
+                  useSkillPromptApp.getState().addSkill(skillData.name, {
+                    title: `/${skillData.name}`,
+                    source: getSkillSourceLabel(skillData.source),
+                  });
+                }
+                useSkillPromptApp.getState().setSkillData(skillData.name, skillData);
+              } else {
+                console.warn('[use_skill] Failed to parse skill data:', skillDataRaw);
+              }
+            });
           }
           return;
         }

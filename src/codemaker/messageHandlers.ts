@@ -18,6 +18,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { CodeMakerWebviewProvider } from './webviewProvider';
 import { getMcpHub } from './mcpHandlers/index';
+import SkillsHandler from './skillsHandler';
 
 /**
  * 处理所有从 WebView 发来的消息
@@ -433,7 +434,9 @@ export async function handleExtendedMessage(
         }
 
         case 'GET_SKILLS': {
-            await handleGetSkills(provider);
+            const handler = SkillsHandler.getInstance();
+            await handler.loadSkills();
+            handler.syncSkills();
             return true;
         }
 
@@ -458,7 +461,41 @@ export async function handleExtendedMessage(
         }
 
         case 'INSTALL_BUILTIN_SKILL': {
-            await handleInstallBuiltinSkill(message.data, provider);
+            const handler = SkillsHandler.getInstance();
+            const installResult = await handler.installBuiltinSkill(
+                message.data?.skillName,
+                message.data?.downloadUrl
+            );
+            provider.sendMessage({
+                type: 'INSTALL_BUILTIN_SKILL_RESULT',
+                data: installResult,
+            });
+            return true;
+        }
+
+        case 'UPDATE_SKILL_CONFIG': {
+            const handler = SkillsHandler.getInstance();
+            handler.handleUpdateSkillConfig(message.data);
+            return true;
+        }
+
+        case 'REMOVE_SKILL': {
+            const handler = SkillsHandler.getInstance();
+            const removeResult = await handler.handleRemoveSkill(message.data);
+            provider.sendMessage({
+                type: 'REMOVE_SKILL_RESULT',
+                data: removeResult,
+            });
+            return true;
+        }
+
+        case 'UPLOAD_SKILL': {
+            const handler = SkillsHandler.getInstance();
+            const uploadResult = await handler.handleUploadSkill(message.data);
+            provider.sendMessage({
+                type: 'UPLOAD_SKILL_RESULT',
+                data: uploadResult,
+            });
             return true;
         }
 
