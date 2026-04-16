@@ -1,6 +1,6 @@
 ## Why
 
-[#98837](https://up1.pm.netease.com/v6/issues/98837)
+#98837
 
 Y3Maker 当前的 Skill 面板功能简陋，仅在 ChatFunctionalToolbar 中提供一个「Skills 工具」的全局启用/禁用开关（通过 `SelectWithTooltip` 切换 on/off）。用户无法查看已加载的 skill 列表，无法对单个 skill 进行独立的启用/禁用控制，也没有 skill 管理配置入口。
 
