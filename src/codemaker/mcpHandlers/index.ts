@@ -148,10 +148,6 @@ export class McpHub {
                             vscode.window.showErrorMessage(
                                 "MCP servers 更新异常: " + getErrorMessage(error),
                             );
-                            this.notifyCallback({
-                                type: "SHOW_MCP_ERROR",
-                                data: error,
-                            });
                         }
                     }
                 }),
@@ -582,10 +578,6 @@ export class McpHub {
         const result = await this.getMcpServersConfig();
         if (!result.success || !result.mcpServers) {
             vscode.window.showErrorMessage("MCP servers 重启异常: " + (result.error || "配置解析失败"));
-            this.notifyCallback({
-                type: "SHOW_MCP_ERROR",
-                data: result.error,
-            });
             return;
         }
 
@@ -595,10 +587,6 @@ export class McpHub {
             vscode.window.showInformationMessage("MCP servers 状态已更新");
         } catch (error) {
             vscode.window.showErrorMessage("MCP servers 重启异常: " + getErrorMessage(error));
-            this.notifyCallback({
-                type: "SHOW_MCP_ERROR",
-                data: error,
-            });
         }
     }
 
@@ -920,6 +908,23 @@ export class McpHub {
         } catch (err) {
             vscode.window.showErrorMessage(`未能打开 MCP 设置文件: ${getErrorMessage(err)}`);
         }
+    }
+
+    // ─── 重置连接（项目切换时清理缓存并重新初始化） ────
+
+    async resetConnections(): Promise<void> {
+        console.log("[McpHub] 清理所有 MCP 连接缓存...");
+        for (const connection of this.connections) {
+            try {
+                await this.deleteConnection(connection.server.name);
+            } catch (error) {
+                console.error(`[McpHub] Failed to close connection for ${connection.server.name}:`, error);
+            }
+        }
+        this.connections = [];
+        this.notifyWebviewOfServerChanges();
+        console.log("[McpHub] MCP 连接缓存已清理，重新初始化...");
+        await this.initializeMcpServers();
     }
 
     // ─── 清理 ────────────────────────────────────────

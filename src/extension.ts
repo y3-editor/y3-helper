@@ -28,6 +28,7 @@ import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
 import * as l10n from '@vscode/l10n';
 import * as mcp from './mcp';
+import { getMcpHub } from './codemaker/mcpHandlers';
 import { initCodeMaker, stopCodeMaker, webviewProvider } from './codemaker';
 
 class Helper {
@@ -198,6 +199,11 @@ class Helper {
                     y3.log.warn(l10n.t('复制 .y3maker 目录失败: {0}', String(e)));
                 }
 
+                // 初始化完成，启动 MCP Server（静默模式）
+                if (!this.tcpServer) {
+                    await this.startTCPServer(true);
+                }
+
                 // 打开项目
                 await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
                 await vscode.commands.executeCommand('vscode.openFolder', env.projectUri);
@@ -303,6 +309,24 @@ class Helper {
             this.tcpServer.dispose();
             this.tcpServer = undefined;
             tools.log.info('[Y3-Helper] TCP Server stopped');
+        }
+    }
+
+    /**
+     * 检查 Y3 仓库是否已初始化（.git 目录存在）。
+     * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
+     */
+    private async isY3Initialized(): Promise<boolean> {
+        const y3Uri = env.y3Uri;
+        if (!y3Uri) {
+            return false;
+        }
+        try {
+            const gitUri = vscode.Uri.joinPath(y3Uri, '.git');
+            const stat = await vscode.workspace.fs.stat(gitUri);
+            return stat.type === vscode.FileType.Directory;
+        } catch {
+            return false;
         }
     }
 
@@ -522,11 +546,19 @@ class Helper {
         this.registerCommandOfNetworkServer();
         this.registerCommonCommands();
 
+        // 项目切换时自动清理 MCP 连接缓存并重新初始化
+        vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+            const hub = getMcpHub();
+            if (hub) {
+                await hub.resetConnections();
+            }
+        });
+
         setTimeout(async () => {
             this.checkNewProject();
             mainMenu.init();
-            // 默认自动启动 MCP Server（静默模式，端口冲突时不弹错误）
-            if (!this.tcpServer) {
+            // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
+            if (!this.tcpServer && await this.isY3Initialized()) {
                 await this.startTCPServer(true);
             }
             metaBuilder.init();
