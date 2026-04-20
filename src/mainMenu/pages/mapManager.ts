@@ -63,16 +63,6 @@ export class 地图管理 extends TreeNode {
                         return !await globalScript.isEnabled();
                     }
                 }));
-                node.childs.push(new TreeNode(l10n.t('一并打开全局脚本'), {
-                    tooltip: l10n.t("会以工作区的形式同时打开地图脚本与全局脚本"),
-                    checkboxState: y3.helper.globalState.get('openGlobalScript', true)
-                        ? vscode.TreeItemCheckboxState.Checked
-                        : vscode.TreeItemCheckboxState.Unchecked,
-                    onDidChangeCheckboxState: async (state) => {
-                        await y3.helper.globalState.update('openGlobalScript', state === vscode.TreeItemCheckboxState.Checked);
-                        await globalScript.openGlobalScript();
-                    },
-                }));
             },
         });
 
