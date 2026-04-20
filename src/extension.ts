@@ -341,12 +341,7 @@ class Helper {
         }
     }
 
-    /**
-     * 检查 Y3 仓库是否已初始化（.git 目录存在）。
-     * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
-     */
-    private async isY3Initialized(): Promise<boolean> {
-        const y3Uri = env.y3Uri;
+    private async hasGitDirectory(y3Uri?: vscode.Uri): Promise<boolean> {
         if (!y3Uri) {
             return false;
         }
@@ -357,6 +352,20 @@ class Helper {
         } catch {
             return false;
         }
+    }
+
+    /**
+     * 检查 Y3 仓库是否已初始化（.git 目录存在）。
+     * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
+     * 启用全局脚本后，仓库可能位于 global_script/y3。
+     */
+    private async isY3Initialized(): Promise<boolean> {
+        if (await this.hasGitDirectory(env.y3Uri)) {
+            return true;
+        }
+        return this.hasGitDirectory(
+            env.globalScriptUri ? vscode.Uri.joinPath(env.globalScriptUri, l10n.t('y3')) : undefined
+        );
     }
 
     private registerCommandOfMCP() {
