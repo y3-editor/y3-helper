@@ -1,28 +1,6 @@
-import * as os from 'os';
-import * as path from 'path';
 import type { GameLauncher } from '../launchGame';
 import type { Client } from '../console/client';
 import type { LogManager } from './logManager';
-
-/**
- * 获取 TCP 连接配置
- * 使用 TCP Socket 以避免权限问题（管理员进程 ↔ 普通用户进程）
- */
-export function getTCPConfig(): { host: string; port: number } {
-    return {
-        host: '127.0.0.1',
-        port: 25897  // Y3-Helper MCP 内部通信端口
-    };
-}
-
-/**
- * 获取 IPC Socket 路径（已废弃，保留用于兼容）
- * @deprecated 使用 getTCPConfig() 代替
- */
-export function getSocketPath(): string {
-    const config = getTCPConfig();
-    return `${config.host}:${config.port}`;
-}
 
 /**
  * MCP 错误码
@@ -45,7 +23,7 @@ export enum MCPErrorCode {
 }
 
 /**
- * MCP 错误类
+ * MCP 错误类型
  */
 export class MCPError extends Error {
     constructor(
@@ -56,28 +34,6 @@ export class MCPError extends Error {
         super(message);
         this.name = 'MCPError';
     }
-}
-
-/**
- * TCP 请求格式
- */
-export interface TCPRequest {
-    id: string;
-    method: string;
-    params?: any;
-}
-
-/**
- * TCP 响应格式
- */
-export interface TCPResponse {
-    id: string;
-    result?: any;
-    error?: {
-        code: number;
-        message: string;
-        data?: any;
-    };
 }
 
 /**
