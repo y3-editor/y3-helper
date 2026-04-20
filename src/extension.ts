@@ -32,6 +32,7 @@ import { initCodeMaker, stopCodeMaker, webviewProvider } from './codemaker';
 class Helper {
     private context: vscode.ExtensionContext;
     private tcpServer?: mcp.TCPServer;
+    private autoStartMCPTask?: Promise<void>;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -316,6 +317,30 @@ class Helper {
         }
     }
 
+    private async tryAutoStartMCP() {
+        if (this.tcpServer || this.autoStartMCPTask) {
+            return;
+        }
+
+        this.autoStartMCPTask = (async () => {
+            try {
+                await env.mapReady();
+                if (this.tcpServer || !await this.isY3Initialized()) {
+                    return;
+                }
+                await this.runStartupStep('startMCPServer', () => this.startTCPServer(true));
+            } catch (error) {
+                this.logStartupError('tryAutoStartMCP', error);
+            }
+        })();
+
+        try {
+            await this.autoStartMCPTask;
+        } finally {
+            this.autoStartMCPTask = undefined;
+        }
+    }
+
     /**
      * 检查 Y3 仓库是否已初始化（.git 目录存在）。
      * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
@@ -416,13 +441,15 @@ class Helper {
             }
         });
 
+        env.onDidChange(() => {
+            void this.tryAutoStartMCP();
+        });
+
         setTimeout(async () => {
             await this.runStartupStep('checkNewProject', () => this.checkNewProject());
             await this.runStartupStep('mainMenu.init', () => mainMenu.init());
             // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
-            if (!this.tcpServer && await this.isY3Initialized()) {
-                await this.runStartupStep('startMCPServer', () => this.startTCPServer(true));
-            }
+            await this.tryAutoStartMCP();
             await this.runStartupStep('metaBuilder.init', () => metaBuilder.init());
             await this.runStartupStep('debug.init', () => debug.init(this.context));
             await this.runStartupStep('console.init', () => console.init());
