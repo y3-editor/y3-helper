@@ -105,8 +105,16 @@ export class McpHub {
 
     constructor(notifyCallback: McpNotifyCallback) {
         this.notifyCallback = notifyCallback;
+    }
+
+    /**
+     * 启动 McpHub：注册文件监听 + 初始化 MCP servers。
+     * 应在确认项目已初始化后调用（如 startTCPServer 时），
+     * 避免构造时过早创建 .y3maker 目录。
+     */
+    async start(): Promise<void> {
         this.watchMcpSettingsFile();
-        this.initializeMcpServers();
+        await this.initializeMcpServers();
     }
 
     // ─── 配置文件路径 ───────────────────────────────

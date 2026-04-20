@@ -10,6 +10,7 @@ import * as mainMenu from './mainMenu';
 
 import { env } from './env';
 import { runShell } from './runShell';
+import { getConfigRepoUrl, checkForUpdates, migrateOldUser, performUpdate, forceRemoteUpdate, clearCachedUpdateStatus, getCachedUpdateStatus } from './y3makerConfig';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
 import { NetworkServer } from './networkServer';
@@ -56,6 +57,54 @@ class Helper {
         });
         vscode.commands.registerCommand('y3-helper.shell', async (...args: any[]) => {
             runShell(l10n.t("执行命令"), args[0], args.slice(1));
+        });
+    }
+
+    private registerCommandOfUpdateY3MakerConfig() {
+        vscode.commands.registerCommand('y3-helper.updateY3MakerConfig', async () => {
+            if (!env.projectUri) {
+                return;
+            }
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: l10n.t('正在更新 Y3Maker 配置...'),
+            }, async () => {
+                const result = await performUpdate(env.projectUri!);
+
+                if (result.success) {
+                    // 更新成功
+                    clearCachedUpdateStatus();
+                    if (webviewProvider) {
+                        await webviewProvider.reloadCodemakerResources();
+                    }
+                    mainMenu.refresh();
+                    vscode.window.showInformationMessage(l10n.t('Y3Maker 配置已更新成功！'));
+                } else {
+                    // 有冲突
+                    const useRemote = l10n.t('使用远端版本');
+                    const handleSelf = l10n.t('自行解决');
+                    const choice = await vscode.window.showWarningMessage(
+                        l10n.t('Y3Maker 配置更新时发生冲突，请选择处理方式：'),
+                        { modal: true },
+                        useRemote,
+                        handleSelf,
+                    );
+
+                    if (choice === useRemote) {
+                        await forceRemoteUpdate(env.projectUri!);
+                        clearCachedUpdateStatus();
+                        if (webviewProvider) {
+                            await webviewProvider.reloadCodemakerResources();
+                        }
+                        mainMenu.refresh();
+                        vscode.window.showInformationMessage(l10n.t('Y3Maker 配置已强制更新到远端版本！'));
+                    } else {
+                        vscode.window.showInformationMessage(
+                            l10n.t('请在终端中手动处理 .y3maker 目录的 git 冲突')
+                        );
+                    }
+                }
+            });
         });
     }
 
@@ -118,6 +167,7 @@ class Helper {
 
                 const optionsGithub = 'Github (可能需要代理）';
                 const optionsGitee  = 'Gitee (国内镜像）';
+                let repoSource: 'github' | 'gitee' = 'github';
                 if (env.language === 'zh-cn') {
                     let result = await vscode.window.showInformationMessage(l10n.t('请选择仓库来源：'),
                     {
@@ -125,13 +175,15 @@ class Helper {
                     }, optionsGithub, optionsGitee);
 
                     if (result === optionsGithub) {
-                        // 从github上 clone 项目，地址为 “https://github.com/y3-editor/y3-lualib”
+                        repoSource = 'github';
+                        // 从github上 clone 项目，地址为 "https://github.com/y3-editor/y3-lualib"
                         await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
                             "clone",
                             "https://github.com/y3-editor/y3-lualib.git",
                             y3Uri.fsPath,
                         ]);
                     } else if (result === optionsGitee)  {
+                        repoSource = 'gitee';
                         await runShell(l10n.t("初始化Y3项目（Gitee）"), "git", [
                             "clone",
                             "https://gitee.com/tsukiko/y3-lualib.git",
@@ -183,19 +235,21 @@ class Helper {
                     } catch {}
                 }
 
-                // 复制 y3-lualib 中的 .y3maker 到工程根目录（包含 skills、rules、knowledge、mcp_settings.json）
+                // clone y3-maker-config 独立仓库到 .y3maker 目录
                 try {
-                    let codemakerSource = vscode.Uri.joinPath(y3Uri, '.y3maker');
-                    let codemakerTarget = vscode.Uri.joinPath(env.projectUri!, '.y3maker');
-                    await vscode.workspace.fs.copy(codemakerSource, codemakerTarget, { overwrite: true });
-                    // 删除 y3-lualib 中的 .y3maker，只保留地图根目录下的
-                    await vscode.workspace.fs.delete(codemakerSource, { recursive: true });
+                    const y3makerTarget = vscode.Uri.joinPath(env.projectUri!, '.y3maker');
+                    const configRepoUrl = getConfigRepoUrl(repoSource);
+                    await runShell(l10n.t("初始化 Y3Maker 配置"), "git", [
+                        "clone",
+                        configRepoUrl,
+                        y3makerTarget.fsPath,
+                    ]);
                     // 通知 Y3Maker 重新加载 Rules/Skills/MCP（因为 openFolder 同一目录不会触发窗口重载）
                     if (webviewProvider) {
                         await webviewProvider.reloadCodemakerResources();
                     }
                 } catch (e) {
-                    y3.log.warn(l10n.t('复制 .y3maker 目录失败: {0}', String(e)));
+                    y3.log.warn(l10n.t('克隆 y3-maker-config 失败: {0}', String(e)));
                 }
 
                 // 打开项目
@@ -287,6 +341,11 @@ class Helper {
 
     private async startTCPServer(silent: boolean = false): Promise<boolean> {
         try {
+            // 确保 McpHub 已启动（注册文件监听 + 初始化 MCP servers）
+            const hub = getMcpHub();
+            if (hub) {
+                await hub.start();
+            }
             this.tcpServer = new mcp.TCPServer();
             const started = await this.tcpServer.start();
             if (!started) {
@@ -437,6 +496,7 @@ class Helper {
 
         this.registerCommandOfNetworkServer();
         this.registerCommonCommands();
+        this.registerCommandOfUpdateY3MakerConfig();
 
         // 项目切换时自动清理 MCP 连接缓存并重新初始化
         vscode.workspace.onDidChangeWorkspaceFolders(async () => {
@@ -457,6 +517,26 @@ class Helper {
         setTimeout(async () => {
             await this.runStartupStep('checkNewProject', () => this.checkNewProject());
             await this.runStartupStep('mainMenu.init', () => mainMenu.init());
+
+            // 后台检测 Y3Maker 配置更新（不阻塞激活流程）
+            if (env.projectUri) {
+                (async () => {
+                    try {
+                        // 先检测是否需要老用户迁移
+                        const migrated = await migrateOldUser(env.projectUri!);
+                        if (migrated && webviewProvider) {
+                            await webviewProvider.reloadCodemakerResources();
+                        }
+                        // 检测版本更新
+                        await checkForUpdates(env.projectUri!);
+                        // 刷新主菜单树视图，使更新节点根据状态显示/隐藏
+                        mainMenu.refresh();
+                    } catch {
+                        // 静默跳过
+                    }
+                })();
+            }
+
             // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
             await this.tryAutoStartMCP();
             await this.runStartupStep('metaBuilder.init', () => metaBuilder.init());
@@ -494,123 +574,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
     helper.start();
 
-    // .codemaker → .y3maker 自动迁移（在 projectUri 就绪后执行）
-    // 因为 helper.start() 是异步的，projectUri 在此时可能还未设置
-    // 所以需要监听 env 变化事件，在 projectUri 首次就绪时执行迁移
-    let migrated = false;
-    const tryMigrate = async () => {
-        if (migrated) { return; }
-        if (y3.env?.projectUri) {
-            migrated = true;
-            await migrateCodemakerToY3maker();
-        }
-    };
-    // 立即尝试一次（如果 projectUri 已经就绪）
-    await tryMigrate();
-    // 监听环境变化，projectUri 设置后再尝试
-    if (!migrated) {
-        const disposable = y3.env.onDidChange(async () => {
-            await tryMigrate();
-            if (migrated) {
-                disposable.dispose();
-                // 迁移完成后，通知 webview 重新加载资源
-                if (webviewProvider) {
-                    await webviewProvider.reloadCodemakerResources();
-                }
-            }
-        });
-        context.subscriptions.push(disposable);
-    }
-
     // 初始化 CodeMaker 模块
     initCodeMaker(context);
 }
 
 export function deactivate() {
     stopCodeMaker();
-}
-
-/**
- * 自动迁移 .codemaker → .y3maker 目录和 .codemaker.codebase.md → .y3maker.codebase.md 文件
- * 在 initCodeMaker 之前调用，确保 webview 加载 rules/skills 时目录已就绪
- */
-async function migrateCodemakerToY3maker() {
-    const projectUri = y3.env?.projectUri;
-    if (!projectUri) {
-        return;
-    }
-
-    // 迁移 .codemaker 目录 → .y3maker
-    const oldDir = vscode.Uri.joinPath(projectUri, '.codemaker');
-    const newDir = vscode.Uri.joinPath(projectUri, '.y3maker');
-
-    // 先检查 .codemaker 是否存在
-    let oldDirExists = false;
-    try {
-        await vscode.workspace.fs.stat(oldDir);
-        oldDirExists = true;
-    } catch {
-        // .codemaker 不存在，无需迁移
-    }
-
-    if (oldDirExists) {
-        // 检查 .y3maker 是否已存在
-        let newDirExists = false;
-        let newDirIsEmpty = false;
-        try {
-            const entries = await vscode.workspace.fs.readDirectory(newDir);
-            newDirExists = true;
-            // 判断是否为"空目录"（只有 MCP 自动创建的 mcp_settings.json 也算空）
-            newDirIsEmpty = entries.length === 0
-                || (entries.length === 1 && entries[0][0] === 'mcp_settings.json');
-        } catch {
-            // .y3maker 不存在
-        }
-
-        if (!newDirExists) {
-            // .y3maker 不存在，复制 .codemaker 到 .y3maker（保留原目录）
-            try {
-                await vscode.workspace.fs.copy(oldDir, newDir, { overwrite: false });
-                y3.log.info('已自动将 .codemaker 目录复制为 .y3maker');
-            } catch (e) {
-                vscode.window.showWarningMessage(
-                    `无法自动将 .codemaker 目录复制为 .y3maker，请手动复制。错误: ${String(e)}`
-                );
-            }
-        } else if (newDirIsEmpty) {
-            // .y3maker 存在但是空的（可能被 MCP 初始化自动创建），先删除再复制
-            try {
-                await vscode.workspace.fs.delete(newDir, { recursive: true });
-                await vscode.workspace.fs.copy(oldDir, newDir, { overwrite: false });
-                y3.log.info('已自动将 .codemaker 目录复制为 .y3maker（覆盖了空的 .y3maker）');
-            } catch (e) {
-                vscode.window.showWarningMessage(
-                    `无法自动将 .codemaker 目录复制为 .y3maker，请手动复制。错误: ${String(e)}`
-                );
-            }
-        } else {
-            // .y3maker 已存在且有内容，不迁移
-            y3.log.info('.y3maker 目录已存在且有内容，跳过 .codemaker 迁移');
-        }
-    }
-
-    // 迁移 .codemaker.codebase.md 文件 → .y3maker.codebase.md
-    const oldFile = vscode.Uri.joinPath(projectUri, '.codemaker.codebase.md');
-    const newFile = vscode.Uri.joinPath(projectUri, '.y3maker.codebase.md');
-    try {
-        await vscode.workspace.fs.stat(newFile);
-        // .y3maker.codebase.md 已存在，无需迁移
-    } catch {
-        try {
-            await vscode.workspace.fs.stat(oldFile);
-            try {
-                await vscode.workspace.fs.copy(oldFile, newFile, { overwrite: false });
-                y3.log.info('已自动将 .codemaker.codebase.md 复制为 .y3maker.codebase.md');
-            } catch (e) {
-                y3.log.warn(`无法复制 .codemaker.codebase.md: ${String(e)}`);
-            }
-        } catch {
-            // 旧文件不存在，跳过
-        }
-    }
 }
