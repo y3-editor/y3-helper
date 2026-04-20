@@ -136,37 +136,8 @@ async function updateRC() {
     await rcAddGlobalPath(rcUri);
 }
 
-export async function openGlobalScript() {
-    if (!y3.env.globalScriptUri) {
-        return;
-    }
-    if (!y3.env.scriptUri) {
-        return;
-    }
-    if (!await isEnabled()) {
-        return;
-    }
-    if (!y3.helper.globalState.get('openGlobalScript', true)) {
-        return;
-    }
-    if (vscode.workspace.workspaceFolders?.length !== 1) {
-        return;
-    }
-    if (vscode.workspace.workspaceFolders[0].toString() === y3.env.globalScriptUri?.toString()) {
-        return;
-    }
-    vscode.workspace.updateWorkspaceFolders(0, vscode.workspace.workspaceFolders.length, {
-        uri: y3.env.scriptUri,
-        name: l10n.t('地图脚本({0})', String(y3.env.currentMap?.name)),
-    }, {
-        uri: y3.env.globalScriptUri,
-        name: l10n.t('全局脚本'),
-    });
-}
-
 export function init() {
     y3.env.onDidChange(() => {
-        openGlobalScript();
         updateRC();
     });
 }
