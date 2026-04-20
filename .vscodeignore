@@ -13,3 +13,11 @@ out/
 webpack.config.json
 .worktrees/
 resources/webview_source_code/
+
+.omx/
+.y3maker/
+MCP_COMPLIANCE_REMEDIATION.md
+PR_DESCRIPTION.md
+docs/
+openspec/
+**/*.map

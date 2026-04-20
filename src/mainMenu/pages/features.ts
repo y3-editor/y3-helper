@@ -311,14 +311,6 @@ export class 功能 extends TreeNode {
                             },
                             tooltip: l10n.t('停止 MCP Server'),
                         }),
-                        new TreeNode(l10n.t('配置 Claude Code MCP'), {
-                            iconPath: new vscode.ThemeIcon('gear'),
-                            command: {
-                                command: 'y3-helper.configureMCP',
-                                title: l10n.t('配置 Claude Code MCP'),
-                            },
-                            tooltip: l10n.t('自动配置 Claude Code MCP 连接'),
-                        }),
                     ],
                 }),
             ]

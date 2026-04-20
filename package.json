@@ -14,9 +14,13 @@
         "Other"
     ],
     "activationEvents": [
+        "workspaceContains:header.project",
+        "workspaceContains:**/header.project",
         "workspaceContains:y3/更新日志.md",
         "workspaceContains:y3/CHANGELOG.md",
-        "onDebugResolve:y3lua"
+        "onDebugResolve:y3lua",
+        "onCommand:y3-helper.startMCPServer",
+        "onCommand:y3-helper.stopMCPServer"
     ],
     "main": "./dist/extension.js",
     "capabilities": {
@@ -500,11 +504,9 @@
     ],
     "icon": "image/logo.png",
     "scripts": {
-        "vscode:prepublish": "webpack --mode production && webpack --config webpack.mcp.config.js",
+        "vscode:prepublish": "webpack --mode production",
         "compile": "webpack --mode none",
-        "compile:mcp": "webpack --config webpack.mcp.config.js",
         "watch": "webpack --mode none --watch",
-        "watch:mcp": "webpack --config webpack.mcp.config.js --watch",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
