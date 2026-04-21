@@ -4,6 +4,8 @@ import * as path from 'path';
 import { env } from './env';
 import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
+import { disposeMcpHub } from './codemaker/mcpHandlers';
+import SkillsHandler from './codemaker/skillsHandler';
 
 // ─── 仓库地址 ────────────────────────────────────────────────
 
@@ -57,6 +59,33 @@ function execGit(args: string[], cwd: string, timeoutMs?: number): Promise<{ std
     });
 }
 
+/**
+ * 将目录内容移动到备份目录，然后删除空的源目录。
+ * 绕过 VSCode 对顶层目录的句柄锁定（子文件/子目录可以移动）。
+ */
+async function backupDirContents(srcDir: vscode.Uri, bakDir: vscode.Uri): Promise<void> {
+    // 确保备份目录存在
+    try {
+        await vscode.workspace.fs.delete(bakDir, { recursive: true });
+    } catch { }
+    await vscode.workspace.fs.createDirectory(bakDir);
+
+    // 读取源目录内容，逐个移动到备份目录
+    const entries = await vscode.workspace.fs.readDirectory(srcDir);
+    for (const [name, type] of entries) {
+        const srcEntry = vscode.Uri.joinPath(srcDir, name);
+        const bakEntry = vscode.Uri.joinPath(bakDir, name);
+        await vscode.workspace.fs.rename(srcEntry, bakEntry, { overwrite: true });
+    }
+
+    // 尝试删除空的源目录
+    try {
+        await vscode.workspace.fs.delete(srcDir, { recursive: false });
+    } catch {
+        // 空目录如果也删不掉就留着，后续 git clone 会失败，改用 git init 方式
+    }
+}
+
 // ─── 核心功能 ────────────────────────────────────────────────
 
 /**
@@ -102,39 +131,73 @@ export async function checkForUpdates(projectUri: vscode.Uri): Promise<UpdateSta
 }
 
 /**
- * 老用户迁移：.y3maker 存在但无 .git 时，备份并 clone 最新版本
+ * 老用户迁移：.y3maker 存在但无 .git 时，备份并 clone 最新版本。
+ * 当 .y3maker 不存在时（用户误删），直接 clone 最新版本。
  */
 export async function migrateOldUser(projectUri: vscode.Uri): Promise<boolean> {
     const y3makerUri = vscode.Uri.joinPath(projectUri, '.y3maker');
     const gitUri = vscode.Uri.joinPath(y3makerUri, '.git');
 
     // 检查 .y3maker 是否存在
+    let y3makerExists = false;
     try {
         await vscode.workspace.fs.stat(y3makerUri);
+        y3makerExists = true;
     } catch {
-        // .y3maker 不存在，无需迁移
-        return false;
+        // .y3maker 不存在
     }
 
-    // 检查 .git 是否存在
-    try {
-        await vscode.workspace.fs.stat(gitUri);
-        // .git 存在，不是老用户
-        return false;
-    } catch {
-        // .git 不存在，需要迁移
+    if (y3makerExists) {
+        // 检查 .git 是否存在
+        try {
+            await vscode.workspace.fs.stat(gitUri);
+            // .git 存在，已是正常的 git 仓库，无需迁移
+            return false;
+        } catch {
+            // .git 不存在，需要迁移
+        }
+
+        // 释放 SkillsHandler 和 McpHub 对 .y3maker 目录的文件监听
+        try { SkillsHandler.getInstance().dispose(); } catch { }
+        try { disposeMcpHub(); } catch { }
+
+        // 备份：将 .y3maker 内容移动到 .y3maker.bak，绕过 VSCode 对顶层目录的句柄锁定
+        const bakUri = vscode.Uri.joinPath(projectUri, '.y3maker.bak');
+        await backupDirContents(y3makerUri, bakUri);
+
+        // 检查 .y3maker 是否已被成功删除
+        let srcDirDeleted = false;
+        try {
+            await vscode.workspace.fs.stat(y3makerUri);
+        } catch {
+            srcDirDeleted = true;
+        }
+
+        const repoUrl = detectRepoSource(projectUri);
+        if (srcDirDeleted) {
+            // 目录已删除，直接 clone
+            await runShell('克隆 Y3Maker 配置', 'git', [
+                'clone',
+                repoUrl,
+                y3makerUri.fsPath,
+            ]);
+        } else {
+            // 空目录删不掉（VSCode 句柄），就地 git init
+            await execGit(['init'], y3makerUri.fsPath);
+            await execGit(['remote', 'add', 'origin', repoUrl], y3makerUri.fsPath);
+            const fetchResult = await execGit(['fetch', 'origin'], y3makerUri.fsPath, 30_000);
+            if (fetchResult.exitCode !== 0) {
+                return false;
+            }
+            await execGit(['reset', '--hard', 'origin/main'], y3makerUri.fsPath);
+            await execGit(['branch', '-M', 'main'], y3makerUri.fsPath);
+            await execGit(['branch', '--set-upstream-to=origin/main', 'main'], y3makerUri.fsPath);
+        }
+
+        return true;
     }
 
-    // 备份 .y3maker → .y3maker.bak（已有则覆盖）
-    const bakUri = vscode.Uri.joinPath(projectUri, '.y3maker.bak');
-    try {
-        await vscode.workspace.fs.delete(bakUri, { recursive: true });
-    } catch {
-        // .y3maker.bak 不存在，忽略
-    }
-    await vscode.workspace.fs.rename(y3makerUri, bakUri, { overwrite: true });
-
-    // clone 最新 y3-maker-config
+    // .y3maker 不存在（用户误删），直接 clone
     const repoUrl = detectRepoSource(projectUri);
     await runShell('克隆 Y3Maker 配置', 'git', [
         'clone',
@@ -142,7 +205,6 @@ export async function migrateOldUser(projectUri: vscode.Uri): Promise<boolean> {
         y3makerUri.fsPath,
     ]);
 
-    y3.log.info('老用户 .y3maker 已迁移：备份至 .y3maker.bak，已 clone 最新配置');
     return true;
 }
 

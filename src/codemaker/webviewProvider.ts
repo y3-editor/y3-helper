@@ -1340,7 +1340,7 @@ Provide the complete updated code.`;
 
     /**
      * 公开方法：重新加载 .codemaker 资源（Rules/Skills/MCP）
-     * 用于地图初始化后 .codemaker 目录被拷贝到工程目录时，通知前端刷新
+     * 用于地图初始化后 从git上拉取.y3maker到工程目录时，通知前端刷新
      */
     public async reloadCodemakerResources() {
         console.log('[Y3Maker] reloadCodemakerResources: 重新加载 Rules/Skills/MCP');
