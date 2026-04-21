@@ -26,7 +26,7 @@ var __privateMethod = (obj, member, method) => {
   __accessCheck(obj, member, "access private method");
   return method;
 };
-import { r as g, g as Ny, R as yt, j as r, u as bs, I as Le, a as Zf, T as om, b as C2, d as S2, e as Jf, B as w, f as _2, h as Ly, i as Ac, k as Fy, F as K, l as U, P as w2, m as Te, E as Qf, A as Ip, S as Xf, n as E2, o as am, p as ye, q as Fe, G as k2, M as T2, s as A2, t as Ao, v as I2, w as Yn, x as kn, y as Kn, z as Tn, C as ra, D as fn, H as zy, J as oa, V as R2, K as Cn, _ as yi, L as Is, N as j2, O as jd, Q as Md, U as br, W as Lt, X as M2, Y as P2, Z as im, $ as Jn, a0 as Qn, a1 as Io, a2 as os, a3 as wl, a4 as ma, a5 as as, a6 as Pd, a7 as Od, a8 as Uy, a9 as By, aa as O2, ab as qy, ac as Hy, ad as Hr, ae as ps, af as Dt, ag as D2, ah as $r, ai as Us, aj as Wy, ak as Mh, al as N2, am as L2, an as F2, ao as z2, ap as Ic, aq as U2, ar as lm, as as vs, at as B2, au as q2, av as H2, aw as W2, ax as V2, ay as Vy, az as Gy, aA as $y, aB as Yy, aC as Ky, aD as Zy, aE as cm, aF as ac, aG as Cr, aH as G2, aI as sl, aJ as um, aK as Rc, aL as Lr, aM as $2, aN as Rp, aO as Y2, aP as eg, aQ as Fr, aR as qi, aS as K2, aT as Jy, aU as Z2, aV as J2, aW as Q2, aX as tg, aY as ng, aZ as sg, a_ as X2, a$ as ew, b0 as tw, b1 as Qy, b2 as nw, c as Yl, b3 as Jc, b4 as rg, b5 as og, b6 as jp, b7 as Fa, b8 as Ph, b9 as jc, ba as Xl, bb as Ro, bc as aa, bd as Xy, be as jo, bf as Ht, bg as eb, bh as sw, bi as rw, bj as tb, bk as nb, bl as uo, bm as ic, bn as ow, bo as ag, bp as aw, bq as iw, br as sb, bs as lw, bt as cw, bu as uw, bv as dm, bw as Oh, bx as ts, by as lc, bz as pm, bA as dw, bB as pw, bC as Wn, bD as hw, bE as mw, bF as Yo, bG as fw, bH as ig, bI as Dh, bJ as gw, bK as xw, bL as cc, bM as Nh, bN as Dd, bO as ea, bP as Lh, bQ as Fh, bR as zh, bS as Uh, bT as Bh, bU as uc, bV as yw, bW as qh, bX as Hh, bY as bw, bZ as vw, b_ as dc, b$ as rb, c0 as ob, c1 as Nd, c2 as Cw, c3 as Sw, c4 as lg, c5 as ab, c6 as ib, c7 as _w, c8 as lr, c9 as ww, ca as Wh, cb as cr, cc as lb, cd as Ew, ce as kw, cf as Tw, cg as Aw, ch as cb, ci as Iw, cj as Ut, ck as Po, cl as Rt, cm as Mt, cn as io, co as ub, cp as Ho, cq as db, cr as pb, cs as Rw, ct as jw, cu as Vh, cv as Mw, cw as Pw, cx as Ow, cy as Dw, cz as di, cA as hb, cB as mb, cC as fb, cD as Oa, cE as Da, cF as gb, cG as wn, cH as rl, cI as ol, cJ as al, cK as il, cL as ll, cM as cl, cN as ul, cO as dl, cP as pl, cQ as Nw, cR as Lw, cS as Fw, cT as no, cU as zw, cV as Uw, cW as Bw, cX as xb, cY as Ld, cZ as qw, c_ as yb, c$ as bb, d0 as vb, d1 as Gh, d2 as cg, d3 as Cb, d4 as Sb, d5 as _b, d6 as Yu, d7 as wb, d8 as Ku, d9 as hm, da as mm, db as fm, dc as Hw, dd as Ww, de as Vw, df as Gw, dg as $w, dh as Yw, di as Kw, dj as ug, dk as Zw, dl as Jw, dm as Qw, dn as gm, dp as Xw, dq as Eb, dr as eE, ds as tE, dt as nE, du as dg, dv as pg, dw as hg, dx as sE, dy as rE, dz as oE, dA as aE, dB as iE, dC as Zu, dD as kb, dE as lE, dF as cE, dG as uE, dH as Tb, dI as Ab, dJ as dE, dK as pE, dL as hE, dM as mE, dN as fE, dO as gE, dP as xE, dQ as yE, dR as bE, dS as vE, dT as CE, dU as SE, dV as _E, dW as wE, dX as EE, dY as kE, dZ as TE, d_ as AE, d$ as IE, e0 as RE, e1 as jE, e2 as ME, e3 as PE, e4 as OE } from "./react-vendor-7e97d1a7.js";
+import { r as g, g as Ny, R as yt, j as r, u as bs, I as Le, a as Zf, T as om, b as C2, d as S2, e as Jf, B as w, f as _2, h as Ly, i as Ac, k as Fy, F as K, l as z, P as w2, m as Te, E as Qf, A as Ip, S as Xf, n as E2, o as am, p as ye, q as Fe, G as k2, M as T2, s as A2, t as Ao, v as I2, w as Yn, x as kn, y as Kn, z as Tn, C as ra, D as fn, H as zy, J as oa, V as R2, K as Cn, _ as yi, L as Is, N as j2, O as jd, Q as Md, U as br, W as Lt, X as M2, Y as P2, Z as im, $ as Jn, a0 as Qn, a1 as Io, a2 as os, a3 as wl, a4 as ma, a5 as as, a6 as Pd, a7 as Od, a8 as Uy, a9 as By, aa as O2, ab as qy, ac as Hy, ad as Hr, ae as ps, af as Pt, ag as D2, ah as $r, ai as Us, aj as Wy, ak as Mh, al as N2, am as L2, an as F2, ao as z2, ap as Ic, aq as U2, ar as lm, as as vs, at as B2, au as q2, av as H2, aw as W2, ax as V2, ay as Vy, az as Gy, aA as $y, aB as Yy, aC as Ky, aD as Zy, aE as cm, aF as ac, aG as Cr, aH as G2, aI as sl, aJ as um, aK as Rc, aL as Lr, aM as $2, aN as Rp, aO as Y2, aP as eg, aQ as Fr, aR as qi, aS as K2, aT as Jy, aU as Z2, aV as J2, aW as Q2, aX as tg, aY as ng, aZ as sg, a_ as X2, a$ as ew, b0 as tw, b1 as Qy, b2 as nw, c as Yl, b3 as Jc, b4 as rg, b5 as og, b6 as jp, b7 as Fa, b8 as Ph, b9 as jc, ba as Xl, bb as Ro, bc as aa, bd as Xy, be as jo, bf as Ht, bg as eb, bh as sw, bi as rw, bj as tb, bk as nb, bl as uo, bm as ic, bn as ow, bo as ag, bp as aw, bq as iw, br as sb, bs as lw, bt as cw, bu as uw, bv as dm, bw as Oh, bx as ts, by as lc, bz as pm, bA as dw, bB as pw, bC as Wn, bD as hw, bE as mw, bF as Yo, bG as fw, bH as ig, bI as Dh, bJ as gw, bK as xw, bL as cc, bM as Nh, bN as Dd, bO as ea, bP as Lh, bQ as Fh, bR as zh, bS as Uh, bT as Bh, bU as uc, bV as yw, bW as qh, bX as Hh, bY as bw, bZ as vw, b_ as dc, b$ as rb, c0 as ob, c1 as Nd, c2 as Cw, c3 as Sw, c4 as lg, c5 as ab, c6 as ib, c7 as _w, c8 as lr, c9 as ww, ca as Wh, cb as cr, cc as lb, cd as Ew, ce as kw, cf as Tw, cg as Aw, ch as cb, ci as Iw, cj as Ut, ck as Po, cl as Rt, cm as Mt, cn as io, co as ub, cp as Ho, cq as db, cr as pb, cs as Rw, ct as jw, cu as Vh, cv as Mw, cw as Pw, cx as Ow, cy as Dw, cz as di, cA as hb, cB as mb, cC as fb, cD as Oa, cE as Da, cF as gb, cG as wn, cH as rl, cI as ol, cJ as al, cK as il, cL as ll, cM as cl, cN as ul, cO as dl, cP as pl, cQ as Nw, cR as Lw, cS as Fw, cT as no, cU as zw, cV as Uw, cW as Bw, cX as xb, cY as Ld, cZ as qw, c_ as yb, c$ as bb, d0 as vb, d1 as Gh, d2 as cg, d3 as Cb, d4 as Sb, d5 as _b, d6 as Yu, d7 as wb, d8 as Ku, d9 as hm, da as mm, db as fm, dc as Hw, dd as Ww, de as Vw, df as Gw, dg as $w, dh as Yw, di as Kw, dj as ug, dk as Zw, dl as Jw, dm as Qw, dn as gm, dp as Xw, dq as Eb, dr as eE, ds as tE, dt as nE, du as dg, dv as pg, dw as hg, dx as sE, dy as rE, dz as oE, dA as aE, dB as iE, dC as Zu, dD as kb, dE as lE, dF as cE, dG as uE, dH as Tb, dI as Ab, dJ as dE, dK as pE, dL as hE, dM as mE, dN as fE, dO as gE, dP as xE, dQ as yE, dR as bE, dS as vE, dT as CE, dU as SE, dV as _E, dW as wE, dX as EE, dY as kE, dZ as TE, d_ as AE, d$ as IE, e0 as RE, e1 as jE, e2 as ME, e3 as PE, e4 as OE } from "./react-vendor-7e97d1a7.js";
 import { a as Rs, l as ut, d as Ci, c as DE, i as Ib, _ as Wo, b as Qc, e as mg, t as Rb, f as fg } from "./utils-vendor-89337d12.js";
 let W5, x4;
 let __tla = (async () => {
@@ -3126,8 +3126,8 @@ ${e.content}
             break;
           }
           i();
-          const z = d(":"), H = t >= e.length;
-          z || (Fg(e[t]) || H ? n = Xr(n, ":") : se()), a() || (z || H ? n += "null" : se());
+          const U = d(":"), H = t >= e.length;
+          U || (Fg(e[t]) || H ? n = Xr(n, ":") : se()), a() || (U || H ? n += "null" : se());
         }
         return e[t] === "}" ? (n += "}", t++) : n = Xr(n, "}"), true;
       }
@@ -3157,7 +3157,7 @@ ${n}
     function b() {
       let B = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : false, re = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : -1, G = e[t] === "\\";
       if (G && (t++, G = true), Uu(e[t])) {
-        const z = zg(e[t]) ? zg : Ug(e[t]) ? Ug : t0(e[t]) ? t0 : iv, H = t, L = n.length;
+        const U = zg(e[t]) ? zg : Ug(e[t]) ? Ug : t0(e[t]) ? t0 : iv, H = t, L = n.length;
         let $ = '"';
         for (t++; ; ) {
           if (t >= e.length) {
@@ -3166,7 +3166,7 @@ ${n}
           }
           if (t === re)
             return $ = Xr($, '"'), n += $, true;
-          if (z(e[t])) {
+          if (U(e[t])) {
             const _e2 = t, ze = $.length;
             if ($ += '"', t++, n += $, i(false), B || t >= e.length || tu(e[t]) || Uu(e[t]) || ri(e[t]))
               return E(), true;
@@ -7033,7 +7033,7 @@ Answer the user's request using the relevant tool(s), if they are available. Che
               stream: true
             });
             try {
-              const P = JSON.parse(j), { content: q, tool_calls: O, total_tokens: D, completion_tokens: X, reasoningContent: se, thinkingSignature: me, redactedThinking: B, prompt_tokens: re, cache_creation_input_tokens: G, cache_read_input_tokens: z, response_id: H } = P;
+              const P = JSON.parse(j), { content: q, tool_calls: O, total_tokens: D, completion_tokens: X, reasoningContent: se, thinkingSignature: me, redactedThinking: B, prompt_tokens: re, cache_creation_input_tokens: G, cache_read_input_tokens: U, response_id: H } = P;
               if (o += q || "", h || (h = H), O)
                 for (const L of O) {
                   if (!L)
@@ -7050,7 +7050,7 @@ Answer the user's request using the relevant tool(s), if they are available. Che
                 }
               se && (d.reasoning_content += se), me && ([
                 Be.Gemini25
-              ].includes(e == null ? void 0 : e.model) ? d.thinking_signature || (d.thinking_signature = me) : d.thinking_signature += me), B && (d.redacted_thinking += B), D && (a = X, i = re, l = G, c = z), n == null ? void 0 : n.onMessage(o, false, u.filter((L) => !!L), a + i + l + c, a, i, l, c, d, h);
+              ].includes(e == null ? void 0 : e.model) ? d.thinking_signature || (d.thinking_signature = me) : d.thinking_signature += me), B && (d.redacted_thinking += B), D && (a = X, i = re, l = G, c = U), n == null ? void 0 : n.onMessage(o, false, u.filter((L) => !!L), a + i + l + c, a, i, l, c, d, h);
             } catch {
               n == null ? void 0 : n.onError(new Error("Error parsing chunk"));
               break;
@@ -9760,11 +9760,11 @@ ${A}` : "");
     }), [
       s,
       b
-    ]), re[0], re[1]), z = f[b] && f[b].length > 0, H = G.data, L = qt(H) ? se && Lv(se) ? zp(se) : se : H, $ = G.error, _e2 = g.useRef(L), ze = h ? qt(H) ? qt(_e2.current) ? L : _e2.current : H : L, qe = b && qt(L), Q = g.useRef(null);
+    ]), re[0], re[1]), U = f[b] && f[b].length > 0, H = G.data, L = qt(H) ? se && Lv(se) ? zp(se) : se : H, $ = G.error, _e2 = g.useRef(L), ze = h ? qt(H) ? qt(_e2.current) ? L : _e2.current : H : L, qe = b && qt(L), Q = g.useRef(null);
     !Zi && Yh.useSyncExternalStore(s6, () => (Q.current = false, Q), () => (Q.current = true, Q));
     const Pe = Q.current;
     m && Pe && !a && qe && console.warn(`Missing pre-initiated data for serialized key "${b}" during server-side rendering. Data fetching should be initiated on the server and provided to SWR via fallback data. You can set "strictServerPrefetchWarning: false" to disable this warning.`);
-    const Oe = (() => !b || !t || k().isPaused() || z && !qt($) ? false : B && !qt(l) ? l : a ? qt(L) ? false : c : qt(L) || c)(), ue = B && Oe, fe = qt(G.isValidating) ? ue : G.isValidating, F = qt(G.isLoading) ? ue : G.isLoading, be = g.useCallback(async (ae) => {
+    const Oe = (() => !b || !t || k().isPaused() || U && !qt($) ? false : B && !qt(l) ? l : a ? qt(L) ? false : c : qt(L) || c)(), ue = B && Oe, fe = qt(G.isValidating) ? ue : G.isValidating, F = qt(G.isLoading) ? ue : G.isLoading, be = g.useCallback(async (ae) => {
       const Ne = I.current;
       if (!b || !Ne || C.current || k().isPaused())
         return false;
@@ -10738,7 +10738,7 @@ ${u}
     skipPromptMask: false,
     codeChatModelsSetting: {},
     codeBaseCheckCommands: []
-  }, Ot = xn()(Ka((e) => ({
+  }, Dt = xn()(Ka((e) => ({
     config: j6,
     updateConfig: (t) => {
       e(Bb((n) => {
@@ -10768,13 +10768,13 @@ ${u}
   }));
   bt.subscribe((e) => {
     var _a2, _b3, _c3, _d3, _e2;
-    if (((_a2 = Ot.getState().config) == null ? void 0 : _a2.codeWhiteSpace) || Ot.setState({
+    if (((_a2 = Dt.getState().config) == null ? void 0 : _a2.codeWhiteSpace) || Dt.setState({
       config: {
-        ...Ot.getState().config,
+        ...Dt.getState().config,
         codeWhiteSpace: "no-wrap"
       }
-    }), (_c3 = (_b3 = Ot.getState().config) == null ? void 0 : _b3.tabs) == null ? void 0 : _c3.length) {
-      const t = (_d3 = Ot.getState().config) == null ? void 0 : _d3.tabs, n = ut.cloneDeep(t);
+    }), (_c3 = (_b3 = Dt.getState().config) == null ? void 0 : _b3.tabs) == null ? void 0 : _c3.length) {
+      const t = (_d3 = Dt.getState().config) == null ? void 0 : _d3.tabs, n = ut.cloneDeep(t);
       e.IDE === mt.JetBrains && (n.find((o) => o.value === "coverage") || n.splice(2, 0, {
         label: "Coverage",
         value: "coverage",
@@ -10790,9 +10790,9 @@ ${u}
         value: "discussion",
         disabled: false,
         selected: false
-      })), Ot.setState({
+      })), Dt.setState({
         config: {
-          ...Ot.getState().config,
+          ...Dt.getState().config,
           tabs: n.map((s) => {
             const o = {
               ...s
@@ -10804,33 +10804,33 @@ ${u}
     } else
       switch (e.IDE) {
         case mt.VisualStudioCode:
-          Ot.setState({
+          Dt.setState({
             config: {
-              ...Ot.getState().config,
+              ...Dt.getState().config,
               tabs: T6
             }
           });
           break;
         case mt.JetBrains:
-          Ot.setState({
+          Dt.setState({
             config: {
-              ...Ot.getState().config,
+              ...Dt.getState().config,
               tabs: A6
             }
           });
           break;
         case mt.VisualStudio:
-          Ot.setState({
+          Dt.setState({
             config: {
-              ...Ot.getState().config,
+              ...Dt.getState().config,
               tabs: I6
             }
           });
           break;
       }
-    ((_e2 = Ot.getState().config) == null ? void 0 : _e2.currentTab) || Ot.setState({
+    ((_e2 = Dt.getState().config) == null ? void 0 : _e2.currentTab) || Dt.setState({
       config: {
-        ...Ot.getState().config,
+        ...Dt.getState().config,
         currentTab: "chat"
       }
     });
@@ -10850,7 +10850,7 @@ ${u}
           justify: "flex-start",
           align: "center",
           mb: 2,
-          children: r.jsxs(U, {
+          children: r.jsxs(z, {
             fontSize: "xs",
             color: "gray.400",
             children: [
@@ -10867,7 +10867,7 @@ ${u}
           borderRadius: "full",
           mb: 3
         }),
-        o.title && r.jsx(U, {
+        o.title && r.jsx(z, {
           fontWeight: "bold",
           fontSize: "md",
           mb: 2,
@@ -10912,7 +10912,7 @@ ${u}
     });
   }
   function P6() {
-    const { activeTour: e, currentStepIndex: t, stopTour: n, setStepIndex: s, completeTour: o, pauseTour: a } = So(), i = Ot((d) => d.config.currentTab), l = e ? gl[e] : null, c = g.useMemo(() => l ? l.steps.filter((d) => {
+    const { activeTour: e, currentStepIndex: t, stopTour: n, setStepIndex: s, completeTour: o, pauseTour: a } = So(), i = Dt((d) => d.config.currentTab), l = e ? gl[e] : null, c = g.useMemo(() => l ? l.steps.filter((d) => {
       const h = d;
       return h.showWhen ? h.showWhen() : true;
     }) : [], [
@@ -15121,7 +15121,7 @@ alwaysApply: true
     });
   }
   const k4 = (e) => {
-    const { tool_calls: t, tool_result: n, id: s } = e, o = Ot((h) => h.config.codeBaseCheckCommands), a = g.useMemo(() => t == null ? void 0 : t.find((h) => h.function.name === _i), [
+    const { tool_calls: t, tool_result: n, id: s } = e, o = Dt((h) => h.config.codeBaseCheckCommands), a = g.useMemo(() => t == null ? void 0 : t.find((h) => h.function.name === _i), [
       t
     ]), i = g.useMemo(() => {
       var _a2;
@@ -15562,10 +15562,10 @@ ${s.content}` : c = EA(s.path, s.content, !!((_b3 = s == null ? void 0 : s.extra
   }
   function wA(e) {
     const t = Yd(e.content);
-    return t ? (yi(() => import("./skillUsage-43e04416.js").then(async (m) => {
+    return t ? (yi(() => import("./skillUsage-65503704.js").then(async (m) => {
       await m.__tla;
       return m;
-    }), ["assets/skillUsage-43e04416.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: n }) => {
+    }), ["assets/skillUsage-65503704.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: n }) => {
       yi(() => Promise.resolve().then(() => Em), void 0).then(({ getSkillDescription: s }) => {
         const o = s(t.name);
         n(t.name, {
@@ -17401,7 +17401,7 @@ ${v}
       const n = t().currentSession();
       if (!n)
         return [];
-      const s = ((_a2 = n == null ? void 0 : n.data) == null ? void 0 : _a2.messages) || [], o = s.length, a = Ot.getState().config;
+      const s = ((_a2 = n == null ? void 0 : n.data) == null ? void 0 : _a2.messages) || [], o = s.length, a = Dt.getState().config;
       return s.slice(Math.max(o - a.historyMessageCount * 2, 0));
     },
     updateConsumedTokens: (n) => {
@@ -17462,7 +17462,7 @@ ${v}
           content: K7
         };
         s.push(o);
-        const a = Ze.getState().config, i = ja(a.model), l = Ot.getState().config.codeChatApiKey, c = Ot.getState().config.codeChatApiBaseUrl, u = {
+        const a = Ze.getState().config, i = ja(a.model), l = Dt.getState().config.codeChatApiKey, c = Dt.getState().config.codeChatApiBaseUrl, u = {
           ...a,
           max_tokens: 2048,
           temperature: 0.7,
@@ -17748,7 +17748,7 @@ ${v}
     prePromptCodeBlock: null,
     updateToolCallResults(n, s) {
       let o = [
-        ...Ot.getState().config.codebaseDefaultAuthorizationPath || []
+        ...Dt.getState().config.codebaseDefaultAuthorizationPath || []
       ], a = [];
       const i = xt.getState().devSpace.allow_paths;
       i && i.length && (a = i), o = [
@@ -17901,7 +17901,7 @@ ${o == null ? void 0 : o.content}
         return;
       }
       xr.clear();
-      const c = Ze.getState().config.model, u = Ot.getState().config.codeChatApiKey, p = Ot.getState().config.codeChatApiBaseUrl;
+      const c = Ze.getState().config.model, u = Dt.getState().config.codeChatApiKey, p = Dt.getState().config.codeChatApiBaseUrl;
       t().resetMessage();
       const d = l.currentSession(), h = Nc.getState(), m = Xo.getState(), f = (V) => {
         var _a3, _b4, _c4, _d4;
@@ -18011,10 +18011,10 @@ ${te.content[0].text.replace(((_d4 = (_c4 = m == null ? void 0 : m.runner) == nu
         skillName: G.skillName,
         title: G.title,
         source: G.source
-      }, yi(() => import("./skillUsage-43e04416.js").then(async (m2) => {
+      }, yi(() => import("./skillUsage-65503704.js").then(async (m2) => {
         await m2.__tla;
         return m2;
-      }), ["assets/skillUsage-43e04416.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: V }) => {
+      }), ["assets/skillUsage-65503704.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: V }) => {
         yi(() => Promise.resolve().then(() => Em), void 0).then(({ getSkillDescription: te }) => {
           const ne = te(G.skillName);
           V(G.skillName, {
@@ -18607,7 +18607,7 @@ ${yo}`), ge.message === En.AuthTokenIsExpired ? window.parent.postMessage({
               model: V
             }
           ]
-        }, ge = Ot.getState().config, de = d.data.messages.length, He = d.data.messages.slice(Math.max(de - ge.historyMessageCount - 1, 0)), et = ut.cloneDeep(He).map((pe) => {
+        }, ge = Dt.getState().config, de = d.data.messages.length, He = d.data.messages.slice(Math.max(de - ge.historyMessageCount - 1, 0)), et = ut.cloneDeep(He).map((pe) => {
           var _a3;
           let rt = "";
           return Array.isArray(pe.content) ? rt = ((_a3 = pe.content.find((at) => at.type === Ft.Text)) == null ? void 0 : _a3.text) || "" : rt = pe.content, delete pe._originalRequestData, {
@@ -19153,7 +19153,7 @@ Note:Don't repeat yourself`, jt.temperature = 1) : [
                           }
                         }, "*");
                       else if (it.function.name === _i)
-                        Ze.getState().autoExecute && wv(Ot.getState().config.codeBaseCheckCommands, Nt.command) && (De.getState().setIsTerminalProcessing(true), window.parent.postMessage({
+                        Ze.getState().autoExecute && wv(Dt.getState().config.codeBaseCheckCommands, Nt.command) && (De.getState().setIsTerminalProcessing(true), window.parent.postMessage({
                           type: Ce.TOOL_CALL,
                           data: {
                             tool_name: it.function.name,
@@ -19379,7 +19379,7 @@ ${yo}`), Pn.message === En.AuthTokenIsExpired && window.parent.postMessage({
           model: C.model
         }
       });
-      const F = Ot.getState().config, be = d.data.messages.length, ke = d.data.messages.slice(Math.max(be - F.historyMessageCount - 1, 0));
+      const F = Dt.getState().config, be = d.data.messages.length, ke = d.data.messages.slice(Math.max(be - F.historyMessageCount - 1, 0));
       let Z = [];
       for (let V = 0; V < ke.length; V++) {
         const te = ut.cloneDeep(ke[V]);
@@ -20725,7 +20725,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
               justifyContent: "space-between",
               minH: "20px",
               children: [
-                r.jsxs(U, {
+                r.jsxs(z, {
                   fontSize: "sm",
                   isTruncated: true,
                   maxW: "160px",
@@ -20837,7 +20837,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                 r.jsx(Uy, {
                   fontSize: 12
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   ml: 1,
                   fontSize: 12,
                   children: (e == null ? void 0 : e.chat_repo) || "-"
@@ -20847,7 +20847,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
           }),
           r.jsxs(K, {
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "xs",
                 opacity: "0.5",
                 pl: 2,
@@ -20855,7 +20855,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                 children: h && Oc(new Date(h), "YYYY-MM-DD HH:mm:ss")
               }),
               r.jsx(By, {}),
-              m ? r.jsxs(U, {
+              m ? r.jsxs(z, {
                 fontSize: "xs",
                 opacity: "0.5",
                 pr: 2,
@@ -20878,7 +20878,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       le.removeSession,
       le.revalidateChatSessions,
       le.chatType
-    ]), v = Ze((le) => le.update), [y, b] = g.useState(""), [E, A] = g.useState([]), C = g.useRef(null), [_] = bs(mo), [I] = bs(kv), [R] = bs(Tv), [k, j] = g.useState(""), { chatMessagesRef: P } = $4(), [q, O] = g.useState(false), [D, X] = g.useState(E1[0]), [se, me] = g.useState(1), [B, re] = g.useState(false), [G, z] = g.useState(true), H = xt((le) => le.workspaceInfo), [L, $] = g.useState(true), [_e2, ze] = g.useState(true), { stopRunningTerminal: qe } = Cc(), Q = g.useCallback(async () => {
+    ]), v = Ze((le) => le.update), [y, b] = g.useState(""), [E, A] = g.useState([]), C = g.useRef(null), [_] = bs(mo), [I] = bs(kv), [R] = bs(Tv), [k, j] = g.useState(""), { chatMessagesRef: P } = $4(), [q, O] = g.useState(false), [D, X] = g.useState(E1[0]), [se, me] = g.useState(1), [B, re] = g.useState(false), [G, U] = g.useState(true), H = xt((le) => le.workspaceInfo), [L, $] = g.useState(true), [_e2, ze] = g.useState(true), { stopRunningTerminal: qe } = Cc(), Q = g.useCallback(async () => {
       const le = await B4();
       f(le.items, x);
     }, [
@@ -20991,7 +20991,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
         }
       });
     }, ke = g.useCallback(() => {
-      z(true), me(1);
+      U(true), me(1);
     }, []), Z = g.useCallback(ut.debounce(async (le) => {
       C.current && C.current.abort();
       const Me = new AbortController();
@@ -21116,7 +21116,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                   display: "flex",
                   justifyContent: "space-between",
                   minH: "20px",
-                  children: r.jsxs(U, {
+                  children: r.jsxs(z, {
                     fontSize: "sm",
                     isTruncated: true,
                     maxW: "160px",
@@ -21143,7 +21143,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                     r.jsx(Uy, {
                       fontSize: 12
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       ml: 1,
                       fontSize: 12,
                       children: (ne == null ? void 0 : ne.chat_repo) || "-"
@@ -21153,7 +21153,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
               }),
               r.jsxs(K, {
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     fontSize: "xs",
                     opacity: "0.5",
                     pl: 2,
@@ -21317,7 +21317,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
         te.items.length ? A((ne) => [
           ...ne,
           ...te.items
-        ]) : z(false), re(false);
+        ]) : U(false), re(false);
       } catch (V) {
         A([]), re(false), console.error(V);
       }
@@ -21440,7 +21440,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                           ce(ne), me(ne);
                         }
                       },
-                      children: r.jsxs(Dt, {
+                      children: r.jsxs(Pt, {
                         align: "stretch",
                         children: [
                           Ct,
@@ -21453,7 +21453,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                               B ? r.jsx(Cn, {
                                 size: "sm"
                               }) : null,
-                              G ? null : r.jsx(U, {
+                              G ? null : r.jsx(z, {
                                 children: "\u6CA1\u6709\u66F4\u591A\u6570\u636E\u4E86"
                               })
                             ]
@@ -21496,7 +21496,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
         boxSize: 12,
         color: "gray.400"
       }),
-      r.jsx(U, {
+      r.jsx(z, {
         mt: 4,
         fontSize: "lg",
         color: "gray.500",
@@ -21716,7 +21716,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                 mb: "1",
                 children: "\u6311\u9009\u4E00\u4E2A\u6A21\u5F0F"
               }),
-              r.jsx(U, {
+              r.jsx(z, {
                 color: "text.default",
                 fontSize: "small",
                 children: "\u9009\u62E9\u589E\u5F3A\u6A21\u5F0F\uFF0C\u89E3\u9501\u667A\u80FD\u5BF9\u8BDD\u7684\u65E0\u9650\u6F5C\u80FD"
@@ -22616,7 +22616,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       y
     ]), j = g.useCallback(() => {
       var _a3;
-      const G = ((_a3 = d == null ? void 0 : d.data) == null ? void 0 : _a3.messages) || [], z = G.length;
+      const G = ((_a3 = d == null ? void 0 : d.data) == null ? void 0 : _a3.messages) || [], U = G.length;
       if ((d == null ? void 0 : d._id) !== I.current) {
         const H = new tl({
           fields: [
@@ -22645,8 +22645,8 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
             role: $.role
           };
         });
-        H.addAll(L), _.current = H, I.current = d == null ? void 0 : d._id, R.current = z;
-      } else if (_.current && z > R.current) {
+        H.addAll(L), _.current = H, I.current = d == null ? void 0 : d._id, R.current = U;
+      } else if (_.current && U > R.current) {
         const L = G.slice(R.current).map(($, _e2) => {
           var _a4;
           const ze = R.current + _e2;
@@ -22659,7 +22659,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
             role: $.role
           };
         });
-        _.current.addAll(L), R.current = z;
+        _.current.addAll(L), R.current = U;
       }
     }, [
       (_a2 = d == null ? void 0 : d.data) == null ? void 0 : _a2.messages,
@@ -22686,9 +22686,9 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
     ]), q = g.useCallback((G) => {
       if (!G)
         return;
-      const z = t.current;
-      if (z) {
-        const H = z.querySelector(".current-highlight");
+      const U = t.current;
+      if (U) {
+        const H = U.querySelector(".current-highlight");
         H && H.scrollIntoView({
           behavior: "smooth",
           block: "center"
@@ -22698,8 +22698,8 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       t
     ]), O = g.useCallback((G) => {
       P();
-      const z = G.slice(0, 200);
-      z.forEach((H, L) => {
+      const U = G.slice(0, 200);
+      U.forEach((H, L) => {
         if (H.node.nodeType === Node.TEXT_NODE) {
           const $ = H.node.textContent;
           if ($ && H.index < $.length) {
@@ -22709,7 +22709,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
             qe.classList.add("search-highlight"), qe.id = `search-highlight-${H.id}`, L === 0 && qe.classList.add("current-highlight"), ze.surroundContents(qe);
           }
         }
-      }), z.length > 0 && (q(z[0]), p(0));
+      }), U.length > 0 && (q(U[0]), p(0));
     }, [
       o,
       P,
@@ -22719,10 +22719,10 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       if (!o.trim() || !G)
         return;
       P();
-      const z = document.createTreeWalker(G, NodeFilter.SHOW_TEXT, null), H = [];
+      const U = document.createTreeWalker(G, NodeFilter.SHOW_TEXT, null), H = [];
       let L, $ = 0;
       const _e2 = o.toLowerCase();
-      for (; L = z.nextNode(); ) {
+      for (; L = U.nextNode(); ) {
         if (!L || !L.nodeValue)
           continue;
         const qe = L.nodeValue.toLowerCase();
@@ -22754,14 +22754,14 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
         b(false);
         return;
       }
-      const z = G.trim();
+      const U = G.trim();
       try {
-        const H = _.current.search(z, {
+        const H = _.current.search(U, {
           fuzzy: 0.2,
           prefix: true
         }), L = [];
         if (H.forEach(($) => {
-          const _e2 = $.messageIndex, ze = $.messageId, qe = $.content.toLowerCase(), Q = z.toLowerCase();
+          const _e2 = $.messageIndex, ze = $.messageId, qe = $.content.toLowerCase(), Q = U.toLowerCase();
           let Pe = 0;
           for (; Pe < qe.length; ) {
             const Oe = qe.indexOf(Q, Pe);
@@ -22771,7 +22771,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
               messageIndex: _e2,
               messageId: ze,
               contentIndex: Oe
-            }), Pe = Oe + z.length;
+            }), Pe = Oe + U.length;
           }
         }), p(-1), m(L), L.length > 0) {
           const $ = Math.min(...L.map((_e2) => _e2.messageIndex));
@@ -22808,12 +22808,12 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       }
       if (l.length === 0)
         return;
-      let z = u + G;
-      z < 0 && (z = l.length - 1), z >= l.length && (z = 0), p(z);
+      let U = u + G;
+      U < 0 && (U = l.length - 1), U >= l.length && (U = 0), p(U);
       const H = t.current;
       if (!H)
         return;
-      const L = l[z], $ = document.getElementById(`search-highlight-${L.id}`);
+      const L = l[U], $ = document.getElementById(`search-highlight-${L.id}`);
       $ && ($.scrollIntoView({
         behavior: "smooth",
         block: "center"
@@ -22829,18 +22829,18 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
       P
     ]);
     g.useEffect(() => {
-      const G = (z) => {
-        if ((z.metaKey || z.ctrlKey) && z.code === "KeyF") {
+      const G = (U) => {
+        if ((U.metaKey || U.ctrlKey) && U.code === "KeyF") {
           if (k) {
-            z.preventDefault();
+            U.preventDefault();
             return;
           }
-          s(true), z.preventDefault(), setTimeout(() => {
+          s(true), U.preventDefault(), setTimeout(() => {
             var _a3;
             (_a3 = i.current) == null ? void 0 : _a3.focus();
           }, 0);
         }
-        z.code === "Escape" && B(), z.code === "Enter" && x && me(1);
+        U.code === "Escape" && B(), U.code === "Enter" && x && me(1);
       };
       return window.addEventListener("keydown", G), () => window.removeEventListener("keydown", G);
     }, [
@@ -22892,8 +22892,8 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
               value: o,
               ref: i,
               onInput: (G) => {
-                const z = G.currentTarget.value;
-                a(z), z.trim().length >= 2 ? b(true) : b(false);
+                const U = G.currentTarget.value;
+                a(U), U.trim().length >= 2 ? b(true) : b(false);
               },
               onFocus: () => v(true),
               onBlur: () => v(false)
@@ -22951,7 +22951,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
     const e = he((R) => R.chatType), t = he((R) => R.currentSession()), [n, s] = he((R) => [
       R.onNewSession,
       R.clearSession
-    ], Zo), { stopRunningTerminal: o } = Cc(), a = De((R) => R.isStreaming), i = De((R) => R.isProcessing), l = De((R) => R.isTerminalProcessing), c = De((R) => R.isSearching), [u, p] = g.useState(false), [d, h] = g.useState(false), m = g.useRef(null), f = g.useRef(null), { toast: x } = Zt(), [v, y] = g.useState(false), b = Ot((R) => R.config), E = Ot((R) => R.updateConfig), A = xt((R) => R.workspaceInfo), C = g.useMemo(() => a || i || l || c, [
+    ], Zo), { stopRunningTerminal: o } = Cc(), a = De((R) => R.isStreaming), i = De((R) => R.isProcessing), l = De((R) => R.isTerminalProcessing), c = De((R) => R.isSearching), [u, p] = g.useState(false), [d, h] = g.useState(false), m = g.useRef(null), f = g.useRef(null), { toast: x } = Zt(), [v, y] = g.useState(false), b = Dt((R) => R.config), E = Dt((R) => R.updateConfig), A = xt((R) => R.workspaceInfo), C = g.useMemo(() => a || i || l || c, [
       a,
       i,
       l,
@@ -23038,7 +23038,7 @@ ${yo}`), V.message === En.AuthTokenIsExpired && window.parent.postMessage({
                       py: "1",
                       pl: "0",
                       pr: "1",
-                      children: r.jsxs(Dt, {
+                      children: r.jsxs(Pt, {
                         align: "center",
                         overflowY: "auto",
                         p: "0",
@@ -43422,7 +43422,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }
     return i.height = l, i.style.height = Je(l), i;
   };
-  function Pt(e, t) {
+  function Ot(e, t) {
     if (!e || e.type !== t)
       throw new Error("Expected node of type " + t + ", but got " + (e ? "node of type " + e.type : String(e)));
     return e;
@@ -43443,7 +43443,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       return OC(e.children[0]);
   }, uf = (e, t) => {
     var n, s, o;
-    e && e.type === "supsub" ? (s = Pt(e.base, "accent"), n = s.base, e.base = n, o = fj(tn(e, t)), e.base = s) : (s = Pt(e, "accent"), n = s.base);
+    e && e.type === "supsub" ? (s = Ot(e.base, "accent"), n = s.base, e.base = n, o = fj(tn(e, t)), e.base = s) : (s = Ot(e, "accent"), n = s.base);
     var a = tn(n, t.havingCrampedStyle()), i = s.isShifty && ba(n), l = 0;
     if (i) {
       var c, u;
@@ -44157,8 +44157,8 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler(e, t) {
-      for (var { parser: n } = e, s = Pt(t[0], "ordgroup"), o = s.body, a = "", i = 0; i < o.length; i++) {
-        var l = Pt(o[i], "textord");
+      for (var { parser: n } = e, s = Ot(t[0], "ordgroup"), o = s.body, a = "", i = 0; i < o.length; i++) {
+        var l = Ot(o[i], "textord");
         a += l.text;
       }
       var c = parseInt(a), u;
@@ -44194,7 +44194,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t) {
-      var { parser: n } = e, s = Pt(t[0], "color-token").color, o = t[1];
+      var { parser: n } = e, s = Ot(t[0], "color-token").color, o = t[1];
       return {
         type: "color",
         mode: n.mode,
@@ -44218,7 +44218,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t) {
-      var { parser: n, breakOnTokenText: s } = e, o = Pt(t[0], "color-token").color;
+      var { parser: n, breakOnTokenText: s } = e, o = Ot(t[0], "color-token").color;
       n.gullet.macros.set("\\current@color", o);
       var a = n.parseExpression(true, s);
       return {
@@ -44247,7 +44247,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         type: "cr",
         mode: s.mode,
         newLine: a,
-        size: o && Pt(o, "size").value
+        size: o && Ot(o, "size").value
       };
     },
     htmlBuilder(e, t) {
@@ -44305,7 +44305,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       t.consumeSpaces();
       var s = t.fetch();
       if (F0[s.text])
-        return (n === "\\global" || n === "\\\\globallong") && (s.text = F0[s.text]), Pt(t.parseFunction(), "internal");
+        return (n === "\\global" || n === "\\\\globallong") && (s.text = F0[s.text]), Ot(t.parseFunction(), "internal");
       throw new $e("Invalid token after macro prefix", s);
     }
   });
@@ -44494,8 +44494,8 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       });
     } else {
       if (q.push(ah(p, m, a)), q.push(_u), c === null) {
-        var z = k - x - E + 2 * z0;
-        q.push(ih(u, z, o));
+        var U = k - x - E + 2 * z0;
+        q.push(ih(u, U, o));
       } else {
         var H = (k - x - E - A) / 2 + 2 * z0;
         q.push(ih(u, H, o)), q.push(_u), q.push(ah(c, m, a)), q.push(_u), q.push(ih(u, H, o));
@@ -44924,7 +44924,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ++s.leftrightDepth;
       var o = s.parseExpression(false);
       --s.leftrightDepth, s.expect("\\right", false);
-      var a = Pt(s.parseFunction(), "leftright-right");
+      var a = Ot(s.parseFunction(), "leftright-right");
       return {
         type: "leftright",
         mode: s.mode,
@@ -45159,7 +45159,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t, n) {
-      var { parser: s, funcName: o } = e, a = Pt(t[0], "color-token").color, i = t[1];
+      var { parser: s, funcName: o } = e, a = Ot(t[0], "color-token").color, i = t[1];
       return {
         type: "enclose",
         mode: s.mode,
@@ -45186,7 +45186,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t, n) {
-      var { parser: s, funcName: o } = e, a = Pt(t[0], "color-token").color, i = Pt(t[1], "color-token").color, l = t[2];
+      var { parser: s, funcName: o } = e, a = Ot(t[0], "color-token").color, i = Ot(t[1], "color-token").color, l = t[2];
       return {
         type: "enclose",
         mode: s.mode,
@@ -45445,12 +45445,12 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     var q = E / 2 + n.fontMetrics().axisHeight, O = t.cols || [], D = [], X, se, me = [];
     if (t.tags && t.tags.some((ne) => ne))
       for (s = 0; s < a; ++s) {
-        var B = c[s], re = B.pos - q, G = t.tags[s], z = void 0;
-        G === true ? z = We([
+        var B = c[s], re = B.pos - q, G = t.tags[s], U = void 0;
+        G === true ? U = We([
           "eqn-num"
-        ], [], n) : G === false ? z = We([], [], n) : z = We([], hs(G, n, true), n), z.depth = B.depth, z.height = B.height, me.push({
+        ], [], n) : G === false ? U = We([], [], n) : U = We([], hs(G, n, true), n), U.depth = B.depth, U.height = B.height, me.push({
           type: "elem",
-          elem: z,
+          elem: U,
           shift: re
         });
       }
@@ -45611,7 +45611,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     };
     if (n[0] && n[0].type === "ordgroup") {
       for (var p = "", d = 0; d < n[0].body.length; d++) {
-        var h = Pt(n[0].body[d], "textord");
+        var h = Ot(n[0].body[d], "textord");
         p += h.text;
       }
       l = Number(p), c = l * 2;
@@ -45619,7 +45619,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     var m = !c;
     i.body.forEach(function(y) {
       for (var b = 1; b < y.length; b += 2) {
-        var E = Pt(y[b], "styling"), A = Pt(E.body[0], "ordgroup");
+        var E = Ot(y[b], "styling"), A = Ot(E.body[0], "ordgroup");
         A.body.unshift(u);
       }
       if (m)
@@ -45653,7 +45653,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     handler(e, t) {
       var n = cp(t[0]), s = n ? [
         t[0]
-      ] : Pt(t[0], "ordgroup").body, o = s.map(function(i) {
+      ] : Ot(t[0], "ordgroup").body, o = s.map(function(i) {
         var l = lp(i), c = l.text;
         if ("lcr".includes(c))
           return {
@@ -45791,7 +45791,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     handler(e, t) {
       var n = cp(t[0]), s = n ? [
         t[0]
-      ] : Pt(t[0], "ordgroup").body, o = s.map(function(l) {
+      ] : Ot(t[0], "ordgroup").body, o = s.map(function(l) {
         var c = lp(l), u = c.text;
         if ("lc".includes(u))
           return {
@@ -45988,7 +45988,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       if (o.type !== "ordgroup")
         throw new $e("Invalid environment name", o);
       for (var a = "", i = 0; i < o.body.length; ++i)
-        a += Pt(o.body[i], "textord").text;
+        a += Ot(o.body[i], "textord").text;
       if (s === "\\begin") {
         if (!nx.hasOwnProperty(a))
           throw new $e("No such environment: " + a, o);
@@ -45998,7 +45998,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           parser: n
         }, d = l.handler(p, c, u);
         n.expect("\\end", false);
-        var h = n.nextToken, m = Pt(n.parseFunction(), "environment");
+        var h = n.nextToken, m = Ot(n.parseFunction(), "environment");
         if (m.name !== a)
           throw new $e("Mismatch: \\begin{" + a + "} matched by \\end{" + m.name + "}", h);
         return d;
@@ -46363,16 +46363,16 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t) {
-      var { parser: n } = e, s = t[4], o = t[5], a = bd(t[0]), i = a.type === "atom" && a.family === "open" ? ox(a.text) : null, l = bd(t[1]), c = l.type === "atom" && l.family === "close" ? ox(l.text) : null, u = Pt(t[2], "size"), p, d = null;
+      var { parser: n } = e, s = t[4], o = t[5], a = bd(t[0]), i = a.type === "atom" && a.family === "open" ? ox(a.text) : null, l = bd(t[1]), c = l.type === "atom" && l.family === "close" ? ox(l.text) : null, u = Ot(t[2], "size"), p, d = null;
       u.isBlank ? p = true : (d = u.value, p = d.number > 0);
       var h = null, m = t[3];
       if (m.type === "ordgroup") {
         if (m.body.length > 0) {
-          var f = Pt(m.body[0], "textord");
+          var f = Ot(m.body[0], "textord");
           h = rx[Number(f.text)];
         }
       } else
-        m = Pt(m, "textord"), h = rx[Number(m.text)];
+        m = Ot(m, "textord"), h = rx[Number(m.text)];
       return tS({
         type: "genfrac",
         mode: n.mode,
@@ -46404,7 +46404,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         type: "infix",
         mode: n.mode,
         replaceWith: "\\\\abovefrac",
-        size: Pt(t[0], "size").value,
+        size: Ot(t[0], "size").value,
         token: o
       };
     }
@@ -46423,7 +46423,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler: (e, t) => {
-      var { parser: n, funcName: s } = e, o = t[0], a = Pt(t[1], "infix").size;
+      var { parser: n, funcName: s } = e, o = t[0], a = Ot(t[1], "infix").size;
       if (!a)
         throw new Error("\\\\abovefrac expected size, but got " + String(a));
       var i = t[2], l = a.number > 0;
@@ -46442,7 +46442,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
   });
   var nS = (e, t) => {
     var n = t.style, s, o;
-    e.type === "supsub" ? (s = e.sup ? tn(e.sup, t.havingStyle(n.sup()), t) : tn(e.sub, t.havingStyle(n.sub()), t), o = Pt(e.base, "horizBrace")) : o = Pt(e, "horizBrace");
+    e.type === "supsub" ? (s = e.sup ? tn(e.sup, t.havingStyle(n.sup()), t) : tn(e.sub, t.havingStyle(n.sub()), t), o = Ot(e.base, "horizBrace")) : o = Ot(e, "horizBrace");
     var a = tn(o.base, t.havingBaseStyle(It.DISPLAY)), i = ip(o, t), l;
     if (o.isOver ? (l = en({
       positionType: "firstBaseline",
@@ -46570,7 +46570,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler: (e, t) => {
-      var { parser: n } = e, s = t[1], o = Pt(t[0], "url").url;
+      var { parser: n } = e, s = t[1], o = Ot(t[0], "url").url;
       return n.settings.isTrusted({
         command: "\\href",
         url: o
@@ -46605,7 +46605,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler: (e, t) => {
-      var { parser: n } = e, s = Pt(t[0], "url").url;
+      var { parser: n } = e, s = Ot(t[0], "url").url;
       if (!n.settings.isTrusted({
         command: "\\url",
         url: s
@@ -46679,7 +46679,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler: (e, t) => {
-      var { parser: n, funcName: s, token: o } = e, a = Pt(t[0], "raw").string, i = t[1];
+      var { parser: n, funcName: s, token: o } = e, a = Ot(t[0], "raw").string, i = t[1];
       n.settings.strict && n.settings.reportNonstrict("htmlExtension", "HTML extension is disabled on strict mode");
       var l, c = {};
       switch (s) {
@@ -46805,7 +46805,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         unit: "em"
       }, l = "";
       if (n[0])
-        for (var c = Pt(n[0], "raw").string, u = c.split(","), p = 0; p < u.length; p++) {
+        for (var c = Ot(n[0], "raw").string, u = c.split(","), p = 0; p < u.length; p++) {
           var d = u[p].split("=");
           if (d.length === 2) {
             var h = d[1].trim();
@@ -46827,7 +46827,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
             }
           }
         }
-      var m = Pt(t[0], "url").url;
+      var m = Ot(t[0], "url").url;
       return l === "" && (l = m, l = l.replace(/^.*[\\/]/, ""), l = l.substring(0, l.lastIndexOf("."))), s.settings.isTrusted({
         command: "\\includegraphics",
         url: m
@@ -46881,7 +46881,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler(e, t) {
-      var { parser: n, funcName: s } = e, o = Pt(t[0], "size");
+      var { parser: n, funcName: s } = e, o = Ot(t[0], "size");
       if (n.settings.strict) {
         var a = s[1] === "m", i = o.value.unit === "mu";
         a ? (i || n.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + s + " supports only mu units, " + ("not " + o.value.unit + " units")), n.mode !== "math" && n.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + s + " works only in math mode")) : i && n.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + s + " doesn't support mu units");
@@ -47173,7 +47173,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     "\\smallint"
   ]), Ml = (e, t) => {
     var n, s, o = false, a;
-    e.type === "supsub" ? (n = e.sup, s = e.sub, a = Pt(e.base, "op"), o = true) : a = Pt(e, "op");
+    e.type === "supsub" ? (n = e.sup, s = e.sub, a = Ot(e.base, "op"), o = true) : a = Ot(e, "op");
     var i = t.style, l = false;
     i.size === It.DISPLAY.size && a.symbol && !rS.has(a.name) && (l = true);
     var c;
@@ -47449,7 +47449,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
   });
   var oS = (e, t) => {
     var n, s, o = false, a;
-    e.type === "supsub" ? (n = e.sup, s = e.sub, a = Pt(e.base, "operatorname"), o = true) : a = Pt(e, "operatorname");
+    e.type === "supsub" ? (n = e.sup, s = e.sub, a = Ot(e.base, "operatorname"), o = true) : a = Ot(e, "operatorname");
     var i;
     if (a.body.length > 0) {
       for (var l = a.body.map((d) => {
@@ -47685,7 +47685,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler(e, t) {
-      var { parser: n } = e, s = Pt(t[0], "size").value, o = t[1];
+      var { parser: n } = e, s = Ot(t[0], "size").value, o = t[1];
       return {
         type: "raisebox",
         mode: n.mode,
@@ -47748,11 +47748,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     },
     handler(e, t, n) {
-      var { parser: s } = e, o = n[0], a = Pt(t[0], "size"), i = Pt(t[1], "size");
+      var { parser: s } = e, o = n[0], a = Ot(t[0], "size"), i = Ot(t[1], "size");
       return {
         type: "rule",
         mode: s.mode,
-        shift: o && Pt(o, "size").value,
+        shift: o && Ot(o, "size").value,
         width: a.value,
         height: i.value
       };
@@ -47829,7 +47829,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       allowedInText: true
     },
     handler: (e, t, n) => {
-      var { parser: s } = e, o = false, a = false, i = n[0] && Pt(n[0], "ordgroup");
+      var { parser: s } = e, o = false, a = false, i = n[0] && Ot(n[0], "ordgroup");
       if (i)
         for (var l = "", c = 0; c < i.body.length; ++c) {
           var u = i.body[c];
@@ -51451,8 +51451,8 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
               var b = v + y, E = x[b];
               x[b] = (E << 8 | E >>> 24) & 16711935 | (E << 24 | E >>> 8) & 4278255360;
             }
-            var A = this._hash.words, C = x[v + 0], _ = x[v + 1], I = x[v + 2], R = x[v + 3], k = x[v + 4], j = x[v + 5], P = x[v + 6], q = x[v + 7], O = x[v + 8], D = x[v + 9], X = x[v + 10], se = x[v + 11], me = x[v + 12], B = x[v + 13], re = x[v + 14], G = x[v + 15], z = A[0], H = A[1], L = A[2], $ = A[3];
-            z = d(z, H, L, $, C, 7, u[0]), $ = d($, z, H, L, _, 12, u[1]), L = d(L, $, z, H, I, 17, u[2]), H = d(H, L, $, z, R, 22, u[3]), z = d(z, H, L, $, k, 7, u[4]), $ = d($, z, H, L, j, 12, u[5]), L = d(L, $, z, H, P, 17, u[6]), H = d(H, L, $, z, q, 22, u[7]), z = d(z, H, L, $, O, 7, u[8]), $ = d($, z, H, L, D, 12, u[9]), L = d(L, $, z, H, X, 17, u[10]), H = d(H, L, $, z, se, 22, u[11]), z = d(z, H, L, $, me, 7, u[12]), $ = d($, z, H, L, B, 12, u[13]), L = d(L, $, z, H, re, 17, u[14]), H = d(H, L, $, z, G, 22, u[15]), z = h(z, H, L, $, _, 5, u[16]), $ = h($, z, H, L, P, 9, u[17]), L = h(L, $, z, H, se, 14, u[18]), H = h(H, L, $, z, C, 20, u[19]), z = h(z, H, L, $, j, 5, u[20]), $ = h($, z, H, L, X, 9, u[21]), L = h(L, $, z, H, G, 14, u[22]), H = h(H, L, $, z, k, 20, u[23]), z = h(z, H, L, $, D, 5, u[24]), $ = h($, z, H, L, re, 9, u[25]), L = h(L, $, z, H, R, 14, u[26]), H = h(H, L, $, z, O, 20, u[27]), z = h(z, H, L, $, B, 5, u[28]), $ = h($, z, H, L, I, 9, u[29]), L = h(L, $, z, H, q, 14, u[30]), H = h(H, L, $, z, me, 20, u[31]), z = m(z, H, L, $, j, 4, u[32]), $ = m($, z, H, L, O, 11, u[33]), L = m(L, $, z, H, se, 16, u[34]), H = m(H, L, $, z, re, 23, u[35]), z = m(z, H, L, $, _, 4, u[36]), $ = m($, z, H, L, k, 11, u[37]), L = m(L, $, z, H, q, 16, u[38]), H = m(H, L, $, z, X, 23, u[39]), z = m(z, H, L, $, B, 4, u[40]), $ = m($, z, H, L, C, 11, u[41]), L = m(L, $, z, H, R, 16, u[42]), H = m(H, L, $, z, P, 23, u[43]), z = m(z, H, L, $, D, 4, u[44]), $ = m($, z, H, L, me, 11, u[45]), L = m(L, $, z, H, G, 16, u[46]), H = m(H, L, $, z, I, 23, u[47]), z = f(z, H, L, $, C, 6, u[48]), $ = f($, z, H, L, q, 10, u[49]), L = f(L, $, z, H, re, 15, u[50]), H = f(H, L, $, z, j, 21, u[51]), z = f(z, H, L, $, me, 6, u[52]), $ = f($, z, H, L, R, 10, u[53]), L = f(L, $, z, H, X, 15, u[54]), H = f(H, L, $, z, _, 21, u[55]), z = f(z, H, L, $, O, 6, u[56]), $ = f($, z, H, L, G, 10, u[57]), L = f(L, $, z, H, P, 15, u[58]), H = f(H, L, $, z, B, 21, u[59]), z = f(z, H, L, $, k, 6, u[60]), $ = f($, z, H, L, se, 10, u[61]), L = f(L, $, z, H, I, 15, u[62]), H = f(H, L, $, z, D, 21, u[63]), A[0] = A[0] + z | 0, A[1] = A[1] + H | 0, A[2] = A[2] + L | 0, A[3] = A[3] + $ | 0;
+            var A = this._hash.words, C = x[v + 0], _ = x[v + 1], I = x[v + 2], R = x[v + 3], k = x[v + 4], j = x[v + 5], P = x[v + 6], q = x[v + 7], O = x[v + 8], D = x[v + 9], X = x[v + 10], se = x[v + 11], me = x[v + 12], B = x[v + 13], re = x[v + 14], G = x[v + 15], U = A[0], H = A[1], L = A[2], $ = A[3];
+            U = d(U, H, L, $, C, 7, u[0]), $ = d($, U, H, L, _, 12, u[1]), L = d(L, $, U, H, I, 17, u[2]), H = d(H, L, $, U, R, 22, u[3]), U = d(U, H, L, $, k, 7, u[4]), $ = d($, U, H, L, j, 12, u[5]), L = d(L, $, U, H, P, 17, u[6]), H = d(H, L, $, U, q, 22, u[7]), U = d(U, H, L, $, O, 7, u[8]), $ = d($, U, H, L, D, 12, u[9]), L = d(L, $, U, H, X, 17, u[10]), H = d(H, L, $, U, se, 22, u[11]), U = d(U, H, L, $, me, 7, u[12]), $ = d($, U, H, L, B, 12, u[13]), L = d(L, $, U, H, re, 17, u[14]), H = d(H, L, $, U, G, 22, u[15]), U = h(U, H, L, $, _, 5, u[16]), $ = h($, U, H, L, P, 9, u[17]), L = h(L, $, U, H, se, 14, u[18]), H = h(H, L, $, U, C, 20, u[19]), U = h(U, H, L, $, j, 5, u[20]), $ = h($, U, H, L, X, 9, u[21]), L = h(L, $, U, H, G, 14, u[22]), H = h(H, L, $, U, k, 20, u[23]), U = h(U, H, L, $, D, 5, u[24]), $ = h($, U, H, L, re, 9, u[25]), L = h(L, $, U, H, R, 14, u[26]), H = h(H, L, $, U, O, 20, u[27]), U = h(U, H, L, $, B, 5, u[28]), $ = h($, U, H, L, I, 9, u[29]), L = h(L, $, U, H, q, 14, u[30]), H = h(H, L, $, U, me, 20, u[31]), U = m(U, H, L, $, j, 4, u[32]), $ = m($, U, H, L, O, 11, u[33]), L = m(L, $, U, H, se, 16, u[34]), H = m(H, L, $, U, re, 23, u[35]), U = m(U, H, L, $, _, 4, u[36]), $ = m($, U, H, L, k, 11, u[37]), L = m(L, $, U, H, q, 16, u[38]), H = m(H, L, $, U, X, 23, u[39]), U = m(U, H, L, $, B, 4, u[40]), $ = m($, U, H, L, C, 11, u[41]), L = m(L, $, U, H, R, 16, u[42]), H = m(H, L, $, U, P, 23, u[43]), U = m(U, H, L, $, D, 4, u[44]), $ = m($, U, H, L, me, 11, u[45]), L = m(L, $, U, H, G, 16, u[46]), H = m(H, L, $, U, I, 23, u[47]), U = f(U, H, L, $, C, 6, u[48]), $ = f($, U, H, L, q, 10, u[49]), L = f(L, $, U, H, re, 15, u[50]), H = f(H, L, $, U, j, 21, u[51]), U = f(U, H, L, $, me, 6, u[52]), $ = f($, U, H, L, R, 10, u[53]), L = f(L, $, U, H, X, 15, u[54]), H = f(H, L, $, U, _, 21, u[55]), U = f(U, H, L, $, O, 6, u[56]), $ = f($, U, H, L, G, 10, u[57]), L = f(L, $, U, H, P, 15, u[58]), H = f(H, L, $, U, B, 21, u[59]), U = f(U, H, L, $, k, 6, u[60]), $ = f($, U, H, L, se, 10, u[61]), L = f(L, $, U, H, I, 15, u[62]), H = f(H, L, $, U, D, 21, u[63]), A[0] = A[0] + U | 0, A[1] = A[1] + H | 0, A[2] = A[2] + L | 0, A[3] = A[3] + $ | 0;
           },
           _doFinalize: function() {
             var x = this._data, v = x.words, y = this._nDataBytes * 8, b = x.sigBytes * 8;
@@ -51521,7 +51521,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }, [
       t,
       h
-    ]), [f, x] = Ot((F) => [
+    ]), [f, x] = Dt((F) => [
       F.config,
       F.updateConfig
     ]), [v] = bs(mo), y = he((F) => F.currentSession()), [b, E] = bt((F) => [
@@ -51655,7 +51655,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }, [
       x,
       f.codeWhiteSpace
-    ]), [z, H] = g.useMemo(() => {
+    ]), [U, H] = g.useMemo(() => {
       if (h.includes("<<<<<<< SEARCH") && h.includes(">>>>>>> REPLACE")) {
         const F = h.split(`
 `), be = [], ke = [];
@@ -51687,18 +51687,18 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         ];
     }, [
       h
-    ]), L = g.useMemo(() => (R || k) && s.defaultExpanded && z.length && H.length > 0, [
+    ]), L = g.useMemo(() => (R || k) && s.defaultExpanded && U.length && H.length > 0, [
       s.defaultExpanded,
       R,
       k,
       H.length,
-      z.length
+      U.length
     ]), $ = g.useMemo(() => {
       const F = {
         add: 0,
         delete: 0
       };
-      return L && Ci(z.join(`
+      return L && Ci(U.join(`
 `), H.join(`
 `)).forEach((ke) => {
         ke.added ? F.add += ke.count || 0 : ke.removed && (F.delete += ke.count || 0);
@@ -51706,9 +51706,9 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }, [
       L,
       H,
-      z
+      U
     ]), _e2 = g.useCallback((F) => {
-      F.stopPropagation(), z && H && (o == null ? void 0 : o.filePath) && (p == null ? void 0 : p.id) && I({
+      F.stopPropagation(), U && H && (o == null ? void 0 : o.filePath) && (p == null ? void 0 : p.id) && I({
         type: Ce.APPLY_SINGLE_CHANGES,
         data: {
           type: "apply",
@@ -51718,7 +51718,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           ],
           fileChange: {
             [q]: {
-              searchCodes: z,
+              searchCodes: U,
               replacedCodes: H,
               createdFilePaths: C[p.id || ""] || [],
               language: t,
@@ -51730,7 +51730,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         }
       });
     }, [
-      z,
+      U,
       H,
       o == null ? void 0 : o.filePath,
       p.id,
@@ -51739,11 +51739,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       C,
       t
     ]), ze = g.useCallback((F) => {
-      F.stopPropagation(), z && H && (o == null ? void 0 : o.filePath) && I({
+      F.stopPropagation(), U && H && (o == null ? void 0 : o.filePath) && I({
         type: Ce.PREVIEW_DIFF_CODE,
         data: {
           diffId: q,
-          searchCodes: z,
+          searchCodes: U,
           replacedCodes: H,
           createdFilePaths: C[p.id || ""] || [],
           language: t,
@@ -51768,7 +51768,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       o == null ? void 0 : o.filePath,
       I,
       H,
-      z
+      U
     ]), qe = g.useCallback((F) => {
       const be = F.split(`
 `), ke = [];
@@ -52352,7 +52352,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         const be = {
           codeBlockId: q,
           filePath: F,
-          searchCodes: z,
+          searchCodes: U,
           replacedCodes: H,
           language: t
         };
@@ -52365,7 +52365,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       o == null ? void 0 : o.filePath,
       a,
       H,
-      z,
+      U,
       P.workspace
     ]);
     const [ue, fe] = g.useState(d ?? true);
@@ -52683,7 +52683,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                   h: "32px !important",
                   fontSize: "sm",
                   children: [
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       w: "full",
                       textAlign: "left",
                       className: "truncate",
@@ -52694,7 +52694,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                         i.annotation
                       ]
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       mb: "0 !important",
                       children: u ? r.jsx(Ae, {
                         as: ps,
@@ -52977,7 +52977,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                   h: "32px !important",
                   fontSize: "sm",
                   children: [
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       w: "full",
                       textAlign: "left",
                       className: "truncate",
@@ -52988,7 +52988,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                         t.annotation
                       ]
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       mb: "0 !important",
                       children: p ? r.jsx(Ae, {
                         as: ps,
@@ -53235,7 +53235,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }, [
       t,
       s
-    ]), z = g.useCallback((Q, Pe, Oe) => {
+    ]), U = g.useCallback((Q, Pe, Oe) => {
       t({
         type: Ce.CREATE_FILE_AND_INSERT_CODE,
         data: {
@@ -53322,7 +53322,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                   ]
                 }),
                 r.jsxs(Ht, {
-                  onClick: () => z(me, D, o),
+                  onClick: () => U(me, D, o),
                   children: [
                     r.jsx(Le, {
                       as: Xl,
@@ -53339,7 +53339,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       ]
     }), [
       B,
-      z,
+      U,
       D,
       o,
       re,
@@ -53860,7 +53860,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                 children: m.function.name === "use_mcp_tool" ? r.jsxs(r.Fragment, {
                   children: [
                     "Y3Maker \u5C06\u4F7F\u7528 ",
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       as: "span",
                       fontWeight: "500",
                       children: [
@@ -53870,7 +53870,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                       ]
                     }),
                     " \u5DE5\u5177\u4E2D\u7684\u65B9\u6CD5\uFF1A ",
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       as: "span",
                       ml: 1,
                       fontWeight: "500",
@@ -53887,7 +53887,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                 }) : r.jsxs(r.Fragment, {
                   children: [
                     "Y3Maker \u9700\u8981\u83B7\u53D6 ",
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       as: "span",
                       fontWeight: "500",
                       children: [
@@ -53897,7 +53897,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                       ]
                     }),
                     " \u7684\u8D44\u6E90\uFF1A ",
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       as: "span",
                       ml: 1,
                       fontWeight: "500",
@@ -54090,11 +54090,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
   }
   function IS(e) {
     const { todos: t = [], showCheckbox: n = false, readOnly: s = true, onToggle: o, showStatusLabel: a = false, onItemClick: i, isItemClickable: l, onDelete: c } = e;
-    return t.length === 0 ? r.jsx(U, {
+    return t.length === 0 ? r.jsx(z, {
       textAlign: "center",
       color: "gray.500",
       children: "\u6E05\u7A7A\u6240\u6709\u4EFB\u52A1"
-    }) : r.jsx(Dt, {
+    }) : r.jsx(Pt, {
       align: "stretch",
       spacing: 1,
       children: t.map((u, p) => {
@@ -54185,7 +54185,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                 h.stopPropagation(), c(p);
               }
             }),
-            a ? r.jsx(U, {
+            a ? r.jsx(z, {
               ml: 2,
               children: u.status
             }) : null
@@ -54320,7 +54320,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
     }) : null, [
       s,
       n
-    ]), A = g.useMemo(() => n ? null : r.jsxs(Dt, {
+    ]), A = g.useMemo(() => n ? null : r.jsxs(Pt, {
       spacing: 4,
       align: "stretch",
       mt: 2,
@@ -54380,7 +54380,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
             r.jsx(br, {
               in: a,
               animateOpacity: true,
-              children: r.jsxs(Dt, {
+              children: r.jsxs(Pt, {
                 spacing: 3,
                 align: "stretch",
                 pl: 1,
@@ -54432,7 +54432,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                         mt: 0.5,
                         children: "2"
                       }),
-                      r.jsxs(Dt, {
+                      r.jsxs(Pt, {
                         align: "start",
                         spacing: 1,
                         flex: 1,
@@ -54604,7 +54604,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           alignItems: "center",
           gap: 2,
           mb: 2,
-          children: r.jsx(U, {
+          children: r.jsx(z, {
             fontWeight: "medium",
             color: "text.primary",
             style: {
@@ -54616,7 +54616,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         r.jsx(w, {
           color: "text.secondary",
           fontSize: "sm",
-          children: r.jsxs(U, {
+          children: r.jsxs(z, {
             style: {
               marginBottom: 0
             },
@@ -54632,11 +54632,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       borderRadius: "md",
       p: 4,
       bg: "bg.subtle",
-      children: r.jsxs(Dt, {
+      children: r.jsxs(Pt, {
         align: "stretch",
         spacing: 4,
         children: [
-          r.jsx(U, {
+          r.jsx(z, {
             fontWeight: "medium",
             color: "text.primary",
             style: {
@@ -54901,7 +54901,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
               ]
             }),
             r.jsx(Bh, {
-              children: r.jsx(Dt, {
+              children: r.jsx(Pt, {
                 gap: 1,
                 align: "stretch",
                 children: r.jsx("div", {
@@ -54938,7 +54938,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       });
     }
     if (p)
-      return r.jsxs(Dt, {
+      return r.jsxs(Pt, {
         gap: 1,
         align: "stretch",
         children: [
@@ -54957,7 +54957,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         ]
       });
     if (d)
-      return r.jsxs(Dt, {
+      return r.jsxs(Pt, {
         gap: 0,
         align: "stretch",
         children: [
@@ -54973,7 +54973,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         ]
       });
     if (E)
-      return r.jsx(Dt, {
+      return r.jsx(Pt, {
         gap: 1,
         align: "stretch",
         children: A
@@ -55058,7 +55058,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         children: r.jsxs(w, {
           children: [
             D,
-            (c || u) && I.length > 0 && r.jsx(U, {
+            (c || u) && I.length > 0 && r.jsx(z, {
               ml: 1,
               style: {
                 display: "inline",
@@ -55095,7 +55095,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         })
       });
     };
-    return r.jsxs(Dt, {
+    return r.jsxs(Pt, {
       gap: 1,
       align: "stretch",
       children: [
@@ -55282,14 +55282,14 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           borderBottom: o ? "1px solid" : "none",
           borderColor: o ? d : "transparent",
           fontSize: "12px",
-          children: t ? r.jsx(U, {
+          children: t ? r.jsx(z, {
             fontSize: "12px",
             mb: "0 !important",
             fontWeight: "400",
             color: h,
             noOfLines: 1,
             children: t
-          }) : r.jsx(U, {
+          }) : r.jsx(z, {
             fontSize: "12px",
             mb: "0 important",
             fontWeight: "600",
@@ -55326,7 +55326,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           children: n || r.jsx(w, {
             px: 2,
             py: 1,
-            children: r.jsx(U, {
+            children: r.jsx(z, {
               fontSize: "12px",
               color: "gray.500",
               textAlign: "center",
@@ -55489,7 +55489,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
   }
   function tP(e) {
     var _a2, _b3, _c3;
-    const { message: t, isShare: n, isLatest: s } = e, o = xt((pe) => pe.workspaceInfo), a = TS(), i = De((pe) => pe.onUserSubmit), l = he((pe) => pe.currentSession()), c = De((pe) => pe.isProcessing), u = De((pe) => pe.isMCPProcessing), p = De((pe) => pe.isTerminalProcessing), d = De((pe) => pe.setIsTerminalProcessing), h = De((pe) => pe.setIsMCPProcessing), { toast: m } = Zt(), f = bt((pe) => pe.IDE), x = f === mt.VisualStudioCode, v = f === mt.JetBrains, { postMessage: y } = gt(), [b] = g.useState(false), [E, A] = g.useState({}), [C, _] = g.useState(/* @__PURE__ */ new Set()), I = g.useRef(false), { updateTerminalLog: R } = Cc(), k = ca((pe) => pe.enableTerminal), j = Ze((pe) => pe.autoApprove), P = Ze((pe) => pe.updateAutoApprove), q = Ze((pe) => pe.autoApply), O = Ze((pe) => pe.updateAutoApply), D = Ze((pe) => pe.autoExecute), X = Ze((pe) => pe.updateAutoExecute), se = Ze((pe) => pe.autoTodo), me = Ze((pe) => pe.updateAutoTodo), B = zt((pe) => pe.MCPServers), re = zt((pe) => pe.builtInServers), G = zt((pe) => pe.getChineseNameByServerName), [z, H] = rn(yw((pe) => [
+    const { message: t, isShare: n, isLatest: s } = e, o = xt((pe) => pe.workspaceInfo), a = TS(), i = De((pe) => pe.onUserSubmit), l = he((pe) => pe.currentSession()), c = De((pe) => pe.isProcessing), u = De((pe) => pe.isMCPProcessing), p = De((pe) => pe.isTerminalProcessing), d = De((pe) => pe.setIsTerminalProcessing), h = De((pe) => pe.setIsMCPProcessing), { toast: m } = Zt(), f = bt((pe) => pe.IDE), x = f === mt.VisualStudioCode, v = f === mt.JetBrains, { postMessage: y } = gt(), [b] = g.useState(false), [E, A] = g.useState({}), [C, _] = g.useState(/* @__PURE__ */ new Set()), I = g.useRef(false), { updateTerminalLog: R } = Cc(), k = ca((pe) => pe.enableTerminal), j = Ze((pe) => pe.autoApprove), P = Ze((pe) => pe.updateAutoApprove), q = Ze((pe) => pe.autoApply), O = Ze((pe) => pe.updateAutoApply), D = Ze((pe) => pe.autoExecute), X = Ze((pe) => pe.updateAutoExecute), se = Ze((pe) => pe.autoTodo), me = Ze((pe) => pe.updateAutoTodo), B = zt((pe) => pe.MCPServers), re = zt((pe) => pe.builtInServers), G = zt((pe) => pe.getChineseNameByServerName), [U, H] = rn(yw((pe) => [
       pe.acceptEdit,
       pe.rejectEdit
     ])), L = g.useMemo(() => t.tool_calls ? t.tool_calls.some((pe) => [
@@ -55840,7 +55840,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
           "replace_in_file"
         ].includes(at.function.name));
         if (ht) {
-          pe ? z(ht.id) : (H(ht.id), i("", {
+          pe ? U(ht.id) : (H(ht.id), i("", {
             event: ie.CODE_CHAT_CODEBASE
           }, void 0, {
             [ht.id]: false
@@ -55903,7 +55903,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       _e2,
       $,
       t.tool_calls,
-      z,
+      U,
       H,
       i,
       y,
@@ -56808,9 +56808,9 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
               X[se] || (X[se] = {});
               const B = y[se][me];
               X[se][me] = B;
-              const { replacedCodes: re } = B, { generate_chars: G, generate_lines: z } = Ks(re.join(`
+              const { replacedCodes: re } = B, { generate_chars: G, generate_lines: U } = Ks(re.join(`
 `));
-              q += G, O += z;
+              q += G, O += U;
             }
           });
         });
@@ -56848,8 +56848,8 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       let O = "";
       const D = [], X = [], se = [];
       Object.keys(P).forEach((me) => {
-        const { codeBlockId: B, searchCodes: re, replacedCodes: G, language: z } = P[me];
-        X.push(...re), se.push(...G), D.push(B), O = z;
+        const { codeBlockId: B, searchCodes: re, replacedCodes: G, language: U } = P[me];
+        X.push(...re), se.push(...G), D.push(B), O = U;
       }), u({
         type: Ce.PREVIEW_DIFF_CODE,
         data: {
@@ -56874,11 +56874,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       const O = {};
       return Object.keys(y).forEach((D) => {
         D.replace(/\\/g, "/").split("/").filter((me) => !!me.trim()).reduce((me, B, re, G) => {
-          const z = me + `${re === 0 ? "" : "/"}${B}`, H = G.length === re + 1;
-          let L = {}, $ = z;
-          H && (y[z] ? L = y[z] : y[`/${z}`] && (L = y[`/${z}`], $ = `/${z}`));
+          const U = me + `${re === 0 ? "" : "/"}${B}`, H = G.length === re + 1;
+          let L = {}, $ = U;
+          H && (y[U] ? L = y[U] : y[`/${U}`] && (L = y[`/${U}`], $ = `/${U}`));
           const _e2 = {
-            key: z,
+            key: U,
             title: r.jsx("div", {
               className: "my-[4px] cm-hover-box",
               children: H ? r.jsxs("div", {
@@ -56921,7 +56921,7 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
             children: [],
             isLeaf: H
           };
-          return !O[z] && z && (O[z] = _e2, O[me] && me && (Array.isArray(O[me].children) || (O[me].children = []), O[me].children.every((ze) => ze.key !== me) && O[me].children.push(_e2)), re === 0 && P.push(_e2), H || q.push(z)), z;
+          return !O[U] && U && (O[U] = _e2, O[me] && me && (Array.isArray(O[me].children) || (O[me].children = []), O[me].children.every((ze) => ze.key !== me) && O[me].children.push(_e2)), re === 0 && P.push(_e2), H || q.push(U)), U;
         }, "");
       }), q = Array.from(new Set(q)), [
         P,
@@ -57481,16 +57481,16 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       if (t.pluginApp || t.mcpPrompt || t.skillPrompt || I)
         return true;
       if ((_a3 = t == null ? void 0 : t.attachs) == null ? void 0 : _a3.length) {
-        const B = (_b4 = t == null ? void 0 : t.attachs) == null ? void 0 : _b4.find((z) => z.type === Gn.MultiAttachment);
+        const B = (_b4 = t == null ? void 0 : t.attachs) == null ? void 0 : _b4.find((U) => U.type === Gn.MultiAttachment);
         if (!B)
           return true;
         const { attachs: re } = B;
         if (!re)
           return false;
         const { dataSource: G } = re;
-        return !!G.filter((z) => ![
+        return !!G.filter((U) => ![
           W.ImageUrl
-        ].includes(z.attachType)).length;
+        ].includes(U.attachType)).length;
       }
       return false;
     }, [
@@ -57648,10 +57648,10 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                                 type: Ce.BATCH_REVERT_EDIT,
                                 data: {
                                   items: re.map((G) => {
-                                    const { content: z, filePath: H, isCreateFile: L } = B[G] || {};
+                                    const { content: U, filePath: H, isCreateFile: L } = B[G] || {};
                                     return {
                                       filePath: H,
-                                      originalContent: z,
+                                      originalContent: U,
                                       isCreateFile: L
                                     };
                                   })
@@ -57694,25 +57694,25 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
       const { attachs: re } = B, { dataSource: G } = re;
       if (!G.length)
         return null;
-      const z = [];
+      const U = [];
       return G.forEach((H) => {
         H.attachType === W.File ? Array.isArray(H == null ? void 0 : H.attachFiles) ? H.attachFiles.forEach((L) => {
-          z.push({
+          U.push({
             ...L,
             attachType: W.File
           });
-        }) : z.push(H) : H.attachType === W.Folder && Array.isArray(H == null ? void 0 : H.attachFolders) ? H.attachFolders.forEach((L) => {
-          z.push({
+        }) : U.push(H) : H.attachType === W.Folder && Array.isArray(H == null ? void 0 : H.attachFolders) ? H.attachFolders.forEach((L) => {
+          U.push({
             ...L,
             attachType: W.Folder
           });
-        }) : z.push(H);
+        }) : U.push(H);
       }), r.jsx(w, {
         display: "flex",
         alignItems: "center",
         children: r.jsx("span", {
           className: "space-x-2 flex",
-          children: z.map((H) => {
+          children: U.map((H) => {
             switch (H == null ? void 0 : H.attachType) {
               case W.Problems:
                 return r.jsxs(K, {
@@ -58560,22 +58560,22 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         var _a3;
         if (X.aborted)
           return;
-        O.querySelectorAll(".search-highlight").forEach((z) => {
-          const H = z.parentNode;
-          H && (H.replaceChild(document.createTextNode(z.textContent || ""), z), H.normalize());
+        O.querySelectorAll(".search-highlight").forEach((U) => {
+          const H = U.parentNode;
+          H && (H.replaceChild(document.createTextNode(U.textContent || ""), U), H.normalize());
         });
         const B = document.createTreeWalker(O, NodeFilter.SHOW_TEXT, null), re = new RegExp(D, "gi");
         let G;
         for (; (G = B.nextNode()) && !X.aborted; ) {
-          const z = G.textContent;
-          if (z && re.test(z)) {
+          const U = G.textContent;
+          if (U && re.test(U)) {
             const H = document.createDocumentFragment();
             let L = 0;
-            z.replace(re, ($, _e2) => {
-              _e2 > L && H.appendChild(document.createTextNode(z.slice(L, _e2)));
+            U.replace(re, ($, _e2) => {
+              _e2 > L && H.appendChild(document.createTextNode(U.slice(L, _e2)));
               const ze = document.createElement("span");
               return ze.classList.add("search-highlight"), ze.textContent = $, H.appendChild(ze), L = _e2 + $.length, $;
-            }), L < z.length && H.appendChild(document.createTextNode(z.slice(L))), (_a3 = G.parentNode) == null ? void 0 : _a3.replaceChild(H, G);
+            }), L < U.length && H.appendChild(document.createTextNode(U.slice(L))), (_a3 = G.parentNode) == null ? void 0 : _a3.replaceChild(H, G);
           }
         }
       });
@@ -58593,11 +58593,11 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         if (re) {
           if (n == null ? void 0 : n.current) {
             const G = n.current;
-            let z = 0, H = re;
-            for (; H && H !== G && (z += H.offsetTop, H = H.offsetParent, H !== G); )
+            let U = 0, H = re;
+            for (; H && H !== G && (U += H.offsetTop, H = H.offsetParent, H !== G); )
               ;
             const L = G.clientHeight, $ = G.scrollHeight;
-            let _e2 = z - L * 0.25;
+            let _e2 = U - L * 0.25;
             const ze = $ - L;
             _e2 = Math.min(_e2, ze), _e2 = Math.max(0, _e2), G.scrollTo({
               top: _e2,
@@ -58728,8 +58728,8 @@ l0,-` + (n + 144) + `c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
                 attachs: re,
                 onFeedback: (G) => {
                   if (O.messages) {
-                    const z = O.messages[O.messages.length - 1];
-                    z.id ? P(z.id, G) : O.id && P(O.id, G);
+                    const U = O.messages[O.messages.length - 1];
+                    U.id ? P(U.id, G) : O.id && P(O.id, G);
                   }
                   O.id && P(O.id, G);
                 },
@@ -59621,7 +59621,7 @@ ${l == null ? void 0 : l.content}
                     },
                     menuPortalTarget: document.body
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_b3 = o[Xe.Knowledge]) == null ? void 0 : _b3.description
                   })
@@ -59667,7 +59667,7 @@ ${l == null ? void 0 : l.content}
                       IndicatorSeparator: () => null
                     }
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_c3 = o[Xe.File]) == null ? void 0 : _c3.description
                   })
@@ -59691,7 +59691,7 @@ ${l == null ? void 0 : l.content}
                     onChange: R,
                     menuPortalTarget: document.body
                   }, o[Xe.Codebase].value),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_d3 = o[Xe.Codebase]) == null ? void 0 : _d3.description
                   })
@@ -59724,7 +59724,7 @@ ${l == null ? void 0 : l.content}
                     },
                     menuPortalTarget: document.body
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_f3 = o[Xe.Knowledge]) == null ? void 0 : _f3.description
                   })
@@ -59772,7 +59772,7 @@ ${l == null ? void 0 : l.content}
                       IndicatorSeparator: () => null
                     }
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_g3 = o[Xe.File]) == null ? void 0 : _g3.description
                   })
@@ -59798,7 +59798,7 @@ ${l == null ? void 0 : l.content}
                     onChange: R,
                     menuPortalTarget: document.body
                   }, o[Xe.Codebase].value),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     opacity: 0.6,
                     children: (_h3 = o[Xe.Codebase]) == null ? void 0 : _h3.description
                   })
@@ -59910,7 +59910,7 @@ ${l == null ? void 0 : l.content}
     }, [
       o
     ]), r.jsx("div", {
-      children: r.jsx(Dt, {
+      children: r.jsx(Pt, {
         p: 2,
         opacity: 0.6,
         children: t.map((l) => r.jsx(Te, {
@@ -63794,7 +63794,7 @@ ${l == null ? void 0 : l.content}
       gridTemplateColumns: "1fr 40px",
       children: r.jsxs(Ut, {
         children: [
-          r.jsxs(U, {
+          r.jsxs(z, {
             mb: 1,
             fontSize: "14px",
             isTruncated: true,
@@ -63803,7 +63803,7 @@ ${l == null ? void 0 : l.content}
               t.name
             ]
           }),
-          r.jsx(U, {
+          r.jsx(z, {
             fontSize: "12px",
             opacity: "0.6",
             isTruncated: true,
@@ -63854,7 +63854,7 @@ ${l == null ? void 0 : l.content}
       children: "\u65E0\u5FEB\u6377\u6307\u4EE4"
     }) : r.jsxs(r.Fragment, {
       children: [
-        r.jsx(Dt, {
+        r.jsx(Pt, {
           pr: 2,
           align: "stretch",
           gap: "2",
@@ -63878,7 +63878,7 @@ ${l == null ? void 0 : l.content}
             })
           }, p))
         }),
-        r.jsx(U, {
+        r.jsx(z, {
           as: K,
           mt: 2,
           pl: 2,
@@ -63895,7 +63895,7 @@ ${l == null ? void 0 : l.content}
     const { prompt: t } = e, n = t.description || t.prompt;
     return r.jsxs(w, {
       children: [
-        r.jsxs(U, {
+        r.jsxs(z, {
           mb: 1,
           fontSize: "14px",
           isTruncated: true,
@@ -63904,7 +63904,7 @@ ${l == null ? void 0 : l.content}
             t.name
           ]
         }),
-        r.jsx(U, {
+        r.jsx(z, {
           fontSize: "12px",
           opacity: "0.6",
           isTruncated: true,
@@ -63922,7 +63922,7 @@ ${l == null ? void 0 : l.content}
       children: [
         r.jsxs(Ut, {
           children: [
-            r.jsxs(U, {
+            r.jsxs(z, {
               mb: 1,
               fontSize: "14px",
               isTruncated: true,
@@ -63931,7 +63931,7 @@ ${l == null ? void 0 : l.content}
                 t.name
               ]
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "12px",
               opacity: "0.6",
               isTruncated: true,
@@ -63982,7 +63982,7 @@ ${l == null ? void 0 : l.content}
           mb: 1,
           alignItems: "center",
           children: [
-            r.jsxs(U, {
+            r.jsxs(z, {
               fontSize: "14px",
               isTruncated: true,
               children: [
@@ -64003,7 +64003,7 @@ ${l == null ? void 0 : l.content}
               maxW: "120px",
               color: s ? "white" : "blue.300",
               borderColor: s ? "white" : "blue.300",
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -64012,7 +64012,7 @@ ${l == null ? void 0 : l.content}
             })
           ]
         }),
-        r.jsx(U, {
+        r.jsx(z, {
           fontSize: "12px",
           opacity: "0.6",
           isTruncated: true,
@@ -64090,7 +64090,7 @@ ${l == null ? void 0 : l.content}
                     mr: 2,
                     onClick: x
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u65B0\u5EFA\u81EA\u5B9A\u4E49 prompt"
                   })
                 ]
@@ -64105,7 +64105,7 @@ ${l == null ? void 0 : l.content}
                 flexDirection: "column",
                 gap: 3,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u81EA\u5B9A\u4E49\u5E38\u7528 Prompt\uFF0C\u53EF\u4EE5\u5728 chat \u7684\u8FC7\u7A0B\u4E2D\u5FEB\u901F\u5E94\u7528\u3002"
                   }),
                   r.jsxs(w, {
@@ -64147,13 +64147,13 @@ ${l == null ? void 0 : l.content}
                       })
                     ]
                   }),
-                  r.jsxs(U, {
+                  r.jsxs(z, {
                     children: [
                       "\u652F\u6301\u591A\u79CD",
                       r.jsxs(Jn, {
                         children: [
                           r.jsx(Qn, {
-                            children: r.jsx(U, {
+                            children: r.jsx(z, {
                               display: "inline",
                               color: "blue.200",
                               cursor: "pointer",
@@ -64252,7 +64252,7 @@ ${l == null ? void 0 : l.content}
                     mr: 2,
                     onClick: x
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u7F16\u8F91\u81EA\u5B9A\u4E49 prompt"
                   })
                 ]
@@ -64267,7 +64267,7 @@ ${l == null ? void 0 : l.content}
                 flexDirection: "column",
                 gap: 3,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u81EA\u5B9A\u4E49\u5E38\u7528 Prompt\uFF0C\u53EF\u4EE5\u5728 chat \u7684\u8FC7\u7A0B\u4E2D\u5FEB\u901F\u5E94\u7528\u3002"
                   }),
                   r.jsxs(w, {
@@ -64309,13 +64309,13 @@ ${l == null ? void 0 : l.content}
                       })
                     ]
                   }),
-                  r.jsxs(U, {
+                  r.jsxs(z, {
                     children: [
                       "\u652F\u6301\u591A\u79CD",
                       r.jsxs(Jn, {
                         children: [
                           r.jsx(Qn, {
-                            children: r.jsx(U, {
+                            children: r.jsx(z, {
                               display: "inline",
                               color: "blue.200",
                               cursor: "pointer",
@@ -64392,7 +64392,7 @@ ${l == null ? void 0 : l.content}
                     mr: 2,
                     onClick: s
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u5220\u9664\u81EA\u5B9A\u4E49 prompt"
                   })
                 ]
@@ -64407,7 +64407,7 @@ ${l == null ? void 0 : l.content}
                 flexDirection: "column",
                 gap: 6,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u786E\u5B9A\u5220\u9664 prompt \u5417\uFF1F"
                   }),
                   r.jsxs(K, {
@@ -64485,7 +64485,7 @@ ${l == null ? void 0 : l.content}
       P,
       q,
       O
-    ]), X = Bs((Z) => Z.update), se = Xo((Z) => Z.update), me = wt((Z) => Z.attachs), B = wt((Z) => Z.update), re = zt((Z) => Z.MCPServers), G = pr((Z) => Z.skills), z = Ur((Z) => Z.setPendingRunner), H = ta((Z) => Z.setLoading), L = g.useMemo(() => (re == null ? void 0 : re.length) ? re.some((Z) => {
+    ]), X = Bs((Z) => Z.update), se = Xo((Z) => Z.update), me = wt((Z) => Z.attachs), B = wt((Z) => Z.update), re = zt((Z) => Z.MCPServers), G = pr((Z) => Z.skills), U = Ur((Z) => Z.setPendingRunner), H = ta((Z) => Z.setLoading), L = g.useMemo(() => (re == null ? void 0 : re.length) ? re.some((Z) => {
       var _a2;
       return (((_a2 = Z.prompts) == null ? void 0 : _a2.length) ?? 0) > 0;
     }) : false, [
@@ -64743,7 +64743,7 @@ description: Replace with description of the skill and when Codemaker should use
             const ae = Z.meta.name || "", Ne = ae.split(".");
             if (Ne.length >= 3) {
               const we = Ne.slice(1, Ne.length - 1).join("."), Ve = Ne[Ne.length - 1], le = ((_b3 = (((_a2 = (re || []).find((Me) => Me.name === we)) == null ? void 0 : _a2.prompts) || []).find((Me) => (Me == null ? void 0 : Me.name) === Ve) || {}) == null ? void 0 : _b3.arguments) || [];
-              z({
+              U({
                 serverName: we,
                 promptName: Ve,
                 title: `/${ae}`,
@@ -64786,7 +64786,7 @@ description: Replace with description of the skill and when Codemaker should use
       s,
       B,
       re,
-      z,
+      U,
       k,
       l,
       H,
@@ -64813,7 +64813,7 @@ description: Replace with description of the skill and when Codemaker should use
               const Ve = we.meta.prompt.slice(5).split(".");
               if (Ve.length >= 2) {
                 const Ct = Ve[0], ce = Ve.slice(1).join("."), Me = (((_a2 = re.find((V) => V.name === Ct)) == null ? void 0 : _a2.prompts) || []).find((V) => V.name === ce);
-                Me && z({
+                Me && U({
                   serverName: Ct,
                   promptName: ce,
                   title: we.meta.name,
@@ -64839,7 +64839,7 @@ description: Replace with description of the skill and when Codemaker should use
       X,
       s,
       re,
-      z
+      U
     ]), g.useEffect(() => {
       if ((c == null ? void 0 : c.type) !== st.CREATE_SKILL_TEMPLATE_RESULT)
         return;
@@ -64967,7 +64967,7 @@ description: Replace with description of the skill and when Codemaker should use
             !ze && d && r.jsx(K, {
               mb: 2,
               placeContent: "space-between",
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 p: 1,
                 pb: 2,
                 fontSize: "sm",
@@ -65226,7 +65226,7 @@ description: Replace with description of the skill and when Codemaker should use
             onClick: e.onBack
           })
         }),
-        r.jsxs(U, {
+        r.jsxs(z, {
           fontSize: "xs",
           color: "text.default",
           children: [
@@ -65460,7 +65460,7 @@ description: Replace with description of the skill and when Codemaker should use
         p: 2,
         bg: "themeBgColor",
         children: [
-          r.jsx(Dt, {
+          r.jsx(Pt, {
             pr: 2,
             align: "stretch",
             maxH: "calc(100vh - 400px)",
@@ -65541,7 +65541,7 @@ description: Replace with description of the skill and when Codemaker should use
             r.jsx(ye, {
               label: l.name,
               placement: "top",
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 fontSize: "sm",
                 isTruncated: true,
                 flex: "1",
@@ -65732,7 +65732,7 @@ description: Replace with description of the skill and when Codemaker should use
         p: 2,
         bg: "themeBgColor",
         children: [
-          r.jsx(Dt, {
+          r.jsx(Pt, {
             pr: 2,
             align: "stretch",
             maxH: "calc(100vh - 400px)",
@@ -65812,7 +65812,7 @@ description: Replace with description of the skill and when Codemaker should use
             r.jsx(ha, {
               attachType: W.CodeBase
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "sm",
               isTruncated: true,
               children: i.label
@@ -66042,7 +66042,7 @@ description: Replace with description of the skill and when Codemaker should use
         p: 2,
         bg: "themeBgColor",
         children: [
-          r.jsx(Dt, {
+          r.jsx(Pt, {
             pr: 2,
             align: "stretch",
             maxH: "calc(100vh - 400px)",
@@ -66063,7 +66063,7 @@ description: Replace with description of the skill and when Codemaker should use
               onBack: i,
               type: "file"
             })
-          }) : r.jsx(U, {
+          }) : r.jsx(z, {
             className: "mt-2",
             fontSize: "xs",
             color: "text.default",
@@ -66130,12 +66130,12 @@ description: Replace with description of the skill and when Codemaker should use
             }) : r.jsx(ha, {
               attachType: W.File
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "sm",
               isTruncated: true,
               children: i.fileName + `\uFF08${i.path}\uFF09`
             }),
-            (i == null ? void 0 : i.isActive) && r.jsx(U, {
+            (i == null ? void 0 : i.isActive) && r.jsx(z, {
               border: "1px solid #fff",
               borderRadius: "4px",
               padding: "2px 4px",
@@ -66279,7 +66279,7 @@ description: Replace with description of the skill and when Codemaker should use
         w: "100%",
         p: 2,
         bg: "themeBgColor",
-        children: r.jsx(Dt, {
+        children: r.jsx(Pt, {
           pr: 2,
           align: "stretch",
           maxH: "calc(100vh - 400px)",
@@ -66351,7 +66351,7 @@ description: Replace with description of the skill and when Codemaker should use
           }) : r.jsx(ha, {
             attachType: W.File
           }),
-          r.jsx(U, {
+          r.jsx(z, {
             fontSize: "sm",
             isTruncated: true,
             children: i.fileName + `\uFF08${i.path}\uFF09`
@@ -66483,7 +66483,7 @@ description: Replace with description of the skill and when Codemaker should use
         p: 2,
         bg: "themeBgColor",
         children: [
-          r.jsx(Dt, {
+          r.jsx(Pt, {
             pr: 2,
             align: "stretch",
             maxH: "calc(100vh - 400px)",
@@ -66555,7 +66555,7 @@ description: Replace with description of the skill and when Codemaker should use
             r.jsx(w, {
               flex: "1",
               overflow: "hidden",
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 fontSize: "sm",
                 fontWeight: "medium",
                 isTruncated: true,
@@ -66598,13 +66598,13 @@ description: Replace with description of the skill and when Codemaker should use
       let G = [
         ...lU
       ];
-      return C === "codebase" ? G = cU.filter((z) => {
+      return C === "codebase" ? G = cU.filter((U) => {
         if ([
           W.Problems,
           W.CodeBase,
           W.Docset
-        ].includes(z._id)) {
-          if (z._id === W.Problems && p === mt.VisualStudioCode || z._id === W.CodeBase && j || z._id === W.Docset && P)
+        ].includes(U._id)) {
+          if (U._id === W.Problems && p === mt.VisualStudioCode || U._id === W.CodeBase && j || U._id === W.Docset && P)
             return true;
         } else
           return true;
@@ -66627,8 +66627,8 @@ description: Replace with description of the skill and when Codemaker should use
     }, [
       m
     ]), g.useEffect(() => {
-      async function G(z) {
-        const H = z.data;
+      async function G(U) {
+        const H = U.data;
         if ((H == null ? void 0 : H.type) === st.WORKSPACE_FILES) {
           const L = H.data || [];
           x(L);
@@ -66667,12 +66667,12 @@ description: Replace with description of the skill and when Codemaker should use
     ]);
     const D = g.useMemo(() => {
       const G = [];
-      return f.forEach((z) => {
+      return f.forEach((U) => {
         G.push({
-          ...z,
-          label: z.path,
-          value: z.path,
-          type: z.path.endsWith("/") ? W.Folder : W.File,
+          ...U,
+          label: U.path,
+          value: U.path,
+          type: U.path.endsWith("/") ? W.Folder : W.File,
           _id: la()
         });
       }), G;
@@ -66694,7 +66694,7 @@ description: Replace with description of the skill and when Codemaker should use
     ]), g.useEffect(() => {
       if (O) {
         h(true);
-        const G = O.toLowerCase(), z = [];
+        const G = O.toLowerCase(), U = [];
         C === "codebase" ? D.flatMap((H) => {
           H.label.toLowerCase().includes(G) && [
             W.File,
@@ -66703,15 +66703,15 @@ description: Replace with description of the skill and when Codemaker should use
             W.Docset
           ].includes(H.type) && ((H == null ? void 0 : H.isActive) && (H.tags = [
             "\u5F53\u524D"
-          ]), z.push(H));
+          ]), U.push(H));
         }) : D.flatMap((H) => {
           if (H.label.toLowerCase().includes(G))
             if (H.type === W.Docset) {
               const { docsetType: $ } = H;
-              $ !== ur.Folder && z.push(H);
+              $ !== ur.Folder && U.push(H);
             } else
-              (H == null ? void 0 : H.isActive) ? z.unshift(H) : z.push(H);
-        }), s(0), y(z);
+              (H == null ? void 0 : H.isActive) ? U.unshift(H) : U.push(H);
+        }), s(0), y(U);
       } else
         h(false);
     }, [
@@ -66727,7 +66727,7 @@ description: Replace with description of the skill and when Codemaker should use
         W.File,
         W.Folder
       ].includes(G.type) && n.current) {
-        const { selectionStart: z = 0, value: H = "" } = n.current, L = H.slice(0, z);
+        const { selectionStart: U = 0, value: H = "" } = n.current, L = H.slice(0, U);
         let $ = -1;
         for (let _e2 = 0; _e2 < L.length; _e2++)
           [
@@ -66735,7 +66735,7 @@ description: Replace with description of the skill and when Codemaker should use
             rs.Prompt
           ].includes(L[_e2]) && ($ = _e2);
         if ($ >= 0) {
-          const _e2 = H.slice(0, $) + H.slice(z, H.length);
+          const _e2 = H.slice(0, $) + H.slice(U, H.length);
           n.current.value = _e2;
         }
         n.current.dispatchEvent(new Event("input", {
@@ -66748,10 +66748,10 @@ description: Replace with description of the skill and when Codemaker should use
       var _a2;
       switch (G.type) {
         case W.File: {
-          const z = G, H = {
-            fileName: z.fileName,
-            path: z.path,
-            content: z.content
+          const U = G, H = {
+            fileName: U.fileName,
+            path: U.path,
+            content: U.content
           };
           _.selectFileAttaches([
             H
@@ -66759,10 +66759,10 @@ description: Replace with description of the skill and when Codemaker should use
           break;
         }
         case W.Folder: {
-          const z = G, H = {
-            fileName: z.fileName,
-            path: z.path,
-            content: z.content
+          const U = G, H = {
+            fileName: U.fileName,
+            path: U.path,
+            content: U.content
           };
           I.selectFolderAttaches([
             H
@@ -66770,9 +66770,9 @@ description: Replace with description of the skill and when Codemaker should use
           break;
         }
         case W.Docset: {
-          const z = G;
-          if ((_a2 = z == null ? void 0 : z.children) == null ? void 0 : _a2.length) {
-            const H = z == null ? void 0 : z.children.map((L) => ({
+          const U = G;
+          if ((_a2 = U == null ? void 0 : U.children) == null ? void 0 : _a2.length) {
+            const H = U == null ? void 0 : U.children.map((L) => ({
               ...L,
               value: L.name,
               type: W.Docset
@@ -66780,8 +66780,8 @@ description: Replace with description of the skill and when Codemaker should use
             y(H), s(0);
             return;
           }
-          (z == null ? void 0 : z.parent) && delete z.parent, R.selectDocsetAttaches([
-            z
+          (U == null ? void 0 : U.parent) && delete U.parent, R.selectDocsetAttaches([
+            U
           ]);
           break;
         }
@@ -66811,12 +66811,12 @@ description: Replace with description of the skill and when Codemaker should use
       if (c === W.Docset && E && !c && d) {
         const G = v[X];
         if (G.type === W.Docset && (G == null ? void 0 : G.parent)) {
-          const z = G == null ? void 0 : G.parent.map((H) => ({
+          const U = G == null ? void 0 : G.parent.map((H) => ({
             ...H,
             value: H.name,
             type: W.Docset
           }));
-          y(z), s(0);
+          y(U), s(0);
         }
       }
     }, [
@@ -66842,7 +66842,7 @@ description: Replace with description of the skill and when Codemaker should use
     ]);
     return g.useEffect(() => {
       const G = n == null ? void 0 : n.current;
-      function z(H) {
+      function U(H) {
         var _a2;
         switch (H.code || H.key) {
           case "Enter":
@@ -66861,8 +66861,8 @@ description: Replace with description of the skill and when Codemaker should use
             break;
         }
       }
-      return G == null ? void 0 : G.addEventListener("keydown", z), () => {
-        G == null ? void 0 : G.removeEventListener("keydown", z);
+      return G == null ? void 0 : G.addEventListener("keydown", U), () => {
+        G == null ? void 0 : G.removeEventListener("keydown", U);
       };
     }, [
       c,
@@ -66882,7 +66882,7 @@ description: Replace with description of the skill and when Codemaker should use
       w: "100%",
       p: 2,
       bg: "themeBgColor",
-      children: r.jsx(Dt, {
+      children: r.jsx(Pt, {
         pr: 2,
         align: "stretch",
         maxH: "calc(100vh - 400px)",
@@ -66890,8 +66890,8 @@ description: Replace with description of the skill and when Codemaker should use
         overflowY: "scroll",
         ref: b,
         scrollBehavior: "smooth",
-        children: v == null ? void 0 : v.map((G, z) => r.jsx(pa, {
-          index: z,
+        children: v == null ? void 0 : v.map((G, U) => r.jsx(pa, {
+          index: U,
           currentIndex: X,
           onClick: () => {
             me(G);
@@ -66902,7 +66902,7 @@ description: Replace with description of the skill and when Codemaker should use
             w: "full",
             h: "full",
             py: 2,
-            color: X === z ? "white" : "text.primary",
+            color: X === U ? "white" : "text.primary",
             display: "flex",
             children: r.jsx(ye, {
               label: G.label,
@@ -66915,7 +66915,7 @@ description: Replace with description of the skill and when Codemaker should use
                   r.jsx(ha, {
                     attachType: G.type
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     fontSize: "sm",
                     isTruncated: true,
                     flex: 1,
@@ -66966,8 +66966,8 @@ description: Replace with description of the skill and when Codemaker should use
         gap: 2,
         backgroundColor: "themeBgColor",
         children: [
-          q.map((G, z) => r.jsx(pa, {
-            index: z,
+          q.map((G, U) => r.jsx(pa, {
+            index: U,
             currentIndex: X,
             onClick: () => {
               var _a2, _b3;
@@ -66980,7 +66980,7 @@ description: Replace with description of the skill and when Codemaker should use
               py: 2,
               placeContent: "space-between",
               alignItems: "center",
-              color: X === z ? "white" : "text.primary",
+              color: X === U ? "white" : "text.primary",
               children: [
                 r.jsxs(w, {
                   display: "flex",
@@ -66990,7 +66990,7 @@ description: Replace with description of the skill and when Codemaker should use
                     r.jsx(ha, {
                       attachType: G._id
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       isTruncated: true,
                       children: G.key
                     })
@@ -67001,7 +67001,7 @@ description: Replace with description of the skill and when Codemaker should use
             })
           }, G._id)),
           r.jsx(w, {
-            children: r.jsx(U, {
+            children: r.jsx(z, {
               fontSize: "xs",
               color: "text.default",
               children: "\u8F93\u5165\u5173\u952E\u5B57\u8FDB\u884C\u68C0\u7D22"
@@ -67046,14 +67046,14 @@ description: Replace with description of the skill and when Codemaker should use
         }, u) : r.jsxs(w, {
           gap: 1,
           children: [
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "14px",
               isTruncated: true,
               children: c.name
             }),
             r.jsx(ye, {
               label: c.description,
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 fontSize: "12px",
                 opacity: "0.6",
                 isTruncated: true,
@@ -67074,12 +67074,12 @@ description: Replace with description of the skill and when Codemaker should use
         r.jsxs(Ut, {
           gap: 1,
           children: [
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "14px",
               isTruncated: true,
               children: t.name
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "12px",
               opacity: "0.6",
               isTruncated: true,
@@ -67552,7 +67552,7 @@ description: Replace with description of the skill and when Codemaker should use
       });
       var Me = Ee === void 0 ? n : Ee;
       return Me ? O(le) : Promise.resolve();
-    }), z = g.useCallback(function(ce, Ee) {
+    }), U = g.useCallback(function(ce, Ee) {
       I({
         type: "SET_FIELD_ERROR",
         payload: {
@@ -67667,7 +67667,7 @@ description: Replace with description of the skill and when Codemaker should use
       validateForm: O,
       validateField: X,
       setErrors: re,
-      setFieldError: z,
+      setFieldError: U,
       setFieldTouched: _e2,
       setFieldValue: H,
       setStatus: Pe,
@@ -67702,13 +67702,13 @@ description: Replace with description of the skill and when Codemaker should use
           return _e2(ce, le, Me);
         },
         setError: function(le) {
-          return z(ce, le);
+          return U(ce, le);
         }
       };
     }, [
       H,
       _e2,
-      z
+      U
     ]), Ne = g.useCallback(function(ce) {
       var Ee = wp(ce), le = Ee ? ce.name : ce, Me = or(_.values, le), V = {
         name: le,
@@ -67751,7 +67751,7 @@ description: Replace with description of the skill and when Codemaker should use
       setFormikState: Q,
       setFieldTouched: _e2,
       setFieldValue: H,
-      setFieldError: z,
+      setFieldError: U,
       setStatus: Pe,
       setSubmitting: Oe,
       setTouched: B,
@@ -68058,7 +68058,7 @@ description: Replace with description of the skill and when Codemaker should use
                       mr: 2,
                       onClick: _
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       children: "\u65B0\u5EFA\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                     })
                   ]
@@ -68074,7 +68074,7 @@ description: Replace with description of the skill and when Codemaker should use
                   flexDirection: "column",
                   gap: 3,
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       children: "\u4E3A\u6574\u4E2A\u4F1A\u8BDD\u589E\u52A0 Prompt\uFF0C\u53EF\u4EE5\u4FDD\u6301 Code Chat \u7684\u4E0A\u4E0B\u6587\u4E00\u81F4"
                     }),
                     r.jsxs(Ut, {
@@ -68109,7 +68109,7 @@ description: Replace with description of the skill and when Codemaker should use
                               onChange: y.handleChange,
                               onInput: y.handleChange
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "sm",
                               opacity: 0.6,
                               children: "\u7B80\u8981\u8BF4\u660E\u6A21\u5F0F\u7684\u7528\u9014\uFF0C\u4F1A\u5C55\u793A\u5728\u6A21\u5F0F\u9009\u9879\u4E0B"
@@ -68134,10 +68134,10 @@ description: Replace with description of the skill and when Codemaker should use
                                 })
                               ]
                             }),
-                            r.jsxs(U, {
+                            r.jsxs(z, {
                               fontSize: "sm",
                               children: [
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   opacity: 0.6,
                                   display: "inline",
                                   children: "\u7ED9 Chat \u4E00\u4E2A\u4E0A\u4E0B\u6587\u8BED\u5883\uFF0C\u5982\u89D2\u8272\u3001\u573A\u666F\u3001\u95EE\u9898\u80CC\u666F\u3002\u652F\u6301\u591A\u79CD"
@@ -68145,7 +68145,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 r.jsxs(Jn, {
                                   children: [
                                     r.jsx(Qn, {
-                                      children: r.jsx(U, {
+                                      children: r.jsx(z, {
                                         display: "inline",
                                         color: "blue.200",
                                         cursor: "pointer",
@@ -68176,7 +68176,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 r.jsx(Mt, {
                                   children: "Prompt \u53C2\u6570"
                                 }),
-                                r.jsxs(U, {
+                                r.jsxs(z, {
                                   fontSize: "sm",
                                   opacity: 0.6,
                                   children: [
@@ -68370,7 +68370,7 @@ description: Replace with description of the skill and when Codemaker should use
                                     value: y.values.categoryId,
                                     onChange: (R) => y.setFieldValue("categoryId", R)
                                   }),
-                                  r.jsxs(U, {
+                                  r.jsxs(z, {
                                     fontSize: "12px",
                                     opacity: 0.6,
                                     children: [
@@ -68421,7 +68421,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   IndicatorSeparator: () => null
                                 }
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "\u4E0D\u540C\u6A21\u578B\u4F1A\u5F71\u54CD\u56DE\u7B54\u6548\u679C"
@@ -68480,7 +68480,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 ]
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "temperature\uFF0C\u503C\u8D8A\u5927\uFF0C\u56DE\u590D\u8D8A\u968F\u673A\uFF0C\u5927\u4E8E 1 \u7684\u503C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u4E71\u7801"
@@ -68541,7 +68541,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 ]
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "present_penalty\uFF0C\u503C\u8D8A\u5927\uFF0C\u8D8A\u6709\u53EF\u80FD\u62D3\u5C55\u5230\u65B0\u8BDD\u9898"
@@ -68565,7 +68565,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 min: lo,
                                 max: Vd
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "max_token\uFF0C\u5355\u6B21\u4E0E\u6A21\u578B\u4EA4\u4E92\u6240\u7528\u7684\u6700\u5927 Token \u6570\uFF0C\u503C\u8D8A\u5927\uFF0C\u53EF\u8F93\u5165\u7684 Token \u6570\u8D8A\u5C11"
@@ -68728,7 +68728,7 @@ description: Replace with description of the skill and when Codemaker should use
                       mr: 2,
                       onClick: C
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       children: "\u4FEE\u6539\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                     })
                   ]
@@ -68744,7 +68744,7 @@ description: Replace with description of the skill and when Codemaker should use
                   flexDirection: "column",
                   gap: 3,
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       children: "\u4E3A\u6574\u4E2A\u4F1A\u8BDD\u589E\u52A0 Prompt\uFF0C\u53EF\u4EE5\u4FDD\u6301 Code Chat \u7684\u4E0A\u4E0B\u6587\u4E00\u81F4"
                     }),
                     r.jsxs(Ut, {
@@ -68779,7 +68779,7 @@ description: Replace with description of the skill and when Codemaker should use
                               onChange: y.handleChange,
                               onInput: y.handleChange
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "sm",
                               opacity: 0.6,
                               children: "\u7B80\u8981\u8BF4\u660E\u6A21\u5F0F\u7684\u7528\u9014\uFF0C\u4F1A\u5C55\u793A\u5728\u6A21\u5F0F\u9009\u9879\u4E0B"
@@ -68804,10 +68804,10 @@ description: Replace with description of the skill and when Codemaker should use
                                 })
                               ]
                             }),
-                            r.jsxs(U, {
+                            r.jsxs(z, {
                               fontSize: "sm",
                               children: [
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   opacity: 0.6,
                                   display: "inline",
                                   children: "\u7ED9 Chat \u4E00\u4E2A\u4E0A\u4E0B\u6587\u8BED\u5883\uFF0C\u5982\u89D2\u8272\u3001\u573A\u666F\u3001\u95EE\u9898\u80CC\u666F\u3002\u652F\u6301\u591A\u79CD"
@@ -68815,7 +68815,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 r.jsxs(Jn, {
                                   children: [
                                     r.jsx(Qn, {
-                                      children: r.jsx(U, {
+                                      children: r.jsx(z, {
                                         display: "inline",
                                         color: "blue.200",
                                         cursor: "pointer",
@@ -68847,7 +68847,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 r.jsx(Mt, {
                                   children: "Prompt \u53C2\u6570"
                                 }),
-                                r.jsxs(U, {
+                                r.jsxs(z, {
                                   fontSize: "sm",
                                   opacity: 0.6,
                                   children: [
@@ -69041,7 +69041,7 @@ description: Replace with description of the skill and when Codemaker should use
                                     value: y.values.categoryId,
                                     onChange: (I) => y.setFieldValue("categoryId", I)
                                   }),
-                                  r.jsxs(U, {
+                                  r.jsxs(z, {
                                     fontSize: "12px",
                                     opacity: 0.6,
                                     children: [
@@ -69092,7 +69092,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   IndicatorSeparator: () => null
                                 }
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "\u4E0D\u540C\u6A21\u578B\u4F1A\u5F71\u54CD\u56DE\u7B54\u6548\u679C\uFF0C\u672A\u8BBE\u7F6E\u65F6\u9ED8\u8BA4\u4F7F\u7528\u5F53\u524D\u7528\u6237\u5168\u5C40 Chat \u914D\u7F6E"
@@ -69151,7 +69151,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 ]
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "temperature\uFF0C\u503C\u8D8A\u5927\uFF0C\u56DE\u590D\u8D8A\u968F\u673A\uFF0C\u5927\u4E8E 1 \u7684\u503C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u4E71\u7801"
@@ -69212,7 +69212,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 ]
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "present_penalty\uFF0C\u503C\u8D8A\u5927\uFF0C\u8D8A\u6709\u53EF\u80FD\u62D3\u5C55\u5230\u65B0\u8BDD\u9898"
@@ -69236,7 +69236,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 min: lo,
                                 max: Vd
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "sm",
                                 opacity: 0.6,
                                 children: "max_token\uFF0C\u5355\u6B21\u4E0E\u6A21\u578B\u4EA4\u4E92\u6240\u7528\u7684\u6700\u5927 Token \u6570\uFF0C\u503C\u8D8A\u5927\uFF0C\u53EF\u8F93\u5165\u7684 Token \u6570\u8D8A\u5C11"
@@ -69317,7 +69317,7 @@ description: Replace with description of the skill and when Codemaker should use
                     mr: 2,
                     onClick: s
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u5220\u9664\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                   })
                 ]
@@ -69332,7 +69332,7 @@ description: Replace with description of the skill and when Codemaker should use
                 flexDirection: "column",
                 gap: 6,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u786E\u5B9A\u5220\u9664\u8BE5\u6A21\u5F0F\u5417\uFF1F"
                   }),
                   r.jsxs(K, {
@@ -69582,14 +69582,14 @@ description: Replace with description of the skill and when Codemaker should use
             n && r.jsx(K, {
               mb: 2,
               placeContent: "space-between",
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 p: 1,
                 pb: 2,
                 fontSize: "sm",
                 children: p6[n]
               })
             }),
-            r.jsx(Dt, {
+            r.jsx(Pt, {
               pr: 2,
               align: "stretch",
               gap: "2",
@@ -69663,7 +69663,7 @@ description: Replace with description of the skill and when Codemaker should use
         r.jsx(w, {
           h: "192px",
           overflow: "scroll",
-          children: r.jsx(Dt, {
+          children: r.jsx(Pt, {
             align: "stretch",
             gap: "2",
             overflowY: "scroll",
@@ -69672,7 +69672,7 @@ description: Replace with description of the skill and when Codemaker should use
             }, n._id))
           })
         }),
-        r.jsx(U, {
+        r.jsx(z, {
           as: K,
           mt: 2,
           pl: 2,
@@ -69734,13 +69734,13 @@ description: Replace with description of the skill and when Codemaker should use
             children: [
               r.jsxs(Ut, {
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     mb: 1,
                     fontSize: "14px",
                     isTruncated: true,
                     children: t.app_name
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     fontSize: "12px",
                     color: "text.default",
                     isTruncated: true,
@@ -69781,7 +69781,7 @@ description: Replace with description of the skill and when Codemaker should use
                   r.jsxs(K, {
                     justifyContent: "flex-end",
                     children: [
-                      r.jsx(U, {
+                      r.jsx(z, {
                         fontSize: "12px",
                         color: "text.default",
                         isTruncated: true,
@@ -69816,7 +69816,7 @@ description: Replace with description of the skill and when Codemaker should use
                 mt: "4",
                 children: [
                   r.jsx(K, {
-                    children: r.jsxs(U, {
+                    children: r.jsxs(z, {
                       mb: 1,
                       fontSize: "14px",
                       isTruncated: true,
@@ -69828,7 +69828,7 @@ description: Replace with description of the skill and when Codemaker should use
                   }),
                   r.jsx(K, {
                     pl: 4,
-                    children: r.jsx(U, {
+                    children: r.jsx(z, {
                       fontSize: "12px",
                       isTruncated: true,
                       color: "text.default",
@@ -69852,7 +69852,7 @@ description: Replace with description of the skill and when Codemaker should use
     bg: "themeBgColor",
     alignItems: "center",
     justifyContent: "center",
-    children: r.jsx(U, {
+    children: r.jsx(z, {
       children: "\u656C\u8BF7\u671F\u5F85"
     })
   }) : r.jsx(K, {
@@ -69976,14 +69976,14 @@ description: Replace with description of the skill and when Codemaker should use
           "Backspace"
         ])) {
           if (s.current) {
-            const { selectionStart: G, value: z } = s.current;
+            const { selectionStart: G, value: U } = s.current;
             [
               Bi
-            ].includes(z.charAt(G - 2)) ? O(z.charAt(G - 2)) : ([
+            ].includes(U.charAt(G - 2)) ? O(U.charAt(G - 2)) : ([
               Bi
-            ].includes(z.charAt(G - 1)) || [
+            ].includes(U.charAt(G - 1)) || [
               Ui
-            ].includes(z.charAt(G - 1)) && !((_c3 = (_b3 = z.charAt(G - 2)) == null ? void 0 : _b3.trim) == null ? void 0 : _c3.call(_b3))) && u(false);
+            ].includes(U.charAt(G - 1)) && !((_c3 = (_b3 = U.charAt(G - 2)) == null ? void 0 : _b3.trim) == null ? void 0 : _c3.call(_b3))) && u(false);
           }
           return;
         } else if (Nn(re, [
@@ -69997,8 +69997,8 @@ description: Replace with description of the skill and when Codemaker should use
           if (s.current) {
             if (re.ctrlKey || re.metaKey)
               return;
-            const { selectionStart: G, value: z } = s.current;
-            z.charAt(G - 1).trim() || O(re.key);
+            const { selectionStart: G, value: U } = s.current;
+            U.charAt(G - 1).trim() || O(re.key);
           }
           return;
         } else
@@ -70703,7 +70703,7 @@ description: Replace with description of the skill and when Codemaker should use
                     mr: 2,
                     onClick: h
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u65B0\u5EFA\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                   })
                 ]
@@ -70718,7 +70718,7 @@ description: Replace with description of the skill and when Codemaker should use
                 flexDirection: "column",
                 gap: 3,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u4E3A\u6574\u4E2A\u4F1A\u8BDD\u589E\u52A0 prompt\uFF0C\u53EF\u4EE5\u4FDD\u6301 Code Chat \u7684\u4E0A\u4E0B\u6587\u4E00\u81F4\u3002"
                   }),
                   r.jsxs(w, {
@@ -70760,7 +70760,7 @@ description: Replace with description of the skill and when Codemaker should use
                       })
                     ]
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u7ED9 Chat \u4E00\u4E2A\u4E0A\u4E0B\u6587\u8BED\u5883\uFF0C\u5982\u89D2\u8272\u3001\u573A\u666F\u3001\u95EE\u9898\u80CC\u666F\u3002"
                   })
                 ]
@@ -70850,7 +70850,7 @@ description: Replace with description of the skill and when Codemaker should use
                     mr: 2,
                     onClick: m
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u7F16\u8F91\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                   })
                 ]
@@ -70865,7 +70865,7 @@ description: Replace with description of the skill and when Codemaker should use
                 flexDirection: "column",
                 gap: 3,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u4E3A\u6574\u4E2A\u4F1A\u8BDD\u589E\u52A0 prompt\uFF0C\u53EF\u4EE5\u4FDD\u6301 Code Chat \u7684\u4E0A\u4E0B\u6587\u4E00\u81F4\u3002"
                   }),
                   r.jsxs(w, {
@@ -70907,7 +70907,7 @@ description: Replace with description of the skill and when Codemaker should use
                       })
                     ]
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u7ED9 Chat \u4E00\u4E2A\u4E0A\u4E0B\u6587\u8BED\u5883\uFF0C\u5982\u89D2\u8272\u3001\u573A\u666F\u3001\u95EE\u9898\u80CC\u666F\u3002"
                   })
                 ]
@@ -70977,7 +70977,7 @@ description: Replace with description of the skill and when Codemaker should use
                     mr: 2,
                     onClick: s
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u5220\u9664\u81EA\u5B9A\u4E49\u804A\u5929\u6A21\u5F0F"
                   })
                 ]
@@ -70992,7 +70992,7 @@ description: Replace with description of the skill and when Codemaker should use
                 flexDirection: "column",
                 gap: 6,
                 children: [
-                  r.jsx(U, {
+                  r.jsx(z, {
                     children: "\u786E\u5B9A\u5220\u9664\u8BE5\u6A21\u5F0F\u5417\uFF1F"
                   }),
                   r.jsxs(K, {
@@ -71045,7 +71045,7 @@ description: Replace with description of the skill and when Codemaker should use
               children: r.jsx(ao, {
                 onClick: () => t((v) => !v),
                 isDisabled: m ? m.attachType === W.Docset : false,
-                children: r.jsx(U, {
+                children: r.jsx(z, {
                   maxW: "80px",
                   isTruncated: true,
                   children: p == null ? void 0 : p.name
@@ -71058,7 +71058,7 @@ description: Replace with description of the skill and when Codemaker should use
                 display: "flex",
                 flexDirection: "column",
                 children: [
-                  r.jsxs(Dt, {
+                  r.jsxs(Pt, {
                     flex: 1,
                     align: "stretch",
                     maxH: "calc(100vh - 400px)",
@@ -71152,7 +71152,7 @@ description: Replace with description of the skill and when Codemaker should use
         w: "full",
         gridTemplateColumns: "1fr 32px",
         alignItems: "center",
-        children: r.jsx(U, {
+        children: r.jsx(z, {
           isTruncated: true,
           title: t.name,
           children: t.name
@@ -71178,7 +71178,7 @@ description: Replace with description of the skill and when Codemaker should use
         alignItems: "center",
         children: [
           r.jsx(Ut, {
-            children: r.jsx(U, {
+            children: r.jsx(z, {
               isTruncated: true,
               title: t.name,
               children: t.name
@@ -71350,7 +71350,7 @@ description: Replace with description of the skill and when Codemaker should use
       chatType: b,
       privateModels: X
     });
-    const B = Ot.getState().config.codeChatModelsSetting, re = g.useCallback((Q) => {
+    const B = Dt.getState().config.codeChatModelsSetting, re = g.useCallback((Q) => {
       const Pe = O[Q];
       return Object.prototype.hasOwnProperty.call(B, Pe) ? B[Pe] !== false : true;
     }, [
@@ -71359,7 +71359,7 @@ description: Replace with description of the skill and when Codemaker should use
     ]), G = g.useCallback(() => q.filter((Q) => re(Q)), [
       q,
       re
-    ]), z = g.useCallback((Q) => !D[Q] || D[Q].length === 0 ? null : r.jsx(r.Fragment, {
+    ]), U = g.useCallback((Q) => !D[Q] || D[Q].length === 0 ? null : r.jsx(r.Fragment, {
       children: D[Q].map((Pe, Oe) => r.jsx(w, {
         display: "inline-flex",
         alignItems: "center",
@@ -71552,7 +71552,7 @@ description: Replace with description of the skill and when Codemaker should use
                       whiteSpace: "nowrap",
                       flex: "1",
                       minW: "0",
-                      children: r.jsx(U, {
+                      children: r.jsx(z, {
                         fontSize: "12px",
                         children: "\u9009\u62E9\u6A21\u578B"
                       })
@@ -71570,7 +71570,7 @@ description: Replace with description of the skill and when Codemaker should use
               flexDirection: "column",
               py: "2",
               px: "0",
-              children: r.jsx(Dt, {
+              children: r.jsx(Pt, {
                 flex: 1,
                 align: "stretch",
                 maxH: "calc(100vh - 400px)",
@@ -71622,12 +71622,12 @@ description: Replace with description of the skill and when Codemaker should use
                           mr: 2,
                           objectFit: "contain"
                         }),
-                        r.jsxs(U, {
+                        r.jsxs(z, {
                           isTruncated: true,
                           title: O[Q],
                           children: [
                             O[Q],
-                            z(Q)
+                            U(Q)
                           ]
                         }),
                         u === Q && r.jsx(Le, {
@@ -71647,7 +71647,7 @@ description: Replace with description of the skill and when Codemaker should use
     });
   };
   function aB() {
-    const [e, t] = yt.useState(false), n = Ze((u) => u.config), s = Ze((u) => u.update), [o, a] = Ot((u) => [
+    const [e, t] = yt.useState(false), n = Ze((u) => u.config), s = Ze((u) => u.update), [o, a] = Dt((u) => [
       u.config,
       u.updateConfig
     ]), i = Ep({
@@ -71718,10 +71718,10 @@ description: Replace with description of the skill and when Codemaker should use
                         children: [
                           r.jsxs(Mt, {
                             children: [
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 children: "\u968F\u673A\u6027"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "12px",
                                 opacity: 0.6,
                                 children: "temperature\uFF0C\u503C\u8D8A\u5927\uFF0C\u56DE\u590D\u8D8A\u968F\u673A\uFF0C\u5927\u4E8E 1 \u7684\u503C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u4E71\u7801"
@@ -71778,10 +71778,10 @@ description: Replace with description of the skill and when Codemaker should use
                         children: [
                           r.jsxs(Mt, {
                             children: [
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 children: "\u5355\u6B21\u56DE\u590D\u9650\u5236"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "12px",
                                 opacity: 0.6,
                                 children: "max_token\uFF0C\u5355\u6B21\u4E0E\u6A21\u578B\u4EA4\u4E92\u6240\u7528\u7684\u6700\u5927 Token \u6570\uFF0C\u503C\u8D8A\u5927\uFF0C\u53EF\u8F93\u5165\u7684 Token \u6570\u8D8A\u5C11"
@@ -71802,10 +71802,10 @@ description: Replace with description of the skill and when Codemaker should use
                         children: [
                           r.jsxs(Mt, {
                             children: [
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 children: "\u8BDD\u9898\u65B0\u9C9C\u5EA6"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "12px",
                                 opacity: 0.6,
                                 children: "present_penalty\uFF0C\u503C\u8D8A\u5927\uFF0C\u8D8A\u6709\u53EF\u80FD\u62D3\u5C55\u5230\u65B0\u8BDD\u9898"
@@ -71864,10 +71864,10 @@ description: Replace with description of the skill and when Codemaker should use
                         children: [
                           r.jsxs(Mt, {
                             children: [
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 children: "\u9644\u5E26\u5386\u53F2\u6D88\u606F\u6570"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "12px",
                                 opacity: 0.6,
                                 children: "\u6BCF\u6B21\u8BF7\u6C42\u643A\u5E26\u7684\u5386\u53F2\u6D88\u606F\u6570"
@@ -72039,7 +72039,7 @@ description: Replace with description of the skill and when Codemaker should use
             children: r.jsx(as, {
               display: "flex",
               flexDirection: "column",
-              children: r.jsxs(Dt, {
+              children: r.jsxs(Pt, {
                 flex: 1,
                 align: "stretch",
                 maxH: "300px",
@@ -72172,7 +72172,7 @@ description: Replace with description of the skill and when Codemaker should use
                     mr: 1,
                     color: "#a78bfa"
                   }),
-                  r.jsx(U, {
+                  r.jsx(z, {
                     fontSize: "12px",
                     fontWeight: "600",
                     color: "white",
@@ -72180,7 +72180,7 @@ description: Replace with description of the skill and when Codemaker should use
                   })
                 ]
               }),
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "12px",
                 color: "rgba(255, 255, 255, 0.9)",
                 children: f.tooltip
@@ -72266,7 +72266,7 @@ description: Replace with description of the skill and when Codemaker should use
                           mr: 1,
                           color: "#a78bfa"
                         }),
-                        r.jsx(U, {
+                        r.jsx(z, {
                           fontSize: "12px",
                           fontWeight: "600",
                           color: "white",
@@ -72274,7 +72274,7 @@ description: Replace with description of the skill and when Codemaker should use
                         })
                       ]
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontSize: "12px",
                       color: "rgba(255, 255, 255, 0.9)",
                       children: y.tooltip
@@ -72384,7 +72384,7 @@ description: Replace with description of the skill and when Codemaker should use
                     d: "M623.93327 77.956139a102.527551 102.527551 0 0 0-51.199776 26.047886L133.887414 524.994183a42.559814 42.559814 0 0 1-57.727747 0.447998 36.927838 36.927838 0 0 1-0.447998-54.399762L514.557749 50.052261c16.639927-15.99993 50.30378-40.575822 95.487582-47.93579 48.255789-7.807966 102.91155 5.183977 154.687323 54.84776 48.767787 46.847795 56.511753 99.455565 50.047781 141.823379 44.799804-6.207973 99.775563 1.919992 149.119348 49.279785 52.60777 50.431779 66.17571 102.463552 57.663748 148.223351-7.999965 43.007812-34.36785 74.559674-50.43178 89.919607l-387.646304 371.902373 104.703542 100.47956a36.927838 36.927838 0 0 1-0.511998 54.399762 42.559814 42.559814 0 0 1-57.599748-0.511998L497.277824 885.120608a36.927838 36.927838 0 0 1 0-54.015764l415.806181-398.846255c9.919957-9.535958 24.191894-27.51988 28.223877-49.279785 3.519985-18.815918 0.511998-46.399797-35.455845-80.959645-31.871861-30.527866-63.743721-31.359863-90.047606-24.959891a147.903353 147.903353 0 0 0-44.991803 19.455915l-1.023996 0.639997-344.318493 330.366555a42.559814 42.559814 0 0 1-57.599748 0.447998 36.927838 36.927838 0 0 1-0.511998-54.399762l343.934495-329.982557 0.511998-0.767996a143.871371 143.871371 0 0 0 20.223911-44.607805c6.719971-26.623884 5.311977-57.791747-25.407888-87.295618-34.687848-33.279854-63.039724-36.159842-82.687639-32.959856z m47.99979 67.199706a36.927838 36.927838 0 0 1 0.447998 54.399762l-344.318493 330.238555a98.111571 98.111571 0 0 0-6.91197 10.623954c-5.055978 8.575962-10.815953 20.47991-14.335937 33.983851-6.78397 25.855887-5.759975 57.08775 26.239885 87.807616 31.871861 30.527866 63.807721 31.359863 90.111606 24.959891a148.159352 148.159352 0 0 0 45.951799-20.159912l344.318493-330.238555a42.559814 42.559814 0 0 1 57.663748-0.511998 36.927838 36.927838 0 0 1 0.511998 54.399762l-346.494484 332.414546a40.255824 40.255824 0 0 1-3.647984 3.071986l-25.471889-30.079868 25.471889 30.079868-0.128 0.064-0.191999 0.127999-0.447998 0.383999-1.407994 1.023995-4.60798 3.135986a232.190984 232.190984 0 0 1-71.359688 30.911865c-47.615792 11.39195-111.679511 8.767962-168.383263-45.6318-56.575752-54.271763-59.135741-115.199496-47.359793-160.191299a211.199076 211.199076 0 0 1 35.263846-72.447683l1.087995-1.343995 0.319999-0.447998 0.191999-0.191999s0.064-0.127999 32.319859 23.423898l-32.255859-23.551897a39.167829 39.167829 0 0 1 3.199986-3.455985l346.494484-332.350546a42.559814 42.559814 0 0 1 57.663748-0.447998z"
                   })
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   marginLeft: 2,
                   fontSize: 12,
                   children: "MCP Server"
@@ -72549,7 +72549,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 })
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 color: h.has(v.name) ? "gray.500" : ((_e2 = v.config) == null ? void 0 : _e2.disabled) ? "inherit" : cy[v.status] || "inherit",
                                 lineHeight: "1",
                                 fontSize: "xs",
@@ -72657,7 +72657,7 @@ description: Replace with description of the skill and when Codemaker should use
               },
               userSelect: "none",
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u66F4\u591A"
                 }),
                 r.jsx(Le, {
@@ -72677,7 +72677,7 @@ description: Replace with description of the skill and when Codemaker should use
               },
               userSelect: "none",
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u6536\u8D77"
                 }),
                 r.jsx(Le, {
@@ -72712,7 +72712,7 @@ description: Replace with description of the skill and when Codemaker should use
                 r.jsx(pb, {
                   size: 16
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   marginLeft: 2,
                   fontSize: 12,
                   children: "Skills \u5DE5\u5177"
@@ -72816,7 +72816,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 })
                               })
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               color: m ? "inherit" : "green.500",
                               lineHeight: "1",
                               fontSize: "xs",
@@ -72895,7 +72895,7 @@ description: Replace with description of the skill and when Codemaker should use
               },
               userSelect: "none",
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u66F4\u591A"
                 }),
                 r.jsx(Le, {
@@ -72915,7 +72915,7 @@ description: Replace with description of the skill and when Codemaker should use
               },
               userSelect: "none",
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u6536\u8D77"
                 }),
                 r.jsx(Le, {
@@ -73190,7 +73190,7 @@ description: Replace with description of the skill and when Codemaker should use
                         });
                       }
                     }),
-                    c.name && r.jsx(U, {
+                    c.name && r.jsx(z, {
                       fontSize: "sm",
                       color: "red.500",
                       mt: 1,
@@ -73260,7 +73260,7 @@ description: Replace with description of the skill and when Codemaker should use
                         });
                       }
                     }),
-                    c.command && r.jsx(U, {
+                    c.command && r.jsx(z, {
                       fontSize: "sm",
                       color: "red.500",
                       mt: 1,
@@ -73463,7 +73463,7 @@ description: Replace with description of the skill and when Codemaker should use
                       },
                       placeholder: "https://example.com/mcp"
                     }),
-                    c.url && r.jsx(U, {
+                    c.url && r.jsx(z, {
                       fontSize: "sm",
                       color: "red.500",
                       mt: 1,
@@ -73736,7 +73736,7 @@ description: Replace with description of the skill and when Codemaker should use
     ]);
     const G = () => {
       t();
-    }, z = () => {
+    }, U = () => {
       q("add"), D(null), j(true);
     }, H = (F) => {
       q("edit"), D(F), j(true);
@@ -73875,7 +73875,7 @@ description: Replace with description of the skill and when Codemaker should use
                             justifyContent: "space-between",
                             mb: 4,
                             children: [
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontWeight: "bold",
                                 children: "\u5DF2\u5B89\u88C5\u7684 MCP \u670D\u52A1"
                               }),
@@ -73904,7 +73904,7 @@ description: Replace with description of the skill and when Codemaker should use
                                       });
                                     }
                                   }),
-                                  r.jsx(U, {
+                                  r.jsx(z, {
                                     fontSize: "sm",
                                     color: "#786fff",
                                     cursor: "pointer",
@@ -73949,7 +73949,7 @@ description: Replace with description of the skill and when Codemaker should use
                                         mr: 2,
                                         borderRadius: "50%"
                                       }),
-                                      r.jsx(U, {
+                                      r.jsx(z, {
                                         fontWeight: "medium",
                                         color: p === At.Light ? "#222" : void 0,
                                         children: F.chinese_name || F.name
@@ -74066,7 +74066,7 @@ description: Replace with description of the skill and when Codemaker should use
                                           mr: 2,
                                           borderRadius: "50%"
                                         }),
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           fontWeight: "medium",
                                           color: p === At.Light ? "#222" : void 0,
                                           children: ((_a2 = F == null ? void 0 : F.config) == null ? void 0 : _a2.chinese_name) || c(F.name) || F.name || `\u670D\u52A1\u5668 ${be + 1}`
@@ -74155,11 +74155,11 @@ description: Replace with description of the skill and when Codemaker should use
                                 alignItems: "center",
                                 gap: 2,
                                 children: [
-                                  r.jsx(U, {
+                                  r.jsx(z, {
                                     fontWeight: "bold",
                                     children: "\u63A8\u8350 MCP \u670D\u52A1"
                                   }),
-                                  r.jsxs(U, {
+                                  r.jsxs(z, {
                                     fontSize: "sm",
                                     color: "#786fff",
                                     cursor: "pointer",
@@ -74190,7 +74190,7 @@ description: Replace with description of the skill and when Codemaker should use
                               r.jsx(Te, {
                                 colorScheme: "blue",
                                 size: "sm",
-                                onClick: z,
+                                onClick: U,
                                 color: "white",
                                 _hover: {
                                   bg: "#5a4fcf"
@@ -74220,7 +74220,7 @@ description: Replace with description of the skill and when Codemaker should use
                                       mr: 2,
                                       borderRadius: "50%"
                                     }),
-                                    r.jsx(U, {
+                                    r.jsx(z, {
                                       fontWeight: "medium",
                                       color: p === At.Light ? "#222" : void 0,
                                       children: F.chinese_name || F.name
@@ -74289,7 +74289,7 @@ description: Replace with description of the skill and when Codemaker should use
                         r.jsxs(Mt, {
                           children: [
                             Z.label,
-                            Z.required && r.jsx(U, {
+                            Z.required && r.jsx(z, {
                               as: "span",
                               color: "red.400",
                               ml: 1,
@@ -74317,13 +74317,13 @@ description: Replace with description of the skill and when Codemaker should use
                           },
                           placeholder: Z.placeholder
                         }),
-                        E[Z.key] && r.jsx(U, {
+                        E[Z.key] && r.jsx(z, {
                           fontSize: "sm",
                           color: "red.500",
                           mt: 1,
                           children: E[Z.key]
                         }),
-                        !E[Z.key] && Z.description && r.jsx(U, {
+                        !E[Z.key] && Z.description && r.jsx(z, {
                           fontSize: "sm",
                           color: "gray.500",
                           mt: 1,
@@ -74582,7 +74582,7 @@ description: Replace with description of the skill and when Codemaker should use
                   justifyContent: "space-between",
                   mb: 4,
                   children: [
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       fontSize: "sm",
                       color: "gray.500",
                       children: [
@@ -74654,7 +74654,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 alignItems: "center",
                                 gap: 2,
                                 children: [
-                                  r.jsx(U, {
+                                  r.jsx(z, {
                                     fontWeight: "medium",
                                     fontSize: "md",
                                     color: _ ? "#e0e0e0" : "#222",
@@ -74673,7 +74673,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   })
                                 ]
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "xs",
                                 color: "gray.500",
                                 mt: 0.5,
@@ -74859,7 +74859,7 @@ description: Replace with description of the skill and when Codemaker should use
             alignItems: "center",
             children: [
               k == null ? void 0 : k.icon,
-              r.jsx(U, {
+              r.jsx(z, {
                 marginLeft: k.icon ? 2 : 0,
                 fontSize: "12px",
                 children: k.title
@@ -74953,7 +74953,7 @@ description: Replace with description of the skill and when Codemaker should use
                 display: "flex",
                 flexDirection: "column",
                 p: "2",
-                children: r.jsxs(Dt, {
+                children: r.jsxs(Pt, {
                   flex: 1,
                   align: "stretch",
                   py: 1,
@@ -75083,7 +75083,7 @@ description: Replace with description of the skill and when Codemaker should use
                   boxSize: 4,
                   mr: 2
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "sm",
                   fontWeight: "bold",
                   children: "Rules \u4F7F\u7528\u6307\u5357"
@@ -75104,13 +75104,13 @@ description: Replace with description of the skill and when Codemaker should use
                   }
                 });
               },
-              children: r.jsxs(U, {
+              children: r.jsxs(z, {
                 fontSize: "xs",
                 color: "text.secondary",
                 lineHeight: "1.5",
                 children: [
                   "Rules \u4E3A\u5C0F\u52A9\u624B\u63D0\u4F9B\u6301\u4E45\u5316\u7684\u4E0A\u4E0B\u6587\u4E0E\u89C4\u8303\uFF0C\u786E\u4FDD\u4EE3\u7801\u751F\u6210\u59CB\u7EC8\u9075\u5FAA\u7528\u6237\u6807\u51C6\u4E0E\u9879\u76EE\u80CC\u666F",
-                  r.jsx(U, {
+                  r.jsx(z, {
                     as: "span",
                     color: "blue.400",
                     ml: 1,
@@ -75172,14 +75172,14 @@ description: Replace with description of the skill and when Codemaker should use
                       mr: 2,
                       children: "/Rules"
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontSize: "xs",
                       fontWeight: "bold",
                       children: "\u6307\u4EE4"
                     })
                   ]
                 }),
-                r.jsxs(U, {
+                r.jsxs(z, {
                   fontSize: "10px",
                   color: "text.secondary",
                   lineHeight: "1.4",
@@ -75251,7 +75251,7 @@ description: Replace with description of the skill and when Codemaker should use
               opacity: 0.1,
               zIndex: 0
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "xs",
               fontWeight: "bold",
               mb: 2,
@@ -75270,13 +75270,13 @@ description: Replace with description of the skill and when Codemaker should use
                   color: "gray.300",
                   lineHeight: "1.4",
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       color: "gray.500",
                       children: "---"
                     }),
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       children: [
-                        r.jsx(U, {
+                        r.jsx(z, {
                           as: "span",
                           color: "blue.300",
                           children: "description:"
@@ -75284,53 +75284,53 @@ description: Replace with description of the skill and when Codemaker should use
                         ' "RPC \u670D\u52A1\u6837\u677F"'
                       ]
                     }),
-                    r.jsxs(U, {
+                    r.jsxs(z, {
                       children: [
-                        r.jsx(U, {
+                        r.jsx(z, {
                           as: "span",
                           color: "blue.300",
                           children: "alwaysApply:"
                         }),
                         " ",
-                        r.jsx(U, {
+                        r.jsx(z, {
                           as: "span",
                           color: "orange.300",
                           children: "false"
                         })
                       ]
                     }),
-                    r.jsx(U, {
-                      children: r.jsx(U, {
+                    r.jsx(z, {
+                      children: r.jsx(z, {
                         as: "span",
                         color: "blue.300",
                         children: "globs:"
                       })
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       pl: 2,
                       children: '- "**/*.service.ts"'
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       color: "gray.500",
                       children: "---"
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       mt: 1,
                       color: "gray.500",
                       children: "<rule>"
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       pl: 2,
                       color: "green.400",
                       children: "# \u7F16\u5199\u5177\u4F53\u7684\u6307\u4EE4..."
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       color: "gray.500",
                       children: "</rule>"
                     })
                   ]
                 }),
-                r.jsxs(Dt, {
+                r.jsxs(Pt, {
                   align: "start",
                   spacing: 3,
                   flexShrink: 0,
@@ -75339,7 +75339,7 @@ description: Replace with description of the skill and when Codemaker should use
                   children: [
                     r.jsxs(w, {
                       children: [
-                        r.jsx(U, {
+                        r.jsx(z, {
                           fontSize: "10px",
                           color: "text.secondary",
                           mb: 3,
@@ -75376,7 +75376,7 @@ description: Replace with description of the skill and when Codemaker should use
                             }),
                             r.jsxs(w, {
                               children: [
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   fontSize: "xs",
                                   fontWeight: "bold",
                                   lineHeight: "1",
@@ -75386,7 +75386,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   },
                                   children: "\u59CB\u7EC8\u751F\u6548"
                                 }),
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   fontSize: "10px",
                                   color: "gray.500",
                                   transform: "scale(0.85)",
@@ -75429,7 +75429,7 @@ description: Replace with description of the skill and when Codemaker should use
                         }),
                         r.jsxs(w, {
                           children: [
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "xs",
                               fontWeight: "bold",
                               lineHeight: "1",
@@ -75439,7 +75439,7 @@ description: Replace with description of the skill and when Codemaker should use
                               },
                               children: "\u624B\u52A8\u6307\u5B9A"
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "10px",
                               color: "gray.500",
                               transform: "scale(0.85)",
@@ -75480,7 +75480,7 @@ description: Replace with description of the skill and when Codemaker should use
                         }),
                         r.jsxs(w, {
                           children: [
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "xs",
                               fontWeight: "bold",
                               lineHeight: "1",
@@ -75490,7 +75490,7 @@ description: Replace with description of the skill and when Codemaker should use
                               },
                               children: "\u6307\u5B9A\u6587\u4EF6"
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "10px",
                               color: "gray.500",
                               transform: "scale(0.85)",
@@ -75533,7 +75533,7 @@ description: Replace with description of the skill and when Codemaker should use
               mt: 0.5,
               boxSize: 3.5
             }),
-            r.jsxs(U, {
+            r.jsxs(z, {
               fontSize: "xs",
               lineHeight: "1.4",
               children: [
@@ -75642,7 +75642,7 @@ description: Replace with description of the skill and when Codemaker should use
           return "md";
       }
     }, f = h();
-    return r.jsx(Dt, {
+    return r.jsx(Pt, {
       align: "stretch",
       spacing: 2,
       children: r.jsx(w, {
@@ -75817,7 +75817,7 @@ description: Replace with description of the skill and when Codemaker should use
                   mr: 2,
                   onClick: s
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "Rules\u914D\u7F6E"
                 }),
                 r.jsx(Te, {
@@ -75890,7 +75890,7 @@ description: Replace with description of the skill and when Codemaker should use
                             minW: "0",
                             children: r.jsxs(w, {
                               children: [
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   fontSize: "14px",
                                   fontWeight: "500",
                                   overflow: "hidden",
@@ -75912,7 +75912,7 @@ description: Replace with description of the skill and when Codemaker should use
                                     h: "18px",
                                     color: "blue.300",
                                     borderColor: "blue.300",
-                                    children: r.jsx(U, {
+                                    children: r.jsx(z, {
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
@@ -75937,7 +75937,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 value: _.value,
                                 children: _.label
                               }, _.value))
-                            }) : r.jsx(U, {
+                            }) : r.jsx(z, {
                               fontSize: "sm",
                               color: "text.secondary",
                               px: 3,
@@ -76042,7 +76042,7 @@ description: Replace with description of the skill and when Codemaker should use
           alignItems: "center",
           h: "20px",
           children: [
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "sm",
               color: "text.primary",
               fontWeight: "extrabold",
@@ -76067,7 +76067,7 @@ description: Replace with description of the skill and when Codemaker should use
                         textDecoration: "none",
                         opacity: 0.8
                       },
-                      children: r.jsx(U, {
+                      children: r.jsx(z, {
                         fontSize: "sm",
                         children: i ? "\u5173\u95ED\u6307\u5357" : "\u4F7F\u7528\u6307\u5357"
                       })
@@ -76097,7 +76097,7 @@ description: Replace with description of the skill and when Codemaker should use
                       size: 20,
                       mr: 1
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontSize: "sm",
                       children: "\u7BA1\u7406Rules"
                     })
@@ -76112,7 +76112,7 @@ description: Replace with description of the skill and when Codemaker should use
           overflow: "hidden",
           flex: "1",
           children: [
-            r.jsx(Dt, {
+            r.jsx(Pt, {
               align: "stretch",
               gap: "2",
               h: "full",
@@ -76150,7 +76150,7 @@ description: Replace with description of the skill and when Codemaker should use
                               alignItems: "center",
                               mb: 1,
                               children: [
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   fontSize: "14px",
                                   fontWeight: "500",
                                   color: h ? "white" : "text.primary",
@@ -76169,7 +76169,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   maxW: "100px",
                                   color: h ? "white" : "text.secondary",
                                   borderColor: h ? "white" : "gray.600",
-                                  children: r.jsx(U, {
+                                  children: r.jsx(z, {
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
@@ -76189,7 +76189,7 @@ description: Replace with description of the skill and when Codemaker should use
                                   maxW: "200px",
                                   color: h ? "white" : "text.secondary",
                                   borderColor: h ? "white" : "gray.600",
-                                  children: r.jsx(U, {
+                                  children: r.jsx(z, {
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
@@ -76198,7 +76198,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 })
                               ]
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "12px",
                               opacity: "0.7",
                               isTruncated: true,
@@ -76222,7 +76222,7 @@ description: Replace with description of the skill and when Codemaker should use
               width: "full",
               align: "center",
               py: 2,
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 color: "text.secondary",
                 fontSize: "xs",
                 opacity: 0.5,
@@ -76269,7 +76269,7 @@ description: Replace with description of the skill and when Codemaker should use
           },
           children: r.jsx(ye, {
             label: "\u81EA\u5B9A\u4E49Rules",
-            children: r.jsx(U, {
+            children: r.jsx(z, {
               style: {
                 marginBottom: 0,
                 transform: "translateY(-1px)"
@@ -76374,7 +76374,7 @@ description: Replace with description of the skill and when Codemaker should use
       return re !== -1 ? (_c3 = b == null ? void 0 : b.data) == null ? void 0 : _c3.messages[re] : void 0;
     }, [
       (_a2 = b == null ? void 0 : b.data) == null ? void 0 : _a2.messages
-    ]), [I, R] = g.useState(false), k = Ot((B) => B.config.submitKey), j = Ot((B) => B.updateConfig), P = Ja(), q = g.useMemo(() => [
+    ]), [I, R] = g.useState(false), k = Dt((B) => B.config.submitKey), j = Dt((B) => B.updateConfig), P = Ja(), q = g.useMemo(() => [
       {
         key: Ys.Enter,
         label: "Enter"
@@ -76504,10 +76504,10 @@ description: Replace with description of the skill and when Codemaker should use
                   justify: "space-between",
                   w: "100%",
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       children: B.label
                     }),
-                    k === B.key && r.jsx(U, {
+                    k === B.key && r.jsx(z, {
                       fontSize: "sm",
                       children: "\u2713"
                     })
@@ -76549,7 +76549,7 @@ description: Replace with description of the skill and when Codemaker should use
             })
           })
         ]
-      }) : r.jsx(U, {
+      }) : r.jsx(z, {
         maxW: "80px",
         isTruncated: true,
         children: B
@@ -76606,13 +76606,13 @@ description: Replace with description of the skill and when Codemaker should use
                           var _a3;
                           return (_a3 = s.current) == null ? void 0 : _a3.trigger(_n.Attach, false);
                         },
-                        children: r.jsx(U, {
+                        children: r.jsx(z, {
                           children: "\xA0@\xA0\xA0\u77E5\u8BC6"
                         })
                       }),
                       r.jsx(Ht, {
                         onClick: t,
-                        children: r.jsx(U, {
+                        children: r.jsx(z, {
                           children: "\xA0/\xA0\xA0\xA0\xA0\u6307\u4EE4"
                         })
                       }),
@@ -76630,7 +76630,7 @@ description: Replace with description of the skill and when Codemaker should use
                               as: Vh,
                               size: "sm"
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               children: "\u56FE\u7247"
                             })
                           ]
@@ -76647,7 +76647,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 as: hg,
                                 size: "sm"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 ml: 2,
                                 children: "\u6587\u6863"
                               })
@@ -76726,13 +76726,13 @@ description: Replace with description of the skill and when Codemaker should use
                           var _a3;
                           return (_a3 = s.current) == null ? void 0 : _a3.trigger(_n.Attach, false);
                         },
-                        children: r.jsx(U, {
+                        children: r.jsx(z, {
                           children: "\xA0@\xA0\xA0\u77E5\u8BC6"
                         })
                       }),
                       r.jsx(Ht, {
                         onClick: t,
-                        children: r.jsx(U, {
+                        children: r.jsx(z, {
                           children: "\xA0/\xA0\xA0\xA0\xA0\u6307\u4EE4"
                         })
                       }),
@@ -76748,7 +76748,7 @@ description: Replace with description of the skill and when Codemaker should use
                             as: Vh,
                             mr: 2
                           }),
-                          r.jsx(U, {
+                          r.jsx(z, {
                             children: "\u56FE\u7247"
                           })
                         ]
@@ -76764,7 +76764,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 as: hg,
                                 size: "sm"
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 ml: 2,
                                 children: "\u6587\u6863"
                               })
@@ -76856,7 +76856,7 @@ description: Replace with description of the skill and when Codemaker should use
     return e;
   };
   function EB() {
-    const e = Ot((n) => n.config.submitKey);
+    const e = Dt((n) => n.config.submitKey);
     return {
       shouldSubmit: (n) => {
         if (n.key !== "Enter")
@@ -77122,7 +77122,7 @@ description: Replace with description of the skill and when Codemaker should use
     }, [
       o,
       O
-    ]), z = g.useCallback(() => {
+    ]), U = g.useCallback(() => {
       l == null ? void 0 : l(), O();
     }, [
       l,
@@ -77208,7 +77208,7 @@ description: Replace with description of the skill and when Codemaker should use
             onSelect: se,
             onMouseUp: se,
             onBlur: i,
-            onFocus: z,
+            onFocus: U,
             onScroll: q,
             onKeyDown: re,
             onPaste: G,
@@ -77309,7 +77309,7 @@ description: Replace with description of the skill and when Codemaker should use
             onSelect: se,
             onMouseUp: se,
             onBlur: i,
-            onFocus: z,
+            onFocus: U,
             onScroll: q,
             onKeyDown: re,
             onPaste: G,
@@ -77355,7 +77355,7 @@ description: Replace with description of the skill and when Codemaker should use
             onSelect: se,
             onMouseUp: se,
             onBlur: i,
-            onFocus: z,
+            onFocus: U,
             onScroll: q,
             onKeyDown: re,
             onPaste: G,
@@ -77367,7 +77367,7 @@ description: Replace with description of the skill and when Codemaker should use
   }
   function IB(e) {
     var _a2;
-    const { handleSubmit: t, tokenNumber: n, handleInputChange: s, isFocused: o, setFocused: a, inputRef: i, promptProtalRef: l, uploadImgRef: c, promptRef: u, fillInputRef: p } = e, d = Ja(), h = yt.useRef(null), m = yt.useRef(null), f = yt.useRef(null), { toast: x } = Zt(), v = wt((fe) => fe.attachs), y = Ze((fe) => fe.chatModels), { shouldSubmit: b } = EB(), E = Tl(), A = Nc((fe) => fe.update), C = De((fe) => fe.onStop), _ = Bs((fe) => fe.runner), I = Ot((fe) => fe.config), R = he((fe) => fe.chatType), k = he((fe) => fe.codebaseChatMode), j = gn((fe) => fe.isDisabledAttachs()), P = he((fe) => fe.currentSession()), q = g.useMemo(() => {
+    const { handleSubmit: t, tokenNumber: n, handleInputChange: s, isFocused: o, setFocused: a, inputRef: i, promptProtalRef: l, uploadImgRef: c, promptRef: u, fillInputRef: p } = e, d = Ja(), h = yt.useRef(null), m = yt.useRef(null), f = yt.useRef(null), { toast: x } = Zt(), v = wt((fe) => fe.attachs), y = Ze((fe) => fe.chatModels), { shouldSubmit: b } = EB(), E = Tl(), A = Nc((fe) => fe.update), C = De((fe) => fe.onStop), _ = Bs((fe) => fe.runner), I = Dt((fe) => fe.config), R = he((fe) => fe.chatType), k = he((fe) => fe.codebaseChatMode), j = gn((fe) => fe.isDisabledAttachs()), P = he((fe) => fe.currentSession()), q = g.useMemo(() => {
       var _a3;
       return ((_a3 = P == null ? void 0 : P.data) == null ? void 0 : _a3.messages) || [];
     }, [
@@ -77377,7 +77377,7 @@ description: Replace with description of the skill and when Codemaker should use
       fe.isSpecFrameworkInitialized
     ]), me = De((fe) => fe.onUpdatePrePromptCodeBlock), B = Ze((fe) => fe.config.model), { updateHistory: re } = wB(), G = async (fe) => {
       u.current = fe, A(fe), t(fe.prompt), D(null);
-    }, z = yt.useCallback((fe) => {
+    }, U = yt.useCallback((fe) => {
       if (i.current) {
         if (i.current.focus(), document.execCommand)
           document.execCommand("insertText", false, fe);
@@ -77392,9 +77392,9 @@ description: Replace with description of the skill and when Codemaker should use
       a,
       s
     ]), H = yt.useCallback((fe) => {
-      z(fe);
+      U(fe);
     }, [
-      z
+      U
     ]), L = yt.useCallback(async (fe) => {
       try {
         if (fe.length > 10 * 1024 * 1024) {
@@ -77889,28 +77889,54 @@ description: Replace with description of the skill and when Codemaker should use
         r.jsx(K, {
           alignItems: "center",
           justifyContent: "center",
-          mb: 2,
-          children: r.jsx(U, {
+          mb: 1,
+          children: r.jsx(z, {
             color: "blue.300",
-            fontSize: "20px",
+            fontSize: "22px",
             fontWeight: "bold",
             lineHeight: "1",
             style: {
               marginBottom: 0,
               marginTop: "3px"
             },
-            children: "Y3Maker Agent"
+            children: "Y3 Maker Agent"
           })
         }),
-        r.jsx(U, {
-          color: "text.default",
-          fontSize: "14px",
+        r.jsxs(Pt, {
+          spacing: 0.5,
           mb: 4,
-          textAlign: "center",
           style: {
             marginBottom: "16px"
           },
-          children: "Y3Maker Agent"
+          children: [
+            r.jsx(z, {
+              color: "blue.200",
+              fontSize: "13px",
+              textAlign: "center",
+              opacity: 0.9,
+              style: {
+                marginBottom: "8px"
+              },
+              children: "\u667A\u80FD Y3 \u9879\u76EE\u5F00\u53D1\u52A9\u624B"
+            }),
+            r.jsx(z, {
+              color: "text.default",
+              fontSize: "12px",
+              textAlign: "center",
+              opacity: 0.65,
+              lineHeight: "1.8",
+              children: "\u5236\u4F5C\u4E0E\u7BA1\u7406 Y3 \u9879\u76EE\u5DE5\u7A0B\uFF0C\u7406\u89E3\u4E0E\u751F\u6210\u9879\u76EE\u4EE3\u7801\uFF0C\u63A7\u5236\u7F16\u8F91\u5668"
+            }),
+            r.jsx(z, {
+              color: "text.default",
+              fontSize: "12px",
+              textAlign: "center",
+              opacity: 0.45,
+              lineHeight: "1.8",
+              mt: 1,
+              children: "\u5728\u804A\u5929\u6846\u8F93\u5165\u4F60\u60F3\u4E86\u89E3\u7684\u5185\u5BB9\uFF0C\u6216\u76F4\u63A5\u5F00\u59CB\u5236\u4F5C"
+            })
+          ]
         }),
         h && r.jsx(K, {
           gap: 3,
@@ -77943,7 +77969,7 @@ description: Replace with description of the skill and when Codemaker should use
                   justify: "space-between",
                   mb: 3,
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontSize: "16px",
                       fontWeight: "bold",
                       color: _ ? "blue.500" : "text.default",
@@ -77988,7 +78014,7 @@ description: Replace with description of the skill and when Codemaker should use
                     })
                   ]
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "12px",
                   color: "text.default",
                   fontWeight: "normal",
@@ -78009,7 +78035,7 @@ description: Replace with description of the skill and when Codemaker should use
             flex: 1,
             children: _ === b && r.jsxs(w, {
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "12px",
                   color: "text.default",
                   mb: 2,
@@ -78024,7 +78050,7 @@ description: Replace with description of the skill and when Codemaker should use
                       align: "center",
                       mb: 1,
                       children: [
-                        r.jsx(U, {
+                        r.jsx(z, {
                           fontSize: "12px",
                           mr: 1,
                           style: {
@@ -78032,7 +78058,7 @@ description: Replace with description of the skill and when Codemaker should use
                           },
                           children: "\u2022"
                         }),
-                        I.emoji && r.jsx(U, {
+                        I.emoji && r.jsx(z, {
                           fontSize: "12px",
                           mr: 1.5,
                           style: {
@@ -78040,7 +78066,7 @@ description: Replace with description of the skill and when Codemaker should use
                           },
                           children: I.emoji
                         }),
-                        r.jsx(U, {
+                        r.jsx(z, {
                           fontSize: "12px",
                           color: "text.default",
                           style: {
@@ -78079,7 +78105,7 @@ description: Replace with description of the skill and when Codemaker should use
                 }),
                 C.mode !== "vibe" && r.jsxs(r.Fragment, {
                   children: [
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontSize: "12px",
                       color: "text.default",
                       mb: 2,
@@ -78093,7 +78119,7 @@ description: Replace with description of the skill and when Codemaker should use
                         align: "center",
                         mb: 1,
                         children: [
-                          r.jsx(U, {
+                          r.jsx(z, {
                             fontSize: "12px",
                             mr: 1,
                             style: {
@@ -78101,7 +78127,7 @@ description: Replace with description of the skill and when Codemaker should use
                             },
                             children: "\u2022"
                           }),
-                          I.emoji && r.jsx(U, {
+                          I.emoji && r.jsx(z, {
                             fontSize: "12px",
                             mr: 1.5,
                             style: {
@@ -78109,7 +78135,7 @@ description: Replace with description of the skill and when Codemaker should use
                             },
                             children: I.emoji
                           }),
-                          r.jsx(U, {
+                          r.jsx(z, {
                             fontSize: "12px",
                             color: "text.default",
                             style: {
@@ -78161,7 +78187,7 @@ description: Replace with description of the skill and when Codemaker should use
                       r.jsxs(K, {
                         alignItems: "center",
                         children: [
-                          r.jsx(U, {
+                          r.jsx(z, {
                             fontSize: "14px",
                             fontWeight: "bold",
                             color: "text.default",
@@ -78170,7 +78196,7 @@ description: Replace with description of the skill and when Codemaker should use
                             },
                             children: "\u63A8\u8350\u95EE\u9898"
                           }),
-                          r.jsx(U, {
+                          r.jsx(z, {
                             fontSize: "12px",
                             color: o ? "gray.500" : "gray.400",
                             ml: 2,
@@ -78201,7 +78227,7 @@ description: Replace with description of the skill and when Codemaker should use
                       })
                     ]
                   }),
-                  r.jsx(Dt, {
+                  r.jsx(Pt, {
                     spacing: 0,
                     children: p.map((C, _) => {
                       var _a2, _b3, _c3;
@@ -78237,7 +78263,7 @@ description: Replace with description of the skill and when Codemaker should use
                                 display: "inline-block",
                                 children: (_c3 = l[C.category]) == null ? void 0 : _c3.label
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "13px",
                                 flex: "1",
                                 color: "text.default",
@@ -78312,7 +78338,7 @@ description: Replace with description of the skill and when Codemaker should use
         children: [
           r.jsx(K, {
             justifyContent: "center",
-            children: r.jsx(U, {
+            children: r.jsx(z, {
               color: "blue.300",
               fontSize: "24px",
               fontWeight: "bold",
@@ -78357,7 +78383,7 @@ description: Replace with description of the skill and when Codemaker should use
             ]
           }) : null,
           r.jsx("div", {
-            children: r.jsx(Dt, {
+            children: r.jsx(Pt, {
               m: 2,
               p: 2,
               children: f.map((y) => r.jsx(Te, {
@@ -78377,7 +78403,7 @@ description: Replace with description of the skill and when Codemaker should use
                   borderColor: "blue.300",
                   color: "blue.300"
                 },
-                children: r.jsxs(Dt, {
+                children: r.jsxs(Pt, {
                   align: "flex-start",
                   children: [
                     r.jsx("div", {
@@ -78571,7 +78597,7 @@ description: Replace with description of the skill and when Codemaker should use
               label: e,
               placement: "top",
               openDelay: 500,
-              children: r.jsx(U, {
+              children: r.jsx(z, {
                 className: "truncate text-sm",
                 color: "text.default",
                 children: c
@@ -78581,14 +78607,14 @@ description: Replace with description of the skill and when Codemaker should use
               className: "items-center gap-1 ml-2",
               flexShrink: 0,
               children: [
-                i.add > 0 && r.jsxs(U, {
+                i.add > 0 && r.jsxs(z, {
                   className: "text-xs font-semibold text-green-500",
                   children: [
                     "+",
                     i.add
                   ]
                 }),
-                i.delete > 0 && r.jsxs(U, {
+                i.delete > 0 && r.jsxs(z, {
                   className: "text-xs font-semibold text-red-500",
                   children: [
                     "-",
@@ -78605,10 +78631,10 @@ description: Replace with description of the skill and when Codemaker should use
                   as: oa,
                   boxSize: "12px"
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u5DF2\u5E94\u7528"
                 }),
-                l && r.jsx(U, {
+                l && r.jsx(z, {
                   className: "text-[10px] bg-[rgba(255,255,255,0.1)] px-1 rounded",
                   children: "Auto"
                 })
@@ -78888,7 +78914,7 @@ description: Replace with description of the skill and when Codemaker should use
               gap: 0.5,
               children: A.map((j) => k(j))
             }),
-            r.jsx(U, {
+            r.jsx(z, {
               fontWeight: "bold",
               fontSize: "sm",
               color: "text.primary",
@@ -78996,7 +79022,7 @@ description: Replace with description of the skill and when Codemaker should use
   const J_ = g.forwardRef(FB);
   J_.displayName = "ChatBottomTabsV2";
   function zB({ todo: e, onTitleChange: t, onDescriptionChange: n }) {
-    return r.jsx(Dt, {
+    return r.jsx(Pt, {
       align: "stretch",
       spacing: 2,
       children: r.jsxs(w, {
@@ -79004,7 +79030,7 @@ description: Replace with description of the skill and when Codemaker should use
         borderRadius: "4px",
         bg: "transparent",
         children: [
-          r.jsx(U, {
+          r.jsx(z, {
             fontSize: "xs",
             color: "text.secondary",
             mb: 1,
@@ -79016,7 +79042,7 @@ description: Replace with description of the skill and when Codemaker should use
             onChange: (s) => t(s.target.value),
             isDisabled: e.status === "completed"
           }),
-          r.jsx(U, {
+          r.jsx(z, {
             fontSize: "xs",
             color: "text.secondary",
             mt: 2,
@@ -79372,7 +79398,7 @@ description: Replace with description of the skill and when Codemaker should use
       h
     ]), r.jsxs(r.Fragment, {
       children: [
-        r.jsxs(Dt, {
+        r.jsxs(Pt, {
           align: "stretch",
           spacing: 2,
           p: 1,
@@ -79529,8 +79555,8 @@ description: Replace with description of the skill and when Codemaker should use
       return Object.keys(l).map((P) => {
         const q = l[P], { accepted: O, autoApply: D } = q;
         P.replace(/\\/g, "/").split("/").filter((me) => !!me.trim()).reduce((me, B, re, G) => {
-          const z = me + `${re === 0 ? "" : "/"}${B}`, H = G.length === re + 1, L = {
-            key: z,
+          const U = me + `${re === 0 ? "" : "/"}${B}`, H = G.length === re + 1, L = {
+            key: U,
             title: r.jsx("div", {
               className: "my-[2px] cm-hover-box",
               children: H ? r.jsxs("div", {
@@ -79602,7 +79628,7 @@ description: Replace with description of the skill and when Codemaker should use
               chatFileItem: q
             }
           };
-          return !j[z] && z && (j[z] = L, j[me] && me && (Array.isArray(j[me].children) || (j[me].children = []), j[me].children.every(($) => $.key !== me) && j[me].children.push(L)), re === 0 && R.push(L), H || k.push(z)), z;
+          return !j[U] && U && (j[U] = L, j[me] && me && (Array.isArray(j[me].children) || (j[me].children = []), j[me].children.every(($) => $.key !== me) && j[me].children.push(L)), re === 0 && R.push(L), H || k.push(U)), U;
         }, "");
       }), k = Array.from(new Set(k)), [
         R,
@@ -79779,7 +79805,7 @@ description: Replace with description of the skill and when Codemaker should use
     }, [
       y,
       p
-    ]), y ? r.jsx(Dt, {
+    ]), y ? r.jsx(Pt, {
       align: "stretch",
       spacing: 2,
       px: 2,
@@ -79810,7 +79836,7 @@ description: Replace with description of the skill and when Codemaker should use
           }
         }) : _()
       })
-    }) : r.jsx(Dt, {
+    }) : r.jsx(Pt, {
       align: "stretch",
       spacing: 2,
       p: 1,
@@ -80167,7 +80193,7 @@ ${d.trim()}
                 r.jsx(Cn, {
                   size: "xs"
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "xs",
                   lineHeight: "1",
                   children: "\u603B\u7ED3\u4E2D"
@@ -80184,7 +80210,7 @@ ${d.trim()}
                   color: h,
                   trackColor: n ? "whiteAlpha.300" : "blackAlpha.200"
                 }),
-                r.jsxs(U, {
+                r.jsxs(z, {
                   fontSize: "xs",
                   color: n ? "#808080" : "#999",
                   lineHeight: "1",
@@ -80213,12 +80239,12 @@ ${d.trim()}
             py: 2,
             textAlign: "left",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "xs",
                 color: n ? "#808080" : "#666",
                 children: "\u4E0A\u4E0B\u6587\u7A97\u53E3\uFF08\u8FBE\u5230100%\u89E6\u53D1\u603B\u7ED3\uFF09"
               }),
-              d && r.jsx(U, {
+              d && r.jsx(z, {
                 fontSize: "xs",
                 color: "blue.400",
                 mt: 2,
@@ -80303,27 +80329,27 @@ ${d.trim()}
               children: a.length === 0 ? r.jsx(w, {
                 py: 8,
                 textAlign: "center",
-                children: r.jsx(U, {
+                children: r.jsx(z, {
                   color: o ? "gray.600" : "gray.500",
                   children: "\u6682\u65E0 MCP \u670D\u52A1\u9519\u8BEF"
                 })
-              }) : r.jsx(Dt, {
+              }) : r.jsx(Pt, {
                 spacing: 4,
                 align: "stretch",
                 children: a.map((l, c) => r.jsxs(w, {
                   children: [
-                    r.jsxs(Dt, {
+                    r.jsxs(Pt, {
                       align: "stretch",
                       spacing: 2,
                       children: [
                         r.jsxs(Yo, {
                           children: [
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontWeight: "bold",
                               fontSize: "md",
                               children: l.name
                             }),
-                            l.status && r.jsxs(U, {
+                            l.status && r.jsxs(z, {
                               fontSize: "xs",
                               color: o ? "gray.600" : "gray.500",
                               children: [
@@ -80340,7 +80366,7 @@ ${d.trim()}
                           p: 3,
                           borderLeft: "4px solid",
                           borderColor: o ? "red.400" : "red.500",
-                          children: r.jsx(U, {
+                          children: r.jsx(z, {
                             fontSize: "sm",
                             color: o ? "red.800" : "red.100",
                             whiteSpace: "pre-wrap",
@@ -80539,7 +80565,7 @@ ${d.trim()}
       align: "center",
       justify: "center",
       flexShrink: 0,
-      children: r.jsx(U, {
+      children: r.jsx(z, {
         fontSize: "12px",
         fontWeight: "bold",
         color: n ? "gray.500" : "gray.400",
@@ -80566,7 +80592,7 @@ ${d.trim()}
       mt: 3,
       width: "100%",
       children: [
-        r.jsxs(U, {
+        r.jsxs(z, {
           fontSize: "12px",
           color: "red.500",
           isTruncated: true,
@@ -80722,7 +80748,7 @@ ${d.trim()}
                                 stepNumber: X + 1,
                                 isLight: t
                               }),
-                              r.jsx(U, {
+                              r.jsx(z, {
                                 fontSize: "11px",
                                 color: se === ar.Completed ? "blue.500" : se === ar.Failed ? "red.500" : se === ar.Running ? "blue.500" : "text.default",
                                 textAlign: "center",
@@ -80750,7 +80776,7 @@ ${d.trim()}
                     errorMessage: I.errorMessage,
                     stepName: R
                   }),
-                  (I == null ? void 0 : I.errorCode) && by[I.errorCode] && r.jsx(Dt, {
+                  (I == null ? void 0 : I.errorCode) && by[I.errorCode] && r.jsx(Pt, {
                     align: "start",
                     spacing: 1,
                     mt: 2,
@@ -80760,7 +80786,7 @@ ${d.trim()}
                       gap: 1,
                       flexWrap: "wrap",
                       children: [
-                        r.jsx(U, {
+                        r.jsx(z, {
                           fontSize: "12px",
                           color: t ? "gray.500" : "gray.400",
                           style: {
@@ -80768,7 +80794,7 @@ ${d.trim()}
                           },
                           children: D.text
                         }),
-                        D.link && r.jsx(U, {
+                        D.link && r.jsx(z, {
                           as: "a",
                           rel: "noopener noreferrer",
                           fontSize: "12px",
@@ -80813,20 +80839,20 @@ ${d.trim()}
                         r.jsxs(w, {
                           flex: 1,
                           children: [
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "13px",
                               fontWeight: "600",
                               color: t ? "orange.800" : "orange.100",
                               mb: 1.5,
                               children: "\u5F53\u524D\u7248\u672C\u4E0D\u652F\u6301\u521D\u59CB\u5316\u529F\u80FD"
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               fontSize: "12px",
                               color: t ? "orange.500" : "orange.300",
                               mb: 2,
                               children: oq(d)
                             }),
-                            d === mt.VisualStudioCode && r.jsx(U, {
+                            d === mt.VisualStudioCode && r.jsx(z, {
                               fontSize: "11px",
                               color: t ? "orange.700" : "orange.200",
                               children: "\u91CD\u65B0\u52A0\u8F7D VSCode \u7A97\u53E3\u53EF\u89E6\u53D1\u63D2\u4EF6\u66F4\u65B0"
@@ -80850,7 +80876,7 @@ ${d.trim()}
                         isDisabled: j,
                         children: j ? "\u521D\u59CB\u5316\u4E2D..." : `\u521D\u59CB\u5316 ${E}`
                       }),
-                      (k == null ? void 0 : k.progressMessage) && r.jsx(U, {
+                      (k == null ? void 0 : k.progressMessage) && r.jsx(z, {
                         fontSize: "11px",
                         color: "blue.400",
                         textAlign: "center",
@@ -80872,7 +80898,7 @@ ${d.trim()}
                     mt: 3,
                     width: "100%",
                     children: [
-                      r.jsx(U, {
+                      r.jsx(z, {
                         fontSize: "13px",
                         color: "green.500",
                         fontWeight: "medium",
@@ -80881,7 +80907,7 @@ ${d.trim()}
                         },
                         children: "\u521D\u59CB\u5316\u6210\u529F\uFF01\u5F00\u59CB\u4F60\u7684 SpecCoding \u4F53\u9A8C\u5427\uFF1A"
                       }),
-                      r.jsxs(Dt, {
+                      r.jsxs(Pt, {
                         align: "start",
                         spacing: 1,
                         children: [
@@ -80889,7 +80915,7 @@ ${d.trim()}
                             align: "center",
                             gap: 1,
                             flexWrap: "wrap",
-                            children: r.jsxs(U, {
+                            children: r.jsxs(z, {
                               fontSize: "12px",
                               color: "text.default",
                               style: {
@@ -80897,7 +80923,7 @@ ${d.trim()}
                               },
                               children: [
                                 "1. \u5EFA\u8BAE\u5148\u4F7F\u7528",
-                                r.jsxs(U, {
+                                r.jsxs(z, {
                                   as: "span",
                                   fontSize: "12px",
                                   color: "blue.400",
@@ -80923,7 +80949,7 @@ ${d.trim()}
                             align: "center",
                             gap: 1,
                             flexWrap: "wrap",
-                            children: r.jsxs(U, {
+                            children: r.jsxs(z, {
                               fontSize: "12px",
                               color: "text.default",
                               style: {
@@ -81013,14 +81039,14 @@ ${d.trim()}
                   borderColor: m ? o : f,
                   borderRadius: "3px",
                   flexShrink: 0,
-                  children: r.jsx(U, {
+                  children: r.jsx(z, {
                     fontSize: "xs",
                     color: f,
                     lineHeight: 1,
                     children: h.index
                   })
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "sm",
                   color: f,
                   whiteSpace: "nowrap",
@@ -81127,14 +81153,14 @@ ${d.trim()}
                   borderColor: m ? o : f,
                   borderRadius: "3px",
                   flexShrink: 0,
-                  children: r.jsx(U, {
+                  children: r.jsx(z, {
                     fontSize: "xs",
                     color: f,
                     lineHeight: 1,
                     children: h.index
                   })
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "sm",
                   color: f,
                   whiteSpace: "nowrap",
@@ -81235,7 +81261,7 @@ ${d.trim()}
       ee.syncHistory,
       ee.onNewSession,
       ee.selectSession
-    ], Zo), d = C1((ee) => ee.sessionIDs), h = C1((ee) => ee.addSessionID), m = Ze((ee) => ee.config.model), f = Ze((ee) => ee.compressConfig), x = Ze((ee) => ee.update), v = Ze((ee) => ee.modelMaxToken), y = Ze((ee) => ee.setEnableEditableMode), b = xt((ee) => ee.setDevSpace), E = ca((ee) => ee.updateTerminals), [A, C] = g.useState(""), _ = De((ee) => ee.isStreaming), I = De((ee) => ee.isSearching), R = De((ee) => ee.isMCPProcessing), k = De((ee) => ee.isProcessing), j = De((ee) => ee.setIsProcessing), P = De((ee) => ee.isAutoApproved), q = De((ee) => ee.isTerminalProcessing), O = De((ee) => ee.isApplying), D = De((ee) => ee.onUserSubmit), X = De((ee) => ee.onStop), se = De((ee) => ee.updateToolCallResults), me = De((ee) => ee.setStreamRetryCount), B = Ze((ee) => ee.chatModels), [re] = g.useState(0), G = g.useRef(null), z = De((ee) => ee.getPrePromptByCodeBlock()), [H, L] = g.useState(false), $ = De((ee) => ee.onUpdatePrePromptCodeBlock), _e2 = De((ee) => ee.onUpdateSelectionPrePromptCodeBlock), ze = De((ee) => ee.onRemovePrePromptCodeBlock), qe = Yc(), Q = Ff();
+    ], Zo), d = C1((ee) => ee.sessionIDs), h = C1((ee) => ee.addSessionID), m = Ze((ee) => ee.config.model), f = Ze((ee) => ee.compressConfig), x = Ze((ee) => ee.update), v = Ze((ee) => ee.modelMaxToken), y = Ze((ee) => ee.setEnableEditableMode), b = xt((ee) => ee.setDevSpace), E = ca((ee) => ee.updateTerminals), [A, C] = g.useState(""), _ = De((ee) => ee.isStreaming), I = De((ee) => ee.isSearching), R = De((ee) => ee.isMCPProcessing), k = De((ee) => ee.isProcessing), j = De((ee) => ee.setIsProcessing), P = De((ee) => ee.isAutoApproved), q = De((ee) => ee.isTerminalProcessing), O = De((ee) => ee.isApplying), D = De((ee) => ee.onUserSubmit), X = De((ee) => ee.onStop), se = De((ee) => ee.updateToolCallResults), me = De((ee) => ee.setStreamRetryCount), B = Ze((ee) => ee.chatModels), [re] = g.useState(0), G = g.useRef(null), U = De((ee) => ee.getPrePromptByCodeBlock()), [H, L] = g.useState(false), $ = De((ee) => ee.onUpdatePrePromptCodeBlock), _e2 = De((ee) => ee.onUpdateSelectionPrePromptCodeBlock), ze = De((ee) => ee.onRemovePrePromptCodeBlock), qe = Yc(), Q = Ff();
     O6("/chat"), D6(jm);
     const { stopRunningTerminal: Pe } = Cc(), Oe = gn((ee) => ee.config.id), ue = gn((ee) => ee.maskList), fe = g.useMemo(() => ue.find((ee) => ee._id === Oe) || yl[1], [
       Oe,
@@ -81411,7 +81437,7 @@ ${ee}`, [
         });
         return;
       }
-      if ((fe == null ? void 0 : fe.prompt.includes(qa)) && !z) {
+      if ((fe == null ? void 0 : fe.prompt.includes(qa)) && !U) {
         at({
           title: "\u672A\u9009\u62E9\u4EE3\u7801\u7247\u6BB5",
           description: "\u8BF7\u5728\u7F16\u8F91\u533A\u5212\u9009\u9700\u8981 Chat \u7684\u4EE3\u7801\uFF0C\u901A\u8FC7\u70B9\u51FB\u3010\u53F3\u952E\u83DC\u5355\u3011-\u3010Y3Maker\u3011-\u3010Y3Maker: Chat\u3011\u5C06\u4EE3\u7801\u6DFB\u52A0\u81F3\u804A\u5929\u4E0A\u4E0B\u6587\u540E\uFF0C\u518D\u91CD\u65B0\u63D0\u4EA4\u3002",
@@ -81462,7 +81488,7 @@ ${ee}`, [
         }), await c(), fs();
         return;
       }
-      if (je.includes(qa) && !z) {
+      if (je.includes(qa) && !U) {
         at({
           title: "\u672A\u9009\u62E9\u4EE3\u7801\u7247\u6BB5",
           description: "\u8BF7\u5728\u7F16\u8F91\u533A\u5212\u9009\u9700\u8981 Chat \u7684\u4EE3\u7801\uFF0C\u901A\u8FC7\u70B9\u51FB\u3010\u53F3\u952E\u83DC\u5355\u3011-\u3010Y3Maker\u3011-\u3010Y3Maker: Chat\u3011\u5C06\u4EE3\u7801\u6DFB\u52A0\u81F3\u804A\u5929\u4E0A\u4E0B\u6587\u540E\uFF0C\u518D\u91CD\u65B0\u9009\u62E9 Prompt\u3002",
@@ -81472,7 +81498,7 @@ ${ee}`, [
         }), ln.current = null;
         return;
       }
-      je = vy(je, z), ((_c4 = o == null ? void 0 : o.data) == null ? void 0 : _c4.messages.length) >= $7 && (o == null ? void 0 : o._id) && !d.includes(o == null ? void 0 : o._id) && h(o._id);
+      je = vy(je, U), ((_c4 = o == null ? void 0 : o.data) == null ? void 0 : _c4.messages.length) >= $7 && (o == null ? void 0 : o._id) && !d.includes(o == null ? void 0 : o._id) && h(o._id);
       const xe = ln.current && c1.get(ln.current._id) || ie.CODE_CHAT_PROMPT_CUSTOM;
       if (ln.current ? (ve.report({
         event: xe,
@@ -81483,7 +81509,7 @@ ${ee}`, [
           content: ln.current.prompt,
           type: ln.current.type
         }
-      }), et(ln.current, z)) : et(void 0, void 0), L(false), Zc(je), je.length > Gl)
+      }), et(ln.current, U)) : et(void 0, void 0), L(false), Zc(je), je.length > Gl)
         if ([
           Be.Gemini25,
           Be.Gemini3Pro
@@ -81532,7 +81558,7 @@ ${ee}`, [
       ze,
       D,
       Me,
-      z,
+      U,
       de,
       fs,
       d,
@@ -81714,10 +81740,10 @@ ${Gt}
             return;
           const Ie = (je == null ? void 0 : je.data) || {};
           if (Ie.success && Ie.skillName) {
-            yi(() => import("./skillUsage-43e04416.js").then(async (m10) => {
+            yi(() => import("./skillUsage-65503704.js").then(async (m10) => {
               await m10.__tla;
               return m10;
-            }), ["assets/skillUsage-43e04416.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInstall: Ye }) => {
+            }), ["assets/skillUsage-65503704.js","assets/react-vendor-7e97d1a7.js","assets/utils-vendor-89337d12.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInstall: Ye }) => {
               Ye(Ie.skillName, {
                 source: "codemaker-command"
               });
@@ -82554,12 +82580,12 @@ ${an.originalContent || "(file content empty)"}
     }, [
       _
     ]), g.useEffect(() => {
-      if (z) {
+      if (U) {
         fs();
         return;
       }
     }, [
-      z,
+      U,
       fs
     ]), g.useEffect(() => {
       const ee = () => {
@@ -83631,7 +83657,7 @@ ${an.originalContent || "(file content empty)"}
             color: "error",
             boxSize: 6
           }),
-          r.jsx(U, {
+          r.jsx(z, {
             ml: 2,
             color: "error",
             children: "\u672A\u77E5\u9519\u8BEF\uFF0C\u8BF7\u5C1D\u8BD5\u5237\u65B0"
@@ -83783,7 +83809,7 @@ ${an.originalContent || "(file content empty)"}
                         })
                       })
                     }),
-                    r.jsx(U, {
+                    r.jsx(z, {
                       fontWeight: "bold",
                       fontSize: "md",
                       children: "Y3Maker \u6570\u636E\u7EDF\u8BA1"
@@ -83838,13 +83864,13 @@ ${an.originalContent || "(file content empty)"}
                           px: 6,
                           py: 4,
                           children: [
-                            r.jsx(U, {
+                            r.jsx(z, {
                               color: "gray.400",
                               fontSize: "sm",
                               mb: 1,
                               children: "\u8FD1 3 \u4E2A\u6708\u4F60\u7684 Y3Maker \u7528\u91CF\u4E3A\uFF1A"
                             }),
-                            r.jsx(U, {
+                            r.jsx(z, {
                               color: "gray.400",
                               fontSize: "sm",
                               mb: 4,
@@ -83858,7 +83884,7 @@ ${an.originalContent || "(file content empty)"}
                               justifyContent: "center",
                               children: [
                                 r.jsx(Cn, {}),
-                                r.jsx(U, {
+                                r.jsx(z, {
                                   mt: "2",
                                   color: "gray.400",
                                   children: "\u6B63\u5728\u4E3A\u60A8\u52A0\u8F7D\u6570\u636E\uFF0C\u8BF7\u7A0D\u5019..."
@@ -83873,11 +83899,11 @@ ${an.originalContent || "(file content empty)"}
                                       alignItems: "center",
                                       mb: 2,
                                       children: [
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           color: "#50A9DE",
                                           children: r.jsx(TE, {})
                                         }),
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           fontWeight: "bold",
                                           children: "\u3010\u4EE3\u7801\u8865\u5168\u3011"
                                         })
@@ -83892,10 +83918,10 @@ ${an.originalContent || "(file content empty)"}
                                           justifyContent: "space-between",
                                           mb: 1,
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u7D2F\u8BA1\u4F7F\u7528\u5929\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.complete_use_days) || 0,
                                                 "\u5929"
@@ -83907,10 +83933,10 @@ ${an.originalContent || "(file content empty)"}
                                           justifyContent: "space-between",
                                           mb: 1,
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u7D2F\u8BA1\u91C7\u7EB3\u4EE3\u7801\u6B21\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.complete_accept_nums) || 0,
                                                 "\u6B21"
@@ -83921,10 +83947,10 @@ ${an.originalContent || "(file content empty)"}
                                         r.jsxs(K, {
                                           justifyContent: "space-between",
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u4EE3\u7801\u8865\u5168\u63A5\u53D7\u7387\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 ut.isNumber(s == null ? void 0 : s.complete_accept_ratio) ? ((s == null ? void 0 : s.complete_accept_ratio) * 100).toFixed(2) : 0,
                                                 "%"
@@ -83943,14 +83969,14 @@ ${an.originalContent || "(file content empty)"}
                                       alignItems: "center",
                                       mb: 2,
                                       children: [
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           color: "purple.300",
                                           children: r.jsx(AE, {
                                             color: "purple.300",
                                             size: 16
                                           })
                                         }),
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           fontWeight: "bold",
                                           children: "\u3010\u4ED3\u5E93\u667A\u804A\u3011"
                                         })
@@ -83965,10 +83991,10 @@ ${an.originalContent || "(file content empty)"}
                                           justifyContent: "space-between",
                                           mb: 1,
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u804A\u5929\u6B21\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.gitchat_total) || 0,
                                                 "\u6B21"
@@ -83979,10 +84005,10 @@ ${an.originalContent || "(file content empty)"}
                                         r.jsxs(K, {
                                           justifyContent: "space-between",
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u751F\u6210\u4E0E\u5E94\u7528\u4EE3\u7801\u884C\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.gitchat_generate_lines) || 0,
                                                 "\u884C"
@@ -84009,7 +84035,7 @@ ${an.originalContent || "(file content empty)"}
                                             d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
                                           })
                                         }),
-                                        r.jsx(U, {
+                                        r.jsx(z, {
                                           fontWeight: "bold",
                                           children: "\u3010Local AI Review\u3011"
                                         })
@@ -84024,10 +84050,10 @@ ${an.originalContent || "(file content empty)"}
                                           justifyContent: "space-between",
                                           mb: 1,
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u53D1\u8D77 AI Review \u6B21\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.localreview_start_nums) || 0,
                                                 "\u6B21"
@@ -84038,10 +84064,10 @@ ${an.originalContent || "(file content empty)"}
                                         r.jsxs(K, {
                                           justifyContent: "space-between",
                                           children: [
-                                            r.jsx(U, {
+                                            r.jsx(z, {
                                               children: "\u2022 \u53CD\u9988\u6709\u6548/\u65E0\u6548\u95EE\u9898\u4E2A\u6570\uFF1A"
                                             }),
-                                            r.jsxs(U, {
+                                            r.jsxs(z, {
                                               children: [
                                                 (s == null ? void 0 : s.localreview_post_issue_nums) || 0,
                                                 "\u4E2A"
@@ -84069,7 +84095,7 @@ ${an.originalContent || "(file content empty)"}
                                 r.jsx(K, {
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  children: r.jsx(U, {
+                                  children: r.jsx(z, {
                                     fontWeight: "bold",
                                     fontSize: "sm",
                                     children: "\u4ED3\u5E93\u667A\u804A\u6D88\u8017\u60C5\u51B5"
@@ -84125,7 +84151,7 @@ ${an.originalContent || "(file content empty)"}
                                   mb: 1,
                                   flexWrap: "wrap",
                                   children: [
-                                    r.jsxs(U, {
+                                    r.jsxs(z, {
                                       fontSize: "xl",
                                       fontWeight: "bold",
                                       mr: 2,
@@ -84134,7 +84160,7 @@ ${an.originalContent || "(file content empty)"}
                                         " \u79EF\u5206"
                                       ]
                                     }),
-                                    r.jsxs(U, {
+                                    r.jsxs(z, {
                                       color: "gray.500",
                                       fontSize: "sm",
                                       children: [
@@ -84300,7 +84326,7 @@ ${an.originalContent || "(file content empty)"}
   function a2() {
     const { postMessage: e } = gt(), { panelId: t, restoreSessionId: n, isPanelMode: s, initialChatType: o } = kS(), [a] = he((ue) => [
       ue.chatType
-    ]), i = Ot((ue) => ue.config.tabs), l = Ot((ue) => ue.config.currentTab), c = Ot((ue) => ue.updateConfig), u = bt(), p = Et((ue) => ue.accessToken), d = bt((ue) => ue.IDE), h = xt((ue) => ue.setWorkspaceInfo), m = xt((ue) => ue.setWorkspaceList), f = xt((ue) => ue.setCurrentFileAutoAttach), [x, v] = g.useState(true), y = Et(), { setSystemTheme: b } = Xn(), E = zt((ue) => ue.setMCPServers), A = zt((ue) => ue.setShowMcpError), C = zt((ue) => ue.setBuiltInServers), _ = zt((ue) => ue.setPrivateModelOnlyServers), I = rn((ue) => ue.setDisableNewApply), R = Ze((ue) => ue.setPlanModeButtonEnabled), k = he((ue) => ue.setChatType), j = he((ue) => ue.selectSession), P = he((ue) => ue.onNewSession), q = he((ue) => ue.currentSession()), O = xt((ue) => ue.setRules), D = ca((ue) => ue.setTerminalTimeout), X = pr((ue) => ue.setSkills), se = xt((ue) => ue.requestSpecInfo), me = Et((ue) => ue.setAccessToken), B = Et((ue) => ue.setUsername), re = Et((ue) => ue.setLoginFrom), G = Et(qd), z = g.useRef([]), { toast: H } = Zt(), [L, $] = g.useState(false), _e2 = d === mt.VisualStudioCode, ze = g.useMemo(() => i ? i.filter((ue) => ue.selected) : [], [
+    ]), i = Dt((ue) => ue.config.tabs), l = Dt((ue) => ue.config.currentTab), c = Dt((ue) => ue.updateConfig), u = bt(), p = Et((ue) => ue.accessToken), d = bt((ue) => ue.IDE), h = xt((ue) => ue.setWorkspaceInfo), m = xt((ue) => ue.setWorkspaceList), f = xt((ue) => ue.setCurrentFileAutoAttach), [x, v] = g.useState(true), y = Et(), { setSystemTheme: b } = Xn(), E = zt((ue) => ue.setMCPServers), A = zt((ue) => ue.setShowMcpError), C = zt((ue) => ue.setBuiltInServers), _ = zt((ue) => ue.setPrivateModelOnlyServers), I = rn((ue) => ue.setDisableNewApply), R = Ze((ue) => ue.setPlanModeButtonEnabled), k = he((ue) => ue.setChatType), j = he((ue) => ue.selectSession), P = he((ue) => ue.onNewSession), q = he((ue) => ue.currentSession()), O = xt((ue) => ue.setRules), D = ca((ue) => ue.setTerminalTimeout), X = pr((ue) => ue.setSkills), se = xt((ue) => ue.requestSpecInfo), me = Et((ue) => ue.setAccessToken), B = Et((ue) => ue.setUsername), re = Et((ue) => ue.setLoginFrom), G = Et(qd), U = g.useRef([]), { toast: H } = Zt(), [L, $] = g.useState(false), _e2 = d === mt.VisualStudioCode, ze = g.useMemo(() => i ? i.filter((ue) => ue.selected) : [], [
       i
     ]), [qe, Q] = g.useState(Py(ze, l)), Pe = g.useRef(null), Oe = g.useRef(null);
     return jq(), g.useEffect(() => {
@@ -84385,8 +84411,8 @@ ${an.originalContent || "(file content empty)"}
         var _a2, _b3, _c3, _d3, _e3, _f3, _g3, _h3, _i3, _j2, _k2, _l3, _m3, _n4, _o3;
         if (!(s && fe.data.targetPanelId && fe.data.targetPanelId !== t)) {
           if (!p && fe.data.type !== st.INIT_DATA) {
-            z.current = [
-              ...z.current,
+            U.current = [
+              ...U.current,
               fe.data
             ];
             return;
@@ -84511,9 +84537,9 @@ ${an.originalContent || "(file content empty)"}
             }
             v(false);
             const at = [
-              ...z.current
+              ...U.current
             ];
-            z.current = [], setTimeout(() => {
+            U.current = [], setTimeout(() => {
               at.forEach((Tt) => {
                 window.postMessage(Tt, "*");
               });
@@ -84777,7 +84803,7 @@ ${an.originalContent || "(file content empty)"}
           alignItems: "start",
           display: "flex",
           children: [
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "16px",
               fontWeight: "bold",
               minW: "72px",
@@ -84863,7 +84889,7 @@ ${an.originalContent || "(file content empty)"}
         display: "flex",
         flexWrap: e ? "wrap" : "nowrap",
         children: [
-          r.jsx(U, {
+          r.jsx(z, {
             fontSize: "16px",
             fontWeight: "bold",
             minW: "72px",
@@ -85148,14 +85174,14 @@ ${an.originalContent || "(file content empty)"}
             r.jsxs(K, {
               align: "center",
               children: [
-                r.jsx(U, {
+                r.jsx(z, {
                   fontSize: "16px",
                   fontWeight: "bold",
                   minW: "72px",
                   mr: "4",
                   children: "\u7F51\u7EDC\u8BCA\u65AD"
                 }),
-                r.jsx(U, {
+                r.jsx(z, {
                   children: "\u68C0\u67E5 Y3Maker \u540E\u7AEF\u670D\u52A1\u7684\u7F51\u7EDC\u8FDE\u63A5"
                 })
               ]
@@ -85204,7 +85230,7 @@ ${an.originalContent || "(file content empty)"}
                 }),
                 r.jsx(w, {
                   flex: "1",
-                  children: r.jsx(U, {
+                  children: r.jsx(z, {
                     fontSize: "sm",
                     color: "orange.700",
                     _dark: {
@@ -85238,7 +85264,7 @@ ${an.originalContent || "(file content empty)"}
                         gap: "3",
                         children: [
                           p(h.status),
-                          r.jsx(U, {
+                          r.jsx(z, {
                             fontWeight: "medium",
                             _dark: {
                               color: "gray.100"
@@ -85251,7 +85277,7 @@ ${an.originalContent || "(file content empty)"}
                         align: "center",
                         gap: "3",
                         children: [
-                          h.summary && r.jsx(U, {
+                          h.summary && r.jsx(z, {
                             fontSize: "sm",
                             color: "gray.500",
                             _dark: {
@@ -85345,7 +85371,7 @@ ${an.originalContent || "(file content empty)"}
           alignItems: "start",
           display: "flex",
           children: [
-            r.jsx(U, {
+            r.jsx(z, {
               fontSize: "16px",
               fontWeight: "bold",
               minW: "72px",
@@ -85381,7 +85407,7 @@ ${an.originalContent || "(file content empty)"}
     });
   }
   const Jq = () => {
-    const [e] = bs(mo), [t, n] = Ot((o) => [
+    const [e] = bs(mo), [t, n] = Dt((o) => [
       o.config.tabs,
       o.updateConfig
     ]), s = (o) => {
@@ -85796,14 +85822,14 @@ ${an.originalContent || "(file content empty)"}
                 h: "24px",
                 src: Kq
               }),
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "20px",
                 fontWeight: "bold",
                 children: "odeMaker \u4E00\u7AD9\u5F0F\u667A\u80FD\u7814\u53D1\u5DE5\u4F5C\u53F0"
               })
             ]
           }),
-          r.jsx(U, {
+          r.jsx(z, {
             color: "text.default",
             children: t.codeMakerVersion
           }),
@@ -85813,7 +85839,7 @@ ${an.originalContent || "(file content empty)"}
             alignItems: "start",
             flexWrap: e ? "wrap" : "nowrap",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "16px",
                 fontWeight: "bold",
                 minW: "72px",
@@ -85861,7 +85887,7 @@ ${an.originalContent || "(file content empty)"}
             display: "flex",
             flexWrap: e ? "wrap" : "nowrap",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "16px",
                 fontWeight: "bold",
                 minW: "72px",
@@ -85903,7 +85929,7 @@ ${an.originalContent || "(file content empty)"}
             display: "flex",
             flexWrap: e ? "wrap" : "nowrap",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "16px",
                 fontWeight: "bold",
                 minW: "72px",
@@ -85976,7 +86002,7 @@ ${an.originalContent || "(file content empty)"}
             display: "flex",
             flexWrap: e ? "wrap" : "nowrap",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "16px",
                 fontWeight: "bold",
                 minW: "72px",
@@ -85991,14 +86017,14 @@ ${an.originalContent || "(file content empty)"}
                     alignItems: "center",
                     mt: "1",
                     children: [
-                      r.jsx(U, {
+                      r.jsx(z, {
                         fontSize: "14px",
                         fontWeight: "bold",
                         mr: "4",
                         minW: "126px",
                         children: "\u7528\u6237\u7FA4"
                       }),
-                      r.jsx(U, {
+                      r.jsx(z, {
                         isTruncated: true,
                         children: "000000"
                       })
@@ -86008,14 +86034,14 @@ ${an.originalContent || "(file content empty)"}
                     display: "flex",
                     mt: "2",
                     children: [
-                      r.jsx(U, {
+                      r.jsx(z, {
                         fontSize: "14px",
                         fontWeight: "bold",
                         mr: "4",
                         minW: "126px",
                         children: "\u670D\u52A1\u52A9\u624B"
                       }),
-                      r.jsx(U, {
+                      r.jsx(z, {
                         children: "support@example.com"
                       })
                     ]
@@ -86058,7 +86084,7 @@ ${an.originalContent || "(file content empty)"}
             display: "flex",
             flexWrap: e ? "wrap" : "nowrap",
             children: [
-              r.jsx(U, {
+              r.jsx(z, {
                 fontSize: "16px",
                 fontWeight: "bold",
                 minW: "72px",
