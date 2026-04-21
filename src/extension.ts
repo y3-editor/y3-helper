@@ -519,23 +519,25 @@ class Helper {
             await this.runStartupStep('mainMenu.init', () => mainMenu.init());
 
             // 后台检测 Y3Maker 配置更新（不阻塞激活流程）
-            if (env.projectUri) {
-                (async () => {
-                    try {
-                        // 先检测是否需要老用户迁移
-                        const migrated = await migrateOldUser(env.projectUri!);
-                        if (migrated && webviewProvider) {
-                            await webviewProvider.reloadCodemakerResources();
-                        }
-                        // 检测版本更新
-                        await checkForUpdates(env.projectUri!);
-                        // 刷新主菜单树视图，使更新节点根据状态显示/隐藏
-                        mainMenu.refresh();
-                    } catch {
-                        // 静默跳过
+            (async () => {
+                try {
+                    await env.mapReady();
+                    if (!env.projectUri) {
+                        return;
                     }
-                })();
-            }
+                    // 先检测是否需要老用户迁移
+                    const migrated = await migrateOldUser(env.projectUri);
+                    if (migrated && webviewProvider) {
+                        await webviewProvider.reloadCodemakerResources();
+                    }
+                    // 检测版本更新
+                    await checkForUpdates(env.projectUri);
+                    // 刷新主菜单树视图，使更新节点根据状态显示/隐藏
+                    mainMenu.refresh();
+                } catch {
+                    // 静默跳过
+                }
+            })();
 
             // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
             await this.tryAutoStartMCP();
