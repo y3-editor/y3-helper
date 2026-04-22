@@ -501,6 +501,15 @@ export class GameSessionManager extends vscode.Disposable {
         // 清除当前会话
         this.currentSession = undefined;
 
+        // 游戏停止后，主动断开 y3runtime MCP 连接并立即尝试重连
+        // 重连必然失败，但会在 connections 中留下 disconnected 状态的条目
+        // 这样下次启动游戏时 pingMcpServers 能检测到并重连
+        try {
+            await getMcpHub()?.restartConnection('y3runtime');
+        } catch {
+            // 忽略错误
+        }
+
         return {
             success: true,
             message: 'Game stopped'
