@@ -6,6 +6,7 @@ import { LogManager } from './logManager';
 import { GameSession, MCPError, MCPErrorCode } from './types';
 import * as env from '../env';
 import * as tools from '../tools';
+import { getMcpHub } from '../codemaker/mcpHandlers/index';
 import { save as saveGmp } from '../tools/y3SaveGmp';
 
 /**
@@ -199,6 +200,9 @@ export class GameSessionManager extends vscode.Disposable {
                 this.isLaunching = false;
                 return;
             }
+
+            // 游戏启动成功，通知 McpHub 重连断开的 MCP servers（如 y3runtime）
+            getMcpHub()?.pingMcpServers();
         } catch (error) {
             session.status = 'stopped';
             session.errorMessage = error instanceof Error ? error.message : String(error);

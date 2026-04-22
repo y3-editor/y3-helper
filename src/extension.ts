@@ -341,11 +341,6 @@ class Helper {
 
     private async startTCPServer(silent: boolean = false): Promise<boolean> {
         try {
-            // 确保 McpHub 已启动（注册文件监听 + 初始化 MCP servers）
-            const hub = getMcpHub();
-            if (hub) {
-                await hub.start();
-            }
             this.tcpServer = new mcp.TCPServer();
             const started = await this.tcpServer.start();
             if (!started) {
@@ -358,6 +353,12 @@ class Helper {
                 return false;
             }
             tools.log.info('[Y3-Helper] MCP Server started');
+            // TCPServer 就绪后再启动 McpHub，避免 McpHub 连接 y3-helper:8766 时端口尚未监听
+            // 确保 McpHub 已启动（注册文件监听 + 初始化 MCP servers）
+            const hub = getMcpHub();
+            if (hub) {
+                await hub.start();
+            }
             return true;
         } catch (error) {
             tools.log.error('[Y3-Helper] Failed to start MCP Server:', error);
