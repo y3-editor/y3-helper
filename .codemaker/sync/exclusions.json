@@ -54,6 +54,14 @@
   "excluded_upstream_dirs": {
     "src/modules/": "CodeMaker内部模块系统，Y3不需要",
     "src/telemetry/": "CodeMaker内部遥测，Y3用stub替代",
-    "src/patchSetup.ts": "CodeMaker内部Sentry补丁"
+    "src/patchSetup.ts": "CodeMaker内部Sentry补丁",
+    "src/routes/CodeReview/": "Y3无代码审查模块，依赖store/localReview、store/review、store/teamReview、services/localReview等Y3不存在的模块",
+    "src/routes/CodeCoverage/": "Y3无代码覆盖率模块"
+  },
+  "excluded_upstream_files_notes": {
+    "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",
+    "src/PostMessageProvider.tsx": "REVIEW: Y3有定制(Skill枚举值: UPDATE_SKILL_CONFIG/REMOVE_SKILL/UPLOAD_SKILL等)，且不需要authRequest/fetchAllUser逻辑。覆盖后需手动恢复Y3定制部分",
+    "package.json": "REVIEW: Y3的build命令已精简，不要覆盖scripts段",
+    "vite.config.ts": "REVIEW: Y3已移除codeMakerCoverage插件，不要还原"
   }
 }

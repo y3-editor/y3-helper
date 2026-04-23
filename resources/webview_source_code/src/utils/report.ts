@@ -2,7 +2,7 @@ import { batchReport } from '../services/report';
 import { useAuthStore } from '../store/auth';
 import { useChatStore } from '../store/chat';
 import { useExtensionStore } from '../store/extension';
-import { LocalRepoType, useWorkspaceStore } from '../store/workspace';
+import { LocalRepoType, SpecFramework, useWorkspaceStore } from '../store/workspace';
 import { UserEvent } from '../types/report';
 import { getLanguageFromFilePath } from './getLanguageFromFilePath';
 
@@ -64,6 +64,14 @@ class UserReporter {
       if (activeFeatureId) {
         message.extends.active_feature_id = activeFeatureId;
       }
+      if (codebaseChatMode === 'openspec') {
+        const openspecFramework = useWorkspaceStore.getState().specInfo.frameworks.find(
+          (f) => f.framework === SpecFramework.OpenSpec,
+        );
+        if (openspecFramework?.version) {
+          message.extends.version = openspecFramework.version;
+        }
+      }
       const filePath: string = (message.extends as any).filePath || (message.extends as any).file_path;
       if (filePath) {
         message.extends.language = getLanguageFromFilePath(filePath);
@@ -110,6 +118,14 @@ class UserReporter {
         }
         if (activeFeatureId) {
           message.extends.active_feature_id = activeFeatureId;
+        }
+        if (codebaseChatMode === 'openspec') {
+          const openspecFramework = useWorkspaceStore.getState().specInfo.frameworks.find(
+            (f) => f.framework === SpecFramework.OpenSpec,
+          );
+          if (openspecFramework?.version) {
+            message.extends.version = openspecFramework.version;
+          }
         }
         const filePath: string = (message.extends as any).filePath || (message.extends as any).file_path;
         if (filePath) {

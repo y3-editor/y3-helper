@@ -4,16 +4,25 @@ import {
   Grid,
   IconButton,
   Text,
-  Tooltip
+  Tooltip,
+  Button,
 } from '@chakra-ui/react';
-import { TbCube, TbWand } from 'react-icons/tb';
-import { LuAirplay } from 'react-icons/lu';
+import { TbPlus, TbCube, TbWand } from 'react-icons/tb';
+import { LuAirplay, LuBox, LuUser } from 'react-icons/lu';
+import { RiStoreFill } from 'react-icons/ri';
 import {
   Prompt,
   PromptCategoryType,
   promptCategoryNameMap,
 } from '../../../../services/prompt';
-import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_OPENSPEC, BUILT_IN_PROMPTS_SPECKIT } from '../../../../services/builtInPrompts';
+import {
+  BUILT_IN_PROMPTS,
+  BUILT_IN_PROMPTS_SPECKIT,
+  getOpenSpecPromptsByVersion,
+  BUILT_IN_PROMPTS_OPENSPEC_V023,
+  BUILT_IN_PROMPTS_OPENSPEC_V1,
+} from '../../../../services/builtInPrompts';
+import useUserPrompt from './useUserPrompt';
 import PromptList from './PromptList';
 import { getListIndex } from '../utils';
 import {
@@ -25,7 +34,9 @@ import {
 import { TypeAheadModePrefix, TypeAheadSubProps } from '../const';
 import Icon from '../../../../components/Icon';
 import { UnionData, UnionType } from './type';
+import { useUserConfig } from '../../../../store/user-config';
 import { usePluginApp } from '../../../../store/plugin-app';
+import { useExtensionStore } from '../../../../store/extension';
 import { TypeAheadMode } from '../const';
 import {
   PromptSampleFormValue,
@@ -39,12 +50,13 @@ import {
   useChatStreamStore,
 } from '../../../../store/chat';
 
-import { useWorkspaceStore } from '../../../../store/workspace';
+import { SpecFramework, useWorkspaceStore } from '../../../../store/workspace';
 import { AttachType } from '../../../../store/attaches';
 import { useMCPStore } from '../../../../store/mcp';
 import { useMcpPromptApp } from '../../../../store/mcp-prompt';
 // import { CODEBASE_EXAMPLE } from '../../ChatSamples';
 import { checkValueOfPressedKeyboard } from '../../../../utils';
+import { supportsOpenSpecVersionSelection } from '../../../../utils/specVersionUtils';
 import { McpPrompt } from '../../../../services/mcp';
 import { RULES_PROMPT } from '../../../../services/builtInPrompts/rules';
 import { createSkillToolId, getSkillSourceLabel, useSkillsStore } from '../../../../store/skills';
@@ -70,11 +82,15 @@ const PromptsPanel = (
     mentionKeyword,
     updateOpenState,
     focusedType,
+    onTypeAheadModeChange,
   } = props;
+  const ide = useExtensionStore((state) => state.IDE);
+  const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion);
   const { postMessage, message } = usePostMessage();
   const { toast } = useCustomToast();
   const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
 
+  const isVscode = ide === 'vscode';
   const [promptType, setPromptType] = React.useState<
     PromptCategoryType | undefined
   >(focusedType || PromptCategoryType._CodeMaker);
@@ -85,12 +101,15 @@ const PromptsPanel = (
     React.useState(false);
   const [isOpenRemovePromptModel, setIsOpenRemovePromptModel] =
     React.useState(false);
+  const { loading, prompts, pluginApps, handleOpenProjectPromptManageWebsite } =
+    useUserPrompt();
 
   const setCustomPromptSampleCallback = useChatActionStore(
     (state) => state.setCustomPromptSampleCallback,
   );
   const newPromptModelRef = React.useRef<ChatNewPromptModelHandle>(null);
 
+  const userConfig = useUserConfig((state) => state.config);
   const chatConfig = useChatConfig((state) => state.config);
   const chatModels = useChatConfig((state) => state.chatModels);
   const clearSession = useChatStore((state) => state.clearSession);
@@ -121,6 +140,14 @@ const PromptsPanel = (
   const isSpecStaging = useAuthStore(selectIsSpecStaging);
 
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
+  const setOpenspecUpdateModalVisible = useWorkspaceStore(
+    (state) => state.setOpenspecUpdateModalVisible
+  );
+
+  // 获取 OpenSpec 版本
+  const getFrameworkSpecInfo = useWorkspaceStore((state) => state.getFrameworkSpecInfo);
+  const openspecFrameworkInfo = getFrameworkSpecInfo(SpecFramework.OpenSpec);
+  const installedOpenSpecVersion = openspecFrameworkInfo?.version;
 
   const isDuringKeywordSearch = React.useMemo(() => {
     if (inputValue === PROMPT_TYPEHEAD_TRIGGER_PREFIX) {
@@ -142,7 +169,7 @@ const PromptsPanel = (
     const isRepoMismatch = sessionRepo && sessionRepo !== workspaceInfo.repoName;
 
     const shouldShowAlreadyNewToast = isEmptySession && (
-      (hasWorkspace && !isRepoMismatch) || 
+      (hasWorkspace && !isRepoMismatch) ||
       (!hasWorkspace && !sessionRepo)
     );
 
@@ -185,7 +212,12 @@ const PromptsPanel = (
     }
 
     if (chatType === 'codebase' && codebaseChatMode === 'openspec') {
-      for (const builtIn of BUILT_IN_PROMPTS_OPENSPEC) {
+      // 根据安装的 OpenSpec 版本动态选择命令集
+      const openspecPrompts = getOpenSpecPromptsByVersion(installedOpenSpecVersion);
+      const canShowUpdate = supportsOpenSpecVersionSelection(codeMakerVersion, ide);
+      for (const builtIn of openspecPrompts) {
+        // openspec-update 仅在 Extension 版本满足 Spec 版本选择要求时提供
+        if (builtIn.name === 'openspec-update' && !canShowUpdate) continue;
         unionData.push({
           name: builtIn.name,
           description: builtIn.description,
@@ -237,6 +269,16 @@ const PromptsPanel = (
         });
       }
     }
+
+    for (const prompt of prompts) {
+      const rowData: UnionData = {
+        name: prompt.name,
+        description: prompt.description,
+        type: UnionType.Prompt,
+        meta: prompt,
+      };
+      unionData.push(rowData);
+    }
     for (const server of MCPServers || []) {
       const serverName = server?.name || '';
       const sPrompts: McpPrompt[] = server.prompts || [];
@@ -257,6 +299,33 @@ const PromptsPanel = (
     }
     // 在流式过程中禁用Clean选项
     if (!disabled) {
+      // Skill Init 和 Skill Creator 目前只支持 VS Code
+      unionData.push({
+        name: 'Skill Init',
+        description: '创建 Skill 模板文件',
+        type: UnionType.Prompt,
+        meta: {
+          name: 'Skill Init',
+          prompt: '创建 Skill 模板并在编辑器中打开',
+          _id: '/skill-init',
+          type: PromptCategoryType.Skill,
+        },
+      });
+      // 如果用户已安装 skill-creator，则不显示内置命令
+      const hasSkillCreator = skills.some((s) => s.name === 'skill-creator');
+      if (!hasSkillCreator) {
+        unionData.push({
+          name: 'Skill Creator',
+          description: '使用 AI 帮你创建专属 Skill',
+          type: UnionType.Prompt,
+          meta: {
+            name: 'Skill Creator',
+            prompt: '使用 AI 帮你创建专属 Skill',
+            _id: '/skill-creator',
+            type: PromptCategoryType.Skill,
+          },
+        });
+      }
       unionData.push({
         name: 'New',
         description: '新建会话',
@@ -317,6 +386,42 @@ const PromptsPanel = (
         });
     }
 
+    const subscribeApps = userConfig?.subscribe_app_tools;
+    for (const plugin of pluginApps || []) {
+      if (!subscribeApps?.includes(plugin._id)) {
+        continue;
+      }
+      for (const shortcut of plugin.app_shortcuts) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { app_shortcuts, ...extra } = plugin;
+        unionData.push({
+          name: shortcut.name,
+          description: shortcut.description,
+          type: UnionType.Plugin,
+          meta: { ...extra, app_shortcut: shortcut },
+        });
+      }
+    }
+
+    //如果当前处于codebase模式，加上codebase的prompt
+    // if (chatType === 'codebase') {
+    //   const reversedArray = Array.from(CODEBASE_EXAMPLE).reverse();
+    //   {
+    //     reversedArray.map((example) => {
+    //       unionData.unshift({
+    //         name: example.title,
+    //         description: example.description,
+    //         type: UnionType.Prompt,
+    //         meta: {
+    //           name: example.title,
+    //           prompt: example.prompt,
+    //           _id: example.title,
+    //           type: PromptCategoryType._CodeMaker,
+    //         },
+    //       });
+    //     });
+    //   }
+    // }
     if (mentionKeyword.trim()) {
       return unionData.filter((item) =>
         item.name.toLowerCase().includes(mentionKeyword.toLowerCase()),
@@ -361,7 +466,22 @@ const PromptsPanel = (
           return [];
       }
     }
-  }, [chatModels, chatType, disabled, mentionKeyword, MCPServers, chatConfig.model, promptType, skills, codebaseChatMode, isSpecStaging]);
+  }, [
+    chatModels,
+    chatType,
+    disabled,
+    userConfig?.subscribe_app_tools,
+    mentionKeyword,
+    prompts,
+    MCPServers,
+    chatConfig.model,
+    pluginApps,
+    promptType,
+    skills,
+    codebaseChatMode,
+    isSpecStaging,
+    installedOpenSpecVersion,
+  ]);
 
   const currentIndex = getListIndex(renderPrompts, focusIndex);
 
@@ -426,9 +546,16 @@ const PromptsPanel = (
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
+          } else if (prompt.name === 'openspec-update') {
+            setOpenspecUpdateModalVisible(true);
+            if (userInputRef.current) {
+              userInputRef.current.value = '';
+            }
           } else if (
             [
-              ...BUILT_IN_PROMPTS_OPENSPEC.map(openspecPrompt => openspecPrompt.name),
+              // 支持 OpenSpec 0.23 和 1.x 的所有命令
+              ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(openspecPrompt => openspecPrompt.name),
+              ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(openspecPrompt => openspecPrompt.name),
               ...BUILT_IN_PROMPTS_SPECKIT.map(speckitPrompt => speckitPrompt.name)
             ].includes(prompt.name)
           ) {
@@ -554,7 +681,8 @@ const PromptsPanel = (
       postMessage,
       setSkillLoading,
       setCodebaseChatMode,
-      handleNewSessionCommand
+      handleNewSessionCommand,
+      setOpenspecUpdateModalVisible
     ],
   );
 
@@ -735,6 +863,52 @@ const PromptsPanel = (
               }
             />
           </Tooltip>
+          <Tooltip label="项目" placement="right">
+            <IconButton
+              fontSize="xl"
+              aria-label="project"
+              colorScheme={
+                promptType === PromptCategoryType.Project ? 'blue' : undefined
+              }
+              color={
+                promptType === PromptCategoryType.Project
+                  ? 'white'
+                  : 'text.primary'
+              }
+              bg={
+                promptType === PromptCategoryType.Project
+                  ? 'blue.300'
+                  : 'buttonBgColor'
+              }
+              border="1px solid"
+              borderColor="customBorder"
+              icon={<Icon as={LuBox} size="md" />}
+              onClick={() => handleChangePromptType(PromptCategoryType.Project)}
+            />
+          </Tooltip>
+          <Tooltip label="我的自定义指令" placement="right">
+            <IconButton
+              fontSize="xl"
+              aria-label="user"
+              colorScheme={
+                promptType === PromptCategoryType.User ? 'blue' : undefined
+              }
+              color={
+                promptType === PromptCategoryType.User
+                  ? 'white'
+                  : 'text.primary'
+              }
+              bg={
+                promptType === PromptCategoryType.User
+                  ? 'blue.300'
+                  : 'buttonBgColor'
+              }
+              border="1px solid"
+              borderColor="customBorder"
+              icon={<Icon as={LuUser} size="md" />}
+              onClick={() => handleChangePromptType(PromptCategoryType.User)}
+            />
+          </Tooltip>
           <Tooltip label="Skills" placement="right">
             <IconButton
               fontSize="xl"
@@ -783,6 +957,33 @@ const PromptsPanel = (
               />
             </Tooltip>
           )}
+          {isVscode && (
+            <Tooltip label="我订阅的插件指令" placement="right">
+              <IconButton
+                fontSize="xl"
+                aria-label="plugin"
+                colorScheme={
+                  promptType === PromptCategoryType.Plugin ? 'blue' : undefined
+                }
+                color={
+                  promptType === PromptCategoryType.Plugin
+                    ? 'white'
+                    : 'text.primary'
+                }
+                bg={
+                  promptType === PromptCategoryType.Plugin
+                    ? 'blue.300'
+                    : 'buttonBgColor'
+                }
+                border="1px solid"
+                borderColor="customBorder"
+                icon={<Icon as={RiStoreFill} size="md" />}
+                onClick={() =>
+                  handleChangePromptType(PromptCategoryType.Plugin)
+                }
+              />
+            </Tooltip>
+          )}
         </Flex>
       </Flex>
       <Grid
@@ -798,10 +999,39 @@ const PromptsPanel = (
             <Text p={1} pb={2} fontSize="sm" color="text.primary">
               {promptCategoryNameMap[promptType]}
             </Text>
+            {promptType === PromptCategoryType.Project && (
+              <Button size="sm" onClick={handleOpenProjectPromptManageWebsite}>
+                管理
+              </Button>
+            )}
+            {promptType === PromptCategoryType.User && (
+              <Tooltip label="自定义我的快捷指令" placement="right">
+                <IconButton
+                  fontSize="small"
+                  size="sm"
+                  aria-label="add"
+                  icon={<Icon as={TbPlus} size="sm" />}
+                  onClick={() => {
+                    setIsOpenNewPromptModel(true);
+                    setCurrentHandlePrompt(undefined);
+                  }}
+                />
+              </Tooltip>
+            )}
+            {promptType === PromptCategoryType.Plugin && (
+              <Tooltip label="前往插件市场订阅" placement="right">
+                <Button
+                  size="sm"
+                  onClick={() => onTypeAheadModeChange(TypeAheadMode.Plugin)}
+                >
+                  订阅更多
+                </Button>
+              </Tooltip>
+            )}
           </Flex>
         )}
         <PromptList
-          loading={false}
+          loading={loading}
           prompts={renderPrompts}
           currentIndex={currentIndex}
           onSubmit={handleSubmitPrompt}

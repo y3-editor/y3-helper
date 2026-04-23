@@ -36,6 +36,12 @@ import useCustomToast from '../../../hooks/useCustomToastWithUseCallback';
 import { RiCalendarTodoLine } from 'react-icons/ri';
 import { GrTransaction } from "react-icons/gr";
 
+// 高度持久化相关常量
+const HEIGHT_STORAGE_KEY = 'chat-bottom-tabs-height';
+const DEFAULT_CONTENT_HEIGHT = 120;
+const MIN_CONTENT_HEIGHT = 80;
+const MAX_CONTENT_HEIGHT = 400;
+
 type ChatBottomTabsProps<TApi = unknown> = {
   items: DockTabItem<TApi>[];
   defaultActiveKey?: string;
@@ -179,7 +185,7 @@ function ChangesListItem({
 /**
  * Changes 列表组件 - 新的列表展示样式
  */
-function ChangesListContent() {
+function ChangesListContent({ contentHeight }: { contentHeight: number }) {
   const chatFileInfo = useChatApplyStore((state) => state.chatFileInfo);
   const clearChatApplyInfoByFilePath = useChatApplyStore((state) => state.clearChatApplyInfoByFilePath);
   const { postMessage } = usePostMessage();
@@ -226,6 +232,10 @@ function ChangesListContent() {
     });
   }, [clearChatApplyInfoByFilePath]);
 
+  React.useEffect(() => {
+    console.log('[Debug] ChangesListContent rendered, fileCount:', fileCount, 'chatFileInfo keys:', Object.keys(chatFileInfo));
+  }, [chatFileInfo, fileCount]);
+
   if (fileCount === 0) {
     return (
       <Box textAlign="center" color="gray.500" py={4}>
@@ -235,7 +245,14 @@ function ChangesListContent() {
   }
 
   return (
-    <Box className="max-h-[120px] overflow-y-auto flex flex-col gap-y-1 px-2">
+    <Box
+      className="overflow-y-auto flex flex-col gap-y-1 px-2"
+      style={{
+        minHeight: `${MIN_CONTENT_HEIGHT}px`,
+        maxHeight: `${contentHeight}px`,
+        height: `${contentHeight}px`,
+      }}
+    >
       {Object.keys(chatFileInfo).map((filePath) => (
         <ChangesListItem
           key={filePath}
@@ -339,6 +356,65 @@ function ChatBottomTabsV2Component<TApi = unknown>(
     (state) => state.clearChatFileInfo,
   );
   const chatFileInfo = useChatApplyStore((state) => state.chatFileInfo);
+
+  // 从 localStorage 读取保存的高度，默认 120px
+  const [contentHeight, setContentHeight] = useState<number>(() => {
+    const savedHeight = localStorage.getItem(HEIGHT_STORAGE_KEY);
+    if (savedHeight) {
+      const parsed = parseInt(savedHeight, 10);
+      if (!isNaN(parsed) && parsed >= MIN_CONTENT_HEIGHT && parsed <= MAX_CONTENT_HEIGHT) {
+        return parsed;
+      }
+    }
+    return DEFAULT_CONTENT_HEIGHT;
+  });
+
+  // 拖拽状态
+  const [isDragging, setIsDragging] = useState(false);
+  const contentHeightRef = useRef(contentHeight);
+  contentHeightRef.current = contentHeight;
+
+  // 拖拽手柄 mousedown 处理
+  const handleGutterMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    let lastY = e.clientY;
+
+    function handleMouseMove(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.style.cursor = 'row-resize';
+      const currentY = e.clientY;
+      // 向上拖动 (currentY < lastY) 增加高度，向下拖动减少高度
+      const diff = lastY - currentY;
+      
+      setContentHeight((prev) => {
+        const nextHeight = prev + diff;
+        return Math.min(Math.max(nextHeight, MIN_CONTENT_HEIGHT), MAX_CONTENT_HEIGHT);
+      });
+      lastY = currentY;
+    }
+
+    function handleMouseUp() {
+      document.body.style.cursor = 'default';
+      setIsDragging(false);
+      clear();
+    }
+
+    function clear() {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // 高度变化后持久化到 localStorage
+  useEffect(() => {
+    localStorage.setItem(HEIGHT_STORAGE_KEY, String(contentHeight));
+  }, [contentHeight]);
 
   const setExpanded = React.useCallback((expanded: boolean) => {
     setExpandedState(expanded);
@@ -462,6 +538,30 @@ function ChatBottomTabsV2Component<TApi = unknown>(
       boxSizing="border-box"
       overflow="hidden"
     >
+      {/* 拖拽手柄 - 仅在展开时显示 */}
+      {expanded && (
+        <Box
+          h="6px"
+          cursor="row-resize"
+          bg={isDragging ? 'blue.400' : 'transparent'}
+          _hover={{ bg: 'blue.300' }}
+          transition="background 0.15s"
+          onMouseDown={handleGutterMouseDown}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Box
+            w="40px"
+            h="3px"
+            borderRadius="2px"
+            bg={isDragging ? 'white' : 'gray.500'}
+            _hover={{ bg: 'gray.300' }}
+            transition="background 0.15s"
+          />
+        </Box>
+      )}
+
       {/* Header 区域 - 始终显示 */}
       <Flex alignItems="center" px={2} py={1.5} gap={2}>
         {/* Tab 图标 - 水平排列 */}
@@ -538,7 +638,13 @@ function ChatBottomTabsV2Component<TApi = unknown>(
       {/* 可折叠的内容区域 - 使用 Collapse 实现动画 */}
       <Collapse in={expanded} animateOpacity>
         {/* Tab 内容 */}
-        <Box maxH="120px" overflowY="auto" pb={2}>
+        <Box
+          minH={`${MIN_CONTENT_HEIGHT}px`}
+          maxH={`${contentHeight}px`}
+          h={`${contentHeight}px`}
+          overflowY="auto"
+          pb={2}
+        >
           {items.map((it) => {
             const helpers: DockTabHelpers = {
               setActions: (node) =>
@@ -555,7 +661,7 @@ function ChatBottomTabsV2Component<TApi = unknown>(
             if (it.key === 'Changes') {
               return (
                 <Collapse key={it.key} in={activeKey === it.key} animateOpacity>
-                  <ChangesListContent />
+                  <ChangesListContent contentHeight={contentHeight} />
                 </Collapse>
               );
             }

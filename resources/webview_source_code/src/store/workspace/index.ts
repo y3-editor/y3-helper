@@ -171,6 +171,10 @@ export enum SpecSetupStepId {
   // SpecKit 步骤 (2 步)
   SpecifyCli = 'specify-cli',
   SpeckitInit = 'speckit-init',
+  // OpenSpec 升级步骤 (3 步)
+  UpgradeVersionCheck = 'upgrade-version-check',
+  UpgradeCli = 'upgrade-cli',
+  UpgradeMigrateDocs = 'upgrade-migrate-docs',
 }
 
 /**
@@ -198,6 +202,11 @@ export enum SpecSetupErrorCode {
   UV_UNAVAILABLE = 'UV_UNAVAILABLE',               // uv 未安装
   SPECIFY_CLI_UNAVAILABLE = 'SPECIFY_CLI_UNAVAILABLE', // Specify CLI 安装失败
   SPECKIT_INIT_FAILED = 'SPECKIT_INIT_FAILED',     // SpecKit 初始化失败
+
+  // OpenSpec 升级错误码
+  UPGRADE_NOT_023 = 'UPGRADE_NOT_023',             // 非 0.23 版本，无需升级
+  UPGRADE_CLI_FAILED = 'UPGRADE_CLI_FAILED',       // CLI 升级失败
+  UPGRADE_MIGRATE_FAILED = 'UPGRADE_MIGRATE_FAILED', // 文档迁移失败
 }
 
 /**
@@ -232,11 +241,28 @@ export interface SpecKitSetupStatus {
 }
 
 /**
+ * OpenSpec 升级状态 (0.23 -> 1.x)
+ * 3 步：版本检测 → CLI 升级 → 文档迁移
+ */
+export interface OpenSpecUpgradeStatus {
+  /** 版本检测 (检测是否为 0.23) */
+  versionCheck: SpecSetupStep;
+  /** CLI 升级 (npm install 1.x) */
+  cliUpgrade: SpecSetupStep;
+  /** 文档迁移 (openspec update --force) */
+  migrateDocs: SpecSetupStep;
+  /** 升级后的版本号 */
+  upgradedVersion?: string;
+}
+
+/**
  * 完整 Setup 状态
  */
 export interface SpecSetupStatus {
   openspec: OpenSpecSetupStatus;
   speckit: SpecKitSetupStatus;
+  /** OpenSpec 升级状态 (仅升级流程中有值) */
+  openspecUpgrade?: OpenSpecUpgradeStatus;
 }
 
 /**
@@ -341,6 +367,8 @@ export interface FrameworkSpecInfo {
   features?: SpecKitFeatureInfo[];
   /** 是否已完成初始化 */
   isInitialized?: boolean;
+  /** OpenSpec 文档版本 (OpenSpec) */
+  version?: '0.23' | '1.x' | 'unknown';
 }
 
 /**
@@ -401,6 +429,10 @@ export type WorkspaceStore = {
   currentSpecFramework: SpecFramework | null;
   /** 设置当前选中的 Spec 框架 */
   setCurrentSpecFramework: (framework: SpecFramework | null) => void;
+  /** OpenSpec 升级弹窗可见性 */
+  openspecUpdateModalVisible: boolean;
+  /** 设置 OpenSpec 升级弹窗可见性 */
+  setOpenspecUpdateModalVisible: (visible: boolean) => void;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -674,7 +706,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         _page: 1
       },
       headers: {
-        'X-Auth-Project': 'codemaker'
+        'X-Auth-Project': 'dep305'
       }
     }).then((res: any) => {
       const data = res.data;
@@ -753,6 +785,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set({
       currentSpecFramework: framework
     })
+  },
+  openspecUpdateModalVisible: false,
+  setOpenspecUpdateModalVisible(visible: boolean) {
+    set({
+      openspecUpdateModalVisible: visible
+    })
   }
 }));
 
@@ -786,9 +824,9 @@ export function getEffectiveRules(options: {
             alwaysApply: true,
             source: 'original'
           },
-          name: '.y3maker.codebase.md',
+          name: '.codemaker.codebase.md',
           content: codebaseCustomPrompt,
-          filePath: '.y3maker.codebase.md'
+          filePath: '.codemaker.codebase.md'
         });
       }
     } else {

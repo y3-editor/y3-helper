@@ -8,6 +8,7 @@ import {
   VStack,
   Button,
   Divider,
+  Tooltip,
 } from '@chakra-ui/react';
 import useService from '../../../../hooks/useService';
 import {
@@ -241,41 +242,23 @@ export function PluginShortcutRow(props: { data: PluginAppRunner }) {
   const { app_shortcut: data } = props.data;
 
   return (
-    <Grid w="full" gridTemplateColumns="1fr 40px">
-      <Grid>
-        <Text mb={1} fontSize="14px" isTruncated>
-          / {data.name}
-        </Text>
+    <Box display="flex" h="24px" alignItems="center" overflow="hidden">
+      <Text fontSize="12px" whiteSpace="nowrap">
+        / {data.name}
+      </Text>
+      <Tooltip label={data.description} placement="top" hasArrow openDelay={300}>
         <Text
-          fontSize="12px"
+          ml="2"
+          fontSize="10px"
           opacity="0.6"
           isTruncated
-          title={data.description}
+          flex={1}
+          minW={0}
         >
           {data.description}
         </Text>
-      </Grid>
-      {/* <Flex
-        flexDirection="column"
-        px={2}
-        color="white"
-        onClick={(event) => {
-          event.stopPropagation();
-          event.preventDefault();
-        }}
-      >
-        <Flex width="auto" mb={1} justifyContent="flex-end"></Flex>
-        <Flex justifyContent="flex-end">
-          <Text fontSize="12px" opacity="0.6" isTruncated title={data.action}>
-            {data.action}
-          </Text>
-          <Divider mx={2} orientation="vertical" />
-          <Button size="xs" opacity="0.8" variant="link">
-            文档
-          </Button>
-        </Flex>
-      </Flex> */}
-    </Grid>
+      </Tooltip>
+    </Box>
   );
 }
 

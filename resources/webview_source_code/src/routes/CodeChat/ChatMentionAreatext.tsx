@@ -141,11 +141,11 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (placeholder?.includes('打开该仓库使用或新建会话') || placeholder?.includes('打开该仓库后可继续对话'));
   }, [isVscode, placeholder]);
-  
+
   // 获取 setInitModalVisible 用于打开初始化弹窗
   const setInitModalVisible = useWorkspaceStore((state) => state.setInitModalVisible);
   const setCurrentSpecFramework = useWorkspaceStore((state) => state.setCurrentSpecFramework);
-  
+
   // 检测是否需要显示初始化提示（提取框架类型和显示文本）
   const initRequiredInfo = useCallback(() => {
     if (!placeholder?.startsWith('__INIT_REQUIRED__')) return null;
@@ -160,7 +160,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     }
     return null;
   }, [placeholder]);
-  
+
   // 处理初始化提示点击事件 - 打开初始化弹窗
   const handleInitClick = useCallback(() => {
     const info = initRequiredInfo();
@@ -406,7 +406,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     <Box position={'relative'} w={'full'} h={'full'}>
       {initInfo ? (
         // 需要初始化的提示：显示可点击的提示，点击后打开初始化弹窗
-        <>
+        <React.Fragment key="spec-init">
           <Box
             position="absolute"
             top="8px"
@@ -443,6 +443,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
           <Textarea
             disabled={true}
             ref={inputRef}
+            value=""
             h="full"
             px="0"
             border="none"
@@ -463,10 +464,10 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onPaste={onCustomPaste}
             onChange={debounce(onCustomChange, 300)}
           />
-        </>
+        </React.Fragment>
       ) : shouldEnableComplexFeatures() ? (
         // VSCode环境且placeholder包含特定文本：显示复杂的点击跳转功能
-        <>
+        <React.Fragment key="complex">
           {placeholder && (
             <Box
               position="absolute"
@@ -588,10 +589,10 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onPaste={onCustomPaste}
             onChange={debounce(onCustomChange, 300)}
           />
-        </>
+        </React.Fragment>
       ) : (
         // 其他情况：也使用高亮层包裹textarea
-        <>
+        <React.Fragment key="normal">
           <Box
             ref={hightlightLayerRef}
             position={'absolute'}
@@ -630,7 +631,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onPaste={onCustomPaste}
             onChange={debounce(onCustomChange, 300)}
           />
-        </>
+        </React.Fragment>
       )}
     </Box>
   )

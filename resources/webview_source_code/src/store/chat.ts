@@ -23,8 +23,8 @@ import {
   getSessionData,
   removeSession,
   updateSession,
-  updateSessionTopic,
   fetchGptResponse,
+  updateSessionTopic,
 } from '../services/chat';
 import { useConfigStore } from './config';
 import {
@@ -79,7 +79,7 @@ import {
   getErrorMessage,
   specialErrorPatterns,
 } from '../utils';
-import { pathsMatch, truncateSessionTopic } from '../utils/common';
+import { pathsMatch, truncateSessionTopic, versionCompare } from '../utils/common';
 import getEnvironmentDetails from '../utils/getEnvironmentDetail';
 import { Prompt, PromptCategoryType } from '../services/prompt';
 import {
@@ -124,13 +124,14 @@ import addCacheMarksToMessages from '../utils/addCacheMarksToMessages';
 import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../utils/truncateMessages';
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
 import { compressionService, getCompressSessionStatus, getPrevCompressSessionStatus, setCompressSessionStatus } from '../services/compressionService';
-import { parseAtMentionedCodeBaseByAttach } from '../utils/codebaseChat';
+import { parseAtMentionedCodeBaseByAttach, parseAtMentionedKnowledgeBaseByAttach } from '../utils/codebaseChat';
 import { getImageUrlFromAttachs } from '../routes/CodeChat/ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
+import { IDE, useExtensionStore } from './extension';
 import { getParsedAttachs, parseFileController } from '../utils/chatAttachParseHandler';
 import { ChatModel } from '../services/chatModel';
 import { BAI_CHUAN, ParseImgType } from '../services/chatModel';
 import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
-import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_OPENSPEC, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
+import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_OPENSPEC_V023, BUILT_IN_PROMPTS_OPENSPEC_V1, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
 
 const CODE_BACKTICKS = '```';
 export const DEFAULT_TOPIC = '';
@@ -313,8 +314,8 @@ interface ChatStore {
 export const useChatStore = create<ChatStore>()(
   persist(
     (set, get) => ({
-      chatType: 'codebase',
-      codebaseChatMode: 'vibe',
+      chatType: 'default',
+      codebaseChatMode: undefined,
       activeChangeId: undefined,
       activeFeatureId: undefined,
       isSpecNavCollapsed: false,
@@ -815,50 +816,39 @@ export const useChatStore = create<ChatStore>()(
       },
 
       generateAndUpdateSessionTopic: async () => {
+        const currentSession = get().currentSession();
+        if (currentSession?.topic) {
+          return;
+        }
+        const newMessages = cloneDeep(currentSession)?.data?.messages.slice(
+          0,
+          1,
+        );
+        if (!newMessages) return;
+        newMessages[0].content = getContentString(newMessages[0].content);
+        const message = {
+          id: nanoid(),
+          role: ChatRole.User,
+          content: SUMMARY_SESSION_PROMPT,
+        };
+        newMessages.push(message);
+
+        const chatConfig = useChatConfig.getState().config;
+        // 统一使用 DeepseekYDV31 模型生成会话标题
+        const model = ChatModel.DeepseekYDV31;
+        const params = {
+          ...chatConfig,
+          max_tokens: 2048,
+          temperature: 0.7,
+          messages: newMessages || [],
+          model,
+        };
         try {
-          const currentSession = get().currentSession();
-          if (currentSession?.topic) {
-            return;
-          }
-          const newMessages = cloneDeep(currentSession)?.data?.messages.slice(
-            0,
-            1,
-          );
-          if (!newMessages || !newMessages.length) return;
-          newMessages[0].content = getContentString(newMessages[0].content);
-          const message = {
-            id: nanoid(),
-            role: ChatRole.User,
-            content: SUMMARY_SESSION_PROMPT,
-          };
-          newMessages.push(message);
-
-          const chatConfig = useChatConfig.getState().config;
-          const model = getAIGWModel(chatConfig.model);
-          const codeChatApiKey = useConfigStore.getState().config.codeChatApiKey;
-          const codeChatApiBaseUrl = useConfigStore.getState().config.codeChatApiBaseUrl;
-          const params: any = {
-            ...chatConfig,
-            max_tokens: 2048,
-            temperature: 0.7,
-            messages: newMessages || [],
-            model,
-          };
-          if (codeChatApiKey) {
-            params.app_key = codeChatApiKey;
-          }
-          if (codeChatApiBaseUrl) {
-            params.base_url = codeChatApiBaseUrl;
-          }
-
           const data = await fetchGptResponse(
             UserEvent.CODE_CHAT_PROMPT_CUSTOM,
             params,
           );
-          const topic =
-            data?.choices[0]?.message?.content ||
-            newMessages?.[0]?.content?.slice?.(0, 10) ||
-            '';
+          const topic = data?.choices[0]?.message?.content || '';
           const finalTopic = truncateSessionTopic(topic);
           get().updateCurrentSession((session) => {
             session.topic = finalTopic;
@@ -930,16 +920,12 @@ export const useChatStore = create<ChatStore>()(
       },
       setChatType(type: ChatType) {
         set(() => ({
-          chatType: type ? 'codebase' : 'codebase',
+          chatType: type,
         }));
       },
-      setCodebaseChatMode(newMode: CodebaseChatMode | undefined) {
-        let mode: CodebaseChatMode = 'vibe';
-        if (newMode) {
-          mode = 'vibe';
-        }
+      setCodebaseChatMode(mode: CodebaseChatMode | undefined) {
         set(() => ({
-          codebaseChatMode: mode
+          codebaseChatMode: mode,
         }));
         // 同步更新当前会话的 codebase_chat_mode（存储在 session.data 下）
         const currentSession = get().currentSession();
@@ -1416,8 +1402,6 @@ export const useChatStreamStore = create(
       ];
       const chatStoreState = useChatStore.getState();
       let isProcessing = true;
-
-      // 监听工具回调的地方
       chatStoreState.updateCurrentSession((session) => {
         if (session && session.data) {
           const messages = session.data.messages || [];
@@ -1431,11 +1415,11 @@ export const useChatStreamStore = create(
             lastMessage.finalResult = extra.finalResult
           }
           if (
-            !lastMessage.tool_calls?.length ||                      // 没有工具调用
+            !lastMessage.tool_calls?.length ||
             Object.keys(lastMessage.tool_result).length ===
-            lastMessage.tool_calls?.length                            // 或者所有工具结果都收到了
+            lastMessage.tool_calls?.length
           ) {
-            isProcessing = false;                                 // 进入判断：要不要自动继续？
+            isProcessing = false;
             const allPathsMatch = pathsMatch(
               lastMessage.tool_result,
               codebaseDefaultAuthorizationPath,
@@ -1454,14 +1438,13 @@ export const useChatStreamStore = create(
             // TODO: 先直接判断 edit_file 自动确认 toolcall 操作，后续拆分
             let auto = false;
             const userConfig = useChatConfig.getState();
-            // 根据工具类型和用户配置决定是否自动继续
             if (lastMessage.tool_calls?.length) {
               if (lastMessage.tool_calls.some(toolCall => ['edit_file', 'replace_in_file', 'reapply'].includes(toolCall.function.name))) {
                 if (userConfig.autoApply) {
                   useChatApplyStore.getState().acceptEdit(lastMessage.tool_calls[0].id);
                 }
               } else if (allPathsMatch) {
-                auto = true;              // 路径在授权范围内 → 自动
+                auto = true;
               } else if (lastMessage.tool_calls.some(toolCall => ['make_plan'].includes(toolCall.function.name))) {
                 auto = userConfig.autoPlanApprove;
               } else if (lastMessage.tool_calls.some(toolCall => ["write_todo"].includes(toolCall.function.name))) {
@@ -1469,11 +1452,10 @@ export const useChatStreamStore = create(
               } else if (lastMessage.tool_calls.some(toolCall => ["ask_user_question"].includes(toolCall.function.name))) {
                 auto = true;
               } else if (userConfig.autoApprove) {
-                auto = true;                       // 用户开了自动授权 → 自动
+                auto = true;
               }
             }
             if (auto) {
-               // ⭐ 这就是"循环"！自动提交，触发新一轮 LLM 调用
               const keysObject = Object.keys(lastMessage.tool_result).reduce(
                 (acc: any, key) => {
                   (acc as Record<string, boolean>)[key] = true;
@@ -1660,14 +1642,13 @@ export const useChatStreamStore = create(
             errorMessage: 'Chat is streaming or searching'
           },
         });
-        return;                                             // 1. 前置检查，正在流式传输？ → 拒绝，return正在搜索？     → 拒绝，return终端执行中？   → 拒绝，return没有 session？ → 创建新 session，return
+        return;
       }
 
       // 反馈池支持多个消息反馈，根据目前需求，只支持最近一次 chat 的反馈
       FeedbackPool.clear();
       const model = useChatConfig.getState().config.model;
       const codeChatApiKey = useConfigStore.getState().config.codeChatApiKey;
-      const codeChatApiBaseUrl = useConfigStore.getState().config.codeChatApiBaseUrl;
 
       get().resetMessage();
 
@@ -1735,21 +1716,6 @@ export const useChatStreamStore = create(
       const devSpace = useWorkspaceStore.getState().devSpace;
       const userContent = assembleUserPromptContent(userInputContent || '-');
       const chatModels = useChatConfig.getState().chatModels
-
-      /* 2.拼接用户消息
-      用户消息 = {
-      id: 随机ID,
-      role: "user",
-      content: 用户输入的文字,
-      
-      // 以下全是可选的"附加物"：
-      attachs:       附件（图片/文件/文件夹/知识库/...）
-      pluginApp:     插件信息
-      mcpPrompt:     MCP Prompt 信息
-      skillPrompt:   Skill 信息
-      rules:         生效的规则列表
-      shortcutPrompt: CodeWiki 快捷指令
-      } */
 
       const userMessage: ChatMessage = {
         id,
@@ -1896,7 +1862,15 @@ export const useChatStreamStore = create(
       const rules = useWorkspaceStore.getState().rules;
       const teamRules = useWorkspaceStore.getState().teamRules;
       const selectedRules = useWorkspaceStore.getState().selectedRules;
-      const isOldVersion = false;
+      const ide = useExtensionStore.getState().IDE;
+      const pluginVersion = useExtensionStore.getState().codeMakerVersion || '';
+      let isOldVersion = true;
+      if (ide === IDE.VisualStudioCode && versionCompare('2.8.0', pluginVersion) >= 0) {
+        isOldVersion = false;
+      }
+      if (ide === IDE.JetBrains) {
+        isOldVersion = false;
+      }
       effectiveRules = getEffectiveRules({
         selectedRules: [
           ...teamRules,
@@ -1942,9 +1916,7 @@ export const useChatStreamStore = create(
         }
       }
 
-      // 3.处理上一轮工具结果
-
-      if (toolResponse) {  //有 toolResponse（工具执行完了，带着结果回来）
+      if (toolResponse) {
         chatStoreState.updateCurrentSession((session) => {
           if (session && session.data) {
             session.chat_repo = session.chat_repo || workspaceInfo.repoName;
@@ -1977,16 +1949,6 @@ export const useChatStreamStore = create(
               });
             }
           }
-          /*上一轮 LLM 说：调用 edit_file 和 grep_search
-          用户点了确认 → 工具执行完毕 → toolResponse 带着结果进来
-
-          代码做的事：
-            遍历上一条 assistant 消息的每个 tool_call
-              → 格式化工具结果
-              → push 一条 Tool 消息到 messages
-
-          messages 变成：
-            [..., assistant(tool_calls), Tool(结果1), Tool(结果2)] */
         });
       } else {
         // 如果有未处理的 tool 请求，又没有 toolResponse，全部置为拒绝先
@@ -2010,18 +1972,8 @@ export const useChatStreamStore = create(
               }
             });
           }
-          /*代码做的事：
-            1. 检查上一条 assistant 有没有未处理的 tool_calls
-              → 有的话全部标记为 "用户拒绝了"
-              → push Tool 消息（content = "The user denied this operation."）
-            
-            2. 把用户新消息 push 到 messages
-
-          messages 变成：
-            [..., assistant(tool_calls), Tool(拒绝), User(新消息)] */
         }
         // 更新 user 的 message
-        // 4.组装请求数据
         chatStoreState.updateCurrentSession((session) => {
           session.chat_repo = session.chat_repo || workspaceInfo.repoName;
           if (rejectResponse && session?.data?.messages) {
@@ -2112,7 +2064,7 @@ export const useChatStreamStore = create(
           content,
           {
             code: `docset_${currentPrompt._id}`,
-            project: 'codemaker',
+            project: 'dep305',
             type: DocsetType._BrainMaker,
             attachType: 'docset',
           } as Docset,
@@ -3103,7 +3055,8 @@ export const useChatStreamStore = create(
         // TODO: 不应该在这里重复处理
         if (chatPromptStoreState.prompt && ![
           ...BUILT_IN_PROMPTS.map(prompt => prompt.name),
-          ...BUILT_IN_PROMPTS_OPENSPEC.map(openspecPrompt => openspecPrompt.name),
+          ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(openspecPrompt => openspecPrompt.name),
+          ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(opsxPrompt => opsxPrompt.name),
           ...BUILT_IN_PROMPTS_SPECKIT.map(speckitPrompt => speckitPrompt.name)
         ].includes(chatPromptStoreState.prompt.name)) {
           const currentMessageIndex = filteredMessages.length - 1;
@@ -3147,14 +3100,19 @@ export const useChatStreamStore = create(
           tools: getCodebaseChatTools(),
         };
 
-        // 如果用户填了 apikey，则使用用户���定的 apiKey
+        // 如果用户填了 apikey，则使用用户指定的 apiKey
         if (codeChatApiKey) {
-          data.app_key = codeChatApiKey;
+          try {
+            const [apiId, apiKey] = codeChatApiKey.split('.');
+            if (apiId && apiKey) {
+              data.app_id = apiId;
+              data.app_key = apiKey;
+            }
+          } catch (err) {
+            console.error(err);
+          }
         }
-        if (codeChatApiBaseUrl) {
-          data.base_url = codeChatApiBaseUrl;
-        }
-        const chatRequestUrl = '/proxy/gpt/u5_chat/codebase_agent_stream';
+        const chatRequestUrl = '/proxy/gpt/gpt/codebase_chat_stream';
         // Codebase Chat 固定设置 temperature 为 0;
         data.temperature = 0;
         const ntesTraceId = generateTraceId();
@@ -3491,7 +3449,7 @@ export const useChatStreamStore = create(
                                       },
                                     ],
                                     input: tool_params.search_query,
-                                    docset: tool_params.docset_id,
+                                    docsets: parseAtMentionedKnowledgeBaseByAttach(),
                                     model: data.model,
                                   },
                                   tool_id: tool.id,
@@ -3777,8 +3735,6 @@ export const useChatStreamStore = create(
           } else if ([ChatModel.Gemini3Pro].includes(data.model as ChatModel)) {
             data.messages[0].content += `\nNote:Don't repeat yourself`
             data.temperature = 1
-          } else if ([ChatModel.Glm47, ChatModel.Glm5].includes(data.model as ChatModel)) {
-            data.temperature = 2
           }
           // DEBUG: 调试用，校验是否前缀匹配
           // checkReusable({
@@ -3786,8 +3742,6 @@ export const useChatStreamStore = create(
           //   tools: data.tools || []
           // })
           data.codebase_chat_mode = codebaseChatMode || 'vibe';
-
-          // 这里是真正给LLM发送消息的地方
           requestCodebaseChatStream(
             data,
             chatRequestUrl,
@@ -4090,6 +4044,37 @@ export const useChatStreamStore = create(
                           } else if (
                             tool.function.name === 'retrieve_knowledge'
                           ) {
+                            let docsets = undefined;
+                            // 83 特判逻辑
+                            if (
+                              [
+                                'svn://svn-g83.gz.netease.com/svn/trunk/src/Package/Script/Python',
+                                'svn://svn-g83.gz.netease.com/svn/trunk/src/Package/Script/Python/'
+                              ].includes(workspaceInfo.repoUrl) ||
+                              ['g83_package_script'].includes(workspaceInfo.repoCodeTable)
+                            ) {
+                              docsets = ['docset_1740109096847'];
+                            }
+                            if (
+                              [
+                                'svn://svn-g83.gz.netease.com/svn/NewSpike/trunk/src/Package/Script/Python',
+                                'svn://svn-g83.gz.netease.com/svn/NewSpike/trunk/src/Package/Script/Python/'
+                              ].includes(workspaceInfo.repoUrl) ||
+                              ['g83_us_package_script'].includes(workspaceInfo.repoCodeTable)
+                            ) {
+                              docsets = ['docset_1740104771133'];
+                            }
+                            // G101 特判逻辑
+                            if (
+                              [
+                                'svn://svn-ngsgo.gz.netease.com/svn/trunk3/src/Package/Script/Python',
+                                'svn://svn-ngsgo.gz.netease.com/svn/trunk3/src/Package/Script/Python/',
+                              ].includes(workspaceInfo.repoUrl) ||
+                              ['g101_package_script'].includes(workspaceInfo.repoCodeTable)
+                            ) {
+                              docsets = ['docset_1740632511008'];
+                            }
+                            docsets = parseAtMentionedKnowledgeBaseByAttach(docsets || []);
                             window.parent.postMessage(
                               {
                                 type: BroadcastActions.TOOL_CALL,
@@ -4104,7 +4089,7 @@ export const useChatStreamStore = create(
                                       },
                                     ],
                                     input: tool_params.search_query,
-                                    docset: tool_params.docset_id,
+                                    docsets: docsets,
                                     model: data.model,
                                   },
                                   tool_id: tool.id,
@@ -4228,6 +4213,8 @@ export const useChatStreamStore = create(
                     void getCompressSessionStatus(sessionId).then(status => {
                       chatStoreState.analyzeContext(sessionId).then(compressionAnalysis => {
                         if (compressionAnalysis.shouldCompress
+                          && compressConfig.enable
+                          && compressConfig.visible
                           && status !== SessionStatus.COMPRESSING
                           && !chatModels[chatConfig.model].isPrivate
                           && status !== SessionStatus.FAILED) {
@@ -4812,10 +4799,15 @@ export const useChatStreamStore = create(
 
       // 如果用户填了 apikey，则使用用户指定的 apiKey
       if (codeChatApiKey) {
-        data.app_key = codeChatApiKey;
-      }
-      if (codeChatApiBaseUrl) {
-        data.base_url = codeChatApiBaseUrl;
+        try {
+          const [apiId, apiKey] = codeChatApiKey.split('.');
+          if (apiId && apiKey) {
+            data.app_id = apiId;
+            data.app_key = apiKey;
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
 
       // 临时补丁，避免content为空导致异常
@@ -5850,12 +5842,10 @@ export function getContentString(content: string | ChatMessageContentUnion[]) {
   if (typeof content === 'string') {
     return content;
   } else {
-    const currentContent = content.filter(
-      (i) => i.type === ChatMessageContent.Text,
-    )[0];
-    return currentContent
-      ? (currentContent as ChatMessageContentText).text
-      : '';
+    const currentContent = content?.filter?.(
+      (i) => i?.type === ChatMessageContent.Text,
+    )?.map?.(i => i?.text).join('\n');
+    return currentContent || 'empty'
   }
 }
 

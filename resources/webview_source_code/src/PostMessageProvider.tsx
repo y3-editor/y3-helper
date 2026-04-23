@@ -67,6 +67,8 @@ export enum BroadcastActions {
   OPEN_PLANTUML = 'OPEN_PLANTUML',
   // 打开新GRAPHVIZ窗口
   OPEN_GRAPHVIZ = 'OPEN_GRAPHVIZ',
+  // 打开文件选择器，更换工作区
+  OPEN_WORKSPACE = 'OPEN_WORKSPACE',
 
   SEARCH_WORKSPACE_PATH = 'SEARCH_WORKSPACE_PATH',
   APPLY_EDIT = 'APPLY_EDIT',
@@ -157,6 +159,11 @@ export enum BroadcastActions {
   GET_SPEC_INFO = 'GET_SPEC_INFO', // 请求获取当前仓库的 Spec 信息
   OPEN_SPEC_SETUP = 'OPEN_SPEC_SETUP', // 触发 OpenSpec 初始化流程
   SPECKIT_SETUP = 'SPECKIT_SETUP', // 触发 SpecKit 初始化流程
+  OPENSPEC_UPDATE = 'OPENSPEC_UPDATE', // 触发 OpenSpec 升级流程 (0.23 -> 1.x)
+
+  // 检查更新
+  OPEN_CHECK_UPDATE = 'OPEN_CHECK_UPDATE', // 检查插件更新
+  RELOAD_WINDOW = 'RELOAD_WINDOW', // 重载窗口
 }
 
 // 订阅的事件，IDE -> webview
@@ -382,7 +389,7 @@ export default function PostMessageProvider({
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [extensionStore, updateEditState, updateSpecInfo, isSpecStaging, setAccessToken, setUsername]);
+  }, [extensionStore, updateEditState, updateSpecInfo, isSpecStaging]);
 
   // 向目标窗口发送消息的函数
   const postMessage = React.useCallback(

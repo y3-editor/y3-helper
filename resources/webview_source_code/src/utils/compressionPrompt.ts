@@ -15,6 +15,8 @@ import { BroadcastActions, SubscribeActions } from '../PostMessageProvider';
 const SKILL_FETCH_TIMEOUT = 10000;
 const SKILL_PLACEHOLDER_PATTERN = /\{\{SKILL:([^}]+)\}\}/g;
 
+export const compressionSkillToolIds = new Set<string>();
+
 function formatSkillToolResult(content: string): string {
   try {
     const data = JSON.parse(content);
@@ -30,10 +32,12 @@ function formatSkillToolResult(content: string): string {
 function fetchSkillFromIDE(skillName: string): Promise<string | null> {
   return new Promise((resolve) => {
     const toolId = createSkillToolId();
+    compressionSkillToolIds.add(toolId);
     let resolved = false;
 
     const cleanup = () => {
       resolved = true;
+      compressionSkillToolIds.delete(toolId);
       window.removeEventListener('message', handleMessage);
     };
 

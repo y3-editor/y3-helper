@@ -521,6 +521,7 @@ export const specialErrorPatterns = [
         'Model not found',
         'model is not supported',
         'anthropic_error_chunk type:serviceUnavailableException',
+        'peer closed connection without sending complete message body',
       ].some(i => msg.includes(i))
     ),
     message: '🤨 本次模型没有回复，可点击重新回复'
@@ -532,7 +533,11 @@ export const specialErrorPatterns = [
   {
     condition: (msg: string) => (
       msg.includes("'type': 'SupplierResponseFailedErrorFromAIGW'") &&
-      (msg.includes('Prompt is too long') || msg.includes('Input is too long') || msg.includes(`maximum context length`))
+      (
+        msg?.toLowerCase?.()?.includes?.('prompt is too long')
+        || msg?.toLowerCase?.()?.includes?.('input is too long')
+        || msg?.toLowerCase?.()?.includes?.(`maximum context length`)
+      )
     ),
     message: '🤨 检测到上下文过长，可在聊天窗口中输入 /compress 指令后再重新回复',
     errorType: 'ContextTooLong' as StreamErrorCallbackType,

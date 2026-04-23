@@ -11,7 +11,7 @@ import { useTheme, ThemeStyle } from "../../../ThemeContext";
 import { useChatStore } from '../../../store/chat';
 import { useMemo } from 'react';
 import { usePostMessage } from '../../../PostMessageProvider';
-
+import MiniButton from '../../../components/MiniButton';
 
 export default function ChatConsumeTokenPanel() {
   const { activeTheme } = useTheme();
@@ -49,18 +49,7 @@ export default function ChatConsumeTokenPanel() {
   return (
     <Popover placement="top-start" trigger="hover" openDelay={0} closeDelay={200}>
       <PopoverTrigger>
-        <Flex
-          px={2}
-          alignItems={'center'}
-          justifyContent={'center'}
-          cursor="pointer"
-          borderRadius="md"
-          border="1px solid"
-          bg={isDark ? 'transparent' : '#EEF0F2'}
-          borderColor={isDark ? '#404040' : 'blackAlpha.100'}
-          fontFamily="monospace"
-          fontSize="xs"
-          h="32px"
+        <MiniButton
           _hover={{
             opacity: 0.8,
             color: '#776fff',
@@ -69,7 +58,7 @@ export default function ChatConsumeTokenPanel() {
           color={isDark ? '#808080' : '#999'}
         >
           Tokens: {displayTokens}
-        </Flex>
+        </MiniButton>
       </PopoverTrigger>
       <PopoverContent
         bg={isDark ? '#1E1E1E' : '#FFFFFF'}
@@ -92,7 +81,7 @@ export default function ChatConsumeTokenPanel() {
                     postMessage({
                       type: 'OPEN_IN_BROWSER',
                       data: {
-                        url: 'http://localhost:3001',
+                        url: 'https://modelspace.netease.com/model_app',
                       },
                     });
                   }}

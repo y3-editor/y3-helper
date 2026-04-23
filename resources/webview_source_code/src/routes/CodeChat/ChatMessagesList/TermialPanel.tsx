@@ -128,8 +128,8 @@ export default function TerminalPanel(
       <Box
         display={'flex'}
         alignItems={'center'}
-        gap={'0.5rem'}
-        paddingY={'0.5rem'}
+        gap={'4px'}
+        paddingY={'4px'}
         w={'100%'}
         backgroundColor={isLightTheme ? 'white' : ''}
         borderRadius={'5px'}
@@ -137,15 +137,16 @@ export default function TerminalPanel(
         <Box
           display={'flex'}
           alignItems={'center'}
-          gap={'0.3rem'}
-          paddingX={'1rem'}
+          gap={1}
+          paddingX={2}
           w={'100%'}
         >
           <Box display={'flex'} alignItems={'center'} justifyContent={'center'}>
-            <Box mr={1} mb={1}>{getStatusIcon(status)}</Box>
+            <Box mr={1}>{getStatusIcon(status)}</Box>
             <Box display={'flex'} alignItems={'center'} justifyContent={'center'} gap={1}>
               {getStatusText(status)}
-              <Box mb={'2px'}
+              <Box
+                fontSize={'12px'}
                 color={
                   activeTheme === ThemeStyle.Light ? '#000000' : '#ccccccef'
                 }>
@@ -239,7 +240,7 @@ export default function TerminalPanel(
               <IoIosArrowForward className={isExpanded ? 'rotate-90 transition-all' : ''} />
             </Button>
           </Tooltip>
-          <Box className="truncate">
+          <Box className="truncate" fontSize={'12px'}>
             <Tooltip label={config?.command || ''}>
               <span>$ {config.command}</span>
             </Tooltip>
@@ -270,7 +271,7 @@ export default function TerminalPanel(
         ref={logContainerRef}
         hidden={!status || !isExpanded}
         alignItems={'flex-start'}
-        padding={'.3em'}
+        padding={1}
         className="show-scrollbar"
         backgroundColor={isLightTheme ? '#f7f5f2' : '#292929'}
         overflowY={'auto'}
@@ -325,10 +326,9 @@ export default function TerminalPanel(
           return (
             <Box
               key={index}
-              paddingLeft={'1em'}
-              lineHeight={`16px`}
+              paddingLeft={2}
+              lineHeight={'16px'}
               fontSize={'12px'}
-            // height={'16px'}
             >
               {line ? line : <br />}
             </Box>

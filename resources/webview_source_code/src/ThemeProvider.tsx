@@ -176,6 +176,7 @@ const ThemeProvider = (props: { children: React.ReactNode }) => {
         listBgColor: isLight ? '#F2F2F2' : '#1D1D1D',
         itemBgColor: isLight ? '#FFFFFF' : '#373737',
         buttonBgColor: isLight ? '#FFFFFF' : '#1D1D1D',
+        darkerButtonBgColor: isLight ? '#FFFFFF' : '#101012',
         // 一些在黑底上高亮的颜色，例如 LocalReview
         panelBgColor: isLight ? '#FFFFFF' : '#373737',
         panelBlockBgColor: isLight ? '#F2F2F2' : '#2C2C2C',

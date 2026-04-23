@@ -3,6 +3,7 @@ import {
   Box,
   Flex,
   Text,
+  Image,
   Select,
   Button,
   VStack,
@@ -14,6 +15,7 @@ import {
 import { RepeatIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { CodebaseChatMode } from '../../store/chat';
 import { useTheme, ThemeStyle } from '../../ThemeContext';
+import CodeMakerLogo from '../../assets/codemaker-logo.png';
 import { useWorkspaceStore } from '../../store/workspace';
 import useCustomToast from '../../hooks/useCustomToast';
 import { CODEBASE_CHAT_SAMPLES } from '../../const';
@@ -68,10 +70,7 @@ const MODE_CARDS: ModeCardConfig[] = [
           { emoji: '', text: '重视文档完整性和代码质量' },
           { emoji: '', text: '适合：大型项目、团队协作、生产环境' },
         ],
-        tips: [
-          { emoji: '', text: '当前适配 openspec 0.23.0 版本' },
-          { emoji: '', text: '使用 /openspec-proposal 指令创建提案' },
-        ]
+        tips: []
       },
       {
         value: 'speckit',
@@ -228,49 +227,34 @@ function CodebaseModePicker({
   return (
     <Box className="py-4 px-2 flex flex-col h-full justify-center">
       {/* Header */}
-      <Flex alignItems="center" justifyContent="center" mb={1}>
+      <Flex alignItems="center" justifyContent="center" mb={2}>
+        <Image
+          src={CodeMakerLogo}
+          alt="CodeMaker Logo"
+          width="28px"
+          height="28px"
+        />
         <Text
           color="blue.300"
-          fontSize="22px"
+          fontSize="20px"
           fontWeight="bold"
           lineHeight="1"
           style={{ marginBottom: 0, marginTop: '3px' }}
         >
-          Y3 Maker Agent
+          odeMaker Coding Agent
         </Text>
       </Flex>
 
-      {/* Subtitle - 介绍说明 */}
-      <VStack spacing={0.5} mb={4} style={{ marginBottom: '16px' }}>
-        <Text
-          color="blue.200"
-          fontSize="13px"
-          textAlign="center"
-          opacity={0.9}
-          style={{ marginBottom: '8px' }}
-        >
-          智能 Y3 项目开发助手
-        </Text>
-        <Text
-          color="text.default"
-          fontSize="12px"
-          textAlign="center"
-          opacity={0.65}
-          lineHeight="1.8"
-        >
-          制作与管理 Y3 项目工程，理解与生成项目代码，控制编辑器
-        </Text>
-        <Text
-          color="text.default"
-          fontSize="12px"
-          textAlign="center"
-          opacity={0.45}
-          lineHeight="1.8"
-          mt={1}
-        >
-          在聊天框输入你想了解的内容，或直接开始制作
-        </Text>
-      </VStack>
+      {/* Subtitle */}
+      <Text
+        color="text.default"
+        fontSize="14px"
+        mb={4}
+        textAlign="center"
+        style={{ marginBottom: '16px' }}
+      >
+        让开发像聊天一样简单！
+      </Text>
 
       {/* Mode Cards - 左右两列布局 */}
       {isSpecStaging && (
@@ -375,113 +359,116 @@ function CodebaseModePicker({
       </Flex>
       )}
 
-      {/* 适用场景 - 卡片外部，显示在选中卡片下方对应位置 */}
+      {/* 适用场景 - 使用 Grid 布局让两侧内容同时渲染占位，避免切换时跳动 */}
       {isSpecStaging && selectedCardIndex >= 0 && (
         <Flex gap={3} mt={4}>
-          {MODE_CARDS.map((card, index) => (
-            <Box key={card.mode} flex={1}>
-              {index === selectedCardIndex && (
+          {MODE_CARDS.map((card, index) => {
+            const isVisible = index === selectedCardIndex;
+            return (
+              <Box
+                key={card.mode}
+                flex={1}
+                visibility={isVisible ? 'visible' : 'hidden'}
+                opacity={isVisible ? 1 : 0}
+              >
+                <Text
+                  fontSize="12px"
+                  color="text.default"
+                  mb={2}
+                  style={{ marginBottom: '8px' }}
+                >
+                  适用场景：
+                </Text>
                 <Box>
-                  <Text
-                    fontSize="12px"
-                    color="text.default"
-                    mb={2}
-                    style={{ marginBottom: '8px' }}
-                  >
-                    适用场景：
-                  </Text>
-                  <Box>
-                    {getCardFeatures(card).map((feature, idx) => (
-                      <Flex key={idx} align="center" mb={1}>
-                        <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
-                          •
+                  {getCardFeatures(card).map((feature, idx) => (
+                    <Flex key={idx} align="center" mb={1}>
+                      <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
+                        •
+                      </Text>
+                      {feature.emoji && (
+                        <Text
+                          fontSize="12px"
+                          mr={1.5}
+                          style={{ marginBottom: 0 }}
+                        >
+                          {feature.emoji}
                         </Text>
-                        {feature.emoji && (
+                      )}
+                      <Text
+                        fontSize="12px"
+                        color="text.default"
+                        style={{ marginBottom: 0 }}
+                      >
+                        {feature.text}
+                      </Text>
+                    </Flex>
+                  ))}
+                  {/* Vibe 模式添加推荐问题入口 */}
+                  {card.mode === 'vibe' && getCardTips(card).length > 0 && (
+                    <Flex align="center" mt={2}>
+                      <Button
+                        fontSize="12px"
+                        color="blue.400"
+                        cursor="pointer"
+                        variant="link"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowRecommendQuestions(!showRecommendQuestions);
+                        }}
+                        style={{ marginBottom: 0 }}
+                      >
+                        推荐问题
+                        <ChevronUpIcon
+                          boxSize={4}
+                          ml={1}
+                          transition="transform 0.2s"
+                          transform={showRecommendQuestions ? 'rotate(180deg)' : 'rotate(0deg)'}
+                        />
+                      </Button>
+                    </Flex>
+                  )}
+                </Box>
+                {card.mode !== 'vibe' && (
+                  <>
+                    <Text
+                      fontSize="12px"
+                      color="text.default"
+                      mb={2}
+                      mt={2}
+                      style={{ marginBottom: '8px' }}
+                    >
+                      使用指引:
+                    </Text>
+                    <Box>
+                      {getCardTips(card).map((tip, idx) => (
+                        <Flex key={idx} align="center" mb={1}>
+                          <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
+                            •
+                          </Text>
+                          {tip.emoji && (
+                            <Text
+                              fontSize="12px"
+                              mr={1.5}
+                              style={{ marginBottom: 0 }}
+                            >
+                              {tip.emoji}
+                            </Text>
+                          )}
                           <Text
                             fontSize="12px"
-                            mr={1.5}
+                            color="text.default"
                             style={{ marginBottom: 0 }}
                           >
-                            {feature.emoji}
+                            {tip.text}
                           </Text>
-                        )}
-                        <Text
-                          fontSize="12px"
-                          color="text.default"
-                          style={{ marginBottom: 0 }}
-                        >
-                          {feature.text}
-                        </Text>
-                      </Flex>
-                    ))}
-                    {/* Vibe 模式添加推荐问题入口 */}
-                    {card.mode === 'vibe' && (
-                      <Flex align="center" mt={2}>
-                        <Button
-                          fontSize="12px"
-                          color="blue.400"
-                          cursor="pointer"
-                          variant="link"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowRecommendQuestions(!showRecommendQuestions);
-                          }}
-                          style={{ marginBottom: 0 }}
-                        >
-                          推荐问题
-                          <ChevronUpIcon
-                            boxSize={4}
-                            ml={1}
-                            transition="transform 0.2s"
-                            transform={showRecommendQuestions ? 'rotate(180deg)' : 'rotate(0deg)'}
-                          />
-                        </Button>
-                      </Flex>
-                    )}
-                  </Box>
-                  {
-                    card.mode !== 'vibe' && (
-                      <>
-                        <Text
-                          fontSize="12px"
-                          color="text.default"
-                          mb={2}
-                          style={{ marginBottom: '8px' }}
-                        >
-                          使用指引:
-                        </Text>
-                        <Box>
-                          {getCardTips(card).map((tip, idx) => (
-                            <Flex key={idx} align="center" mb={1}>
-                              <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
-                                •
-                              </Text>
-                              {tip.emoji && (
-                                <Text
-                                  fontSize="12px"
-                                  mr={1.5}
-                                  style={{ marginBottom: 0 }}
-                                >
-                                  {tip.emoji}
-                                </Text>
-                              )}
-                              <Text
-                                fontSize="12px"
-                                color="text.default"
-                                style={{ marginBottom: 0 }}
-                              >
-                                {tip.text}
-                              </Text>
-                            </Flex>
-                          ))}
-                        </Box>
-                      </>
-                    )
-                  }
-                </Box>
-              )}
-            </Box>
-          ))}
+                        </Flex>
+                      ))}
+                    </Box>
+                  </>
+                )}
+              </Box>
+            );
+          })}
         </Flex>
       )}
 
