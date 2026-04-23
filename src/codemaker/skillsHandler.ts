@@ -88,6 +88,8 @@ interface MdcParseResult {
 }
 
 function parseMdc(raw: string): MdcParseResult {
+  // 统一换行符：将 CRLF 转为 LF，避免 \r 残留导致 YAML 解析异常
+  raw = raw.replace(/\r\n/g, '\n');
   const match = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
   if (!match) {
     return { success: false, error: 'No front-matter found' };
