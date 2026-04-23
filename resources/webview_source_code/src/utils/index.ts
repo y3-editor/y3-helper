@@ -539,6 +539,14 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => (
+      msg.includes("API 请求失败") &&
+      (msg.includes('Range of input length should be'))
+    ),
+    message: '🤨 检测到上下文过长，可在聊天窗口中输入 /compress 指令后再重新回复',
+    errorType: 'ContextTooLong' as StreamErrorCallbackType,
+  },
+  {
+    condition: (msg: string) => (
       msg.includes("'type': 'SupplierResponseFailedErrorFromAIGW'")
     ) && (
         msg.includes('Invalid `signature` in `thinking` block')
