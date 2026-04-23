@@ -14,7 +14,7 @@ import { ChatModel, IChatModelConfig } from '../services/chatModel';
 const { toast } = createStandaloneToast();
 
 
-// 只有通义千问模型下才允许 c、lpc 语言使用 chat 的功能
+// 只有私有模型下才允许 c、lpc 语言使用 chat 的功能
 export function validateBeforeChat(
   language: string,
   model: string,
@@ -29,7 +29,7 @@ export function validateBeforeChat(
       }
       toast({
         title:
-          '为保证项目代码安全，禁止使用 GPT 对 C&LPC 代码进行操作。可在 Chat 聊天窗口下切换模型为【通义千问 (私有部署) 或 DeepSeek-R1 (私有部署)】再尝试操作',
+          '为保证项目代码安全，禁止使用商业模型对 C&LPC 代码进行操作。可在 Chat 聊天窗口下切换模型到【私有模型(开源模型私有部署)】再尝试操作',
         status: 'error',
         position: 'top',
         isClosable: true,
@@ -39,6 +39,26 @@ export function validateBeforeChat(
     }
   }
   return true;
+}
+
+/**
+ * 校验代码块数组中是否包含 C/LPC 语言，非 c_unrestrict 用户在公共模型下禁止使用
+ */
+export function validateCodeBlocksLanguage(
+  codeBlocks: { language: string }[] | null,
+  model: string,
+  c_unrestrict: boolean,
+): boolean {
+  if (!codeBlocks || codeBlocks.length === 0) {
+    return true;
+  }
+  const hasCLpc = codeBlocks.some(
+    (block) => block.language === 'c' || block.language === 'lpc',
+  );
+  if (!hasCLpc) {
+    return true;
+  }
+  return validateBeforeChat('c', model, c_unrestrict);
 }
 
 /**
