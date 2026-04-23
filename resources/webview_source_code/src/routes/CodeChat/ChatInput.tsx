@@ -35,6 +35,8 @@ import { useMaskStore } from '../../store/mask';
 import { useWorkspaceStore, SpecFramework } from '../../store/workspace';
 import { ChatMessageContent, ChatMessageContentUnion } from '../../services';
 import { checkValueOfPressedKeyboard, isMacOS } from '../../utils';
+import { validateBeforeChat } from '../../utils/validateBeforeChat';
+import { useAuthStore } from '../../store/auth';
 // import { useUserConfig } from '../../store/user-config';
 import ChatMentionAreatext from './ChatMentionAreatext';
 import { ChatRole } from '../../types/chat';
@@ -107,6 +109,7 @@ function ChatInput(props: ChatInputProp) {
   );
 
   const model = useChatConfig((state) => state.config.model);
+  const cUnrestrict = useAuthStore((state) => state.authExtends.c_unrestrict);
 
   const { updateHistory } = useEventContext();
 
@@ -315,6 +318,7 @@ function ChatInput(props: ChatInputProp) {
           const textData = clipboardData.getData('text/plain') || '';
           if (codeData && textData.includes('\n')) {
             const { mode } = JSON.parse(codeData);
+            if (!validateBeforeChat(mode, model, cUnrestrict)) return;
             onUpdatePrePromptCodeBlock({
               language: mode,
               content: textData,
@@ -329,7 +333,7 @@ function ChatInput(props: ChatInputProp) {
         }
       }
     },
-    [updateHistory, chatModels, model, inputRef, uploadImgByBase64, toast, onUpdatePrePromptCodeBlock, handleInputChange],
+    [updateHistory, chatModels, model, inputRef, uploadImgByBase64, toast, onUpdatePrePromptCodeBlock, handleInputChange, cUnrestrict],
   );
 
   // 会话改变的时候重置发送消息索引

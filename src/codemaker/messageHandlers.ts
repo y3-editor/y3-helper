@@ -278,6 +278,24 @@ export async function handleExtendedMessage(
             return true;
         }
 
+        case 'OPEN_WORKSPACE': {
+            const uris = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: '选择工作区文件夹',
+            });
+            if (uris && uris.length > 0) {
+                await vscode.commands.executeCommand('vscode.openFolder', uris[0], false);
+            }
+            return true;
+        }
+
+        case 'RELOAD_WINDOW': {
+            await vscode.commands.executeCommand('workbench.action.reloadWindow');
+            return true;
+        }
+
         // ═══════════════════════════════════════════
         //  可视化（Mermaid / PlantUML / Graphviz / HTML）
         // ═══════════════════════════════════════════

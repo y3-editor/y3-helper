@@ -56,7 +56,7 @@ import {
 import { TOAST_STREAMING_PREVENT_SUBMIT_ID } from '../../utils/toast';
 import Split from '../../components/Split';
 import { SplitDirection, SplitValueType } from '../../components/Split/Split';
-import { validateBeforeChat } from '../../utils/validateBeforeChat';
+import { validateBeforeChat, validateCodeBlocksLanguage } from '../../utils/validateBeforeChat';
 import useCustomToast from '../../hooks/useCustomToast';
 import { uploadMessageFeedback } from '../../services/chat';
 import ChatMaskVariableForm from './ChatMaskSelector/ChatMaskVariableForm';
@@ -605,6 +605,18 @@ function CodeChat() {
             status: 'warning',
           });
         }
+        return;
+      }
+
+      // 校验 prePromptCodeBlock 是否包含 C/LPC 语言
+      const codeBlocks = useChatStreamStore.getState().prePromptCodeBlock;
+      if (
+        !validateCodeBlocksLanguage(
+          codeBlocks,
+          model,
+          authExtends.c_unrestrict,
+        )
+      ) {
         return;
       }
 

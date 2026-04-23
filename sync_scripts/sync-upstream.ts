@@ -842,86 +842,149 @@ function verify(): void {
     console.log('  Phase 3: VERIFY - 合并验证');
     console.log('═══════════════════════════════════════════');
     console.log('');
+    console.log('⚠️  编译验证请在终端中手动执行以下命令：');
+    console.log('');
+    console.log('  1. Webview 编译:');
+    console.log('     cd resources/webview_source_code && npm run build');
+    console.log('');
+    console.log('  2. Extension 编译:');
+    console.log('     npm run compile');
+    console.log('');
+    console.log('  确认编译通过后，再运行:');
+    console.log('     npm run sync:verify -- --confirm');
+    console.log('');
+    console.log('═══════════════════════════════════════════');
+}
 
-    let allPassed = true;
+function verifyConfirm(): void {
+    console.log('═══════════════════════════════════════════');
+    console.log('  Phase 3: VERIFY - 更新基准');
+    console.log('═══════════════════════════════════════════');
+    console.log('');
 
-    // 1. Webview 编译检查
-    console.log('🔨 检查 webview 编译...');
-    try {
-        execSync('npm run build', {
-            cwd: path.join(PROJECT_ROOT, 'resources', 'webview_source_code'),
-            encoding: 'utf-8',
-            stdio: 'pipe',
-        });
-        console.log('  ✅ webview 编译通过');
-    } catch (err: any) {
-        console.error('  ❌ webview 编译失败:');
-        console.error(err.stdout || err.stderr || err.message);
-        allPassed = false;
-    }
-
-    // 2. Extension 编译检查
-    console.log('🔨 检查 extension 编译...');
-    try {
-        execSync('npm run compile', {
-            cwd: PROJECT_ROOT,
-            encoding: 'utf-8',
-            stdio: 'pipe',
-        });
-        console.log('  ✅ extension 编译通过');
-    } catch (err: any) {
-        console.error('  ❌ extension 编译失败:');
-        console.error(err.stdout || err.stderr || err.message);
-        allPassed = false;
-    }
-
-    // 3. 消息协议一致性校验
+    // 1. 消息协议一致性校验
     console.log('📨 检查消息协议一致性...');
     const y3Cases = getY3MakerCases();
     console.log(`  后端处理的消息类型: ${y3Cases.length} 个`);
-
-    // 尝试从前端编译产物中提取消息类型（简化版 — 只检查后端自己的一致性）
     console.log('  ✅ 消息类型清单已记录 (详细校验需结合前端)');
 
-    // 4. 更新基准
-    if (allPassed) {
-        console.log('');
-        console.log('📌 更新基准版本...');
+    // 2. 更新基准
+    console.log('');
+    console.log('📌 更新基准版本...');
 
-        const reportPath = path.join(SYNC_DIR, 'last-sync-report.json');
-        if (fs.existsSync(reportPath)) {
-            const report: SyncReport = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
-            const baselinePath = path.join(SYNC_DIR, 'baseline.json');
-            const baseline: Baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf-8'));
+    const reportPath = path.join(SYNC_DIR, 'last-sync-report.json');
+    if (fs.existsSync(reportPath)) {
+        const report: SyncReport = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        const baselinePath = path.join(SYNC_DIR, 'baseline.json');
+        const baseline: Baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf-8'));
 
-            if (report.upstream.webui) {
-                baseline.webui.lastSyncCommit = report.upstream.webui.to;
-                baseline.webui.lastSyncDate = report.upstream.webui.date_to;
-                console.log(`  webui: → ${report.upstream.webui.to.slice(0, 8)} (${report.upstream.webui.date_to})`);
-            }
-            if (report.upstream.extension) {
-                baseline.extension.lastSyncCommit = report.upstream.extension.to;
-                baseline.extension.lastSyncDate = report.upstream.extension.date_to;
-                console.log(`  extension: → ${report.upstream.extension.to.slice(0, 8)} (${report.upstream.extension.date_to})`);
-            }
-
-            fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2), 'utf-8');
-            console.log('  ✅ baseline.json 已更新');
-        } else {
-            console.log('  ⚠️ 未找到同步报告，跳过基准更新');
+        if (report.upstream.webui) {
+            baseline.webui.lastSyncCommit = report.upstream.webui.to;
+            baseline.webui.lastSyncDate = report.upstream.webui.date_to;
+            console.log(`  webui: → ${report.upstream.webui.to.slice(0, 8)} (${report.upstream.webui.date_to})`);
         }
+        if (report.upstream.extension) {
+            baseline.extension.lastSyncCommit = report.upstream.extension.to;
+            baseline.extension.lastSyncDate = report.upstream.extension.date_to;
+            console.log(`  extension: → ${report.upstream.extension.to.slice(0, 8)} (${report.upstream.extension.date_to})`);
+        }
+
+        fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2), 'utf-8');
+        console.log('  ✅ baseline.json 已更新');
+
+        // 3. 写同步总结到 history
+        writeHistory(report);
+    } else {
+        console.log('  ⚠️ 未找到同步报告，跳过基准更新');
     }
 
     console.log('');
     console.log('═══════════════════════════════════════════');
-    if (allPassed) {
-        console.log('  ✅ 全部验证通过!');
-        console.log('  基准已更新，可以运行下一轮 analyze。');
-    } else {
-        console.log('  ❌ 验证失败，请修复后重新运行 verify。');
-        console.log('  基准未更新。');
-    }
+    console.log('  ✅ 基准已更新，可以运行下一轮 analyze。');
     console.log('═══════════════════════════════════════════');
+}
+
+function writeHistory(report: SyncReport): void {
+    const historyDir = path.join(SYNC_DIR, 'history');
+    if (!fs.existsSync(historyDir)) {
+        fs.mkdirSync(historyDir, { recursive: true });
+    }
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+
+    // 文件名: 2026-04-23_1430.md
+    const filename = `${dateStr}_${timeStr}.md`;
+    const filePath = path.join(historyDir, filename);
+
+    // 统计
+    const safe = report.items.filter(i => i.category === 'safe');
+    const review = report.items.filter(i => i.category === 'review');
+    const newItems = report.items.filter(i => i.category === 'new');
+    const skip = report.items.filter(i => i.category === 'skip');
+
+    const lines: string[] = [];
+    lines.push(`# 同步总结 ${dateStr}`);
+    lines.push('');
+    lines.push(`> 生成时间: ${now.toISOString()}`);
+    lines.push('');
+
+    // 上游范围
+    lines.push('## 上游范围');
+    lines.push('');
+    if (report.upstream.webui) {
+        const w = report.upstream.webui;
+        lines.push(`- **webui**: \`${w.from.slice(0, 8)}\` → \`${w.to.slice(0, 8)}\` (${w.date_from} → ${w.date_to}), ${w.commit_count} commits`);
+    }
+    if (report.upstream.extension) {
+        const e = report.upstream.extension;
+        lines.push(`- **extension**: \`${e.from.slice(0, 8)}\` → \`${e.to.slice(0, 8)}\` (${e.date_from} → ${e.date_to}), ${e.commit_count} commits`);
+    }
+    lines.push('');
+
+    // 统计概览
+    lines.push('## 统计');
+    lines.push('');
+    lines.push(`| 分类 | 数量 |`);
+    lines.push(`|------|------|`);
+    lines.push(`| 🟢 SAFE | ${safe.length} |`);
+    lines.push(`| 🟡 REVIEW | ${review.length} |`);
+    lines.push(`| 🔴 NEW | ${newItems.length} |`);
+    lines.push(`| ⚪ SKIP | ${skip.length} |`);
+    lines.push(`| **总计** | **${report.items.length}** |`);
+    lines.push('');
+
+    // 详细变更列表（SAFE + REVIEW + NEW）
+    const actionable = report.items.filter(i => i.category !== 'skip');
+    if (actionable.length > 0) {
+        lines.push('## 变更明细');
+        lines.push('');
+        lines.push('| # | 分类 | 仓库 | 上游路径 | Y3 路径 | 类型 |');
+        lines.push('|---|------|------|---------|---------|------|');
+        for (const item of actionable) {
+            const icon = item.category === 'safe' ? '🟢' : item.category === 'review' ? '🟡' : '🔴';
+            lines.push(`| ${item.id} | ${icon} ${item.category.toUpperCase()} | ${item.repo} | \`${item.upstream_path}\` | ${item.local_path ? `\`${item.local_path}\`` : '-'} | ${item.change_type} |`);
+        }
+        lines.push('');
+    }
+
+    // 跳过的项（折叠）
+    if (skip.length > 0) {
+        lines.push('<details>');
+        lines.push(`<summary>跳过项 (${skip.length} 个)</summary>`);
+        lines.push('');
+        for (const item of skip) {
+            lines.push(`- \`${item.upstream_path}\` — ${item.reason || '在排除列表中'}`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+
+    fs.writeFileSync(filePath, lines.join('\n'), 'utf-8');
+    console.log('');
+    console.log(`📝 同步总结已写入: .codemaker/sync/history/${filename}`);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -939,9 +1002,15 @@ function main(): void {
             analyze(skipToDate);
             break;
         }
-        case 'verify':
-            verify();
+        case 'verify': {
+            const hasConfirm = args.includes('--confirm');
+            if (hasConfirm) {
+                verifyConfirm();
+            } else {
+                verify();
+            }
             break;
+        }
         default:
             console.log('Usage:');
             console.log('  npx tsx sync_scripts/sync-upstream.ts analyze [--skip-to-date YYYY-MM-DD]');
