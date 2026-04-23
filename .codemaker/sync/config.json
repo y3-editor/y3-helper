@@ -21,7 +21,14 @@
       "resources/webview_source_code/src/PostMessageProvider.tsx",
       "resources/webview_source_code/src/App.tsx",
       "resources/webview_source_code/src/routes/CodeChat/ChatHeaderToolbar.tsx",
-      "resources/webview_source_code/src/services/useChatStream.ts"
+      "resources/webview_source_code/src/routes/CodeChat/ChatFunctionalToolbar.tsx",
+      "resources/webview_source_code/src/services/useChatStream.ts",
+      "resources/webview_source_code/src/routes/CodeChat/CodebaseModePicker.tsx",
+      "resources/webview_source_code/src/routes/CodeChat/CodebaseExceedCost.tsx",
+      "resources/webview_source_code/src/routes/CodeChat/GlobalDataLoader.tsx",
+      "resources/webview_source_code/src/routes/CodeReview/utils.ts",
+      "resources/webview_source_code/src/store/chatBill.ts",
+      "resources/webview_source_code/src/utils/specVersionUtils.ts"
     ],
     "y3_only": [
       "resources/webview_source_code/src/stubs/"

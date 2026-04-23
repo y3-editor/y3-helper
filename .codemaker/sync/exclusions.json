@@ -55,8 +55,14 @@
     "src/modules/": "CodeMaker内部模块系统，Y3不需要",
     "src/telemetry/": "CodeMaker内部遥测，Y3用stub替代",
     "src/patchSetup.ts": "CodeMaker内部Sentry补丁",
-    "src/routes/CodeReview/": "Y3无代码审查模块，依赖store/localReview、store/review、store/teamReview、services/localReview等Y3不存在的模块",
-    "src/routes/CodeCoverage/": "Y3无代码覆盖率模块"
+    "src/routes/CodeReview/index.tsx": "Y3无代码审查页面组件，依赖store/localReview等不存在的模块",
+    "src/routes/CodeReview/const.ts": "Y3无TEAM_REVIEW_API_URL等CodeReview常量",
+    "src/routes/CodeReview/ReviewLanding.tsx": "Y3无代码审查着陆页",
+    "src/routes/CodeReview/CreateReviewRequest.tsx": "Y3无创建审查请求页面",
+    "src/routes/CodeReview/ReviewDetail.tsx": "Y3无审查详情页面",
+    "src/routes/CodeReview/ReviewList.tsx": "Y3无审查列表页面",
+    "src/routes/CodeCoverage/": "Y3无代码覆盖率模块",
+    "src/routes/CodeChat/GlobalDataLoader/": "Y3有自己的GlobalDataLoader.tsx（从VSCode Settings读取固定模型），上游的index.tsx会调getUserModels接口（Y3没有），且目录优先于文件导致Y3版本被覆盖"
   },
   "excluded_upstream_files_notes": {
     "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",

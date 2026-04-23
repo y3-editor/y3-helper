@@ -36,7 +36,7 @@ export const useChatBillStore = create<IChatBillStore>()(
           maxCostPerMonth: cost
         }))
       },
-      isExceedCost: true,
+      isExceedCost: false,
       setIsExceedCost(isExceed: boolean) {
         set(() => ({
           isExceedCost: isExceed

@@ -2,12 +2,10 @@ import {
   Box,
   Flex,
   Text,
-  Image,
   Button,
   VStack,
 } from '@chakra-ui/react';
 import * as React from 'react';
-import CodeMakerLogo from '../../assets/codemaker-logo.png';
 import { useChatBillStore } from '../../store/chatBill';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { usePostMessage } from '../../PostMessageProvider';
@@ -33,22 +31,15 @@ function CodebaseExceedCost() {
     <Box className="py-6 px-6 flex flex-col h-full justify-center max-w-2xl mx-auto">
       {/* Header */}
       <Flex justifyContent="center" alignItems={'flex-start'}>
-        <Image
-          src={CodeMakerLogo}
-          alt="CodeMaker Logo"
-          width="28px"
-          height="28px"
-          mr={1}
-        />
         <Text
           color="blue.300"
-          fontSize="20px"
+          fontSize="22px"
           fontWeight="bold"
           lineHeight="1.8"
           bgGradient="linear(to-r, blue.400, purple.400)"
           bgClip="text"
         >
-          odeMaker Coding Agent
+          Y3 Maker Agent
         </Text>
       </Flex>
 
@@ -59,7 +50,7 @@ function CodebaseExceedCost() {
         mb={6}
         textAlign="center"
       >
-        让开发像聊天一样简单！
+        智能 Y3 项目开发助手
       </Text>
 
       {/* Main Content */}
