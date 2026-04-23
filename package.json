@@ -511,7 +511,9 @@
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
         "feasibility_test": "node ./out/test/feasibility.test.js",
-        "build:webview": "cd resources/webview_source_code && npm run build"
+        "build:webview": "cd resources/webview_source_code && npm run build",
+        "sync:analyze": "npx tsx sync_scripts/sync-upstream.ts analyze",
+        "sync:verify": "npx tsx sync_scripts/sync-upstream.ts verify"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.13.1",

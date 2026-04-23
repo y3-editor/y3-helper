@@ -11,3 +11,8 @@ CLAUDE.md
 design
 .worktrees
 resources/webview_source_code/node_modules/
+
+# CodeMaker upstream sync - sensitive/temporary files
+.codemaker/sync/config.local.json
+.codemaker/sync/*.diff
+.codemaker/sync/merge-progress.json

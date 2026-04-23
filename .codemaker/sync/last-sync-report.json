@@ -1,0 +1,506 @@
+{
+  "generated_at": "2026-04-23T02:43:47.269Z",
+  "upstream": {
+    "webui": {
+      "from": "10be173b133f0d35e300637fe8f259a21799f943",
+      "to": "ab58bc52417ef1838ec905302ddeb6651eabca50",
+      "date_from": "2026-03-02",
+      "date_to": "2026-03-03",
+      "commits": 6
+    },
+    "extension": {
+      "from": "fbf9134fd4b252c2812189b182769fe8cc5cb017",
+      "to": "61ab1041a3cf54a831fa99ceac808f6bccad5664",
+      "date_from": "2026-03-04",
+      "date_to": "2026-03-05",
+      "commits": 10
+    }
+  },
+  "items": [
+    {
+      "id": 1,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/AuthProvider.tsx",
+      "local_path": "resources/webview_source_code/src/routes/AuthProvider.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/ChatInput.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/ChatInput.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/ChatMessagesList/index.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/ChatMessagesList/index.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/ChatModelSelector.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/ChatModelSelector.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/ChatTypeAhead/Prompt/PromptsPanel.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/ChatTypeAhead/Prompt/PromptsPanel.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/CodeChat.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/CodeChat.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 7,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/routes/CodeChat/DevspaceCollapse.tsx",
+      "local_path": "resources/webview_source_code/src/routes/CodeChat/DevspaceCollapse.tsx",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 8,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/services/index.ts",
+      "local_path": "resources/webview_source_code/src/services/index.ts",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 9,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/services/useChatStream.ts",
+      "local_path": "resources/webview_source_code/src/services/useChatStream.ts",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 10,
+      "category": "safe",
+      "repo": "webui",
+      "upstream_path": "src/store/chat.ts",
+      "local_path": "resources/webview_source_code/src/store/chat.ts",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 11,
+      "category": "skip",
+      "repo": "webui",
+      "upstream_path": "src/telemetry/otel.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 12,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "CHANGELOG.md",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 13,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "package.json",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 14,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "pnpm-lock.yaml",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 15,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/commands/addComments/index.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 16,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/commands/addDocstring/index.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 17,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/commands/editSuggestions/unisdk.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 18,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/config.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 19,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/extension.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 20,
+      "category": "review",
+      "repo": "extension",
+      "upstream_path": "src/handlers/skillsHandler/index.ts",
+      "local_path": "src/codemaker/skillsHandler.ts",
+      "change_type": "modified",
+      "reason": "在监控列表中且有映射",
+      "status": "pending"
+    },
+    {
+      "id": 21,
+      "category": "review",
+      "repo": "extension",
+      "upstream_path": "src/handlers/specHandler/parsers/openspecParser.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在监控列表中（可能影响 Y3Maker 功能）",
+      "status": "pending"
+    },
+    {
+      "id": 22,
+      "category": "review",
+      "repo": "extension",
+      "upstream_path": "src/handlers/specHandler/parsers/speckitParser.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在监控列表中（可能影响 Y3Maker 功能）",
+      "status": "pending"
+    },
+    {
+      "id": 23,
+      "category": "review",
+      "repo": "extension",
+      "upstream_path": "src/handlers/specHandler/specHandler.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在监控列表中（可能影响 Y3Maker 功能）",
+      "status": "pending"
+    },
+    {
+      "id": 24,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/handlers/uriHandler.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 25,
+      "category": "safe",
+      "repo": "extension",
+      "upstream_path": "src/handlers/workspaceTracker/index.ts",
+      "local_path": "src/codemaker/handlers/workspaceTracker.ts",
+      "change_type": "modified",
+      "reason": null,
+      "status": "pending"
+    },
+    {
+      "id": 26,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/param/configures.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 27,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/utils/chatNotification.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 28,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/executeFunction.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 29,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/fileType.ts",
+      "local_path": null,
+      "change_type": "added",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 30,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/generateCode.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 31,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/generateComments.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 32,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/generateCommentsNew.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 33,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/generateDocstring.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 34,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/getCodeFix.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 35,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/utils/localRepo.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 36,
+      "category": "skip",
+      "repo": "extension",
+      "upstream_path": "src/utils/localReview.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "在排除列表中",
+      "status": "pending"
+    },
+    {
+      "id": 37,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "src/utils/modifyCode.ts",
+      "local_path": null,
+      "change_type": "modified",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 38,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/alerter/alerter",
+      "local_path": null,
+      "change_type": "added",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 39,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/Info.plist",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 40,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/MacOS/terminal-notifier",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 41,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/PkgInfo",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 42,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/Resources/Terminal.icns",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 43,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/Resources/en.lproj/Credits.rtf",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 44,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/Resources/en.lproj/InfoPlist.strings",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 45,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/mac.noindex/terminal-notifier.app/Contents/Resources/en.lproj/MainMenu.nib",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 46,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/snoreToast/LICENSE",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 47,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/snoreToast/snoretoast-x64.exe",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    },
+    {
+      "id": 48,
+      "category": "new",
+      "repo": "extension",
+      "upstream_path": "vendor/snoreToast/snoretoast-x86.exe",
+      "local_path": null,
+      "change_type": "deleted",
+      "reason": "无路径映射",
+      "status": "pending"
+    }
+  ],
+  "message_type_changes": {
+    "new_cases": [],
+    "exists_cases": [],
+    "skipped_cases": []
+  }
+}
