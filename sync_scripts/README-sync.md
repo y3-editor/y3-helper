@@ -22,11 +22,16 @@ CodeMaker 上游仓库                          Y3Helper
 ### Phase 1: ANALYZE（分析） — 自己在终端跑
 ```bash
 npm run sync:analyze
-# 或指定跳过到某天：
+# 指定仓库（不指定时自动选优先级高的）：
+npm run sync:analyze -- --repo webui
+npm run sync:analyze -- --repo extension
+# 跳过到某天：
 npm run sync:analyze -- --skip-to-date 2026-04-01
 ```
 
-- 从两个上游仓库 fetch 最新代码
+- **单仓库模式**：每次只分析一个仓库的变更（webui 优先于 extension）
+- 同一天两个仓库都处理完才能推进到下一天
+- 从上游仓库 fetch 最新代码
 - 找到 baseline 后下一天的提交（一天限额）
 - 计算 diff 并分类每个变更文件
 - 为 SAFE/REVIEW 项提取完整 diff 和上游文件内容
@@ -40,12 +45,18 @@ npm run sync:analyze -- --skip-to-date 2026-04-01
 > "帮我合并上游同步报告"
 > "读取同步报告开始合并"
 
+> [!IMPORTANT]
+> **AI 必须先执行 `npm run sync:analyze`，不能直接读取旧的 `last-sync-report.json` 来分析！**
+> 报告文件在合并完成后不会自动清理，下次对话时可能读到过时数据。
+> 正确流程：先跑 analyze → 确认报告内容是最新的 → 再开始合并。
+
 AI 会：
-1. 读取 `.codemaker/sync/last-sync-report.json`（含完整 diff）
-2. **SAFE 项**：AI 直接用 `upstream_content` 覆盖 Y3 文件
-3. **REVIEW 项**：AI 读取 diff + Y3 当前文件，智能合并（保留 Y3 定制，采纳上游改动），然后让你 review
-4. **NEW 项**：AI 判断是否与 Y3 相关，给出建议，你确认后执行
-5. **复杂冲突**：AI 标记出来，你用 git merge 工具手动处理
+1. **先执行 `npm run sync:analyze`**，确保报告是基于最新 baseline 生成的
+2. 读取 `.codemaker/sync/last-sync-report.json`（含完整 diff）
+3. **SAFE 项**：AI 直接用 `upstream_content` 覆盖 Y3 文件
+4. **REVIEW 项**：AI 读取 diff + Y3 当前文件，智能合并（保留 Y3 定制，采纳上游改动），然后让你 review
+5. **NEW 项**：AI 判断是否与 Y3 相关，给出建议，你确认后执行
+6. **复杂冲突**：AI 标记出来，你用 git merge 工具手动处理
 
 ### Phase 3: VERIFY（验证） — 自己在终端跑
 ```bash
@@ -79,20 +90,25 @@ npm run sync:verify
 ## 日常使用
 
 ```bash
-# 1. 分析下一天的变更
+# 1. 分析（自动选一个仓库，webui 优先）
 npm run sync:analyze
 
-# 2. 查看报告
-# 打开 .codemaker/sync/last-sync-report.md
-
-# 3. 在 AI 对话中合并
+# 2. 在 AI 对话中合并该仓库的变更
 # 说："帮我合并上游同步报告"
 
-# 4. 验证 + 更新基准
+# 3. 验证 + 更新基准
 npm run sync:verify
 
-# 5. 重复 1-4 直到追上最新版本
+# 4. 再次 analyze 处理同一天的另一个仓库（如有）
+npm run sync:analyze
+
+# 5. 合并 + 验证另一个仓库
+
+# 6. 重复直到追上最新版本
 ```
+
+> **同一天约束**：两个仓库的提交可能无关联，分开处理更清晰。
+> 如果发现某个仓库的变更依赖另一个仓库的内容，先合并被依赖方。
 
 ## 文件变更分类
 

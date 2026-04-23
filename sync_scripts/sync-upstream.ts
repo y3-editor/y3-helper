@@ -6,7 +6,7 @@
  * Phase 3: verify  — 验证合并结果（编译检查 + 协议一致性）+ 更新基准
  *
  * Usage:
- *   npx tsx sync_scripts/sync-upstream.ts analyze [--skip-to-date YYYY-MM-DD]
+ *   npx tsx sync_scripts/sync-upstream.ts analyze [--repo webui|extension] [--skip-to-date YYYY-MM-DD]
  *   npx tsx sync_scripts/sync-upstream.ts verify
  */
 
@@ -650,7 +650,7 @@ function generateMarkdownReport(report: SyncReport): void {
 //  Phase 1: Analyze (main entry)
 // ═══════════════════════════════════════════════════════════════
 
-function analyze(skipToDate?: string): void {
+function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void {
     console.log('═══════════════════════════════════════════');
     console.log('  Phase 1: ANALYZE - 上游变更分析');
     console.log('═══════════════════════════════════════════');
@@ -658,57 +658,106 @@ function analyze(skipToDate?: string): void {
 
     const { config, local, baseline, exclusions } = loadConfig();
 
-    // Fetch 两个仓库
+    // Fetch 仓库（只 fetch 需要的）
     console.log('📡 Fetching upstream repositories...');
-    gitFetch(local.webui.localPath, local.webui.branch);
-    gitFetch(local.extension.localPath, local.extension.branch);
+    if (!repoFilter || repoFilter === 'webui') {
+        gitFetch(local.webui.localPath, local.webui.branch);
+    }
+    if (!repoFilter || repoFilter === 'extension') {
+        gitFetch(local.extension.localPath, local.extension.branch);
+    }
     console.log('');
 
     // Find sync targets
     console.log('🔍 Finding sync targets (一天限额)...');
+    console.log('');
 
-    const webuiTarget = findNextSyncTarget(
-        local.webui.localPath,
-        local.webui.branch,
-        baseline.webui.lastSyncCommit,
-        baseline.webui.lastSyncDate,
-        skipToDate,
-    );
+    const webuiTarget = (!repoFilter || repoFilter === 'webui')
+        ? findNextSyncTarget(
+            local.webui.localPath,
+            local.webui.branch,
+            baseline.webui.lastSyncCommit,
+            baseline.webui.lastSyncDate,
+            skipToDate,
+        )
+        : null;
 
-    const extTarget = findNextSyncTarget(
-        local.extension.localPath,
-        local.extension.branch,
-        baseline.extension.lastSyncCommit,
-        baseline.extension.lastSyncDate,
-        skipToDate,
-    );
+    const extTarget = (!repoFilter || repoFilter === 'extension')
+        ? findNextSyncTarget(
+            local.extension.localPath,
+            local.extension.branch,
+            baseline.extension.lastSyncCommit,
+            baseline.extension.lastSyncDate,
+            skipToDate,
+        )
+        : null;
 
-    if (webuiTarget) {
-        console.log(`  📦 webui: ${baseline.webui.lastSyncCommit.slice(0, 8)} → ${webuiTarget.commit.slice(0, 8)} (${webuiTarget.date})`);
-        console.log(`     ${webuiTarget.message}`);
+    // ── 自动选择仓库 ──
+    // 不指定 --repo 时，按同一天约束自动选优先级：webui 优先
+    let selectedRepo: 'webui' | 'extension' | 'both' | 'none' = 'none';
+
+    if (repoFilter) {
+        // 用户明确指定了仓库
+        if (repoFilter === 'webui' && webuiTarget) {
+            selectedRepo = 'webui';
+        } else if (repoFilter === 'extension' && extTarget) {
+            selectedRepo = 'extension';
+        }
     } else {
+        // 自动选择：基于同一天约束
+        if (webuiTarget && extTarget) {
+            // 两个都有更新，看日期是否相同
+            if (webuiTarget.date === extTarget.date) {
+                // 同一天，但分开处理：先 webui
+                selectedRepo = 'webui';
+                console.log(`  ℹ️ 两个仓库在 ${webuiTarget.date} 都有更新，按优先级先处理 webui`);
+                console.log(`     处理完 webui 后再执行一次 analyze 处理 extension`);
+            } else if (webuiTarget.date < extTarget.date) {
+                // webui 日期更早，先处理
+                selectedRepo = 'webui';
+            } else {
+                // extension 日期更早，先处理
+                selectedRepo = 'extension';
+            }
+        } else if (webuiTarget) {
+            selectedRepo = 'webui';
+        } else if (extTarget) {
+            selectedRepo = 'extension';
+        }
+    }
+
+    // 打印状态
+    if (webuiTarget) {
+        const marker = (selectedRepo === 'webui' || selectedRepo === 'both') ? '📦' : '⏸️';
+        console.log(`  ${marker} webui: ${baseline.webui.lastSyncCommit.slice(0, 8)} → ${webuiTarget.commit.slice(0, 8)} (${webuiTarget.date})`);
+        console.log(`     ${webuiTarget.message}`);
+    } else if (!repoFilter || repoFilter === 'webui') {
         console.log('  ✅ webui: 已是最新版本');
     }
 
     if (extTarget) {
-        console.log(`  📦 extension: ${baseline.extension.lastSyncCommit.slice(0, 8)} → ${extTarget.commit.slice(0, 8)} (${extTarget.date})`);
+        const marker = (selectedRepo === 'extension' || selectedRepo === 'both') ? '📦' : '⏸️';
+        console.log(`  ${marker} extension: ${baseline.extension.lastSyncCommit.slice(0, 8)} → ${extTarget.commit.slice(0, 8)} (${extTarget.date})`);
         console.log(`     ${extTarget.message}`);
-    } else {
+    } else if (!repoFilter || repoFilter === 'extension') {
         console.log('  ✅ extension: 已是最新版本');
     }
     console.log('');
 
-    if (!webuiTarget && !extTarget) {
-        console.log('✅ 两个仓库都已是最新版本，无需同步。');
+    if (selectedRepo === 'none') {
+        console.log('✅ 无需同步的仓库。');
         return;
     }
 
-    // Get diff files and classify
+    // ── 根据选择的仓库分析变更 ──
     const items: ChangeItem[] = [];
     let idCounter = 1;
 
+    const processWebui = selectedRepo === 'webui' || selectedRepo === 'both';
+    const processExtension = selectedRepo === 'extension' || selectedRepo === 'both';
+
     // Webui changes
-    if (webuiTarget) {
+    if (processWebui && webuiTarget) {
         console.log('📂 分析 webui 变更...');
         const diffs = getDiffFiles(local.webui.localPath, baseline.webui.lastSyncCommit, webuiTarget.commit);
         console.log(`  找到 ${diffs.length} 个文件变更`);
@@ -739,7 +788,7 @@ function analyze(skipToDate?: string): void {
     }
 
     // Extension changes
-    if (extTarget) {
+    if (processExtension && extTarget) {
         console.log('📂 分析 extension 变更...');
         const diffs = getDiffFiles(local.extension.localPath, baseline.extension.lastSyncCommit, extTarget.commit);
         console.log(`  找到 ${diffs.length} 个文件变更`);
@@ -769,9 +818,9 @@ function analyze(skipToDate?: string): void {
         }
     }
 
-    // Message type detection
+    // Message type detection (only when processing extension)
     let messageTypeChanges: SyncReport['message_type_changes'] = undefined;
-    if (extTarget) {
+    if (processExtension && extTarget) {
         console.log('📨 检测消息类型变更...');
         messageTypeChanges = detectMessageTypeChanges(
             local.extension.localPath,
@@ -792,14 +841,14 @@ function analyze(skipToDate?: string): void {
     const report: SyncReport = {
         generated_at: new Date().toISOString(),
         upstream: {
-            webui: webuiTarget ? {
+            webui: (processWebui && webuiTarget) ? {
                 from: baseline.webui.lastSyncCommit,
                 to: webuiTarget.commit,
                 date_from: baseline.webui.lastSyncDate,
                 date_to: webuiTarget.date,
                 commits: parseInt(git(local.webui.localPath, `rev-list --count ${baseline.webui.lastSyncCommit}..${webuiTarget.commit}`) || '0'),
             } : null,
-            extension: extTarget ? {
+            extension: (processExtension && extTarget) ? {
                 from: baseline.extension.lastSyncCommit,
                 to: extTarget.commit,
                 date_from: baseline.extension.lastSyncDate,
@@ -824,12 +873,30 @@ function analyze(skipToDate?: string): void {
 
     console.log('');
     console.log('═══════════════════════════════════════════');
-    console.log('  分析完成!');
+    console.log(`  分析完成! [${selectedRepo.toUpperCase()}]`);
     console.log(`  🟢 SAFE: ${safe}  🟡 REVIEW: ${review}  🔴 NEW: ${newCount}  ⚪ SKIP: ${skipCount}`);
     console.log('  总计: ' + items.length + ' 个变更项');
     console.log('');
     console.log('  下一步: 在 AI 对话中运行 Phase 2 合并');
     console.log('  或查看报告: .codemaker/sync/last-sync-report.md');
+
+    // 提示同一天的另一个仓库
+    if (!repoFilter) {
+        if (selectedRepo === 'webui' && extTarget && webuiTarget && extTarget.date === webuiTarget.date) {
+            console.log('');
+            console.log(`  ⏳ extension 在同一天 (${extTarget.date}) 也有更新`);
+            console.log('     合并完 webui 后请再次执行 analyze 处理 extension');
+        } else if (selectedRepo === 'webui' && extTarget) {
+            console.log('');
+            console.log(`  ⏳ extension 有待处理更新 (${extTarget.date})`);
+            console.log('     当前天的 webui 合并完后再处理');
+        } else if (selectedRepo === 'extension' && webuiTarget) {
+            console.log('');
+            console.log(`  ⏳ webui 有待处理更新 (${webuiTarget.date})`);
+            console.log('     当前天的 extension 合并完后再处理');
+        }
+    }
+
     console.log('═══════════════════════════════════════════');
 }
 
@@ -935,11 +1002,11 @@ function writeHistory(report: SyncReport): void {
     lines.push('');
     if (report.upstream.webui) {
         const w = report.upstream.webui;
-        lines.push(`- **webui**: \`${w.from.slice(0, 8)}\` → \`${w.to.slice(0, 8)}\` (${w.date_from} → ${w.date_to}), ${w.commit_count} commits`);
+        lines.push(`- **webui**: \`${w.from.slice(0, 8)}\` → \`${w.to.slice(0, 8)}\` (${w.date_from} → ${w.date_to}), ${w.commits} commits`);
     }
     if (report.upstream.extension) {
         const e = report.upstream.extension;
-        lines.push(`- **extension**: \`${e.from.slice(0, 8)}\` → \`${e.to.slice(0, 8)}\` (${e.date_from} → ${e.date_to}), ${e.commit_count} commits`);
+        lines.push(`- **extension**: \`${e.from.slice(0, 8)}\` → \`${e.to.slice(0, 8)}\` (${e.date_from} → ${e.date_to}), ${e.commits} commits`);
     }
     lines.push('');
 
@@ -999,7 +1066,13 @@ function main(): void {
         case 'analyze': {
             const skipIdx = args.indexOf('--skip-to-date');
             const skipToDate = skipIdx >= 0 ? args[skipIdx + 1] : undefined;
-            analyze(skipToDate);
+            const repoIdx = args.indexOf('--repo');
+            const repoFilter = repoIdx >= 0 ? args[repoIdx + 1] as 'webui' | 'extension' : undefined;
+            if (repoFilter && repoFilter !== 'webui' && repoFilter !== 'extension') {
+                console.error(`❌ --repo 参数只接受 webui 或 extension，收到: ${repoFilter}`);
+                process.exit(1);
+            }
+            analyze(skipToDate, repoFilter);
             break;
         }
         case 'verify': {
@@ -1013,7 +1086,7 @@ function main(): void {
         }
         default:
             console.log('Usage:');
-            console.log('  npx tsx sync_scripts/sync-upstream.ts analyze [--skip-to-date YYYY-MM-DD]');
+            console.log('  npx tsx sync_scripts/sync-upstream.ts analyze [--repo webui|extension] [--skip-to-date YYYY-MM-DD]');
             console.log('  npx tsx sync_scripts/sync-upstream.ts verify');
             console.log('');
             console.log('Phase 2 (merge) 由 AI 在对话中驱动，无需命令行。');
