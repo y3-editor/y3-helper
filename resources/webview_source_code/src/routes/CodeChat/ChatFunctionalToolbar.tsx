@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useRef, useState } from 'react';
+import { ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Text,
@@ -7,6 +7,8 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
+  PopoverHeader,
+  CloseButton,
   Tooltip,
   useOutsideClick,
   VStack,
@@ -14,17 +16,22 @@ import {
 } from '@chakra-ui/react';
 import SelectWithTooltip, { SelectOption } from '../../components/SelectWithTooltip';
 import { RiFileEditLine, RiQuestionnaireLine, RiToolsLine } from 'react-icons/ri';
+import { FiFileText } from "react-icons/fi";
 import { useChatConfig } from '../../store/chat-config';
 import { LuListTodo } from 'react-icons/lu';
 import { IoTerminalOutline } from 'react-icons/io5';
+import { IoMdBook } from 'react-icons/io';
 import MCPConfigCollapse from './MCPConfigCollapse';
-import SkillConfigCollapse from './SkillConfigCollapse';
+import { TbBrandNetbeans, TbWand } from 'react-icons/tb';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
-import SkillSettingModal from './SkillSettingModal';
+import { IDE, useExtensionStore } from '../../store/extension';
+import { versionCompare } from '../../utils/common';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
-import { useChatStore } from '../../store/chat';
+import { useChatAttach, useChatStore } from '../../store/chat';
+import { AttachType } from '../../store/attaches';
+import { useFilteredAttach } from './ChatTypeAhead/Attach/Hooks/useFilteredAttach';
 import {
   updateCurrentSession,
   useCurrentSession,
@@ -32,7 +39,9 @@ import {
 import { usePostMessage } from '../../PostMessageProvider';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
+import { useSkillsStore } from '../../store/skills';
 import MiniButton from '../../components/MiniButton';
+import DevspaceCollapse from './DevspaceCollapse';
 
 enum EAutoConfig {
   AutoApprove = 'autoApprove',
@@ -44,14 +53,32 @@ enum EAutoConfig {
 function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mcpSettingOpen, setMcpSettingOpen] = useState(false);
-  const [skillSettingOpen, setSkillSettingOpen] = useState(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverContentRef = useRef<HTMLDivElement>(null);
+  const ide = useExtensionStore((state) => state.IDE);
+  const pluginVersion =
+    useExtensionStore((state) => state.codeMakerVersion) || '';
+  const attachs = useChatAttach((state) => state.attachs);
+  const filterAttachHook = useFilteredAttach();
   const syncHistory = useChatStore((state) => state.syncHistory);
   const { postMessage } = usePostMessage();
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
 
-  const supportNewApply = true;
+  const supportNewApply = useMemo(() => {
+    let newApplyVersion = false;
+    if (ide === IDE.VisualStudioCode) {
+      newApplyVersion = versionCompare('2.5.8', pluginVersion) >= 0;
+    } else if (ide === IDE.JetBrains && pluginVersion) {
+      try {
+        const jbVersion = pluginVersion.split('-')[1];
+        newApplyVersion = versionCompare('2.3.9', jbVersion) >= 0;
+      } catch {
+        newApplyVersion = false;
+      }
+    }
+    return newApplyVersion;
+  }, [ide, pluginVersion]);
 
   const currentSession = useCurrentSession();
 
@@ -76,6 +103,10 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
   }));
 
   const [
+    enableCodeMapSearch,
+    setEnableCodeMapSearch,
+    enableKnowledgeLibSearch,
+    setEnableKnowledgeLibSearch,
     enableEditableMode,
     setEnableEditableMode,
     enableUserQuestion,
@@ -91,16 +122,31 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     state.setEnableUserQuestion,
   ]);
 
+  const enableSkills = useChatConfig((state) => state.enableSkills);
+  const setEnableSkills = useChatConfig((state) => state.setEnableSkills);
+
+  const skills = useSkillsStore((state) => state.skills);
+
   useOutsideClick({
     ref: popoverRef,
     handler: (e) => {
-      if (!popoverRef.current?.contains(e.target as Node)) {
-        const target = e.target as HTMLElement;
-        const clickTarget = target?.getAttribute?.('data-target') || ''
-        if (!['selectOption'].includes(clickTarget)) {
-          setIsOpen(false);
-        }
+      // 检查点击目标是否在 PopoverContent 内部
+      const target = e.target as Node;
+      if (popoverContentRef.current?.contains(target)) {
+        return;
       }
+      // 检查点击目标是否在 Portal 渲染的下拉菜单内（SelectWithTooltip 的下拉菜单）
+      const targetElement = e.target as HTMLElement;
+      const dropdown = targetElement.closest('[data-select-dropdown="true"]');
+      if (dropdown) {
+        return;
+      }
+      // 检查是否点击了 selectOption
+      const clickTarget = targetElement?.getAttribute?.('data-target') || '';
+      if (['selectOption'].includes(clickTarget)) {
+        return;
+      }
+      setIsOpen(false);
     },
   });
 
@@ -132,28 +178,38 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       value: boolean;
       tooltip?: string;
       lebalTooltips?: string;
-      onChange: (val: boolean) => void;
+      onChange?: (val: boolean) => void;
       autoConfigKey?: EAutoConfig;
       autoValue?: boolean;
       autoTip?: ReactNode;
       onAutoChange?: (val: boolean) => void;
+      alwaysEnabled?: boolean; // 始终启用模式，只有"启用"和"启用(Auto)"两个选项
     }) => {
-      // 确定 Select 的值
-      const selectValue = !item.value ? 'off' : (item.autoValue ? 'auto' : 'on');
       const hasAutoOption = item.autoConfigKey && item.onAutoChange !== undefined;
 
+      // 确定 Select 的值
+      // alwaysEnabled 模式下没有 'off' 选项，直接根据 autoValue 判断
+      const selectValue = item.alwaysEnabled
+        ? (item.autoValue ? 'auto' : 'on')
+        : (!item.value ? 'off' : (item.autoValue ? 'auto' : 'on'));
+
       // Build options array
-      const selectOptions: SelectOption[] = [
-        { value: 'off', label: '关闭' },
-        { value: 'on', label: '启用' },
-      ];
+      const selectOptions: SelectOption[] = item.alwaysEnabled
+        ? [{ value: 'on', label: '启用' }]
+        : [
+            { value: 'off', label: '关闭' },
+            { value: 'on', label: '启用' },
+          ];
 
       if (hasAutoOption) {
         // For autoTip, extract text or use a simplified version
         let tooltipText = '自动模式';
         let tooltipTitle = '自动模式';
 
-        if (item.autoConfigKey === EAutoConfig.AutoExecute) {
+        if (item.autoConfigKey === EAutoConfig.AutoApprove) {
+          tooltipTitle = '自动读取';
+          tooltipText = '开启后，智聊过程将自动进行目录/文件授权，可通过配置忽略目录来保护敏感文件';
+        } else if (item.autoConfigKey === EAutoConfig.AutoExecute) {
           tooltipTitle = '自动执行';
           tooltipText = '智聊过程需运行的命令将自动执行，可通过配置忽略命令来规避高危操作';
         } else if (item.autoConfigKey === EAutoConfig.AutoApply) {
@@ -217,7 +273,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 const isAuto = value === 'auto';
 
                 // 先更新启用状态
-                if (item.value !== isEnabled) {
+               if (!item.alwaysEnabled && item.value !== isEnabled && item.onChange) {
                   item.onChange(isEnabled);
                 }
 
@@ -250,6 +306,20 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     });
   }, [compressConfig, renderSwitchItem, setCompressConfig]);
 
+  const renderSkillsItem = useCallback(() => {
+    if (skills.length === 0) return null;
+
+    return renderSwitchItem({
+      title: 'Skills 工具',
+      icon: <TbWand size={16} />,
+      value: enableSkills,
+      lebalTooltips:
+        '加载本地 Skills 文件，根据需求自动匹配并激活对应的专业指导，支持 ~/.claude/skills、.claude/skills、.codemaker/skills 目录',
+      onChange: (val) => {
+        setEnableSkills(val);
+      },
+    });
+  }, [skills.length, enableSkills, renderSwitchItem, setEnableSkills]);
 
   return (
     <Box ref={popoverRef} data-tour="chat-functional-toolbar">
@@ -282,9 +352,36 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
             </Tooltip>
           </MiniButton>
         </PopoverTrigger>
-        <PopoverContent w={'330px'}>
+        <PopoverContent w={'330px'} ref={popoverContentRef}>
+          <PopoverHeader
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            borderBottom="1px solid"
+            borderColor="gray.200"
+            _dark={{ borderColor: 'gray.600' }}
+            py={2}
+            px={3}
+          >
+            <Text fontSize="13px" fontWeight="medium">
+              工具配置
+            </Text>
+            <CloseButton size="sm" onClick={() => setIsOpen(false)} />
+          </PopoverHeader>
           <PopoverBody display="flex" flexDirection="column" p="2">
             <VStack flex={1} align="stretch" py={1}>
+              {renderSwitchItem({
+                title: '仓库文件读取',
+                icon: <FiFileText size={16} />,
+                value: true, // 始终启用
+                alwaysEnabled: true, // 只有"启用"和"启用(Auto)"两个选项
+                autoConfigKey: EAutoConfig.AutoApprove,
+                autoValue: config.autoApprove,
+                onAutoChange: (val) => {
+                  onReportAutoConfig(EAutoConfig.AutoApprove, val);
+                  config.updateAutoApprove(val);
+                },
+              })}
               {!['openspec', 'speckit'].includes(codebaseChatMode || '') && renderSwitchItem({
                 title: 'Plan Mode',
                 icon: <LuListTodo size={16} />,
@@ -306,6 +403,42 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 onAutoChange: (val) => {
                   onReportAutoConfig(EAutoConfig.AutoTodo, val);
                   config.updateAutoTodo(val);
+                },
+              })}
+              {renderSwitchItem({
+                title: '代码地图检索',
+                icon: <TbBrandNetbeans size={16} />,
+                tooltip:
+                  '开启检索代码地图工具后，检索知识库工具将同步启用，因为检索代码地图工具是基于知识库的内容进行拓展分析',
+                value: enableCodeMapSearch,
+                lebalTooltips:
+                  '根据需求智能检索云端接入的代码地图，检索相关的代码调用与片段辅助智聊生成代码',
+                onChange: (val) => {
+                  if (val) {
+                    setEnableKnowledgeLibSearch(val);
+                  } else {
+                    filterAttachHook.filterAttachesByAttachType(attachs, [
+                      AttachType.CodeBase,
+                    ]);
+                  }
+                  setEnableCodeMapSearch(val);
+                },
+              })}
+              {renderSwitchItem({
+                title: '知识库检索',
+                icon: <IoMdBook size={16} />,
+                value: enableKnowledgeLibSearch,
+                lebalTooltips:
+                  '根据需求智能调用有权限的知识库，检索相关的知识片段辅助智聊回答问题',
+                onChange: (val) => {
+                  setEnableKnowledgeLibSearch(val);
+                  if (!val) {
+                    setEnableCodeMapSearch(val);
+                    filterAttachHook.filterAttachesByAttachType(attachs, [
+                      AttachType.CodeBase,
+                      AttachType.Docset,
+                    ]);
+                  }
                 },
               })}
               {supportNewApply &&
@@ -359,7 +492,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 },
               })}
               {renderAutoMemoryItem()}
-              <SkillConfigCollapse setSkillSettingOpen={setSkillSettingOpen} />
+              {renderSkillsItem()}
               {renderSwitchItem({
                 title: '需求澄清工具',
                 icon: <RiQuestionnaireLine size={'16'} color="white" />,
@@ -369,6 +502,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   setEnableUserQuestion(val);
                 },
               })}
+              <DevspaceCollapse />
               <MCPConfigCollapse setMcpSettingOpen={setMcpSettingOpen} />
             </VStack>
           </PopoverBody>
@@ -378,10 +512,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       <MCPSettingModel
         isOpen={mcpSettingOpen}
         onClose={() => setMcpSettingOpen(false)}
-      />
-      <SkillSettingModal
-        isOpen={skillSettingOpen}
-        onClose={() => setSkillSettingOpen(false)}
       />
     </Box>
   );

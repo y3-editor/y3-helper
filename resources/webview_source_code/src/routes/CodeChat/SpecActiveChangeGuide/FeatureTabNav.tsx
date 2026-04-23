@@ -132,7 +132,6 @@ function FeatureTabNav({
           <Box>
             <Box>Feature: {activeFeatureId || activeChangeId}</Box>
             <Box>SpecType: {codebaseChatMode}</Box>
-            <Box>点击打开详细阶段</Box>
           </Box>
         }
         placement="bottom"

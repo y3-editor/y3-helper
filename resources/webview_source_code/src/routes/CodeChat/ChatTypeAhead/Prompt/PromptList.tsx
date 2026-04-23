@@ -11,6 +11,8 @@ import {
   MenuItem,
   Grid,
   VStack,
+  Tooltip,
+  Portal,
 } from '@chakra-ui/react';
 import { TbDotsVertical } from 'react-icons/tb';
 import { Prompt, PromptCategoryType } from '../../../../services/prompt';
@@ -19,6 +21,7 @@ import { scrollToFocusItem } from '../utils';
 import { UnionData, UnionType } from './type';
 import { PluginShortcutRow } from './PluginAppList';
 import EventBus, { EBusEvent } from '../../../../utils/eventbus';
+import { BroadcastActions } from '../../../../PostMessageProvider';
 // import { MERMAID_SIGN } from '../../../../store/chat-config';
 
 interface PromptListProps {
@@ -102,8 +105,11 @@ function PromptList(props: PromptListProps) {
                 textAlign="left"
                 w="full"
                 h="full"
-                py={2}
+                minH="24px"
+                py={1}
                 color="text.secondary"
+                display="flex"
+                alignItems="center"
               >
                 {renderPrompt(item, index)}
               </Box>
@@ -131,13 +137,22 @@ function SystemPrompt(props: { prompt: Prompt }) {
   const displayText = prompt.description || prompt.prompt;
 
   return (
-    <Box>
-      <Text mb={1} fontSize="14px" isTruncated>
+    <Box display="flex" h="24px" alignItems="center" overflow="hidden">
+      <Text fontSize="12px" whiteSpace="nowrap">
         / {prompt.name}
       </Text>
-      <Text fontSize="12px" opacity="0.6" isTruncated title={displayText}>
-        {displayText}
-      </Text>
+      <Tooltip label={displayText} placement="top" hasArrow openDelay={300}>
+        <Text
+          ml="2"
+          fontSize="10px"
+          opacity="0.6"
+          isTruncated
+          flex={1}
+          minW={0}
+        >
+          {parseMarkdownLinks(displayText)}
+        </Text>
+      </Tooltip>
     </Box>
   );
 }
@@ -150,33 +165,44 @@ function UserPrompt(props: {
   const { prompt, onEdit, onRemove } = props;
 
   return (
-    <Grid w="full" gridTemplateColumns="1fr 40px">
-      <Grid>
-        <Text mb={1} fontSize="14px" isTruncated>
+    <Grid w="full" h="24px" gridTemplateColumns="1fr 40px">
+      <Box display="flex" alignItems="center" overflow="hidden">
+        <Text fontSize="12px" whiteSpace="nowrap">
           / {prompt.name}
         </Text>
-        <Text fontSize="12px" opacity="0.6" isTruncated>
-          {prompt.prompt}
-        </Text>
-      </Grid>
+        <Tooltip label={prompt.prompt} placement="top" hasArrow openDelay={300}>
+          <Text
+            ml="2"
+            fontSize="10px"
+            opacity="0.6"
+            isTruncated
+            flex={1}
+            minW={0}
+          >
+            {prompt.prompt}
+          </Text>
+        </Tooltip>
+      </Box>
       <Grid
-        px={2}
+        px={1}
         alignItems="center"
         onClick={(event) => {
           event.stopPropagation();
           event.preventDefault();
         }}
       >
-        <Menu isLazy placement="left" boundary="scrollParent">
+        <Menu isLazy placement="bottom-end">
           <MenuButton
-            size="sm"
+            size="xs"
             as={IconButton}
             icon={<TbDotsVertical />}
-          ></MenuButton>
-          <MenuList minWidth="64px">
-            <MenuItem onClick={() => onEdit(prompt)}>编辑</MenuItem>
-            <MenuItem onClick={() => onRemove(prompt)}>删除</MenuItem>
-          </MenuList>
+          />
+          <Portal>
+            <MenuList minWidth="64px" zIndex="popover">
+              <MenuItem onClick={() => onEdit(prompt)}>编辑</MenuItem>
+              <MenuItem onClick={() => onRemove(prompt)}>删除</MenuItem>
+            </MenuList>
+          </Portal>
         </Menu>
       </Grid>
     </Grid>
@@ -188,41 +214,100 @@ function SkillPrompt(props: { prompt: Prompt; source?: string; active?: boolean 
   const displayText = prompt.description || prompt.prompt;
 
   return (
-    <Box>
-      <Flex mb={1} alignItems="center">
-        <Text fontSize="14px" isTruncated>
-          / {prompt.name}
-        </Text>
-        {source && (
-          <Box
-            display="inline-flex"
-            alignItems="center"
-            justifyContent="center"
-            ml="2"
-            px="2"
-            borderRadius="md"
-            borderWidth="1px"
-            fontSize="xs"
-            h="20px"
-            maxW="120px"
-            color={active ? 'white' : 'blue.300'}
-            borderColor={active ? 'white' : 'blue.300'}
-          >
-            <Text
-              overflow="hidden"
-              textOverflow="ellipsis"
-              whiteSpace="nowrap"
-            >
-              {source}
-            </Text>
-          </Box>
-        )}
-      </Flex>
-      <Text fontSize="12px" opacity="0.6" isTruncated title={displayText}>
-        {displayText}
+    <Box display="flex" h="24px" alignItems="center" overflow="hidden">
+      <Text fontSize="12px" whiteSpace="nowrap">
+        / {prompt.name}
       </Text>
+      {source && (
+        <Box
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          ml="2"
+          px="2"
+          borderRadius="md"
+          borderWidth="1px"
+          fontSize="xs"
+          h="20px"
+          maxW="80px"
+          flexShrink={0}
+          color={active ? 'white' : 'blue.300'}
+          borderColor={active ? 'white' : 'blue.300'}
+        >
+          <Text
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+          >
+            {source}
+          </Text>
+        </Box>
+      )}
+      <Tooltip label={displayText} placement="top" hasArrow openDelay={300}>
+        <Text
+          ml="2"
+          fontSize="10px"
+          opacity="0.6"
+          isTruncated
+          flex={1}
+          minW={0}
+        >
+          {displayText}
+        </Text>
+      </Tooltip>
     </Box>
   );
+}
+
+// 解析文本中的 Markdown 链接并返回 React 元素数组
+function parseMarkdownLinks(text: string): React.ReactNode[] {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    // 添加链接前的文本
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // 添加链接
+    const linkText = match[1];
+    const linkUrl = match[2];
+    parts.push(
+      <Text
+        key={match.index}
+        as="span"
+        cursor="pointer"
+        _hover={{ textDecoration: 'underline' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          window.parent.postMessage(
+            {
+              type: BroadcastActions.OPEN_IN_BROWSER,
+              data: {
+                url: linkUrl,
+              },
+            },
+            '*',
+          );
+        }}
+      >
+        {linkText}
+      </Text>,
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 添加最后的文本
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
 }
 
 export default PromptList;

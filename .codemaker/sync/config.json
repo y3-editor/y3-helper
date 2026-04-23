@@ -17,7 +17,8 @@
     },
     "customized": [
       "resources/webview_source_code/vite.config.ts",
-      "resources/webview_source_code/package.json"
+      "resources/webview_source_code/package.json",
+      "resources/webview_source_code/src/PostMessageProvider.tsx"
     ],
     "y3_only": [
       "resources/webview_source_code/src/stubs/"

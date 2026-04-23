@@ -10,7 +10,7 @@ import { useChatStore } from '../../../store/chat';
 export const devKnowledgeTour: TourConfig = {
   id: 'dev-knowledge',
   name: '研发知识集引导',
-  version: '1.0.0',
+  version: '1.1.0',
   activePageRoute: 'chat',
   trigger: {
     type: TourTriggerType.PageEnter,
@@ -24,8 +24,9 @@ export const devKnowledgeTour: TourConfig = {
   steps: [
     {
       target: '[data-tour="chat-functional-toolbar"]',
-      title: '研发知识集配置迁移',
-      content: '研发知识集配置调整到工具里，开启后可选择生效知识集合。',
+      title: '研发知识集与 Auto 配置已迁移至工具模块',
+      content:
+        '可在工具中启用并选择生效的研发知识集，同时开启仓库文件读取、Plan、Apply 等工具的 Auto 模式',
       placement: 'top',
       disableBeacon: true,
     },

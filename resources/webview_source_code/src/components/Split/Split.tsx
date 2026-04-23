@@ -92,11 +92,38 @@ function Split(props: SplitProps) {
           maybeSizes[0].type === SplitValueType.Percentage) &&
           maybeSizes[1].type === SplitValueType.Auto) ||
           (maybeSizes[0].type === SplitValueType.Auto &&
-            (maybeSizes[1].type === SplitValueType.Absolute ||
-              maybeSizes[1].type === SplitValueType.Percentage)))
+            (maybeSizes[1].type === SplitValueType.Percentage ||
+              maybeSizes[1].type === SplitValueType.Absolute)))
       );
     }
-    return isValid(sizesInLocalStorage) ? sizesInLocalStorage : defaultSizes;
+    if (isValid(sizesInLocalStorage)) {
+      // 合并 localStorage 中的 value 和 defaultSizes 中的 min/max 约束
+      return sizesInLocalStorage.map((cached, index) => {
+        const defaultSize = defaultSizes[index];
+        if (cached.type === SplitValueType.Auto) {
+          return cached;
+        }
+        // 从 defaultSize 获取 min/max 约束
+        const minConstraint = (defaultSize as { min?: number | string }).min;
+        const maxConstraint = (defaultSize as { max?: number | string }).max;
+        
+        // 校正 value 使其在 min/max 范围内
+        let correctedValue = cached.value;
+        if (typeof minConstraint === 'number' && correctedValue < minConstraint) {
+          correctedValue = minConstraint;
+        }
+        if (typeof maxConstraint === 'number' && correctedValue > maxConstraint) {
+          correctedValue = maxConstraint;
+        }
+        
+        return {
+          ...defaultSize, // 保留 min/max 等约束
+          type: cached.type,
+          value: correctedValue,
+        };
+      }) as Sizes;
+    }
+    return defaultSizes;
   });
   const sizesRef = useRef(sizes);
   sizesRef.current = sizes;

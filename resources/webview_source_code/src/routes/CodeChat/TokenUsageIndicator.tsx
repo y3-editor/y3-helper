@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   CircularProgress,
+  Divider,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -21,6 +22,7 @@ import {
 } from '../../types/contextCompression';
 import { ChatMessage } from '../../services';
 import { useTheme, ThemeStyle } from '../../ThemeContext';
+import MiniButton from '../../components/MiniButton';
 
 interface TokenUsageIndicatorProps {
   visible?: boolean;
@@ -141,23 +143,16 @@ export function TokenUsageIndicator({
   const progressColor = 'blue.400';
 
   return (
+    <>
     <Popover trigger="hover" placement="top-start" openDelay={0} closeDelay={200}>
       <PopoverTrigger>
-        <Flex
-          alignItems="center"
-          justifyContent="center"
-          cursor="pointer"
-          px={2}
-          borderRadius="md"
-          border="1px solid"
-          borderColor={isDark ? '#404040' : 'blackAlpha.100'}
+        <MiniButton
           bg={isDark ? 'transparent' : '#EEF0F2'}
           _hover={{
             opacity: 0.8,
             color: '#776fff',
           }}
           transition="all 0.2s"
-          h="32px"
           fontFamily="monospace"
           fontSize="xs"
         >
@@ -182,7 +177,7 @@ export function TokenUsageIndicator({
               </Text>
             </Flex>
           )}
-        </Flex>
+        </MiniButton>
       </PopoverTrigger>
       <PopoverContent
         bg={isDark ? '#1E1E1E' : '#FFFFFF'}
@@ -209,6 +204,8 @@ export function TokenUsageIndicator({
         </PopoverBody>
       </PopoverContent>
     </Popover>
+    <Divider h="14px" mx="1" orientation="vertical" />
+    </>
   );
 }
 

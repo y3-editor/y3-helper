@@ -13,6 +13,14 @@ const MIN_VERSIONS_SPEC_INIT = {
   JETBRAINS: '2.5.1',
 } as const;
 
+/*
+ * OpenSpec 版本选择功能的最低 Extension 版本要求
+ */
+const MIN_VERSIONS_OPENSPEC_VERSION_SELECTION = {
+  VSCODE: '3.0.0-beta.8',
+  JETBRAINS: '2.5.3',
+} as const;
+
 /**
  * JetBrains 版本号格式正则
  */
@@ -29,30 +37,44 @@ function extractJetBrainsVersion(version: string): string | null {
 }
 
 /**
- * 检查当前 Extension 版本是否支持 Spec 初始化功能（SpecKit 和 OpenSpec 通用）
+ * 通用版本检查函数
  *
  * @param codeMakerVersion - Extension 版本号
  * @param ide - IDE 类型
- * @returns 是否支持初始化功能（>= 最低版本要求）
+ * @param minVersions - 最低版本要求配置
+ * @returns 是否满足最低版本要求
  */
-export function supportsSpecInit(
+function checkVersionSupport(
   codeMakerVersion: string | null,
-  ide: string | null
+  ide: string | null,
+  minVersions: { VSCODE: string; JETBRAINS: string }
 ): boolean {
   if (!codeMakerVersion || !ide) return false;
 
   if (ide === IDE.VisualStudioCode) {
-    return compareVersion(codeMakerVersion, MIN_VERSIONS_SPEC_INIT.VSCODE) >= 0;
+    return compareVersion(codeMakerVersion, minVersions.VSCODE) >= 0;
   }
 
   if (ide === IDE.JetBrains) {
     const extensionVersion = extractJetBrainsVersion(codeMakerVersion);
     if (!extensionVersion) return false;
-    return compareVersion(extensionVersion, MIN_VERSIONS_SPEC_INIT.JETBRAINS) >= 0;
+    return compareVersion(extensionVersion, minVersions.JETBRAINS) >= 0;
   }
 
   return false;
 }
+
+/**
+ * 检查当前 Extension 版本是否支持 Spec 初始化功能（SpecKit 和 OpenSpec 通用）
+ */
+export const supportsSpecInit = (codeMakerVersion: string | null, ide: string | null) =>
+  checkVersionSupport(codeMakerVersion, ide, MIN_VERSIONS_SPEC_INIT);
+
+/**
+ * 检查当前 Extension 版本是否支持 OpenSpec 版本选择功能
+ */
+export const supportsOpenSpecVersionSelection = (codeMakerVersion: string | null, ide: string | null) =>
+  checkVersionSupport(codeMakerVersion, ide, MIN_VERSIONS_OPENSPEC_VERSION_SELECTION);
 
 /**
  * 获取 Spec 初始化功能的最低版本提示文本（SpecKit 和 OpenSpec 通用）
@@ -62,12 +84,12 @@ export function supportsSpecInit(
  */
 export function getSpecInitMinVersionHint(ide: string | null): string {
   if (ide === IDE.VisualStudioCode || ide === 'Visual Studio Code') {
-    return `需要 Y3Maker Extension ${MIN_VERSIONS_SPEC_INIT.VSCODE} 或更高版本`;
+    return `需要 CodeMaker Extension ${MIN_VERSIONS_SPEC_INIT.VSCODE} 或更高版本`;
   }
   if (ide === IDE.JetBrains) {
-    return `需要 Y3Maker Plugin ${MIN_VERSIONS_SPEC_INIT.JETBRAINS} 或更高版本`;
+    return `需要 CodeMaker Plugin ${MIN_VERSIONS_SPEC_INIT.JETBRAINS} 或更高版本`;
   }
-  return '需要更新 Y3Maker 版本';
+  return '需要更新 CodeMaker 版本';
 }
 
 

@@ -1,8 +1,7 @@
 import * as React from 'react';
-import { Box, IconButton, Tooltip } from '@chakra-ui/react';
-import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
-import { FaAngleDoubleDown } from 'react-icons/fa';
-
+import { Box, IconButton, Tooltip, Divider } from '@chakra-ui/react';
+import { FaAngleDoubleDown, FaAngleUp, FaAngleDown } from 'react-icons/fa';
+import Icon from '../../components/Icon';
 export interface ChatNavigationButtonsProps {
   userMsgIndexes: number[];
   isStreaming?: boolean;
@@ -38,40 +37,51 @@ const ChatNavigationButtons: React.FC<ChatNavigationButtonsProps> = ({
   const isNextDisabled = canGoNext ? !canGoNext() : !hasMultipleMessages;
 
   return (
-    <Box display="flex" alignItems="center" gap={1}>
+    <Box display="flex" alignItems="center" gap="2" color="text.default">
+      {/* 上/下导航按钮组 - 组合在一个圆角容器内 */}
       {!isStreaming && (
-        <>
+        <Box
+          display="flex"
+          alignItems="center"
+          borderRadius="md"
+          // bg="darkerButtonBgColor"
+        >
           <Tooltip label="上一组对话">
             <IconButton
-              size="sm"
+              size="xs"
+              variant="ghost"
               aria-label="To previous user message"
-              icon={<ChevronUpIcon boxSize={6} />}
+              icon={<Icon as={FaAngleUp} size="xs" />}
               onClick={onPrevMessage}
               onMouseEnter={handleMouseEnter}
               isDisabled={isPrevDisabled}
+              borderRadius="md"
+              color="text.default"
             />
           </Tooltip>
           <Tooltip label="下一组对话">
             <IconButton
-              size="sm"
+              size="xs"
+              variant="ghost"
               aria-label="To next user message"
-              icon={<ChevronDownIcon boxSize={6} />}
+              icon={<Icon as={FaAngleDown} size="xs" />}
               onClick={onNextMessage}
               onMouseEnter={handleMouseEnter}
               isDisabled={isNextDisabled}
+              borderRadius="md"
+              color="text.default"
             />
           </Tooltip>
-        </>
+        </Box>
       )}
-
-      <Tooltip label="置底">
-        <IconButton
-          size="sm"
-          aria-label="To bottom"
-          icon={<FaAngleDoubleDown size={14} />}
-          onClick={onScrollToBottom}
-        />
-      </Tooltip>
+      {!isStreaming && <Divider h="14px" orientation="vertical" />}
+      <Box display="flex" alignItems="center">
+        <Tooltip label="置底" placement="top">
+          <Box as="span" display="inline-flex" cursor="pointer" onClick={onScrollToBottom}>
+            <Icon as={FaAngleDoubleDown} size="xxs" />
+          </Box>
+        </Tooltip>
+      </Box>
     </Box>
   );
 };

@@ -303,6 +303,13 @@ function classifyWebuiChange(
         return { category: 'skip', localPath: null, reason: '在排除列表中' };
     }
 
+    // 1b. SKIP: 在 exclusions.excluded_upstream_dirs 中
+    const excludedDirs = Object.keys(exclusions.excluded_upstream_dirs || {});
+    if (excludedDirs.some(dir => upPath.startsWith(dir))) {
+        const matchedDir = excludedDirs.find(dir => upPath.startsWith(dir))!;
+        return { category: 'skip', localPath: null, reason: exclusions.excluded_upstream_dirs[matchedDir] };
+    }
+
     // 2. 尝试映射
     let localPath: string | null = null;
 
@@ -350,6 +357,13 @@ function classifyExtensionChange(
     // 1. SKIP: 在 excluded_upstream 中
     if (matchesAnyPrefix(upPath, config.excluded_upstream)) {
         return { category: 'skip', localPath: null, reason: '在排除列表中' };
+    }
+
+    // 1b. SKIP: 在 exclusions.excluded_upstream_dirs 中
+    const excludedDirs = Object.keys(exclusions.excluded_upstream_dirs || {});
+    if (excludedDirs.some(dir => upPath.startsWith(dir))) {
+        const matchedDir = excludedDirs.find(dir => upPath.startsWith(dir))!;
+        return { category: 'skip', localPath: null, reason: exclusions.excluded_upstream_dirs[matchedDir] };
     }
 
     // 2. 检查 one_to_many_mapping
@@ -694,7 +708,7 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
 
     // ── 自动选择仓库 ──
     // 不指定 --repo 时，按同一天约束自动选优先级：webui 优先
-    let selectedRepo: 'webui' | 'extension' | 'both' | 'none' = 'none';
+    let selectedRepo: 'webui' | 'extension' | 'none' = 'none';
 
     if (repoFilter) {
         // 用户明确指定了仓库
@@ -728,7 +742,7 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
 
     // 打印状态
     if (webuiTarget) {
-        const marker = (selectedRepo === 'webui' || selectedRepo === 'both') ? '📦' : '⏸️';
+        const marker = (selectedRepo === 'webui') ? '📦' : '⏸️';
         console.log(`  ${marker} webui: ${baseline.webui.lastSyncCommit.slice(0, 8)} → ${webuiTarget.commit.slice(0, 8)} (${webuiTarget.date})`);
         console.log(`     ${webuiTarget.message}`);
     } else if (!repoFilter || repoFilter === 'webui') {
@@ -736,7 +750,7 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
     }
 
     if (extTarget) {
-        const marker = (selectedRepo === 'extension' || selectedRepo === 'both') ? '📦' : '⏸️';
+        const marker = (selectedRepo === 'extension') ? '📦' : '⏸️';
         console.log(`  ${marker} extension: ${baseline.extension.lastSyncCommit.slice(0, 8)} → ${extTarget.commit.slice(0, 8)} (${extTarget.date})`);
         console.log(`     ${extTarget.message}`);
     } else if (!repoFilter || repoFilter === 'extension') {
@@ -753,8 +767,8 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
     const items: ChangeItem[] = [];
     let idCounter = 1;
 
-    const processWebui = selectedRepo === 'webui' || selectedRepo === 'both';
-    const processExtension = selectedRepo === 'extension' || selectedRepo === 'both';
+    const processWebui = selectedRepo === 'webui';
+    const processExtension = selectedRepo === 'extension';
 
     // Webui changes
     if (processWebui && webuiTarget) {

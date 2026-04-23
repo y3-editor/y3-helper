@@ -21,12 +21,15 @@ import {
   useChatPromptStore,
   nanoid,
   FileItem,
+  AttachFile,
   ImageUrl,
   useUserActionStore,
   IMultiAttachment,
   IProblem,
+  getContentString,
   FolderItem,
 } from '../../store/chat';
+import { useConfigStore } from '../../store/config';
 import {
   BroadcastActions,
   PostMessageSubscribeType,
@@ -58,7 +61,7 @@ import Split from '../../components/Split';
 import { SplitDirection, SplitValueType } from '../../components/Split/Split';
 import { validateBeforeChat, validateCodeBlocksLanguage } from '../../utils/validateBeforeChat';
 import useCustomToast from '../../hooks/useCustomToast';
-import { uploadMessageFeedback } from '../../services/chat';
+import { countTokens, uploadMessageFeedback } from '../../services/chat';
 import ChatMaskVariableForm from './ChatMaskSelector/ChatMaskVariableForm';
 import GlobalDataLoader from './GlobalDataLoader';
 import Icon from '../../components/Icon';
@@ -69,6 +72,7 @@ import { usePluginApp } from '../../store/plugin-app';
 import { useMcpPromptApp } from '../../store/mcp-prompt';
 import { createSkillToolId, isSkillToolId } from '../../store/skills';
 import { useSkillPromptApp } from '../../store/skills/skill-prompt';
+import { compressionSkillToolIds } from '../../utils/compressionPrompt';
 import { PromptCategoryType } from '../../services/prompt';
 import { debounce, cloneDeep, findLastIndex, isEqual } from 'lodash';
 import useService from '../../hooks/useService';
@@ -137,16 +141,19 @@ import {
   parseReadFileToolContent,
 } from '../../utils/chatAttachParseHandler';
 import FileUpload from '../../components/FileUpload';
+import ChatConsumeTokenPanel from './ChatConsumeTokenPanel';
 import { TokenUsageIndicator } from './TokenUsageIndicator';
 import { ChatModel, ParseImgType } from '../../services/chatModel';
 import { useSelectImageAttach } from './ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
 import { useUploadRes } from '../../components/ImageUpload/useUploadRes';
 import MCPErrorModal from './MCPErrorModal';
 import {
-  BUILT_IN_PROMPTS_OPENSPEC,
+  BUILT_IN_PROMPTS_OPENSPEC_V023,
+  BUILT_IN_PROMPTS_OPENSPEC_V1,
   BUILT_IN_PROMPTS_SPECKIT,
 } from '../../services/builtInPrompts';
 import SpecInitModal from './SpecInitModal';
+import OpenSpecUpdateModal from './OpenSpecUpdateModal';
 import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
 import {
@@ -176,6 +183,7 @@ function CodeChat() {
     (state) => state.currentSession()?.data?.todoList,
   );
   const [
+    getHistoryMessages,
     revalidateChatSessions,
     updateCurrentSession,
     syncHistory,
@@ -183,6 +191,7 @@ function CodeChat() {
     selectSession,
   ] = useChatStore(
     (state) => [
+      state.getHistoryMessages,
       state.revalidateChatSessions,
       state.updateCurrentSession,
       state.syncHistory,
@@ -196,6 +205,7 @@ function CodeChat() {
   const model = useChatConfig((state) => state.config.model);
   const compressConfig = useChatConfig((state) => state.compressConfig);
   const updateChatConfig = useChatConfig((state) => state.update);
+  const maxTokens = useChatConfig((state) => state.config.max_tokens);
   const modelMaxTokenMap = useChatConfig((state) => state.modelMaxToken);
   const setEnableEditableMode = useChatConfig(
     (state) => state.setEnableEditableMode,
@@ -220,6 +230,14 @@ function CodeChat() {
   const isApplying = useChatStreamStore((state) => state.isApplying);
   const onUserSubmit = useChatStreamStore((state) => state.onUserSubmit);
   const onStreamStop = useChatStreamStore((state) => state.onStop);
+  const [getCodebaseChatSystemPrompt, getCodebaseFunctionPrompt] =
+    useWorkspaceStore(
+      (state) => [
+        state.getCodebaseChatSystemPrompt,
+        state.getCodebaseFunctionPrompt,
+      ],
+      shallow,
+    );
   const updateToolCallResults = useChatStreamStore(
     (state) => state.updateToolCallResults,
   );
@@ -227,7 +245,7 @@ function CodeChat() {
     (state) => state.setStreamRetryCount,
   );
   const chatModels = useChatConfig((state) => state.chatModels);
-  const [tokenNumber] = React.useState(0);
+  const [tokenNumber, setTokenNumber] = React.useState(0);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const prePromptCodeBlock = useChatStreamStore((state) =>
@@ -259,6 +277,8 @@ function CodeChat() {
   const mask = React.useMemo(() => {
     return maskList.find((m) => m._id === maskId) || DEFAULT_MASKS[1];
   }, [maskId, maskList]);
+
+  const config = useConfigStore((state) => state.config);
 
   const attachs = useChatAttach((state) => state.attachs);
   const updateAttachs = useChatAttach((state) => state.update);
@@ -432,6 +452,91 @@ function CodeChat() {
     }
   }, [data, revalidateChatSessions, chatType, workspaceInfo.repoName]);
 
+  const validateTokenLimit = React.useCallback(
+    async (prompt: string) => {
+      // GPT 模式计算 token 是否超过最大限制
+      // 计算逻辑：max_tokens + input tokens <= modelMaxTokens
+      // 根据 modelMaxTokenMap 各个模型的最大 token 数限制，结合 countTokens 计算的值和 max_tokens 配置的值。
+      // 其中 max_tokens 指的是返回的内容的 token 最大数。
+      if (!attachs || attachs.attachType === AttachType.File) {
+        const historyMessages = getHistoryMessages();
+        const promptContent = historyMessages.reduce(
+          (prev, curr) => (prev = getContentString(curr.content) + prev),
+          prompt,
+        );
+        let attachFilesContent = '';
+        if (attachs && attachs.attachType === AttachType.File) {
+          const { attachFiles } = attachs as AttachFile;
+          attachFilesContent = attachFiles.reduce(
+            (prev, curr) => (prev = curr.content + prev),
+            '',
+          );
+        }
+        let codebasePrompt = '';
+        if (chatType === 'codebase') {
+          codebasePrompt += getCodebaseChatSystemPrompt();
+          codebasePrompt += getCodebaseFunctionPrompt();
+          historyMessages.forEach((msg) => {
+            if (msg.role === ChatRole.Assistant && msg.tool_calls) {
+              msg.tool_calls.forEach((tool) => {
+                codebasePrompt += `${tool.function.name}${tool.function.arguments ? JSON.stringify(tool.function.arguments) : ''}`;
+              });
+            }
+          });
+        }
+        if (chatModels[model]?.hasComputableToken) {
+          const inputTokens = await countTokens(
+            `${codebasePrompt} ${promptContent} ${attachFilesContent}`,
+            model,
+          );
+          const modelMaxTokens = modelMaxTokenMap[model];
+          if (inputTokens + maxTokens > modelMaxTokens) {
+            toast({
+              title: '对话超出最大 token 数限制',
+              description: `当前上下文与输入的内容的 tokens 超出该模型最大 token 数限制${modelMaxTokens}，请减少输入的内容或删除部分上下文再进行重试。`,
+              position: 'top',
+              status: 'error',
+              isClosable: true,
+            });
+            userReporter.report({
+              event: UserEvent.CODE_CHAT_TOKES_COUNT,
+              extends: {
+                input_tokens: inputTokens,
+                max_tokens: maxTokens,
+                model: model,
+                trigger_limit: true,
+              },
+            });
+            return false;
+          } else {
+            userReporter.report({
+              event: UserEvent.CODE_CHAT_TOKES_COUNT,
+              extends: {
+                input_tokens: inputTokens,
+                max_tokens: maxTokens,
+                model: model,
+                trigger_limit: false,
+              },
+            });
+          }
+        }
+      }
+      return true;
+    },
+    [
+      chatModels,
+      attachs,
+      getHistoryMessages,
+      maxTokens,
+      model,
+      toast,
+      modelMaxTokenMap,
+      chatType,
+      getCodebaseChatSystemPrompt,
+      getCodebaseFunctionPrompt,
+    ],
+  );
+
   React.useEffect(
     function scrollToBottomWhenChangeSession() {
       if (!loading) {
@@ -524,8 +629,68 @@ function CodeChat() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      if (!chatModels[model].hasComputableToken) {
+        setTokenNumber(0);
+        return;
+      }
+      // 创建新的 AbortController 用于当前操作
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+      if (attachs && attachs.attachType !== AttachType.File) {
+        return;
+      }
+      const trimmedUserInput = inputRef.current?.value.trim() || '';
+      const historyMessages = getHistoryMessages();
+      let promptContent = historyMessages.reduce(
+        (prev, curr) => (prev = getContentString(curr.content) + prev),
+        trimmedUserInput,
+      );
+      if (prePromptCodeBlock) {
+        promptContent = promptContent += prePromptCodeBlock;
+      }
+      let attachFilesContent = '';
+      if (attachs && attachs.attachType === AttachType.File) {
+        const { attachFiles } = attachs as AttachFile;
+        attachFilesContent = attachFiles.reduce(
+          (prev, curr) => (prev = curr.content + prev),
+          '',
+        );
+      }
+      let codebasePrompt = '';
+      if (chatType === 'codebase') {
+        codebasePrompt += getCodebaseChatSystemPrompt();
+        codebasePrompt += getCodebaseFunctionPrompt();
+        historyMessages.forEach((msg) => {
+          if (msg.role === ChatRole.Assistant && msg.tool_calls) {
+            msg.tool_calls.forEach((tool) => {
+              codebasePrompt += `${tool.function.name}${tool.function.arguments ? JSON.stringify(tool.function.arguments) : ''}`;
+            });
+          }
+        });
+      }
+      try {
+        const inputTokens = await countTokens(
+          `${codebasePrompt} ${promptContent} ${attachFilesContent}`,
+          model,
+          signal,
+        );
+        if (!signal.aborted) {
+          setTokenNumber(inputTokens);
+        }
+      } finally {
+        if (abortControllerRef.current?.signal === signal) {
+          abortControllerRef.current = null;
+        }
+      }
     }, 500),
-    [],
+    [
+      attachs,
+      prePromptCodeBlock,
+      getHistoryMessages,
+      config.historyMessageCount,
+      model,
+      chatType,
+    ],
   );
 
   const handleMentionAttach = React.useCallback(
@@ -562,7 +727,10 @@ function CodeChat() {
       if (promptApp && !promptApp?.meta?._id.includes('codewiki')) {
         if (
           [
-            ...BUILT_IN_PROMPTS_OPENSPEC.map(
+            ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(
+              (openspecPrompt) => openspecPrompt.name,
+            ),
+            ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(
               (openspecPrompt) => openspecPrompt.name,
             ),
             ...BUILT_IN_PROMPTS_SPECKIT.map(
@@ -599,7 +767,7 @@ function CodeChat() {
         if (!isActive(TOAST_STREAMING_PREVENT_SUBMIT_ID)) {
           toast({
             id: TOAST_STREAMING_PREVENT_SUBMIT_ID,
-            title: 'Y3Maker 正在回复中，请稍后再提问',
+            title: 'CodeMaker 正在回复中，请稍后再提问',
             position: 'top',
             duration: 1000,
             status: 'warning',
@@ -626,7 +794,7 @@ function CodeChat() {
           toast({
             title: '未选择代码片段',
             description:
-              '请在编辑区划选需要 Chat 的代码，通过点击【右键菜单】-【Y3Maker】-【Y3Maker: Chat】将代码添加至聊天上下文后，再重新提交。',
+              '请在编辑区划选需要 Chat 的代码，通过点击【右键菜单】-【CodeMaker】-【CodeMaker: Chat】将代码添加至聊天上下文后，再重新提交。',
             position: 'top',
             status: 'info',
             isClosable: true,
@@ -659,7 +827,7 @@ function CodeChat() {
         const assistant = {
           id,
           content:
-            'Y3Maker新用户盲盒活动已结束，感谢您的参与！请持续关注，更多精彩活动即将来临～',
+            'CodeMaker新用户盲盒活动已结束，感谢您的参与！请持续关注，更多精彩活动即将来临～',
           role: ChatRole.Assistant,
           suffix: '',
           loading: false,
@@ -717,7 +885,7 @@ function CodeChat() {
           toast({
             title: '未选择代码片段',
             description:
-              '请在编辑区划选需要 Chat 的代码，通过点击【右键菜单】-【Y3Maker】-【Y3Maker: Chat】将代码添加至聊天上下文后，再重新选择 Prompt。',
+              '请在编辑区划选需要 Chat 的代码，通过点击【右键菜单】-【CodeMaker】-【CodeMaker: Chat】将代码添加至聊天上下文后，再重新选择 Prompt。',
             position: 'top',
             status: 'info',
             isClosable: true,
@@ -728,6 +896,13 @@ function CodeChat() {
       }
       _prompt = compileTemplateVariableNode(_prompt, prePromptCodeBlock);
 
+      const isPass =
+        chatType === 'codebase' || pluginApp
+          ? true
+          : await validateTokenLimit(_prompt);
+      if (!isPass) {
+        return;
+      }
       const length = currentSession?.data?.messages.length;
       if (length! >= MAX_SHOW_TIP_NUM) {
         if (currentSession?._id && !sessionIDs.includes(currentSession?._id)) {
@@ -814,13 +989,47 @@ function CodeChat() {
       }
       promptRef.current = null;
     },
-    [setStreamRetryCount, addSessionID, currentSession?._id, currentSession?.data?.messages.length, handleMentionAttach, isActive, isProcessing, isSearching, isStreaming, mask?.prompt, onRemovePrePromptCodeBlock, onUserSubmit, pluginApp, prePromptCodeBlock, promptApp, scrollToBottom, sessionIDs, syncHistory, toast, updateChatPrompt, updateCurrentSession, updatePromptApp, attachs, model, mcpRunner, skillRunner, clearInputDraft],
+    [
+      setStreamRetryCount,
+      addSessionID,
+      chatType,
+      currentSession?._id,
+      currentSession?.data?.messages.length,
+      handleMentionAttach,
+      isActive,
+      isProcessing,
+      isSearching,
+      isStreaming,
+      mask?.prompt,
+      onRemovePrePromptCodeBlock,
+      onUserSubmit,
+      pluginApp,
+      prePromptCodeBlock,
+      promptApp,
+      scrollToBottom,
+      sessionIDs,
+      syncHistory,
+      toast,
+      updateChatPrompt,
+      updateCurrentSession,
+      updatePromptApp,
+      validateTokenLimit,
+      attachs,
+      model,
+      mcpRunner,
+      skillRunner,
+      clearInputDraft, // 添加 clearInputDraft 依赖
+    ],
   );
 
   const handlePrePromptSubmit = React.useCallback(
     async (prompt: Prompt, code: string, language: string) => {
       const markdownCode = `\n \`\`\`${language}\n${code}\n\`\`\`\n`;
       const _prompt = compileTemplateVariableNode(prompt.prompt, markdownCode);
+      const isPass = await validateTokenLimit(_prompt);
+      if (chatType !== 'codebase' && !isPass) {
+        return;
+      }
       const event = prePromptEventIdsMap.get(prompt._id);
       userReporter.report({
         event: event as unknown as string,
@@ -835,7 +1044,7 @@ function CodeChat() {
       updateChatPrompt(prompt, markdownCode);
       onUserSubmit(_prompt, { event });
     },
-    [onUserSubmit, updateChatPrompt],
+    [validateTokenLimit, onUserSubmit, chatType, updateChatPrompt],
   );
 
   const checkTokensAllowed = React.useCallback(() => {
@@ -1187,6 +1396,9 @@ function CodeChat() {
           extra = {},
         } = eventData?.data || {};
         if (tool_name === 'use_skill' && isSkillToolId(tool_id)) {
+          if (compressionSkillToolIds.has(tool_id)) {
+            return;
+          }
           // 如果消息指定了 targetPanelId，只有匹配的面板处理
           const targetPanelId = eventData?.targetPanelId;
           if (targetPanelId) {
@@ -1196,40 +1408,18 @@ function CodeChat() {
           }
           const { parseSkillToolResult, getSkillSourceLabel } = await import('../../store/skills');
           const { useSkillPromptApp } = await import('../../store/skills/skill-prompt');
-          // 解析skill结果(支持单个对象或数组)
-          let skillsDataArray: unknown[] = [];
-          const content = tool_result?.content?.trim();
-          if (content) {
-            try {
-              const parsed: unknown = JSON.parse(content);
-              skillsDataArray = Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-              console.error('[use_skill] Failed to parse skill result:', e, tool_result?.content);
-              skillsDataArray = [];
-            }
-          } else {
-            console.warn('[use_skill] Empty or invalid skill result content');
-            skillsDataArray = [];
-          }
-
-          if (tool_result?.isError || skillsDataArray.length === 0) {
+          const skillData = parseSkillToolResult(tool_result?.content || '');
+          if (tool_result?.isError || !skillData) {
             useSkillPromptApp.getState().setLoading(false);
           } else {
-            skillsDataArray.forEach((skillDataRaw) => {
-              const skillData = parseSkillToolResult(JSON.stringify(skillDataRaw));
-              if (skillData) {
-                // 如果skill不存在则添加(处理AI直接调用use_skill的情况)
-                if (!useSkillPromptApp.getState().hasSkill(skillData.name)) {
-                  useSkillPromptApp.getState().addSkill(skillData.name, {
-                    title: `/${skillData.name}`,
-                    source: getSkillSourceLabel(skillData.source),
-                  });
-                }
-                useSkillPromptApp.getState().setSkillData(skillData.name, skillData);
-              } else {
-                console.warn('[use_skill] Failed to parse skill data:', skillDataRaw);
-              }
-            });
+            useSkillPromptApp.getState().setRunner(
+              {
+                skillName: skillData.name,
+                title: `/${skillData.name}`,
+                source: getSkillSourceLabel(skillData.source),
+              },
+              skillData
+            );
           }
           return;
         }
@@ -2289,7 +2479,66 @@ function CodeChat() {
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [batchUploadRes, closeAll, chatModels, selectImageHook, selectedFileHook, updateTerminals, onUpdatePrePromptCodeBlock, onUpdateSelectionPrePromptCodeBlock, onUserSubmit, model, attachs, workspaceInfo.repoCodeTable, updateAppliedCodeBlocks, handleInputChange, authExtends.c_unrestrict, updateChatPrompt, handleSubmit, triggerCustomPromptSample, triggerCustomMaskSample, updateAttachs, chatType, toast, syncHistory, checkRepoAllowed, checkTokensAllowed, handlePrePromptSubmit, setChatType, isProcessing, currentSession, updateCurrentSession, updateTerminalResult, updateTerminalLog, updateToolCallResults, updateApplyingInfo, workspaceInfo.repoUrl, workspaceInfo.repoName, setIsProcessing, createdFilePaths, updateCreatedFilePaths, currentFileAutoAttach, getChatApplyItem, handleAcceptEditFailed, handleAcceptEditSuccess, handleRevertEditFailed, handleRevertEditSuccess, handleSelectedPathsAttach, isApplying, isMCPProcessing, updateChatApplyItem, onNewSession, handleStopStream, selectSession, updateChatConfig, setEnableEditableMode, setDevSpace, isPanelMode, currentPanelId]);
+  }, [
+    batchUploadRes,
+    closeAll,
+    chatModels,
+    selectImageHook,
+    selectedFileHook,
+    updateTerminals,
+    onUpdatePrePromptCodeBlock,
+    onUpdateSelectionPrePromptCodeBlock,
+    onUserSubmit,
+    model,
+    attachs,
+    workspaceInfo.repoCodeTable,
+    updateAppliedCodeBlocks,
+    validateTokenLimit,
+    handleInputChange,
+    authExtends.c_unrestrict,
+    updateChatPrompt,
+    handleSubmit,
+    triggerCustomPromptSample,
+    triggerCustomMaskSample,
+    updateAttachs,
+    chatType,
+    toast,
+    syncHistory,
+    checkRepoAllowed,
+    checkTokensAllowed,
+    handlePrePromptSubmit,
+    setChatType,
+    isProcessing,
+    currentSession,
+    updateCurrentSession,
+    updateTerminalResult,
+    updateTerminalLog,
+    updateToolCallResults,
+    updateApplyingInfo,
+    workspaceInfo.repoUrl,
+    workspaceInfo.repoName,
+    setIsProcessing,
+    createdFilePaths,
+    updateCreatedFilePaths,
+    currentFileAutoAttach,
+    getChatApplyItem,
+    handleAcceptEditFailed,
+    handleAcceptEditSuccess,
+    handleRevertEditFailed,
+    handleRevertEditSuccess,
+    handleSelectedPathsAttach,
+    isApplying,
+    isMCPProcessing,
+    updateChatApplyItem,
+    onNewSession,
+    handleStopStream,
+    selectSession,
+    updateChatConfig,
+    setEnableEditableMode,
+    setDevSpace,
+    isPanelMode,
+    currentPanelId,
+  ]);
 
   // TODO: 当 attachs、prePromptCodeBlock 或 config.historyMessageCount 改变时，会重新计算 token 数
   useFirstFocusedEffect(() => {
@@ -2654,9 +2903,8 @@ function CodeChat() {
       {/* 功能引导组件 */}
       {/* <FeatureTour /> */}
       <Box
-        // isPanelMode 的情况下，不需要减去顶部 Tabs 的高度 
-        // h={ isPanelMode ? '100vh' : 'calc(100vh - 28px)'}
-        h='100vh'
+        // isPanelMode 的情况下，不需要减去顶部 Tabs 的高度
+        h={ isPanelMode ? '100vh' : 'calc(100vh - 28px)'}
         className={
           activeTheme === ThemeStyle.Light ? 'light-mode' : 'dark-mode'
         }
@@ -2692,9 +2940,9 @@ function CodeChat() {
             { type: SplitValueType.Auto },
             {
               type: SplitValueType.Absolute,
-              value: 164,
+              value: 120,
               max: '50%',
-              min: 164,
+              min: 120,
             },
           ]}
         >
@@ -2819,6 +3067,7 @@ function CodeChat() {
                     !hasImageAttach
                   }
                 />
+                {!(isStreaming || hasImageAttach) && <ChatConsumeTokenPanel />}
                 <Box className="w-full" hidden={!hasImageAttach}>
                   {!isStreaming &&
                     chatModels[model]?.parseImgType !== ParseImgType.NONE && (
@@ -2838,6 +3087,13 @@ function CodeChat() {
                   p="2"
                   borderRadius="md"
                   fontSize="12px"
+                  cursor="pointer"
+                  onClick={()=>{
+                    window.parent.postMessage({
+                      type: BroadcastActions.OPEN_WORKSPACE
+                    }, '*')
+                  }}
+                  zIndex={2}
                 >
                   <Icon as={FaFolderOpen} /> <span className='mx-1'>代码仓库</span>
                   {workspaceInfo.repoName}
@@ -2997,6 +3253,8 @@ function CodeChat() {
         <MCPErrorModal />
         {/* Spec 初始化引导弹窗 */}
         <SpecInitModal />
+        {/* OpenSpec 升级弹窗 */}
+        <OpenSpecUpdateModal />
       </Box>
     </CodeChatContext.Provider>
   );
