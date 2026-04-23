@@ -1485,6 +1485,8 @@ export async function handleGetRules(provider: CodeMakerWebviewProvider, panelId
  * 内容
  */
 function parseMdcFile(raw: string): { description: string; alwaysApply: boolean; globs: string[]; content: string } {
+    // 统一换行符：将 CRLF 转为 LF，避免 \r 残留导致 YAML 解析异常
+    raw = raw.replace(/\r\n/g, '\n');
     const result: { description: string; alwaysApply: boolean; globs: string[]; content: string } = {
         description: '', alwaysApply: true, globs: [], content: raw,
     };
