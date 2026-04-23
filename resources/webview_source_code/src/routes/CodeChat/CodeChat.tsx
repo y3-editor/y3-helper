@@ -45,6 +45,7 @@ import PrePromptCodeBlock from './PrePromptCodeBlock';
 import { useAtBottom } from '../../hooks/useAtBottom';
 import { Prompt } from '../../services/prompt';
 import { ChatTypeAheadHandle } from './ChatTypeAhead/ChatTypeAhead';
+import { PromptModals } from './ChatTypeAhead/Prompt/PromptsPanel';
 import userReporter from '../../utils/report';
 import {
   INNER_VARIABLE,
@@ -78,7 +79,7 @@ import { debounce, cloneDeep, findLastIndex, isEqual } from 'lodash';
 import useService from '../../hooks/useService';
 // import ChatSessionClearPanel from './ChatSessionClearPanel';
 import { useAuthStore } from '../../store/auth';
-import { countGodeGenerate, DateFormat, truncateContent } from '../../utils';
+import { countGodeGenerate, DateFormat, isImageFileWithPath, truncateContent } from '../../utils';
 import ChatRecommendation from './ChatRecommendation';
 import { Docset, Docsets } from '../../services/docsets';
 import {
@@ -138,7 +139,8 @@ import { useGlobalEvent } from '../../hooks/useGlobalEvent';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import {
   EParsedDocsStatus,
-  parseReadFileToolContent,
+  parseDocContentFromReadFileTool,
+  parseImageFromReadFileTool,
 } from '../../utils/chatAttachParseHandler';
 import FileUpload from '../../components/FileUpload';
 import ChatConsumeTokenPanel from './ChatConsumeTokenPanel';
@@ -912,7 +914,7 @@ function CodeChat() {
 
       const event = promptRef.current
         ? prePromptEventIdsMap.get(promptRef.current._id) ||
-          UserEvent.CODE_CHAT_PROMPT_CUSTOM
+        UserEvent.CODE_CHAT_PROMPT_CUSTOM
         : UserEvent.CODE_CHAT_PROMPT_CUSTOM;
       if (promptRef.current) {
         userReporter.report({
@@ -990,6 +992,7 @@ function CodeChat() {
       promptRef.current = null;
     },
     [
+      authExtends?.c_unrestrict,
       setStreamRetryCount,
       addSessionID,
       chatType,
@@ -1238,15 +1241,15 @@ function CodeChat() {
           });
           handleSubmit(
             '请分析报错原因并提供修复建议，错误信息: \n\n' +
-              '```\n' +
-              error_message +
-              '\n' +
-              '```\n\n' +
-              '相关代码: \n\n' +
-              `\`\`\`${language || ''}\n` +
-              context +
-              '\n' +
-              '```',
+            '```\n' +
+            error_message +
+            '\n' +
+            '```\n\n' +
+            '相关代码: \n\n' +
+            `\`\`\`${language || ''}\n` +
+            context +
+            '\n' +
+            '```',
           );
         }
       }
@@ -1527,6 +1530,10 @@ function CodeChat() {
                 }
               },
             );
+          } else if (typeof tool_result.content === 'string') {
+            try {
+              tool_result.content = JSON.parse(tool_result.content);
+            } catch (e) { /* empty */ }
           }
         }
         updateCurrentSession((session) => {
@@ -1587,8 +1594,13 @@ function CodeChat() {
                       if (
                         extra?.parseDocStatus === EParsedDocsStatus.NotParsed
                       ) {
-                        parseReadFileToolContent(tool_id, tool_result);
+                        parseDocContentFromReadFileTool(tool_id, tool_result);
                         return;
+                      } if (
+                        isImageFileWithPath(tool_result.path)
+                      ) {
+                        parseImageFromReadFileTool(tool_id, tool_result);
+                        return
                       } else {
                         let content = tool_result.content;
                         const lines = content.split('\n');
@@ -2904,7 +2916,7 @@ function CodeChat() {
       {/* <FeatureTour /> */}
       <Box
         // isPanelMode 的情况下，不需要减去顶部 Tabs 的高度
-        h={ isPanelMode ? '100vh' : 'calc(100vh - 28px)'}
+        h={isPanelMode ? '100vh' : 'calc(100vh - 28px)'}
         className={
           activeTheme === ThemeStyle.Light ? 'light-mode' : 'dark-mode'
         }
@@ -3076,7 +3088,7 @@ function CodeChat() {
                 </Box>
               </Flex>
               {chatType === 'codebase' &&
-              !currentSession?.data?.messages?.length ? (
+                !currentSession?.data?.messages?.length ? (
                 <Box
                   position="absolute"
                   top="calc(50% - 8px)"
@@ -3088,7 +3100,7 @@ function CodeChat() {
                   borderRadius="md"
                   fontSize="12px"
                   cursor="pointer"
-                  onClick={()=>{
+                  onClick={() => {
                     window.parent.postMessage({
                       type: BroadcastActions.OPEN_WORKSPACE
                     }, '*')
@@ -3136,23 +3148,23 @@ function CodeChat() {
                   isMCPProcessing ||
                   isTerminalProcessing ||
                   isApplying) && (
-                  <Button
-                    size="sm"
-                    onClick={handleStopStream}
-                    leftIcon={
-                      <Icon as={TbCircleMinus} size="sm" color="blue.300" />
-                    }
-                    borderRadius="full"
-                    color="text.secondary"
-                    bgColor="listBgColor"
-                    disabled={
-                      lastMessage?.isAutoCompressingMessage &&
-                      !lastMessage?.content
-                    }
-                  >
-                    中止生成
-                  </Button>
-                )}
+                    <Button
+                      size="sm"
+                      onClick={handleStopStream}
+                      leftIcon={
+                        <Icon as={TbCircleMinus} size="sm" color="blue.300" />
+                      }
+                      borderRadius="full"
+                      color="text.secondary"
+                      bgColor="listBgColor"
+                      disabled={
+                        lastMessage?.isAutoCompressingMessage &&
+                        !lastMessage?.content
+                      }
+                    >
+                      中止生成
+                    </Button>
+                  )}
               </Box>
             </Box>
             <Box className="w-full p-1 markdown-body overflow-scroll">
@@ -3255,6 +3267,8 @@ function CodeChat() {
         <SpecInitModal />
         {/* OpenSpec 升级弹窗 */}
         <OpenSpecUpdateModal />
+        {/* Prompt 编辑和删除 Modal */}
+        <PromptModals />
       </Box>
     </CodeChatContext.Provider>
   );

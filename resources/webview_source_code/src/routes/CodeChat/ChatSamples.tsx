@@ -26,7 +26,7 @@ export const ChatSamples = (props: ChatSamplesProps) => {
   const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
-  
+
   // 本地选中的模式（点击只切换本地状态，发送时才确认到 store），新会话默认选中 vibe
   const [localSelectedMode, setLocalSelectedMode] = React.useState<CodebaseChatMode | undefined>(codebaseChatMode || 'vibe');
 
@@ -44,7 +44,7 @@ export const ChatSamples = (props: ChatSamplesProps) => {
       });
       return;
     }
-    
+
     // codebase模式：填充到输入框
     // 普通聊天模式：直接发送
     if (chatType === 'codebase' && props.onFillInput) {
@@ -66,11 +66,11 @@ export const ChatSamples = (props: ChatSamplesProps) => {
       }
       return isShowRecommendation
         ? questions.map((i, index) => ({
-            id: index,
-            title: `问题${index + 1}`,
-            description: i,
-            prompt: `${i}`,
-          }))
+          id: index,
+          title: `问题${index + 1}`,
+          description: i,
+          prompt: `${i}`,
+        }))
         : CHAT_SAMPLES;
     }
   }, [chatType, isShowRecommendation, questions]);
@@ -107,7 +107,7 @@ export const ChatSamples = (props: ChatSamplesProps) => {
         <div className="py-4 px-2">
           <Flex justifyContent="center">
             <Text color="blue.300" fontSize="24px" fontWeight="bold">
-              你可以和 Y3Maker 聊点什么？
+              你可以和 CodeMaker 聊点什么？
             </Text>
           </Flex>
           {ide === IDE.VisualStudioCode && chatType === 'default' ? (

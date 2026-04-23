@@ -14,6 +14,7 @@ import {
 import { FeedbackPool } from '../../../services/useChatStream';
 import Icon from '../../../components/Icon';
 import '../../../assets/github-markdown-dark.css';
+import { useChatBillStore } from '../../../store/chatBill';
 
 export default function Retry(props: { userScrollLock: boolean }) {
   const { userScrollLock } = props;
@@ -23,6 +24,8 @@ export default function Retry(props: { userScrollLock: boolean }) {
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isSearching = useChatStreamStore((state) => state.isSearching);
   const [shouldShowReTry, setShouldShowReTry] = React.useState(false);
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost)
+
   const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
   const reTryRef = React.useRef<HTMLDivElement>(null);
 
@@ -56,7 +59,7 @@ export default function Retry(props: { userScrollLock: boolean }) {
   }
 
   return (
-    <Box mt={1} hidden={!shouldShowReTry}>
+    <Box mt={1} hidden={!shouldShowReTry || isExceedCost}>
       <Tooltip label='重新回复该消息'>
         <Button
           border={0}

@@ -7,6 +7,7 @@ import { useChatConfig } from "../store/chat-config";
 import { processMakePlanDenied, processMakePlanResult } from "../store/workspace/tools/plan";
 import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspace/tools/todo";
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
+import { isImageFileWithPath } from ".";
 
 
 export function getToolCallQuery(name: string, args: string) {
@@ -20,6 +21,9 @@ export function getToolCallQuery(name: string, args: string) {
   }
   switch (name) {
     case 'read_file':
+      if (isImageFileWithPath(toolParams.path)) {
+        return '读取此图片';
+      }
       return '读取此文件内容';
     case 'list_files_top_level':
       return '读取此路径下的首层文件列表（不含代码内容）';

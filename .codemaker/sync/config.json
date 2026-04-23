@@ -18,7 +18,10 @@
     "customized": [
       "resources/webview_source_code/vite.config.ts",
       "resources/webview_source_code/package.json",
-      "resources/webview_source_code/src/PostMessageProvider.tsx"
+      "resources/webview_source_code/src/PostMessageProvider.tsx",
+      "resources/webview_source_code/src/App.tsx",
+      "resources/webview_source_code/src/routes/CodeChat/ChatHeaderToolbar.tsx",
+      "resources/webview_source_code/src/services/useChatStream.ts"
     ],
     "y3_only": [
       "resources/webview_source_code/src/stubs/"

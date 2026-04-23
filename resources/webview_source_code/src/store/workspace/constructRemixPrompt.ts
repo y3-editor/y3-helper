@@ -1,4 +1,5 @@
 import { Rule, WorkspaceInfo } from ".";
+import { versionCompare } from "../../utils/common";
 import { useChatStore } from "../chat";
 import { useChatConfig } from "../chat-config";
 import { MCPServer, useMCPStore } from "../mcp";
@@ -14,10 +15,12 @@ export default function constructRemixPrompt(options: {
   effectiveRules: Rule[];
   mentionFiles?: string[];
   skills?: SkillIndexItem[];
+  openspecVersion?: string;
 }) {
-  const { info, MCPServers, enableTerminal, effectiveRules, skills = [] } = options;
+  const { info, MCPServers, enableTerminal, codeMakerVersion, effectiveRules, skills = [], openspecVersion } = options;
   const { workspace, osName, shell } = info;
   const { enableEditableMode, enableSkills } = useChatConfig.getState()
+  const enableReplaceInFile = codeMakerVersion && (versionCompare('2.4.9', codeMakerVersion) > 0);
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
 
   // 封装成按条件引入的函数
@@ -80,7 +83,7 @@ ${MCPServers.filter((server) => server.status === "connected" && !server.disable
 </mcp_tool_call>`
   }
 
-    return `You are a powerful agentic AI coding assistant, powered by Y3Maker.
+  return `You are a powerful agentic AI coding assistant, powered by CodeMaker. You operate exclusively in CodeMaker, the best AI Assistant.
 
 You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question. Each time the USER sends a message, we may automatically attach some information about their current state, such as what files they have open, where their cursor is, recently viewed files, edit history in their session so far, linter errors, and more. This information may or may not be relevant to the coding task, it is up for you to decide.
 
@@ -105,7 +108,7 @@ You have tools at your disposal to solve the coding task. Follow these rules reg
 3. **NEVER refer to tool names when speaking to the USER.** For example, instead of saying 'I need to use the edit_file tool to edit your file', just say 'I will edit your file'.
 4. Only calls tools when they are necessary. If the USER's task is general or you already know the answer, just respond without calling tools.
 5. Before calling each tool, first explain to the USER why you are calling it.
-6. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as "<previous_tool_call>" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
+6. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as \"<previous_tool_call>\" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
 7. If the user shows you the file content in last message, assume it was the lastest content and do not call read_file to read the file.
 </tool_calling>
 ${mcpToolsPrompt}
@@ -134,6 +137,7 @@ It is *EXTREMELY* important that your generated code can be run immediately by t
 7. If you've suggested a reasonable code_edit that wasn't followed by the apply model, you should try reapplying the edit using reapply tool. And DO NOT reapply or re-edit on the same file for more than once until you received another user_query.
 8. If Apply fail because of network errors, you should tell the user to apply change manually or try to use "ReApply" later.
 9. NEVER read file you have just edited until received user's reaction or user's next query.
+${enableReplaceInFile ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.': ''}
 </making_code_changes>` : ''
 }
 
@@ -155,7 +159,7 @@ These are user-specified response rules derived from preset rule files in the re
 ${rulesPrompt}
 </user_requirement_rules>
 ` : ''}
-${codebaseChatMode === 'openspec' ? `
+${codebaseChatMode === 'openspec' && openspecVersion !== '1.x' ? `
 <open_spec">
 Now you are in spec driven development mode, called OpenSpec. Follow the <open_spec_rules> as shown.
 <open_spec_rules filePath="@/openspec/AGENTS.md>

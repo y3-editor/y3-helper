@@ -189,20 +189,23 @@ export const ChatNewPromptModel = React.forwardRef(
   },
 );
 
-export function ChatEditPromptModel(props: Required<ChatPromptModelProps>) {
+export function ChatEditPromptModel(props: ChatPromptModelProps) {
   const { isOpen, prompt, onClose } = props;
 
-  const [promptName, setPromptName] = React.useState(prompt.name);
-  const [promptContent, setPromptContent] = React.useState(prompt.prompt);
+  const [promptName, setPromptName] = React.useState(prompt?.name || '');
+  const [promptContent, setPromptContent] = React.useState(prompt?.prompt || '');
   const { handleUpdatePrompt } = useUserPrompt();
   const { toast } = useCustomToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const handleReset = () => {
     setPromptName('');
     setPromptContent('');
   };
 
   const handleSubmit = async () => {
+    if (!prompt) return;
+
     setIsSubmitting(true);
     const trimmedPromptName = promptName.trim();
     const trimmedPromptContent = promptContent.trim();
@@ -230,11 +233,16 @@ export function ChatEditPromptModel(props: Required<ChatPromptModelProps>) {
   };
 
   React.useEffect(() => {
-    if (isOpen) {
+    if (isOpen && prompt) {
       setPromptName(prompt.name);
       setPromptContent(prompt.prompt);
     }
   }, [isOpen, prompt]);
+
+  // 如果没有 prompt，不渲染 Modal
+  if (!prompt) {
+    return null;
+  }
 
   return (
     <Modal
@@ -324,13 +332,15 @@ export function ChatEditPromptModel(props: Required<ChatPromptModelProps>) {
   );
 }
 
-export function ChatRemovePromptModel(props: Required<ChatPromptModelProps>) {
+export function ChatRemovePromptModel(props: ChatPromptModelProps) {
   const { isOpen, prompt, onClose } = props;
 
   const { handleRemovePrompt } = useUserPrompt();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
+    if (!prompt) return;
+
     setIsSubmitting(true);
     await handleRemovePrompt(prompt._id);
     onClose();
@@ -339,6 +349,11 @@ export function ChatRemovePromptModel(props: Required<ChatPromptModelProps>) {
 
   // 使用 debounce 包裹 handleSubmit
   const debouncedHandleSubmit = debounce(handleSubmit, 200);
+
+  // 如果没有 prompt，不渲染 Modal
+  if (!prompt) {
+    return null;
+  }
 
   return (
     <Modal
@@ -398,7 +413,7 @@ function PromptVariableTooltip() {
           <CopyButton content={INNER_VARIABLE.__USER__}>
             <code>{INNER_VARIABLE.__USER__}</code>
           </CopyButton>
-          : 获取当前用户名
+          : 获取当前提交者 corp 邮箱前缀，如 gzxiaoming
         </ListItem>
         <ListItem>
           <CopyButton content={INNER_VARIABLE.__DATETIME__}>

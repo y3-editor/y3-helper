@@ -15,8 +15,9 @@ import {
   Radio,
   RadioGroup,
   Badge,
+  Checkbox,
 } from '@chakra-ui/react';
-import { CheckCircleIcon, WarningIcon, CopyIcon } from '@chakra-ui/icons';
+import { CheckCircleIcon, WarningIcon } from '@chakra-ui/icons';
 import {
   useWorkspaceStore,
   SpecSetupStepId,
@@ -41,10 +42,12 @@ import {
 import {
   supportsSpecInit,
   supportsOpenSpecVersionSelection,
+  supportsOpenSpecCliUpgrade,
   getSpecInitMinVersionHint,
 } from '../../utils/specVersionUtils';
 import { usePromptApp } from '../../store/promp-app';
 import { UnionType } from './ChatTypeAhead/Prompt/type';
+import SetupErrorDisplay from './components/SetupErrorDisplay';
 
 /** OpenSpec 初始化步骤配置 (2 步) */
 const OPENSPEC_STEPS: { id: SpecSetupStepId; label: string }[] = [
@@ -143,92 +146,6 @@ const getCompletionConfig = (
   };
 };
 
-/** 错误码提示项 */
-interface ErrorCodeTipItem {
-  text: string;
-  linkText?: string;
-  link?: string;
-}
-
-/** 错误码对应的提示信息映射 */
-const ERROR_CODE_TIPS: Record<string, ErrorCodeTipItem[]> = {
-  NODE_UNAVAILABLE: [
-    {
-      text: '安装 openspec-cli 需要 npm 命令，当前不可用',
-      linkText: '',
-      link: '',
-    },
-    {
-      text: '- 请确认 Node.js 正确安装后重新点击初始化(推荐使用 nvm)',
-      linkText: 'nvm 安装指南',
-      link: 'https://github.com/nvm-sh/nvm',
-    },
-    {
-      text: '- 也可以自行安装 openspec-cli 后重新点击初始化',
-      linkText: '查看文档',
-      link: 'https://github.com/Fission-AI/OpenSpec?tab=readme-ov-file#quick-start',
-    },
-  ],
-  NODE_VERSION_INVALID: [
-    {
-      text: 'Node.js 版本不满足要求(>=20.19.0)',
-      linkText: '',
-      link: '',
-    },
-    {
-      text: '- 请升级版本后重新点击初始化(推荐使用 nvm)',
-      linkText: 'nvm 安装指南',
-      link: 'https://github.com/nvm-sh/nvm',
-    },
-    {
-      text: '- 也可以自行安装 openspec-cli 后重新点击初始化',
-      linkText: '查看文档',
-      link: 'https://github.com/Fission-AI/OpenSpec?tab=readme-ov-file#quick-start',
-    },
-  ],
-  OPENSPEC_CLI_UNAVAILABLE: [
-    {
-      text: 'openspec-cli 未成功安装',
-      linkText: '',
-      link: '',
-    },
-    {
-      text: '- 也可以自行安装 openspec-cli 后重新点击初始化',
-      linkText: '查看安装文档',
-      link: 'https://github.com/Fission-AI/OpenSpec?tab=readme-ov-file#quick-start',
-    },
-  ],
-  UV_UNAVAILABLE: [
-    {
-      text: '安装 specify-cli 依赖 uv，当前 uv 命令不可用',
-      linkText: '',
-      link: '',
-    },
-    {
-      text: '- 请确认 uv 已正确安装后重新点击初始化',
-      linkText: '官方安装指南',
-      link: 'https://github.com/astral-sh/uv?tab=readme-ov-file#installation',
-    },
-    {
-      text: '- 也可以自行安装 specify-cli 后重新点击初始化',
-      linkText: '查看安装文档',
-      link: 'https://github.com/github/spec-kit?tab=readme-ov-file#1-install-specify-cli',
-    },
-  ],
-  SPECIFY_CLI_UNAVAILABLE: [
-    {
-      text: 'specify-cli 未成功安装',
-      linkText: '',
-      link: '',
-    },
-    {
-      text: '可以自行安装 specify-cli 后重新点击初始化',
-      linkText: '查看安装文档',
-      link: 'https://github.com/github/spec-kit?tab=readme-ov-file#1-install-specify-cli',
-    },
-  ],
-};
-
 /** 横向进度步骤圆形图标 */
 function StepCircle({
   status,
@@ -312,56 +229,6 @@ function StepCircle({
   );
 }
 
-/** 错误信息显示组件 - 简化样式，无底色边框 */
-function ErrorMessageBox({
-  errorMessage,
-}: {
-  errorMessage: string;
-  stepName: string;
-}) {
-  const { postMessage } = usePostMessage();
-
-  const handleCopy = React.useCallback(() => {
-    postMessage({
-      type: BroadcastActions.COPY_TO_CLIPBOARD,
-      data: errorMessage,
-    });
-  }, [errorMessage, postMessage]);
-
-  return (
-    <Flex align="flex-start" gap={1} mt={3} width="100%">
-      <Text
-        fontSize="12px"
-        color="red.500"
-        isTruncated
-        flex={1}
-        style={{
-          marginBottom: 0,
-          wordBreak: 'break-word',
-        }}
-        title={errorMessage}
-      >
-        错误信息: {errorMessage}
-      </Text>
-      <Button
-        size="xs"
-        variant="ghost"
-        colorScheme="gray"
-        onClick={handleCopy}
-        flexShrink={0}
-        minW="auto"
-        h="18px"
-        px={1}
-        title="复制错误信息"
-        opacity={0.6}
-        _hover={{ opacity: 1 }}
-      >
-        <CopyIcon boxSize={3} />
-      </Button>
-    </Flex>
-  );
-}
-
 /** Spec 初始化弹窗组件 */
 function SpecInitModal() {
   const { activeTheme } = useTheme();
@@ -409,6 +276,18 @@ function SpecInitModal() {
   const [selectedOpenSpecVersion, setSelectedOpenSpecVersion] = React.useState<
     '0.23' | '1.x'
   >('1.x');
+
+  // CLI 升级复选框状态（默认勾选）
+  const [upgradeCliChecked, setUpgradeCliChecked] = React.useState(true);
+
+  const openspecCliVersion = specInfo?.setupStatus?.openspec?.cliVersion;
+
+  const showUpgradeCliCheckbox = React.useMemo(() => {
+    if (specMode !== 'openspec' || !openspecCliVersion) return false;
+    if (!supportsOpenSpecCliUpgrade(codeMakerVersion, ide)) return false;
+    const major = openspecCliVersion.replace(/^v/, '').split('.')[0];
+    return major === '0' && selectedOpenSpecVersion === '1.x';
+  }, [specMode, openspecCliVersion, selectedOpenSpecVersion, codeMakerVersion, ide]);
 
   // 弹窗打开时重置状态
   React.useEffect(() => {
@@ -490,11 +369,8 @@ function SpecInitModal() {
     return step?.status ?? SpecSetupStepStatus.Pending;
   };
 
-  // 获取失败的步骤及其名称
+  // 获取失败的步骤
   const failedStep = steps.find((s) => s.status === SpecSetupStepStatus.Failed);
-  const failedStepName = failedStep
-    ? stepConfig.find((cfg) => cfg.id === failedStep.id)?.label || ''
-    : '';
 
   // 获取正在运行的步骤
   const runningStep = steps.find(
@@ -541,13 +417,18 @@ function SpecInitModal() {
     // OpenSpec：支持版本选择时传递版本参数，否则不传（Extension 默认 0.23）
     const data =
       specMode === 'openspec' && openspecSupportsVersionSelection
-        ? { version: selectedOpenSpecVersion }
+        ? {
+            version: selectedOpenSpecVersion,
+            upgradeCli: showUpgradeCliCheckbox && upgradeCliChecked,
+          }
         : {};
     postMessage({ type: actionType, data });
   }, [
     specMode,
     selectedOpenSpecVersion,
     openspecSupportsVersionSelection,
+    showUpgradeCliCheckbox,
+    upgradeCliChecked,
     postMessage,
   ]);
 
@@ -667,50 +548,11 @@ function SpecInitModal() {
             </Flex>
 
             {/* 错误信息 */}
-            {failedStep?.errorMessage && (
-              <ErrorMessageBox
+            {failedStep && (
+              <SetupErrorDisplay
                 errorMessage={failedStep.errorMessage}
-                stepName={failedStepName}
+                errorCode={failedStep.errorCode}
               />
-            )}
-
-            {/* 错误码提示 - 简化样式，浅灰色文字，无底色 */}
-            {failedStep?.errorCode && ERROR_CODE_TIPS[failedStep.errorCode] && (
-              <VStack align="start" spacing={1} mt={2} width="100%">
-                {ERROR_CODE_TIPS[failedStep.errorCode].map((tip, idx) => (
-                  <Flex key={idx} align="center" gap={1} flexWrap="wrap">
-                    <Text
-                      fontSize="12px"
-                      color={isLight ? 'gray.500' : 'gray.400'}
-                      style={{ marginBottom: 0 }}
-                    >
-                      {tip.text}
-                    </Text>
-                    {tip.link && (
-                      <Text
-                        as="a"
-                        rel="noopener noreferrer"
-                        fontSize="12px"
-                        color="blue.400"
-                        textDecoration="underline"
-                        _hover={{ color: 'blue.500' }}
-                        cursor="pointer"
-                        onClick={() => {
-                          postMessage({
-                            type: 'OPEN_IN_BROWSER',
-                            data: {
-                              url: tip.link,
-                            },
-                          });
-                        }}
-                        style={{ marginBottom: 0 }}
-                      >
-                        {tip.linkText || tip.link}
-                      </Text>
-                    )}
-                  </Flex>
-                ))}
-              </VStack>
             )}
 
             {/* 版本不支持提示（未完成初始化且不支持初始化功能） */}
@@ -768,9 +610,10 @@ function SpecInitModal() {
               </Box>
             )}
 
-            {/* 版本选择器（仅 OpenSpec 且未完成初始化且版本支持，且未点击初始化） */}
+            {/* 版本选择器（仅 OpenSpec 且未完成初始化且版本支持，且未点击初始化，且没有失败步骤） */}
             {specMode === 'openspec' &&
               !allCompleted &&
+              !failedStep &&
               openspecSupportsVersionSelection &&
               !hasClickedInit && (
                 <Box mt={3} width="100%">
@@ -875,6 +718,19 @@ function SpecInitModal() {
                       ))}
                     </VStack>
                   </RadioGroup>
+                  {showUpgradeCliCheckbox && (
+                    <Checkbox
+                      mt={3}
+                      size="sm"
+                      colorScheme="blue"
+                      isChecked={upgradeCliChecked}
+                      onChange={(e) => setUpgradeCliChecked(e.target.checked)}
+                    >
+                      <Text fontSize="12px" color="text.default">
+                        检测到本地已有 OpenSpec CLI {openspecCliVersion}，同步升级 CLI 版本
+                      </Text>
+                    </Checkbox>
+                  )}
                 </Box>
               )}
 

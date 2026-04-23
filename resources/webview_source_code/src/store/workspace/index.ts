@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { isEqual } from 'lodash';
 import constructReActPrompt from './constructReActPrompt';
 import constructH75Prompt from './constructH75Prompt';
@@ -230,6 +231,8 @@ export interface SpecSetupStep {
 export interface OpenSpecSetupStatus {
   openspecCli: SpecSetupStep;
   openspecInit: SpecSetupStep;
+  /** 检测到的全局 CLI 版本号 */
+  cliVersion?: string;
 }
 
 /**
@@ -435,364 +438,377 @@ export type WorkspaceStore = {
   setOpenspecUpdateModalVisible: (visible: boolean) => void;
 };
 
-export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
-  workspaceInfo: {
-    workspace: '',
-    repoUrl: '',
-    repoName: '',
-    osName: '',
-    shell: '',
-    currentFilePath: '',
-    openFilePaths: [],
-    repoCodeTable: '',
-    codebaseCustomPrompt: '',
-    repoType: LocalRepoType.NO_REPO
-  },
-  specInfo: {
-    frameworks: [],
-    lastScanTime: 0,
-  },
-  devSpace: {
-    _id: '',
-    name: '',
-    project: '',
-    knowledge_bases: [],
-    codebases: [],
-    code_style: '',
-    ignore_paths: [],
-    allow_paths: [],
-    allow_public_model_access: false,
-    repos: [],
-    rules: []
-  },
-  devSpaceOptions: [],
-  workspaceList: [],
-  currentFileAutoAttach: false,
-  rules: [],
-  teamRules: [],
-  selectedCodebases: [],
-  selectedKnowledgeBases: [],
-  selectedRules: [],
-  setWorkspaceInfo(info) {
-    const workspaceInfo = get().workspaceInfo;
-    const newInfo = {
-      ...workspaceInfo,
-      ...info,
-    };
+export const useWorkspaceStore = create<WorkspaceStore>()(
+  persist(
+    (set, get) => ({
+      workspaceInfo: {
+        workspace: '',
+        repoUrl: '',
+        repoName: '',
+        osName: '',
+        shell: '',
+        currentFilePath: '',
+        openFilePaths: [],
+        repoCodeTable: '',
+        codebaseCustomPrompt: '',
+        repoType: LocalRepoType.NO_REPO
+      },
+      specInfo: {
+        frameworks: [],
+        lastScanTime: 0,
+      },
+      devSpace: {
+        _id: '',
+        name: '',
+        project: '',
+        knowledge_bases: [],
+        codebases: [],
+        code_style: '',
+        ignore_paths: [],
+        allow_paths: [],
+        allow_public_model_access: false,
+        repos: [],
+        rules: []
+      },
+      devSpaceOptions: [],
+      workspaceList: [],
+      currentFileAutoAttach: false,
+      rules: [],
+      teamRules: [],
+      selectedCodebases: [],
+      selectedKnowledgeBases: [],
+      selectedRules: [],
+      setWorkspaceInfo(info) {
+        const workspaceInfo = get().workspaceInfo;
+        const newInfo = {
+          ...workspaceInfo,
+          ...info,
+        };
 
-    if (isEqual(workspaceInfo, newInfo)) {
-      return;
-    }
+        if (isEqual(workspaceInfo, newInfo)) {
+          return;
+        }
 
-    set({
-      workspaceInfo: newInfo,
-    });
-    if (newInfo.repoCodeTable && newInfo.repoName) {
-      // 缓存关联代码地图
-      const codeTableCacheStr =
-        window.localStorage.getItem('codeTableCache') || '{}';
-      const codeTableCache = JSON.parse(codeTableCacheStr);
-      codeTableCache[newInfo.repoName] = newInfo.repoCodeTable;
-      window.localStorage.setItem(
-        'codeTableCache',
-        JSON.stringify(codeTableCache),
-      );
-    } else if (!newInfo.repoCodeTable && newInfo.repoName) {
-      // 读取缓存关联代码地图
-      const codeTableCacheStr =
-        window.localStorage.getItem('codeTableCache') || '{}';
-      const codeTableCache = JSON.parse(codeTableCacheStr);
-      const repoCodeTable = codeTableCache[newInfo.repoName];
-      if (repoCodeTable && repoCodeTable !== 'dep35_test') {
         set({
-          workspaceInfo: {
-            ...newInfo,
-            repoCodeTable,
-          },
+          workspaceInfo: newInfo,
         });
-      }
-    }
-  },
-  updateSpecInfo(info: SpecInfo) {
-    const specInfo = get().specInfo;
-
-    if (isEqual(specInfo, info)) {
-      return;
-    }
-
-    set({
-      specInfo: info,
-    });
-  },
-  isSpecFrameworkInitialized(framework: SpecFramework) {
-    const specInfo = get().specInfo;
-    return specInfo.frameworks.some(f => f.framework === framework);
-  },
-  getFrameworkSpecInfo(framework: SpecFramework) {
-    const specInfo = get().specInfo;
-    return specInfo.frameworks.find(f => f.framework === framework);
-  },
-  requestSpecInfo() {
-    // 向 IDE 发送请求，获取最新的 Spec 信息
-    (window as any).parent.postMessage(
-      {
-        type: BroadcastActions.GET_SPEC_INFO,
-        data: {},
-      },
-      '*',
-    );
-  },
-  setDevSpace(newDevSpace) {
-    // 如果配置了 ignore_path，同步给插件
-    if (newDevSpace.ignore_paths) {
-      (window as any).parent.postMessage({
-        type: BroadcastActions.UPDATE_CODEBASE_IGNORE_PATH,
-        data: {
-          codebaseIgnorePath: newDevSpace.ignore_paths
+        if (newInfo.repoCodeTable && newInfo.repoName) {
+          // 缓存关联代码地图
+          const codeTableCacheStr =
+            window.localStorage.getItem('codeTableCache') || '{}';
+          const codeTableCache = JSON.parse(codeTableCacheStr);
+          codeTableCache[newInfo.repoName] = newInfo.repoCodeTable;
+          window.localStorage.setItem(
+            'codeTableCache',
+            JSON.stringify(codeTableCache),
+          );
+        } else if (!newInfo.repoCodeTable && newInfo.repoName) {
+          // 读取缓存关联代码地图
+          const codeTableCacheStr =
+            window.localStorage.getItem('codeTableCache') || '{}';
+          const codeTableCache = JSON.parse(codeTableCacheStr);
+          const repoCodeTable = codeTableCache[newInfo.repoName];
+          if (repoCodeTable && repoCodeTable !== 'dep35_test') {
+            set({
+              workspaceInfo: {
+                ...newInfo,
+                repoCodeTable,
+              },
+            });
+          }
         }
-      }, '*')
-    }
-    if (newDevSpace.rules) {
-      get().setTeamRules(newDevSpace.rules.map(rule => {
-        return {
-          metaData: {
-            name: rule.name,
-            alwaysApply: true,
-            source: 'devspace'
+      },
+      updateSpecInfo(info: SpecInfo) {
+        const specInfo = get().specInfo;
+
+        if (isEqual(specInfo, info)) {
+          return;
+        }
+
+        set({
+          specInfo: info,
+        });
+      },
+      isSpecFrameworkInitialized(framework: SpecFramework) {
+        const specInfo = get().specInfo;
+        return specInfo.frameworks.some(f => f.framework === framework);
+      },
+      getFrameworkSpecInfo(framework: SpecFramework) {
+        const specInfo = get().specInfo;
+        return specInfo.frameworks.find(f => f.framework === framework);
+      },
+      requestSpecInfo() {
+        // 向 IDE 发送请求，获取最新的 Spec 信息
+        (window as any).parent.postMessage(
+          {
+            type: BroadcastActions.GET_SPEC_INFO,
+            data: {},
           },
-          name: rule.name,
-          content: rule.data.codeMaker,
-          filePath: rule.name
-        }
-      }));
-    } else {
-      get().setTeamRules([]);
-    }
-    set({
-      devSpace: newDevSpace,
-      selectedCodebases: newDevSpace.codebases.map(codebase => codebase.codebase_id),
-      selectedKnowledgeBases: newDevSpace.knowledge_bases.map(knowledgeBase => knowledgeBase.knowledge_base_id)
-    })
-  },
-  setDevSpaceOptions(options: DevSpaceOption[]) {
-    set({
-      devSpaceOptions: options
-    });
-  },
-  setWorkspaceList(list: any[]) {
-    set({
-      workspaceList: list
-    });
-  },
-  getCodebaseChatSystemPrompt(options: {
-    isReAct?: boolean,
-    effectiveRules: Rule[]
-  } = {
-      isReAct: false,
-      effectiveRules: []
-    }) {
-    const { isReAct, effectiveRules } = options;
-    const { workspace, osName, shell, openFilePaths, repoCodeTable, codebaseCustomPrompt } =
-      get().workspaceInfo;
-    const { enableNewApply } = useChatApplyStore.getState();
-    const MCPServers = useMCPStore.getState().getAvailableMCPServers();
-    const disabledSwitches = useMCPStore.getState().disabledSwitches;
-    const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
-    const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
-    const enableTerminal = useChatTerminalStore.getState().enableTerminal;
-    const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
-
-    const code_style = get().devSpace.code_style;
-    const { codebases } = get().devSpace;
-    const hasCodeTable = codebases.length || repoCodeTable;
-
-    // 过滤掉被禁用的 MCP 服务器
-    const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
-
-    let customPrompt = '';
-    if (code_style) {
-      customPrompt = code_style;
-    } else if (codebaseCustomPrompt) {
-      customPrompt = codebaseCustomPrompt;
-    }
-    if (isReAct) {
-      return constructReActPrompt({
-        info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
-        MCPServers: filteredMCPServers,
-        enableTerminal,
-        codeMakerVersion,
-        isVSCode
-      })
-    }
-
-    if (repoCodeTable && repoCodeTable.includes('h75_scripts_1211')) {
-      return constructH75Prompt({ workspace, osName, openFilePaths, codebaseCustomPrompt: customPrompt });
-    }
-
-    const skills = useSkillsStore.getState().skills;
-
-    if (enableNewApply) {
-      return constructRemixPrompt({
-        info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
-        MCPServers: filteredMCPServers,
-        codeMakerVersion,
-        enableTerminal: enableTerminal && (isVSCode || isJetbrains),
-        effectiveRules,
-        skills
-      });
-    } else {
-      return constructToolCallPrompt({
-        info: { workspace, osName, shell, openFilePaths, codebaseCustomPrompt: customPrompt },
-        withCodeTable: !!hasCodeTable,
-        MCPServers: filteredMCPServers,
-        enableTerminal: enableTerminal && (isVSCode || isJetbrains),
-        effectiveRules,
-        skills
-      });
-    }
-  },
-  getCodebaseChatTools() {
-    const { workspace } = get().workspaceInfo;
-    const { codebases } = get().devSpace;
-    const { enableNewApply } = useChatApplyStore.getState();
-    const MCPServers = useMCPStore.getState().getAvailableMCPServers();
-    const disabledSwitches = useMCPStore.getState().disabledSwitches;
-    const enableTerminal = useChatTerminalStore.getState().enableTerminal;
-    const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
-    const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
-
-    // 过滤掉被禁用的 MCP 服务器
-    const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
-
-    let hasCodeTable = !!codebases.length;
-    if (!hasCodeTable) {
-      const recentUserMessage = useChatStore.getState().getRecentUserMessageFromCurrentSession()
-      const attach = recentUserMessage?._originalRequestData?.attachs as IMultiAttachment
-      hasCodeTable = attach?.attachType === AttachType.MultiAttachment && attach.dataSource.some(i => i.attachType === AttachType.CodeBase)
-    }
-    if (enableNewApply) {
-      return getToolsEN({
-        workspace,
-        hasCodeTable,
-        MCPServers: filteredMCPServers,
-        enableTerminal,
-        codeMakerVersion,
-        isVSCode
-      });
-    } else {
-      return getTools({
-        workspace,
-        hasCodeTable,
-        MCPServers: filteredMCPServers,
-        enableTerminal,
-        codeMakerVersion,
-        isVSCode
-      });
-    }
-  },
-  getCodebaseFunctionPrompt() {
-    const chatTools = get().getCodebaseChatTools();
-    let functionPrompt = '';
-    chatTools.forEach((tool) => {
-      functionPrompt += `${tool.function.name}${tool.function.description}${tool.function.parameters ? JSON.stringify(tool.function.parameters) : ''}`;
-    });
-    return functionPrompt;
-  },
-  syncDevSpaceOptions() {
-    devcloudOfficeRequest.get('/api/v1/dev_spaces', {
-      params: {
-        _global: '1',
-        _num: '50',
-        _page: 1
+          '*',
+        );
       },
-      headers: {
-        'X-Auth-Project': 'dep305'
-      }
-    }).then((res: any) => {
-      const data = res.data;
-      if (data && data.items && data.items.length) {
-        get().setDevSpaceOptions(data.items);
-      }
-    })
-  },
-  setCurrentFileAutoAttach(autoAttach) {
-    set({
-      currentFileAutoAttach: autoAttach
-    })
-  },
-  setRules(rules: Rule[]) {
-    const currentRules = get().rules;
+      setDevSpace(newDevSpace) {
+        // 如果配置了 ignore_path，同步给插件
+        if (newDevSpace.ignore_paths) {
+          (window as any).parent.postMessage({
+            type: BroadcastActions.UPDATE_CODEBASE_IGNORE_PATH,
+            data: {
+              codebaseIgnorePath: newDevSpace.ignore_paths
+            }
+          }, '*')
+        }
+        if (newDevSpace.rules) {
+          get().setTeamRules(newDevSpace.rules.map(rule => {
+            return {
+              metaData: {
+                name: rule.name,
+                alwaysApply: true,
+                source: 'devspace'
+              },
+              name: rule.name,
+              content: rule.data.codeMaker,
+              filePath: rule.name
+            }
+          }));
+        } else {
+          get().setTeamRules([]);
+        }
+        set({
+          devSpace: newDevSpace,
+          selectedCodebases: newDevSpace.codebases.map(codebase => codebase.codebase_id),
+          selectedKnowledgeBases: newDevSpace.knowledge_bases.map(knowledgeBase => knowledgeBase.knowledge_base_id)
+        })
+      },
+      setDevSpaceOptions(options: DevSpaceOption[]) {
+        set({
+          devSpaceOptions: options
+        });
+      },
+      setWorkspaceList(list: any[]) {
+        set({
+          workspaceList: list
+        });
+      },
+      getCodebaseChatSystemPrompt(options: {
+        isReAct?: boolean,
+        effectiveRules: Rule[]
+      } = {
+          isReAct: false,
+          effectiveRules: []
+        }) {
+        const { isReAct, effectiveRules } = options;
+        const { workspace, osName, shell, openFilePaths, repoCodeTable, codebaseCustomPrompt } =
+          get().workspaceInfo;
+        const { enableNewApply } = useChatApplyStore.getState();
+        const MCPServers = useMCPStore.getState().getAvailableMCPServers();
+        const disabledSwitches = useMCPStore.getState().disabledSwitches;
+        const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
+        const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
+        const enableTerminal = useChatTerminalStore.getState().enableTerminal;
+        const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
 
-    // 如果是初次设置或当前为空，直接设置
-    if (currentRules.length === 0) {
-      set({
-        rules: rules
-      });
-      get().setSelectedRules(rules.map(rule => rule.filePath));
-      return;
+        const code_style = get().devSpace.code_style;
+        const { codebases } = get().devSpace;
+        const hasCodeTable = codebases.length || repoCodeTable;
+
+        // 过滤掉被禁用的 MCP 服务器
+        const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
+
+        let customPrompt = '';
+        if (code_style) {
+          customPrompt = code_style;
+        } else if (codebaseCustomPrompt) {
+          customPrompt = codebaseCustomPrompt;
+        }
+        if (isReAct) {
+          return constructReActPrompt({
+            info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
+            MCPServers: filteredMCPServers,
+            enableTerminal,
+            codeMakerVersion,
+            isVSCode
+          })
+        }
+
+        if (repoCodeTable && repoCodeTable.includes('h75_scripts_1211')) {
+          return constructH75Prompt({ workspace, osName, openFilePaths, codebaseCustomPrompt: customPrompt });
+        }
+
+        const skills = useSkillsStore.getState().skills;
+
+        if (enableNewApply) {
+          const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
+          return constructRemixPrompt({
+            info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
+            MCPServers: filteredMCPServers,
+            codeMakerVersion,
+            enableTerminal: enableTerminal && (isVSCode || isJetbrains),
+            effectiveRules,
+            skills,
+            openspecVersion
+          });
+        } else {
+          return constructToolCallPrompt({
+            info: { workspace, osName, shell, openFilePaths, codebaseCustomPrompt: customPrompt },
+            withCodeTable: !!hasCodeTable,
+            MCPServers: filteredMCPServers,
+            enableTerminal: enableTerminal && (isVSCode || isJetbrains),
+            effectiveRules,
+            skills
+          });
+        }
+      },
+      getCodebaseChatTools() {
+        const { workspace } = get().workspaceInfo;
+        const { codebases } = get().devSpace;
+        const { enableNewApply } = useChatApplyStore.getState();
+        const MCPServers = useMCPStore.getState().getAvailableMCPServers();
+        const disabledSwitches = useMCPStore.getState().disabledSwitches;
+        const enableTerminal = useChatTerminalStore.getState().enableTerminal;
+        const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
+        const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
+
+        // 过滤掉被禁用的 MCP 服务器
+        const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
+
+        let hasCodeTable = !!codebases.length;
+        if (!hasCodeTable) {
+          const recentUserMessage = useChatStore.getState().getRecentUserMessageFromCurrentSession()
+          const attach = recentUserMessage?._originalRequestData?.attachs as IMultiAttachment
+          hasCodeTable = attach?.attachType === AttachType.MultiAttachment && attach.dataSource.some(i => i.attachType === AttachType.CodeBase)
+        }
+        if (enableNewApply) {
+          return getToolsEN({
+            workspace,
+            hasCodeTable,
+            MCPServers: filteredMCPServers,
+            enableTerminal,
+            codeMakerVersion,
+            isVSCode
+          });
+        } else {
+          return getTools({
+            workspace,
+            hasCodeTable,
+            MCPServers: filteredMCPServers,
+            enableTerminal,
+            codeMakerVersion,
+            isVSCode
+          });
+        }
+      },
+      getCodebaseFunctionPrompt() {
+        const chatTools = get().getCodebaseChatTools();
+        let functionPrompt = '';
+        chatTools.forEach((tool) => {
+          functionPrompt += `${tool.function.name}${tool.function.description}${tool.function.parameters ? JSON.stringify(tool.function.parameters) : ''}`;
+        });
+        return functionPrompt;
+      },
+      syncDevSpaceOptions() {
+        devcloudOfficeRequest.get('/api/v1/dev_spaces', {
+          params: {
+            _global: '1',
+            _num: '50',
+            _page: 1
+          },
+          headers: {
+            'X-Auth-Project': 'dep305'
+          }
+        }).then((res: any) => {
+          const data = res.data;
+          if (data && data.items && data.items.length) {
+            get().setDevSpaceOptions(data.items);
+          }
+        })
+      },
+      setCurrentFileAutoAttach(autoAttach) {
+        set({
+          currentFileAutoAttach: autoAttach
+        })
+      },
+      setRules(rules: Rule[]) {
+        const currentRules = get().rules;
+
+        // 如果是初次设置或当前为空，直接设置
+        if (currentRules.length === 0) {
+          set({
+            rules: rules
+          });
+          get().setSelectedRules(rules.map(rule => rule.filePath));
+          return;
+        }
+
+        // 基于 filePath 进行智能更新，保持原有顺序
+        const filePathMap = new Map(rules.map(rule => [rule.filePath, rule]));
+        const updatedRules: Rule[] = [];
+
+        // 首先保留现有规则的顺序，更新存在的规则
+        currentRules.forEach(currentRule => {
+          const updatedRule = filePathMap.get(currentRule.filePath);
+          if (updatedRule) {
+            updatedRules.push(updatedRule);
+            filePathMap.delete(currentRule.filePath); // 从待处理中移除
+          }
+          // 如果不存在于新规则中，则被移除（不添加到 updatedRules）
+        });
+
+        // 然后添加新的规则（保持新规则的原始顺序）
+        const newRules = Array.from(filePathMap.values());
+        updatedRules.push(...newRules);
+        set({
+          rules: updatedRules
+        });
+        get().setSelectedRules(updatedRules.map(rule => rule.filePath));
+      },
+      setSelectedCodebases(codebases: string[]) {
+        set({
+          selectedCodebases: codebases
+        })
+      },
+      setTeamRules(rules: Rule[]) {
+        set({
+          teamRules: rules
+        })
+      },
+      setSelectedKnowledgeBases(knowledgeBases: string[]) {
+        set({
+          selectedKnowledgeBases: knowledgeBases
+        })
+      },
+      setSelectedRules(rules: string[]) {
+        set({
+          selectedRules: rules
+        })
+      },
+      initModalVisible: false,
+      setInitModalVisible(visible: boolean) {
+        set({
+          initModalVisible: visible
+        })
+      },
+      currentSpecFramework: null,
+      setCurrentSpecFramework(framework: SpecFramework | null) {
+        set({
+          currentSpecFramework: framework
+        })
+      },
+      openspecUpdateModalVisible: false,
+      setOpenspecUpdateModalVisible(visible: boolean) {
+        set({
+          openspecUpdateModalVisible: visible
+        })
+      }
+    }),
+    {
+      name: 'codemaker-workspace-config',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        devSpace: state.devSpace,
+      }),
     }
-
-    // 基于 filePath 进行智能更新，保持原有顺序
-    const filePathMap = new Map(rules.map(rule => [rule.filePath, rule]));
-    const updatedRules: Rule[] = [];
-
-    // 首先保留现有规则的顺序，更新存在的规则
-    currentRules.forEach(currentRule => {
-      const updatedRule = filePathMap.get(currentRule.filePath);
-      if (updatedRule) {
-        updatedRules.push(updatedRule);
-        filePathMap.delete(currentRule.filePath); // 从待处理中移除
-      }
-      // 如果不存在于新规则中，则被移除（不添加到 updatedRules）
-    });
-
-    // 然后添加新的规则（保持新规则的原始顺序）
-    const newRules = Array.from(filePathMap.values());
-    updatedRules.push(...newRules);
-    set({
-      rules: updatedRules
-    });
-    get().setSelectedRules(updatedRules.map(rule => rule.filePath));
-  },
-  setSelectedCodebases(codebases: string[]) {
-    set({
-      selectedCodebases: codebases
-    })
-  },
-  setTeamRules(rules: Rule[]) {
-    set({
-      teamRules: rules
-    })
-  },
-  setSelectedKnowledgeBases(knowledgeBases: string[]) {
-    set({
-      selectedKnowledgeBases: knowledgeBases
-    })
-  },
-  setSelectedRules(rules: string[]) {
-    set({
-      selectedRules: rules
-    })
-  },
-  initModalVisible: false,
-  setInitModalVisible(visible: boolean) {
-    set({
-      initModalVisible: visible
-    })
-  },
-  currentSpecFramework: null,
-  setCurrentSpecFramework(framework: SpecFramework | null) {
-    set({
-      currentSpecFramework: framework
-    })
-  },
-  openspecUpdateModalVisible: false,
-  setOpenspecUpdateModalVisible(visible: boolean) {
-    set({
-      openspecUpdateModalVisible: visible
-    })
-  }
-}));
+  )
+);
 
 
 export function getEffectiveRules(options: {

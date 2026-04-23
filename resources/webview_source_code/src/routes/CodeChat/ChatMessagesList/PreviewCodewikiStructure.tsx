@@ -30,7 +30,7 @@ interface ICodewikiDirectory {
 const PreviewCodewikiStructure: React.FC<{
   content: string
   hasError: boolean
-  isLatest: boolean
+  isLatest: boolean | undefined
 }> = (props) => {
   const { postMessage } = usePostMessage();
   const { hasError, content } = props;
@@ -210,7 +210,7 @@ const PreviewCodewikiStructure: React.FC<{
                         postMessage({
                           type: 'OPEN_IN_BROWSER',
                           data: {
-                            url: 'http://localhost:3001',
+                            url: 'https://devcloud-office.nie.netease.com/',
                           },
                         });
                       }}

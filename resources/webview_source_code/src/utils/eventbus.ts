@@ -75,6 +75,8 @@ export enum EBusEvent {
   Docs_File_Upload = 'Docs_File_Upload', // 文件上传
 
   CodeChat_Unlock_Scroll = 'CodeChat_Unlock_Scroll', // 代码聊天解锁自动滚动
-  
+
   Submit_Init_Prompt = 'Submit_Init_Prompt', // 提交初始化 prompt（用于 Spec 初始化）
+
+  Update_User_Quota = 'Update_User_Quota', // 更新用户账单
 }

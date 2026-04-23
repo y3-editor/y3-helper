@@ -7,6 +7,9 @@ function useSubmitHandler() {
 
   const shouldSubmit = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return false;
+
+    // 在输入法组合状态下，Enter 应该是确认输入法输入，而不是发送消息
+    if (e.nativeEvent.isComposing) return false;
     
     // 当设置为 Enter 发送时，Ctrl+Enter (Windows/Linux) 或 Cmd+Enter (Mac) 应该换行而不是发送
     if (submitKey === SubmitKey.Enter) {

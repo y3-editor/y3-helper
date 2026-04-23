@@ -17,40 +17,44 @@ import {
   TabPanel,
   Select,
   Icon,
-  Link
+  Link,
+  Progress,
+  Button,
 } from '@chakra-ui/react';
 // import { InfoIcon } from '@chakra-ui/icons';
-import { getUserDashboard, UseDashboardData, getUserBill } from '../../services/userDashboard';
+import { getUserDashboard, UseDashboardData } from '../../services/userDashboard';
 import { isNumber } from 'lodash';
 import { RiWechatLine } from 'react-icons/ri';
 import { BiCodeCurly } from 'react-icons/bi';
-import { AiOutlineQuestionCircle } from 'react-icons/ai';
+import { AiOutlineQuestionCircle, AiOutlineWarning } from 'react-icons/ai';
 import { usePostMessage } from '../../PostMessageProvider';
+import { useChatBillStore } from '../../store/chatBill';
 
 
 const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
   const { open, onClose } = props;
+  const { postMessage } = usePostMessage();
   // const [showMore, setShowMore] = React.useState(false);
   const [data, setData] = React.useState<UseDashboardData | null>(null);
-  const [billData, setBillData] = React.useState<Record<string, { cost: number, amout: number }> | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [billLoading, setBillLoading] = React.useState(false);
-
-  const [currentMonth, setCurrentMonth] = React.useState('')
-  const [lastMonth, setLastMonth] = React.useState('')
-  const [prevMonth, setPrevMonth] = React.useState('')
+  const billLoading = useChatBillStore(state => state.billLoading)
+  const monthlyBills = useChatBillStore(state => state.monthlyBills)
+  const maxCostPerMonth = useChatBillStore(state => state.maxCostPerMonth)
+  const { currentMonth = '-', lastMonth = '-', prevMonth = '-' } = React.useMemo(() => {
+    if (!monthlyBills.length) return {}
+    return {
+      currentMonth: monthlyBills[0].time,
+      lastMonth: monthlyBills[1].time,
+      prevMonth: monthlyBills[2].time
+    };
+  }, [monthlyBills]);
 
   // 设置默认选中当前月份
   const [selectedMonth, setSelectedMonth] = React.useState('');
 
-  const getMonthData = React.useCallback((monthData: string) => {
-    const dates = monthData?.split?.('-')
-    if (Array.isArray(dates)) {
-      const [year, month, day] = dates
-      return `${year}-${month}-${day}`
-    }
-    return '-'
-  }, [])
+  React.useEffect(() => {
+    setSelectedMonth(currentMonth)
+  }, [currentMonth])
 
   React.useEffect(() => {
     if (open) {
@@ -66,45 +70,6 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
     }
   }, [open]);
 
-  React.useEffect(() => {
-    if (open) {
-      setBillLoading(true);
-      getUserBill()
-        .then((data) => {
-          const cur = data?.current_month?.results?.find?.(r => r?.app_code?.includes('cm_chat_codebase'))
-          const last = data?.last_month?.results?.find?.(r => r?.app_code?.includes('cm_chat_codebase'))
-          const prev = data?.prev_month?.results?.find?.(r => r?.app_code?.includes('cm_chat_codebase'))
-
-          const curMonth = getMonthData(data?.current_month?.date_range?.end || '')
-          const lastMonth = getMonthData(data?.last_month?.date_range?.end || '')
-          const prevMonth = getMonthData(data?.prev_month?.date_range?.end || '')
-
-          setBillData({
-            [curMonth]: {
-              amout: cur?.token_amt || 0,
-              cost: cur?.total_cost || 0
-            },
-            [lastMonth]: {
-              amout: last?.token_amt || 0,
-              cost: last?.total_cost || 0
-            },
-            [prevMonth]: {
-              amout: prev?.token_amt || 0,
-              cost: prev?.total_cost || 0
-            }
-          })
-          setCurrentMonth(curMonth)
-          setLastMonth(lastMonth)
-          setPrevMonth(prevMonth)
-          setSelectedMonth(curMonth)
-        }).catch(() => {
-          setBillData(null)
-        })
-        .finally(() => {
-          setBillLoading(false);
-        })
-    }
-  }, [getMonthData, open]);
 
 
   // 格式化月份显示
@@ -144,15 +109,18 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
     return `${startDate.toLocaleString()} - ${endDate.toLocaleString()}`;
   }, [data]);
 
-  const formatDayDisplay = React.useCallback((monthStr: string): string => {
-    const [_, mont, day] = monthStr.split('-');
-    if (day) {
-      return `${mont} 月 ${day?.split(' ')?.[0]}`;
-    } else {
-      return '--'
-    }
-  }, []);
 
+  const currentCost = React.useMemo(() => {
+    const bill = monthlyBills.find(item => item.time === selectedMonth);
+    return bill?.usageCost || 0;
+  }, [monthlyBills, selectedMonth]);
+  const currentPoints = React.useMemo(() => Math.floor(currentCost * 100), [currentCost]);
+  const maxIntegral = React.useMemo(() => Math.floor(maxCostPerMonth * 100), [maxCostPerMonth]);
+  const isExceeded = React.useMemo(() => currentPoints > maxIntegral, [currentPoints, maxIntegral]);
+  const progressValue = React.useMemo(() => {
+    if (maxIntegral <= 0) return 0;
+    return Math.min((currentPoints / maxIntegral) * 100, 100);
+  }, [currentPoints, maxIntegral]);
 
   return (
     <>
@@ -176,12 +144,12 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
         <PopoverContent bg="#1A1A1A" borderColor="#343434" color="white" w="320px" boxShadow={'base'}>
           <PopoverHeader borderBottom="none" pt={4} px={4}>
             <Flex alignItems="center">
-              <Box as="span" mr={2} color="purple.400">
+              <Box as="span" mr={2} color="blue.400">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
                 </svg>
               </Box>
-              <Text fontWeight="bold" fontSize="md">Y3Maker 数据统计</Text>
+              <Text fontWeight="bold" fontSize="md">CodeMaker 数据统计</Text>
             </Flex>
           </PopoverHeader>
           <PopoverCloseButton top="12px" color="gray.400" />
@@ -196,7 +164,7 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                   fontSize="sm"
                   py={1}
                 >
-                  功能用量
+                  消耗统计
                 </Tab>
                 <Tab
                   _selected={{ bg: '#454545', color: 'white' }}
@@ -205,13 +173,103 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                   fontSize="sm"
                   py={1}
                 >
-                  消耗统计
+                  功能用量
                 </Tab>
               </TabList>
               <TabPanels>
                 <TabPanel px={6} py={4}>
+                  {
+                    billLoading ? (
+                      <Flex w="full" minH="200px" direction="column" alignItems="center" justifyContent="center">
+                        <Spinner />
+                        <Text mt="2" color={'gray.400'}>正在为您加载数据，请稍候...</Text>
+                      </Flex>
+                    ) : (
+                      <>
+                        <Flex justifyContent="space-between" alignItems="center" mb={4}>
+                          <Flex alignItems={'center'} justifyContent={'center'}>
+                            <Text fontWeight="bold" fontSize="sm">仓库智聊消耗情况</Text>
+                          </Flex>
+                          <Select
+                            size="sm"
+                            w="110px"
+                            borderColor="gray.600"
+                            value={selectedMonth}
+                            style={{ zoom: .9 }}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                          >
+                            <option value={currentMonth}>{formatMonthDisplay(currentMonth)}</option>
+                            <option value={lastMonth}>{formatMonthDisplay(lastMonth)}</option>
+                            <option value={prevMonth}>{formatMonthDisplay(prevMonth)}</option>
+                          </Select>
+                        </Flex>
+
+                        <Box bg="#2d2e30" borderRadius="md" p={4} mb={4}>
+                          <Flex color="gray.400" fontSize="sm" mb={2}>
+                            截止当月累计消耗
+                            <ConsumeTenkenTip className='mb-1' />
+                          </Flex>
+                          <Flex alignItems="baseline" mb={3} flexWrap={'wrap'}>
+                            <Text fontSize="xl" fontWeight="bold" mr={2}>
+                              {billLoading ? '-' : currentPoints.toLocaleString()} 积分
+                            </Text>
+                            <Text color="gray.500" fontSize="sm">({billLoading ? '-' : currentCost.toFixed(1)} 元)</Text>
+                          </Flex>
+
+                          <Progress
+                            value={progressValue}
+                            size="sm"
+                            colorScheme="blue"
+                            borderRadius="full"
+                            bg="gray.600"
+                            mb={2}
+                            sx={{
+                              '& > div': {
+                                backgroundColor: 'blue.400'
+                              }
+                            }}
+                          />
+
+                          <Flex justifyContent="space-between" alignItems="center" fontSize="xs">
+                            <Flex alignItems="center" visibility={isExceeded ? 'visible' : 'hidden'}>
+                              <Icon as={AiOutlineWarning} color="blue.400" mr={1} />
+                              <Text color="blue.300">已超出限额</Text>
+                            </Flex>
+                            <Text color="gray.500">
+                              {currentPoints.toLocaleString()}/{maxIntegral.toLocaleString()} 积分
+                            </Text>
+                          </Flex>
+                        </Box>
+                        {
+                          isExceeded && currentMonth === selectedMonth && (
+                            <Flex color={'gray.500'} fontSize={'small'}>
+                              <Text>恢复服务申请：</Text>
+                              <Button
+                                size="sm"
+                                variant="link"
+                                color="blue.600"
+                                fontWeight="600"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  postMessage({
+                                    type: "OPEN_IN_BROWSER",
+                                    data: { url: `https://g.126.fm/01ePpyp` },
+                                  });
+                                }}
+                                _hover={{ textDecoration: 'none', opacity: 0.8 }}
+                              >
+                                《仓库智聊积分申请》
+                              </Button>
+                            </Flex>
+                          )
+                        }
+                      </>
+                    )
+                  }
+                </TabPanel>
+                <TabPanel px={6} py={4}>
                   <Text color="gray.400" fontSize="sm" mb={1}>
-                    近 3 个月你的 Y3Maker 用量为：
+                    近 3 个月你的 CodeMaker 用量为：
                   </Text>
                   <Text color="gray.400" fontSize="sm" mb={4}>
                     {getTime()}
@@ -251,7 +309,7 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
 
                       <Box mb="4">
                         <Flex alignItems="center" mb={2}>
-                          <Text color="purple.300"><RiWechatLine color="purple.300" size={16} /></Text>
+                          <Text color="blue.300"><RiWechatLine color="blue.300" size={16} /></Text>
                           <Text fontWeight="bold">【仓库智聊】</Text>
                         </Flex>
                         <Box ml="6" fontSize="sm" color="gray.300">
@@ -287,43 +345,6 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                     </>
                   )}
                 </TabPanel>
-                <TabPanel px={6} py={4}>
-                  <Flex justifyContent="space-between" alignItems="center" mb={4}>
-                    <Flex alignItems={'center'} justifyContent={'center'}>
-                      <Text fontWeight="bold" fontSize="sm">仓库智聊消耗情况</Text>
-                    </Flex>
-                    <Select
-                      size="sm"
-                      w="110px"
-                      borderColor="gray.600"
-                      value={selectedMonth}
-                      style={{ zoom: .9 }}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                    >
-                      <option value={currentMonth}>{formatMonthDisplay(currentMonth)}</option>
-                      <option value={lastMonth}>{formatMonthDisplay(lastMonth)}</option>
-                      <option value={prevMonth}>{formatMonthDisplay(prevMonth)}</option>
-                    </Select>
-                  </Flex>
-
-                  <Box bg="#2d2e30" borderRadius="md" p={4} mb={4}>
-                    <Flex color="gray.400" fontSize="sm" mb={2}>
-                      截止 {formatDayDisplay(selectedMonth)} 日累计消耗
-                      <ConsumeTenkenTip className='mb-1' />
-                    </Flex>
-                    <Flex alignItems="baseline" mb={1} flexWrap={'wrap'}>
-                      <Text fontSize="xl" fontWeight="bold" mr={2}>
-                        {billLoading ? '-' : ((billData?.[selectedMonth]?.cost || 0) * 100)?.toLocaleString() || 0} 积分
-                      </Text>
-                      <Text color="gray.500" fontSize="sm">({billLoading ? '-' : (billData?.[selectedMonth]?.cost || 0).toFixed(1)} 元)</Text>
-                    </Flex>
-                  </Box>
-
-                  {/* <Flex alignItems="center" color="purple.400" fontSize="xs" mb={2}>
-                    <InfoIcon mr={2} />
-                    <Text>目前账单只统计【仓库智聊】产生的Token消耗情况</Text>
-                  </Flex> */}
-                </TabPanel>
               </TabPanels>
             </Tabs>
           </PopoverBody>
@@ -349,14 +370,14 @@ export const ConsumeTenkenTip = ({
     },
     {
       title: '为什么展示积分？',
-      content: '近期发现部分用户无节制的使用Y3Maker，产生了超出正常使用的成本，也影响到其他人使用。为了量化每个会话资源消耗，方便Y3Maker团队分析成本构成，推进技术优化，我们将消耗Token数升级为积分数，并给出实际成本消耗预估。'
+      content: '近期发现部分用户无节制的使用CodeMaker，产生了超出正常使用的成本，也影响到其他人使用。为了量化每个会话资源消耗，方便CodeMaker团队分析成本构成，推进技术优化，我们将消耗Token数升级为积分数，并给出实际成本消耗预估。'
     },
     {
       title: '私有模型也算积分吗？',
       content: '私有部署也是要服务器的，目前我们用的有道的私有部署服务，单价由有道来定。',
     },
     {
-      title: '后续Y3Maker是否会收费，面向团队或是个人？',
+      title: '后续CodeMaker是否会收费，面向团队或是个人？',
       content: '目前暂未计划收费',
     },
     {
@@ -374,7 +395,7 @@ export const ConsumeTenkenTip = ({
               postMessage({
                 type: 'OPEN_IN_BROWSER',
                 data: {
-                  url: 'http://localhost:3001',
+                  url: 'https://modelspace.netease.com/model_app',
                 },
               });
             }}
@@ -385,7 +406,7 @@ export const ConsumeTenkenTip = ({
         </>
       )
     }
-  ]), [])
+  ]), [postMessage])
 
   return (
     <Box className={className}>
