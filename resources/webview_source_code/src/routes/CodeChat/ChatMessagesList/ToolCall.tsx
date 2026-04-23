@@ -108,6 +108,24 @@ export default function ToolCall(props: ToolCallProps) {
     );
   }, [message]);
 
+  const hasListFilesTool = useMemo(() => {
+    if (!message.tool_calls) {
+      return false;
+    }
+    return message.tool_calls.some((tool) =>
+      ['list_files_top_level', 'list_files_recursive', 'view_source_code_definitions_top_level'].includes(tool.function.name),
+    );
+  }, [message]);
+
+  const hasReadFileTool = useMemo(() => {
+    if (!message.tool_calls) {
+      return false;
+    }
+    return message.tool_calls.some((tool) =>
+      tool.function.name === 'read_file',
+    );
+  }, [message]);
+
   const hasMCPTool = useMemo(() => {
     if (!message.tool_calls) {
       return false;
@@ -615,6 +633,7 @@ export default function ToolCall(props: ToolCallProps) {
         success: true,
         userQuestion: notificationMessage,
         panelId: panelContext?.panelId,
+        mode: panelContext?.mode,
         isHighPriority: true, // 标记为高优先级通知
       });
     }
@@ -638,6 +657,7 @@ export default function ToolCall(props: ToolCallProps) {
     hasTodoTool,
     currentSession?.topic,
     panelContext?.panelId,
+    panelContext?.mode,
     mcpServerDisplayName,
     message.id,
     isFileRelatedTool,
@@ -835,7 +855,7 @@ export default function ToolCall(props: ToolCallProps) {
     return (
       <TaskProgressPanel
         headerContent={toolCallTitle}
-        showHeader={!hasEditFileTool && !hasTerminalTool && !hasMCPTool && !hasToolCallError && !hasMakePlanTool && !hasAskUserQuestionTool}
+        showHeader={!hasEditFileTool && !hasTerminalTool && !hasMCPTool && !hasToolCallError && !hasMakePlanTool && !hasAskUserQuestionTool && !hasListFilesTool && !hasReadFileTool}
       >
         <ToolCallResults
           message={message}
@@ -853,7 +873,7 @@ export default function ToolCall(props: ToolCallProps) {
     <TaskProgressPanel
       headerContent={toolCallTitle}
       autoConfigItems={autoConfigItems}
-      showHeader={!hasEditFileTool && !hasTerminalTool && !hasMCPTool && !hasToolCallError && !hasMakePlanTool && !hasAskUserQuestionTool}
+      showHeader={!hasEditFileTool && !hasTerminalTool && !hasMCPTool && !hasToolCallError && !hasMakePlanTool && !hasAskUserQuestionTool && !hasListFilesTool && !hasReadFileTool}
       footerContent={
         !toolResponseDisabled &&
         !isProcessing &&

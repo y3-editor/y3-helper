@@ -14,7 +14,7 @@ import {
   SubscribeActions,
   usePostMessage,
 } from './PostMessageProvider';
-import { selectIsSpecStaging, useAuthStore } from './store/auth';
+import { useAuthStore } from './store/auth';
 import Login from './components/Login';
 import CodeChat from './routes/CodeChat';
 import { IDE, useExtensionStore } from './store/extension';
@@ -118,7 +118,6 @@ function App() {
   const setUsername = useAuthStore((state) => state.setUsername);
   const setLoginFrom = useAuthStore((state) => state.setLoginFrom);
 
-  const isSpecStaging = useAuthStore(selectIsSpecStaging);
 
   // 未处理事件队列
   const pendingEventsRef = React.useRef<PostMessageSubscribeType[]>([]);
@@ -185,10 +184,8 @@ function App() {
     postMessage({
       type: BroadcastActions.GET_SKILLS
     });
-    if (isSpecStaging) {
-      requestSpecInfo();
-    }
-  }, [chatType, postMessage, requestSpecInfo, isSpecStaging])
+    requestSpecInfo();
+  }, [chatType, postMessage, requestSpecInfo])
 
   React.useEffect(() => {
     // setTimeout(() => {
@@ -387,6 +384,7 @@ function App() {
           disableNewApply,
           codeChatTerminalTimeout,
           themeStyle,
+          selectedModel,
           loginFrom,
           login_from,
           fixedModel,
@@ -490,6 +488,22 @@ function App() {
           useChatConfig.getState().update((config) => {
             config.model = fixedModel as ChatModel;
           });
+        }
+
+        // 应用插件传递的模型选择（如果存在）
+        if (selectedModel) {
+          // 设置全局聊天配置模型
+          useChatConfig.getState().update((config) => {
+            config.model = selectedModel;
+          });
+          
+          // 同时设置模型缓存，确保新会话使用正确的模型
+          const { setNormalChatModel, setCodebaseChatModel } = useChatConfig.getState();
+          if (initialChatType === 'codebase') {
+            setCodebaseChatModel(selectedModel);
+          } else {
+            setNormalChatModel(selectedModel);
+          }
         }
 
         setLoginLoading(false);
@@ -737,6 +751,17 @@ function App() {
         overflow="hidden"
       >
         <FeatureTour />
+        {/* 虚拟锚点：用于 user-dashboard 引导定位到 IDE 标题栏按钮位置 */}
+        <Box
+          data-tour="user-dashboard-anchor"
+          position="fixed"
+          top="-12px"
+          right={ide === IDE.JetBrains ? '120px' : '76px'}
+          width="1px"
+          height="1px"
+          pointerEvents="none"
+          aria-hidden="true"
+        />
         <Box w="full">
           <CodeChat />
         </Box>

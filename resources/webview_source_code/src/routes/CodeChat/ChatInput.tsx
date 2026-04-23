@@ -333,7 +333,17 @@ function ChatInput(props: ChatInputProp) {
         }
       }
     },
-    [updateHistory, chatModels, model, inputRef, uploadImgByBase64, toast, onUpdatePrePromptCodeBlock, handleInputChange, cUnrestrict],
+    [
+      chatModels,
+      updateHistory,
+      model,
+      inputRef,
+      uploadImgByBase64,
+      toast,
+      onUpdatePrePromptCodeBlock,
+      handleInputChange,
+      cUnrestrict,
+    ],
   );
 
   // 会话改变的时候重置发送消息索引

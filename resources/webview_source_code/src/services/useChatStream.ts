@@ -27,19 +27,9 @@ import { BMSearch } from '../services';
 import { uniqueId } from 'lodash';
 import { UserEvent } from '../types/report';
 import { getValidToolName } from '../utils';
+// Y3: 内联 execFuncWithoutException（上游来自 CodeReview/utils，Y3 没有该模块）
+const execFuncWithoutException = (func: () => void) => { try { func?.(); } catch { /* empty */ } };
 import { ChatModel } from './chatModel';
-
-/**
- * @name 执行函数时，忽略异常
- * @param func
- */
-export const execFuncWithoutException = (func: () => void) => {
-  try {
-    func?.();
-  } catch (e) {
-    /* empty */
-  }
-};
 
 export enum StreamError {
   BaiChuan2TokenLimit = 'Prompt is greator than max_tokens.',
@@ -233,16 +223,22 @@ async function createStream(req: Request, parseCallback?: (data: any) => void) {
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
-
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
-            const text = delta.content ?? '';
+            const text =
+              choices[0].delta.content === null ? '' : choices[0].delta.content;
 
             // 处理 reasoning 相关字段
-            const reasoningContent = delta.reasoning_content ?? '';
-            const thinkingSignature = delta.thinking_signature ?? '';
-            const redactedThinking = delta.redacted_thinking ?? '';
+            const reasoningContent =
+              choices[0]?.delta?.reasoning_content === null
+                ? ''
+                : choices[0].delta.reasoning_content;
+            const thinkingSignature =
+              choices[0]?.delta?.thinking_signature === null
+                ? ''
+                : choices[0].delta.thinking_signature;
+            const redactedThinking =
+              choices[0]?.delta?.redacted_thinking === null
+                ? ''
+                : choices[0].delta.redacted_thinking;
 
             // 处理一些后端的错误
             if (
@@ -381,12 +377,12 @@ async function createDeepseekReasonerStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
-
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
-            const text = delta.content ?? '';
-            const reasoningText = delta.reasoning_content ?? '';
+            const text =
+              choices[0].delta.content === null ? '' : choices[0].delta.content;
+            const reasoningText =
+              choices[0]?.delta?.reasoning_content === null
+                ? ''
+                : choices[0].delta.reasoning_content;
 
             // 处理一些后端的错误
             if ([StreamError.Timeout].includes(text as StreamError)) {
@@ -498,14 +494,21 @@ async function createClaude37ReasonerStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            const text =
+              choices[0].delta.content === null ? '' : choices[0].delta.content;
 
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
-            const text = delta.content ?? '';
-            const reasoningContent = delta.reasoning_content ?? '';
-            const thinkingSignature = delta.thinking_signature ?? '';
-            const redactedThinking = delta.redacted_thinking ?? '';
+            const reasoningContent =
+              choices[0]?.delta?.reasoning_content === null
+                ? ''
+                : choices[0].delta.reasoning_content;
+            const thinkingSignature =
+              choices[0]?.delta?.thinking_signature === null
+                ? ''
+                : choices[0].delta.thinking_signature;
+            const redactedThinking =
+              choices[0]?.delta?.redacted_thinking === null
+                ? ''
+                : choices[0].delta.redacted_thinking;
 
             // 处理一些后端的错误
             if ([StreamError.Timeout].includes(text as StreamError)) {
@@ -638,11 +641,8 @@ async function createBMStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
-
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
-            const text = delta.content ?? '';
+            const text =
+              choices[0].delta.content === null ? '' : choices[0].delta.content;
 
             // 处理 reasoning_content 字段，拼接思考过程
             if (json.reasoning_content) {
@@ -966,14 +966,10 @@ async function createGoogleGeminiNetworkStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
-
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
             let text = '';
             // 模型回答的内容
-            if (delta.content != null) {
-              text = delta.content;
+            if (choices[0]?.delta?.content !== null) {
+              text = choices[0].delta.content;
             }
 
             if (json?.grounding_metadata) {
@@ -1051,10 +1047,13 @@ async function createFunctionCallStream(
             try {
               json = JSON.parse(data);
               latestMessage = json;
+              if (json?.error) {
+                throw new Error()
+              }
               if (parseCallback) {
                 parseCallback(json);
               }
-            } catch {
+            } catch (e) {
               throw new Error(data);
             }
 
@@ -1088,20 +1087,26 @@ async function createFunctionCallStream(
               needContinue = true;
             }
 
-            const delta = choices[0]?.delta;
-            if (!delta) return;
-
             // 模型回答的内容
             if (
-              delta.tool_calls != null ||
-              delta.content != null
+              choices[0]?.delta.tool_calls !== null ||
+              choices[0]?.delta?.content !== null
             ) {
               const response_id = json.id || '';
-              const content = delta.content;
-              const tool_calls = delta.tool_calls;
-              const reasoningContent = delta.reasoning_content ?? '';
-              const thinkingSignature = delta.thinking_signature ?? '';
-              const redactedThinking = delta.redacted_thinking ?? '';
+              const content = choices[0].delta.content;
+              const tool_calls = choices[0].delta.tool_calls;
+              const reasoningContent =
+                choices[0]?.delta?.reasoning_content === null
+                  ? ''
+                  : choices[0].delta.reasoning_content;
+              const thinkingSignature =
+                choices[0]?.delta?.thinking_signature === null
+                  ? ''
+                  : choices[0].delta.thinking_signature;
+              const redactedThinking =
+                choices[0]?.delta?.redacted_thinking === null
+                  ? ''
+                  : choices[0].delta.redacted_thinking;
               const queue = encoder.encode(
                 JSON.stringify({
                   response_id,
@@ -1116,7 +1121,7 @@ async function createFunctionCallStream(
             }
             if (
               choices[0].finish_reason === FinishReason.Stop &&
-              delta.role === ChatRole.Assistant
+              choices[0].delta?.role === ChatRole.Assistant
             ) {
               securelyCloseStream(controller);
               return;
@@ -1194,7 +1199,7 @@ async function createDifyStream(
             }
             if (json.event === 'error') {
               const queue = encoder.encode(
-                'AI 应用发生异常',
+                'AI 应用发生异常，请联系我们：7896636',
               );
               securelyEnqueueValue(controller, queue);
               securelyCloseStream(controller);
@@ -1268,7 +1273,7 @@ async function createDifyWorkFlowStream(
             break;
           case 'error': {
             const errorQueue = encoder.encode(
-              'AI 应用发生异常',
+              'AI 应用发生异常，请联系我们：7896636',
             );
             securelyEnqueueValue(controller, errorQueue);
             securelyCloseStream(controller);
@@ -1323,8 +1328,8 @@ export function setRequestHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
     'X-Access-Token': accessToken as string,
-    'X-Auth-User': encodeURIComponent(username || '') as string,
-    'y3maker-version': codeMakerVersion as string,
+    'X-Auth-User': username as string,
+    'codemaker-version': codeMakerVersion as string,
     ide: ide as string,
     'department-code': departmentCode as string,
     'code-generate-model-code': codeGenerateModelCode as string,
@@ -2004,7 +2009,7 @@ export async function requestMultipleBMChatStream(
   let chatRequestUrl = '';
   const hasOfficeDocset = docsets.some((docset) => docset.env === 'office');
   if (hasOfficeDocset) {
-    chatRequestUrl = `${OFFICE_BM_API_URL}/proxy/bm/api/v1/apps/00000000-0000-0000-0000-000000000005/chat`;
+    chatRequestUrl = `${OFFICE_BM_API_URL}/proxy/bm/api/v1/apps/9e3c89c1-c7f2-4a24-8d8f-f035947b9495/chat`;
     docsetList = JSON.stringify(
       docsets.map((docset) => ({
         docset_code: docset.code,
@@ -2013,7 +2018,7 @@ export async function requestMultipleBMChatStream(
       })),
     );
   } else {
-    chatRequestUrl = `/proxy/bm/apps/00000000-0000-0000-0000-000000000006/chat`;
+    chatRequestUrl = `/proxy/bm/apps/ccd6279b-04d8-4139-9bef-f7614a189b1e/chat`;
     docsetList = JSON.stringify(
       docsets.map((docset) => ({
         docset_code: docset.code,
@@ -2141,7 +2146,7 @@ export async function requestBMKnowledgeAugmentationStream(
     },
   };
 
-  const url = `${OFFICE_BM_API_URL}/proxy/bm/api/v1/apps/00000000-0000-0000-0000-000000000007/chat`;
+  const url = `${OFFICE_BM_API_URL}/proxy/bm/api/v1/apps/6043d056-a62e-4b6d-a3d0-dae35ba5c2a4/chat`;
 
   try {
     const req = new Request(url, {
@@ -2386,8 +2391,9 @@ export async function requestNetworkChatStream(
 }
 
 export async function requestCodebaseChatStream(
+  event: string = UserEvent.CODE_CHAT_CODEBASE,
   data: ChatPromptBody,
-  chatRequestUrl = '/proxy/gpt/u5_chat/codebase_chat_stream',
+  chatRequestUrl = '/proxy/gpt/gpt/text_chat_stream',
   options?: {
     isDeepSeek?: boolean;
     onMessage: (
@@ -2451,7 +2457,7 @@ export async function requestCodebaseChatStream(
 
   async function run(promptData: ChatPromptBody) {
     toolCalls = [];
-    const url = chatRequestUrl;
+    const url = chatRequestUrl + `/${event}`;
     let chunkTimeoutId: NodeJS.Timeout | null = null;
     try {
       const requestHeaders: any = setRequestHeaders() || {};
@@ -2697,6 +2703,7 @@ export async function requestCodebaseChatStream(
 }
 
 export async function requestDSCodebaseChatStream(
+  event: string = UserEvent.CODE_CHAT_CODEBASE,
   data: ChatPromptBody,
   chatRequestUrl = '/proxy/gpt/gpt/text_chat_stream',
   options?: {
@@ -2743,7 +2750,7 @@ export async function requestDSCodebaseChatStream(
   };
 
   async function run(promptData: ChatPromptBody) {
-    const url = chatRequestUrl;
+    const url = chatRequestUrl + `/${event}`;
     let chunkTimeoutId: NodeJS.Timeout | null = null;
     try {
       const requestHeaders: any = setRequestHeaders() || {};
@@ -2966,8 +2973,7 @@ const toolParamNames = [
   'tool_name',
   'arguments',
   'uri',
-  'command',
-  'docset_id'
+  'command'
 ]
 
 export interface ParsedToolCall {

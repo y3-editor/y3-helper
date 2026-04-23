@@ -1,16 +1,20 @@
 import * as React from 'react';
 import {
   Box,
+  Button,
   Grid,
   Text,
   Popover,
   PopoverTrigger,
   PopoverContent,
   PopoverBody,
+  PopoverFooter,
   VStack,
+  // HStack,
   useOutsideClick,
   Tooltip,
   useMediaQuery,
+  Link,
   Icon,
 } from '@chakra-ui/react';
 import {
@@ -21,7 +25,8 @@ import {
 import useCustomToast from '../../hooks/useCustomToast';
 import { AttachType } from '../../store/attaches';
 import { SmallScreenWidth } from '../../const';
-import { AiOutlineCheck } from 'react-icons/ai';
+import { usePostMessage } from '../../PostMessageProvider';
+import { AiOutlineQuestionCircle, AiOutlineSetting, AiOutlineCheck, AiOutlineDown } from 'react-icons/ai';
 import { SiOpenai } from 'react-icons/si';
 import { validateBeforeChat } from '../../utils/validateBeforeChat';
 import { useAuthStore } from '../../store/auth';
@@ -37,10 +42,16 @@ import geminiIcon from '../../assets/model/gemini.png';
 import qwenIcon from '../../assets/model/qwen.png';
 import deepseekIcon from '../../assets/model/deepseek-avatar.png';
 import kimiIcon from '../../assets/model/kimi.png';
+// import miniMaxIcon from '../../assets/model/mini_max.png';
+// import flowIcon from '../../assets/model/flow.png';
+// import palm2Icon from '../../assets/model/palm2.png';
+// import llama2Icon from '../../assets/model/llama2.png';
+// import baichuanIcon from '../../assets/model/baichuan.png';
+// import chatAideaIcon from '../../assets/model/chat-aidea.png';
+// import internIcon from '../../assets/model/intern.jpeg';
 import glmIcon from '../../assets/model/zhipu.png';
-import { BAI_CHUAN, ChatModel, ChatModelType, ParseImgType } from '../../services/chatModel';
+import { BAI_CHUAN, ChatModel, ChatModelType } from '../../services/chatModel';
 import { useChatConfig } from '../../store/chat-config';
-import { useExtensionStore } from '../../store/extension';
 
 // 模型图标映射
 const ModelIconMap: Record<ChatModel, any> = {
@@ -87,10 +98,11 @@ const ModelIconMap: Record<ChatModel, any> = {
   [ChatModel.Glm46]: glmIcon,
   [ChatModel.Glm47]: glmIcon,
   [ChatModel.Glm5]: glmIcon,
-  [ChatModel.Claude46Opus]: claude3Icon
+  [ChatModel.Claude46Opus]: claude3Icon,
 };
 
 const ChatModelSelector = () => {
+  const { postMessage } = usePostMessage();
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const [isExtraSmallScreen] = useMediaQuery('(max-width: 380px)');
   const [isAbove460px] = useMediaQuery('(min-width: 461px)');
@@ -263,92 +275,83 @@ const ChatModelSelector = () => {
     [publicModels, privateModels, getDisplayedModels, chatType, chatModels]
   );
 
-  const fixedModel = useExtensionStore((state) => state.fixedModel);
-
+  // 初始化模型选择器的显示值
   React.useEffect(() => {
-    updateChatConfig((config) => {
-      // Y3Helper: 有 fixedModel 时，直接锁定到用户配置的模型，不做任何回退
-      if (fixedModel) {
-        config.model = fixedModel as ChatModel;
-        if (chatType === 'codebase') {
-          setCodebaseChatModel(config.model);
-        } else {
-          setNormalChatModel(config.model);
-        }
-        return;
-      }
+    const sessionModel = currentSession?.data?.model;
+    const messageLength = currentSession?.data?.messages?.length || 0;
 
-      const sessionModel = currentSession?.data?.model;
+    // 确定当前应该显示的模型
+    let displayModel: ChatModel | undefined;
 
-      if (chatType === 'codebase') {
-        const hasCodebaseModel = [ChatModelType.CODEBASE, ChatModelType.ALL].includes(chatModels[sessionModel as ChatModel]?.chatType);
-        // 仓库智聊: 优先使用会话最后一条消息的模型
-        if (hasCodebaseModel && sessionModel && displayModels.includes(sessionModel)) {
-          config.model = sessionModel;
-        } else if (!hasCodebaseModel || !displayModels.includes(config.model)) {
-          if (config.model === ChatModel.DeepseekYDV3) {
-            config.model = ChatModel.DeepseekYDV31;
-          } else {
-            // 如果会话模型不可用,使用默认模型
-            config.model = ChatModel.Glm5;
-          }
-        }
-        setCodebaseChatModel(config.model);
+    if (chatType === 'codebase') {
+      // 仓库智聊: 如果会话有有效模型,显示会话模型,否则显示缓存的默认模型
+      const hasCodebaseModel = sessionModel && [ChatModelType.CODEBASE, ChatModelType.ALL].includes(chatModels[sessionModel as ChatModel]?.chatType);
+      if (hasCodebaseModel && displayModels.includes(sessionModel)) {
+        displayModel = sessionModel;
       } else {
-        // 普通聊天: 优先使用会话最后一条消息的模型
-        if (sessionModel && displayModels.includes(sessionModel)) {
-          config.model = sessionModel;
-        } else if (!displayModels.includes(config.model)) {
-          // 如果会话模型不可用,使用默认模型
-          config.model = ChatModel.Glm5;
-        }
-
-        // 如果有会话模型,进行一些兼容性转换
-        if (sessionModel) {
-          const messageLength = currentSession?.data?.messages?.length || 0;
-
-          // 如果会话有消息但模型不同，说明用户可能刚刚切换了模型
-          // 在这种情况下，我们应该尊重用户的选择，不自动重置
-          if (messageLength > 0 && config.model !== sessionModel) {
-            // 检查这是否是一个合理的模型切换（例如，从不支持图片到支持图片的模型）
-            const configModelSupportsImages = [ParseImgType.BASE64, ParseImgType.URL].includes(chatModels[config.model]?.parseImgType)
-            const sessionModelSupportsImages = [ParseImgType.BASE64, ParseImgType.URL].includes(chatModels[sessionModel]?.parseImgType);
-
-            // 如果用户切换到了支持图片的模型，保持用户的选择
-            if (configModelSupportsImages && !sessionModelSupportsImages) {
-              return;
-            }
-
-            // 如果用户在同类型模型间切换（都支持或都不支持图片），也保持用户的选择
-            if (configModelSupportsImages === sessionModelSupportsImages) {
-              return;
-            }
-          }
-
-          // 兼容性转换: 旧模型自动升级
-          if (![ChatModelType.NORMAL, ChatModelType.ALL].includes(chatModels[sessionModel as ChatModel]?.chatType)
-            || !chatModels[sessionModel]?.enabled
-          ) {
-            config.model = ChatModel.Glm5;
-          } else if (sessionModel === ChatModel.QWenOld) {
-            config.model = ChatModel.QWen;
-          } else if (sessionModel === BAI_CHUAN) {
-            config.model = ChatModel.QWen;
-          } else if (sessionModel === ChatModel.DeepseekYDV3) {
-            config.model = ChatModel.DeepseekYDV31;
-          }
-          setNormalChatModel(config.model);
+        displayModel = useChatConfig.getState().codebaseChatModel;
+        // 如果缓存的模型不可用,使用默认模型
+        if (!displayModels.includes(displayModel) || ![ChatModelType.CODEBASE, ChatModelType.ALL].includes(chatModels[displayModel]?.chatType)) {
+          displayModel = ChatModel.Claude4Sonnet20250514;
         }
       }
+    } else {
+      // 普通聊天: 如果会话有有效模型,显示会话模型,否则显示缓存的默认模型
+      if (sessionModel && displayModels.includes(sessionModel)) {
+        // 兼容性转换: 旧模型自动升级
+        if (sessionModel === ChatModel.QWenOld) {
+          displayModel = ChatModel.QWen;
+        } else if (sessionModel === BAI_CHUAN) {
+          displayModel = ChatModel.QWen;
+        } else if (sessionModel === ChatModel.DeepseekYDV3) {
+          displayModel = ChatModel.DeepseekYDV31;
+        } else if ([ChatModelType.NORMAL, ChatModelType.ALL].includes(chatModels[sessionModel as ChatModel]?.chatType) && chatModels[sessionModel]?.enabled) {
+          displayModel = sessionModel;
+        } else {
+          displayModel = ChatModel.Claude4Sonnet20250514;
+        }
+      } else {
+        displayModel = useChatConfig.getState().normalChatModel;
+        // 如果缓存的模型不可用,使用默认模型
+        if (!displayModels.includes(displayModel) || ![ChatModelType.NORMAL, ChatModelType.ALL].includes(chatModels[displayModel]?.chatType)) {
+          displayModel = ChatModel.Claude4Sonnet20250514;
+        }
+      }
+    }
+
+    // 更新 config.model 以在 UI 中显示正确的模型
+    updateChatConfig((config) => {
+      config.model = displayModel!;
     });
-  }, [fixedModel, updateChatConfig, currentSession?.data?.model, chatType, currentSession?.data?.messages?.length, displayModels, chatModels, setCodebaseChatModel, setNormalChatModel]);
+
+    // 如果是空会话(无消息),同步更新缓存的默认模型
+    if (messageLength === 0) {
+      if (chatType === 'codebase') {
+        setCodebaseChatModel(displayModel!);
+      } else {
+        setNormalChatModel(displayModel!);
+      }
+    }
+  }, [currentSessionId, chatType, displayModels, chatModels, updateChatConfig, setCodebaseChatModel, setNormalChatModel]);
+
+  const openInBrowser = React.useCallback(
+    (url: string) => {
+      postMessage({
+        type: 'OPEN_IN_BROWSER',
+        data: {
+          url,
+        },
+      });
+    },
+    [postMessage],
+  );
 
   const handleChangeModel = React.useCallback(
     (model: ChatModel) => {
       // 正在生成会话，不允许切换模型
       if (isStreaming || isSearching) {
         toast({
-          title: 'Y3Maker 正在回复，请稍后再切换会话',
+          title: 'CodeMaker 正在回复，请稍后再切换会话',
           status: 'warning',
           position: 'top',
           isClosable: true,
@@ -474,7 +477,7 @@ const ChatModelSelector = () => {
       <Popover isLazy placement="top" isOpen={isOpenPopover}>
         <PopoverTrigger>
           <MiniButton
-            onClick={() => {}}
+            onClick={() => setIsOpenPopover((prev) => !prev)}
             isDisabled={isDisabledAttachs}
             w={isExtraSmallScreen ? '16px' : 'auto'}
             minW={isExtraSmallScreen ? '16px' : 'auto'}
@@ -483,7 +486,6 @@ const ChatModelSelector = () => {
             display="flex"
             alignItems="center"
             aria-label="选择模型"
-            cursor="default"
           >
             <Tooltip label={modelTooltip} >
               <Box
@@ -529,6 +531,13 @@ const ChatModelSelector = () => {
                         <Text fontSize="12px">选择模型</Text>
                       </Box>
                     )}
+                    <Icon
+                      as={AiOutlineDown}
+                      w="10px"
+                      h="10px"
+                      ml={0.5}
+                      flexShrink={0}
+                    />
                   </>
                 )}
               </Box>
@@ -563,7 +572,57 @@ const ChatModelSelector = () => {
             >
               {/* 公有模型部分 */}
               <Box>
+                {
+                  getFilteredModels('public').length > 0 &&
+                  <Text mb={1} px={2} >商业模型(调用商业api)</Text>
+                }
                 {getFilteredModels('public').map((model) => (
+                  <Box
+                    pl={4}
+                    pr={2}
+                    py={1}
+                    my={1}
+                    alignItems="center"
+                    cursor="pointer"
+                    _hover={{ bg: 'blue.300' }}
+                    bg={selectedModel === model ? 'blue.300' : 'none'}
+                    key={model}
+                    onClick={() => handleChangeModel(model)}
+                    // borderRadius="8px"
+                    onMouseEnter={() => setHoverModel(model)}
+                    onMouseLeave={() => setHoverModel('')}
+                  >
+                    <Grid w="full" alignItems="center" templateColumns="auto 1fr auto">
+                      {getIcon(model) && (
+                        <Box
+                          as="img"
+                          src={getIcon(model)}
+                          alt="model"
+                          w="16px"
+                          h="16px"
+                          mr={2}
+                          objectFit="contain"
+                        />
+                      )}
+                      <Text isTruncated title={ChatModelNameMap[model]}>
+                        {ChatModelNameMap[model]}
+                        {renderModelTags(model)}
+                      </Text>
+                      {selectedModel === model && (
+                        <Icon as={AiOutlineCheck} size="xs" color="#746cec" />
+                      )}
+                    </Grid>
+                  </Box>
+                ))}
+              </Box>
+
+              {/* 私有模型部分 */}
+              <Box>
+                {
+                  getFilteredModels('private').length > 0 &&
+                  <Text mb={1} px={2}>私有模型(开源模型私有部署)</Text>
+                }
+                {getFilteredModels('private').map((model) => (
                   <Box
                     pl={4}
                     pr={2}
@@ -604,6 +663,38 @@ const ChatModelSelector = () => {
               </Box>
             </VStack>
           </PopoverBody>
+          <PopoverFooter p="1">
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Link
+                color="blue.300"
+                px="1"
+                onClick={() => {
+                  openInBrowser('https://g.126.fm/00luKFk');
+                }}
+                display="flex"
+                alignItems="center"
+              >
+                <Text mr="1">模型说明</Text>
+                <Icon as={AiOutlineQuestionCircle} size="sm" />
+              </Link>
+              <Tooltip label="设置">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  colorScheme="blue"
+                  p="1"
+                  minW="auto"
+                  onClick={() => {
+                    postMessage({
+                      type: 'OPEN_CHAT_MODELS_SETTING',
+                    });
+                  }}
+                >
+                  <Icon as={AiOutlineSetting} size="sm" />
+                </Button>
+              </Tooltip>
+            </Box>
+          </PopoverFooter>
         </PopoverContent>
       </Popover>
     </div>

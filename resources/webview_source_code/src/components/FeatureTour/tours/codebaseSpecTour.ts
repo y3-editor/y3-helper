@@ -20,9 +20,9 @@ export const codebaseSpecTour: TourConfig = {
   steps: [
     {
       target: '[data-tour="spec-mode-card"]',
-      title: 'Spec Coding 模式',
+      title: '仓库智聊新增Spec Coding模式',
       content:
-        '选择 Spec 模式，支持 OpenSpec 和 SpecKit 两种框架，遵循结构化流程进行编程开发。',
+        '支持OpenSpec、SpecKit两种框架。先规划后实现，按工程标准逐步构建结构化编程。 ',
       placement: 'bottom',
       disableBeacon: true,
     },

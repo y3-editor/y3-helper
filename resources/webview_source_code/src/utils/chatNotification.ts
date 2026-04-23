@@ -8,6 +8,8 @@ export interface ChatReplyDoneData {
   userQuestion?: string;
   /** 面板 ID，用于插件端识别是哪个 webview */
   panelId?: string;
+  /** 面板模式，用于插件端区分主会话/并行会话/CM2 */
+  mode?: string;
   /** 是否为高优先级通知（如需要用户操作），高优先级通知会阻止后续的低优先级通知 */
   isHighPriority?: boolean;
 }

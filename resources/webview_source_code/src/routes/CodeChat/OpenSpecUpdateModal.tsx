@@ -24,6 +24,7 @@ import {
 } from '../../store/workspace';
 import { ThemeStyle, useTheme } from '../../ThemeContext';
 import { UnionType } from './ChatTypeAhead/Prompt/type';
+import SetupErrorDisplay from './components/SetupErrorDisplay';
 
 /** 升级步骤配置 */
 const UPDATE_STEPS = [
@@ -49,7 +50,7 @@ const UPGRADE_NOTES = [
   'CLI 工具升级到 1.x',
   '文档结构迁移 (移除 openspec/AGENTS.md)',
   '新建 config.yaml（项目配置文件）',
-  '弃用 project.md，建议内容手动迁移至 .codemaker/rules 中'
+  '弃用 project.md，建议内容手动迁移至 .codemaker/rules 中',
 ];
 
 /** 新命令列表 */
@@ -147,6 +148,7 @@ function OpenSpecUpdateModal() {
     return UPDATE_STEPS.map((cfg) => ({
       id: cfg.id,
       status: upgradeStatus[cfg.key]?.status ?? SpecSetupStepStatus.Pending,
+      errorCode: upgradeStatus[cfg.key]?.errorCode,
       errorMessage: upgradeStatus[cfg.key]?.errorMessage,
     }));
   }, [upgradeStatus]);
@@ -310,38 +312,33 @@ function OpenSpecUpdateModal() {
             )}
 
             {/* 错误信息 */}
-            {hasClickedUpgrade && failedStep?.errorMessage && (
-              <Box mt={3} width="100%">
-                <Text
-                  fontSize="12px"
-                  color="red.500"
-                  textAlign="center"
-                  style={{ marginBottom: 0 }}
-                >
-                  {failedStep?.errorMessage}
-                </Text>
-              </Box>
+            {hasClickedUpgrade && failedStep && (
+              <SetupErrorDisplay
+                errorMessage={failedStep.errorMessage}
+                errorCode={failedStep.errorCode}
+              />
             )}
 
             {/* 升级按钮 */}
-            {!(hasClickedUpgrade && allCompleted) && !(hasClickedUpgrade && failedStep) && (
-              <Flex
-                direction="column"
-                align="center"
-                mt={hasClickedUpgrade ? 2 : 4}
-              >
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  onClick={handleStartUpgrade}
-                  borderRadius="6px"
-                  px={6}
-                  isDisabled={isRunning}
+            {!(hasClickedUpgrade && allCompleted) &&
+              !(hasClickedUpgrade && failedStep) && (
+                <Flex
+                  direction="column"
+                  align="center"
+                  mt={hasClickedUpgrade ? 2 : 4}
                 >
-                  {isRunning ? '升级中...' : '开始升级'}
-                </Button>
-              </Flex>
-            )}
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    onClick={handleStartUpgrade}
+                    borderRadius="6px"
+                    px={6}
+                    isDisabled={isRunning}
+                  >
+                    {isRunning ? '升级中...' : '开始升级'}
+                  </Button>
+                </Flex>
+              )}
 
             {/* 升级完成提示 */}
             {hasClickedUpgrade && allCompleted && (

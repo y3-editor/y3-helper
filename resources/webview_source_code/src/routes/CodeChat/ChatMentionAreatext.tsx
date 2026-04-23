@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Textarea } from '@chakra-ui/react';
+import React, { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { Box, Button, Flex, Spinner, Textarea } from '@chakra-ui/react';
 import { mentionRegex, mentionRegexGlobal } from '../../utils/chatMention';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { AttachType } from '../../store/attaches';
@@ -11,6 +11,7 @@ import { debounce } from 'lodash';
 import useCustomToast from '../../hooks/useCustomToast';
 import { useDraftInput } from '../../hooks/useDraftInput';
 import { SpecFramework } from '../../store/workspace';
+import { useChatBillStore } from '../../store/chatBill';
 
 interface ChatInputProp {
   inputRef: React.MutableRefObject<HTMLTextAreaElement | null>;
@@ -131,12 +132,16 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const chatType = useChatStore((state) => state.chatType);
   const updateAttachs = useChatAttach((state) => state.update);
   const workspaceList = useWorkspaceStore((state) => state.workspaceList);
+  const maxCostPerMonth = useChatBillStore(state => state.maxCostPerMonth)
   const ide = useExtensionStore((state) => state.IDE);
   const isVscode = ide === IDE.VisualStudioCode;
   const { toast } = useCustomToast();
 
+  // 判断仓库是否已加载完成（workspaceList 有内容表示已加载）
+  const workspaceReady = workspaceList && workspaceList.length > 0;
+
   // 使用 useDraftInput Hook 管理输入框草稿
-  const { saveCurrentDraft } = useDraftInput(chatType, inputRef);
+  const { saveCurrentDraft } = useDraftInput(chatType, inputRef, workspaceReady);
   // 抽取条件判断，避免重复代码
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (placeholder?.includes('打开该仓库使用或新建会话') || placeholder?.includes('打开该仓库后可继续对话'));
@@ -145,6 +150,9 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   // 获取 setInitModalVisible 用于打开初始化弹窗
   const setInitModalVisible = useWorkspaceStore((state) => state.setInitModalVisible);
   const setCurrentSpecFramework = useWorkspaceStore((state) => state.setCurrentSpecFramework);
+
+  const billLoading = useChatBillStore((state) => state.billLoading)
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost)
 
   // 检测是否需要显示初始化提示（提取框架类型和显示文本）
   const initRequiredInfo = useCallback(() => {
@@ -401,6 +409,71 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
 
   // 获取初始化信息（只用于决定渲染哪种 UI）
   const initInfo = initRequiredInfo();
+
+  const renderExceededTip = useCallback(() => {
+    return (
+      <Box position={'relative'} w={'full'} h={'full'} userSelect={'none'}>
+        <Box
+          position="absolute"
+          top="8px"
+          left="0"
+          right="0"
+          paddingLeft="0"
+          fontSize="12px"
+          color="#666"
+          zIndex={2}
+          pointerEvents="auto"
+        >
+          本月 {maxCostPerMonth * 100} 积分（等值于{maxCostPerMonth} 元 Token）额度已用完。因 3.0 版本上线后需求激增，系统已暂时限制使用权限以兼顾稳定性和成本控制。
+          恢复使用请查阅
+          <Button
+            size="sm"
+            variant="link"
+            color="blue.400"
+            fontWeight="600"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation();
+              postMessage({
+                type: "OPEN_IN_BROWSER",
+                data: { url: `https://g.126.fm/01ePpyp` },
+              });
+            }}
+            _hover={{ textDecoration: 'none', opacity: 0.8 }}
+          >
+            《积分申请》。
+          </Button>
+          审批通过后：点击
+          <Button
+            size="sm"
+            variant="link"
+            color="blue.400"
+            fontWeight="600"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation();
+              EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
+            }}
+            _hover={{ textDecoration: 'none', opacity: 0.8 }}
+          >
+            「刷新限额」
+          </Button>
+          ，即可恢复。
+        </Box>
+      </Box>
+    )
+  }, [maxCostPerMonth, postMessage])
+
+  if (billLoading && chatType === 'codebase' && isExceedCost) {
+    return (
+      <Flex position={'relative'} w={'full'} h={'full'} fontSize={'12px'} color={'text.default'} pt={2} gap={2}>
+        <Spinner size={'sm'} />
+        {/* <Box>正在为您加载数据，请稍候...</Box> */}
+      </Flex>
+    )
+  }
+
+  if (isExceedCost && chatType === 'codebase' && !billLoading) {
+    return renderExceededTip()
+  }
 
   return (
     <Box position={'relative'} w={'full'} h={'full'}>

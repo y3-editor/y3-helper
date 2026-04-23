@@ -14,6 +14,96 @@ export const LANGUAGE_TO_GRAPH_TYPE: Record<string, 'mermaid' | 'plantuml' | 'gr
   graphviz: 'graphviz',
 };
 
+/**
+ * 根据 URL 参数生成隔离的存储键名
+ * 实现主会话和 CM2 会话的数据隔离
+ * 
+ * @param baseKey 基础存储键名
+ * @returns 隔离后的存储键名
+ */
+export function getIsolatedStorageKey(baseKey: string): string {
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
+  const sessionId = urlParams.get('restoreSessionId');
+  const panelId = urlParams.get('panelId');
+  
+  let storageKey: string;
+  
+  // 优先使用 sessionId 进行更精确的隔离
+  if (mode && sessionId) {
+    // 使用新的命名格式：cm_{mode}_codemaker-chat-store
+    storageKey = `cm_${mode}_${baseKey}`;
+    
+    // 并行会话需要额外处理 panelId
+    if (mode === 'parallel' && panelId) {
+      storageKey = `cm_${mode}_${panelId}_${baseKey}`;
+    }
+  } else if (mode === 'sidebar') {
+    // 向后兼容：主会话模式
+    storageKey = `${baseKey}-sidebar`;
+  } else if (mode === 'newwindow') {
+    // 向后兼容：CM2 模式
+    storageKey = `${baseKey}-cm2`;
+  } else if (mode === 'parallel') {
+    // 向后兼容：并行会话模式
+    const parallelId = panelId || 'default';
+    storageKey = `${baseKey}-parallel-${parallelId}`;
+  } else if (panelId) {
+    // 兼容现有的 panelId 机制
+    storageKey = `${baseKey}-panel-${panelId}`;
+  } else {
+    // 默认存储键名
+    storageKey = baseKey;
+  }
+  
+  return storageKey;
+}
+
+/**
+ * 获取会话数据，同步插件端的数据读取逻辑
+ * 针对并行会话提供优化的数据获取策略
+ * 
+ * @param storageKey 存储键名
+ * @param sessionId 会话ID
+ * @returns 会话数据
+ */
+export function getSessionData(storageKey: string, sessionId: string): any {
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
+  
+  try {
+    // 同步插件端逻辑：从localStorage获取所有数据
+    const allData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    
+    if (mode === 'parallel') {
+      // 并行会话使用sessionId区分数据，从allData中获取对应sessionId的数据
+      const sessionData = allData[sessionId] || getDefaultSessionData();
+      console.log('[Debug] Parallel session data:', { sessionId, sessionData, mode });
+      return sessionData;
+    } else {
+      // 主会话和CM2直接使用自己独立的存储
+      const sessionData = allData[sessionId] || getDefaultSessionData();
+      console.log('[Debug] Session data loaded:', { sessionId, sessionData, mode });
+      return sessionData;
+    }
+  } catch (error) {
+    console.error('[Debug] Failed to load session data:', error);
+    return getDefaultSessionData();
+  }
+}
+
+/**
+ * 获取默认会话数据结构
+ */
+function getDefaultSessionData(): any {
+  return {
+    messages: [],
+    currentSessionId: null,
+    chatType: 'default',
+    // 其他默认字段...
+  };
+}
+
 function pad(str: string | number): string {
   return +str >= 10 ? (str as string) : '0' + str;
 }
@@ -53,7 +143,7 @@ export function DateFormat(d: Date | string | number, fmt?: string): string {
 }
 
 export function toastErrorMessage(error: Error) {
-  return `错误：${error.message}`;
+  return `错误：${error.message}，请重试或联系我们：7896636`;
 }
 
 export function addString(
@@ -137,7 +227,7 @@ export async function getBase64FromUrl(url: string): Promise<string> {
   try {
     // 使用代理去获取图片
     const newUrl = url.replace(
-      'http://localhost:3001',
+      'https://cm-img.s3v2.nie.netease.com',
       '/proxy/img',
     );
     // 提取文件扩展名
@@ -206,16 +296,16 @@ export function proxyImage(url: string) {
   if (url.includes('brainmaker')) {
     if (url.includes('brainmaker-office')) {
       return url.replace(
-        `http://localhost:3001`,
+        `https://brainmaker-office.netease.com/proxy/server`,
         `${OFFICE_BM_API_URL}/proxy/bm/api/v1`,
       );
     }
     return url.replace(
-      `http://localhost:3001`,
+      `https://manage.brainmaker.netease.com/proxy/server`,
       '/proxy/bm',
     );
   }
-  return url.replace('http://localhost:3001', '/proxy/img');
+  return url.replace('https://cm-img.s3v2.nie.netease.com', '/proxy/img');
 }
 
 // const superscriptNumbers: readonly string[] = [
@@ -379,7 +469,7 @@ export const exportGraphAsPng = async ({ type, chart }: ExportGraphOptions) => {
       throw new Error(`Unsupported graph type: ${type}`);
     }
 
-    const response = await fetch(`http://localhost:3001`, {
+    const response = await fetch(`https://codemaker.nie.netease.com/kroki/${endpoint}/png`, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',
@@ -460,6 +550,7 @@ interface StreamErrorType {
   name?: string;
   message: string;
   type?: string;
+  msg?: string;
 }
 
 // 处理需要特殊匹配的错误
@@ -482,11 +573,11 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('invalid_request_error'),
-    message: '❌ 消息体异常'
+    message: '❌ 消息体异常，请联系 CodeMaker 团队(popo：7896636)反馈'
   },
   {
     condition: (msg: string) => msg.includes("Error code: 500") && msg.includes('TypeError'),
-    message: '🔧 消息解析异常'
+    message: '🔧 消息解析异常，请联系 CodeMaker 团队(popo：7896636)反馈'
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('RequestValidationError'),
@@ -494,7 +585,7 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('InvalidRequestErrorFromAIGW'),
-    message: '⚠️ 消息格式异常'
+    message: '⚠️ 消息格式异常，请联系 CodeMaker 团队(popo：7896636)反馈'
   },
   {
     condition: (msg: string) => (
@@ -509,7 +600,7 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => /Error code: [54]\d{2}/.test(msg),
-    message: '❌ 系统报错'
+    message: '❌ 系统报错，稍后重试或联系 CodeMaker 团队(popo：7896636)反馈。'
   },
   {
     condition: (msg: string) => msg.includes("anthropic_error_chunk type:overloaded_error message:Overloaded"),
@@ -544,14 +635,6 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => (
-      msg.includes("API 请求失败") &&
-      (msg.includes('Range of input length should be'))
-    ),
-    message: '🤨 检测到上下文过长，可在聊天窗口中输入 /compress 指令后再重新回复',
-    errorType: 'ContextTooLong' as StreamErrorCallbackType,
-  },
-  {
-    condition: (msg: string) => (
       msg.includes("'type': 'SupplierResponseFailedErrorFromAIGW'")
     ) && (
         msg.includes('Invalid `signature` in `thinking` block')
@@ -579,7 +662,7 @@ export const handleStreamError = (
     [StreamError.ApiKeyIsError]: 'ApiKey 配置错误，请检查 ApiKey',
     [StreamError.GPT4TokenLimit]: '当前对话超出次数限制，请稍后重试',
     [StreamError.NeedAppKey]: '使用 GPT 4 需要配置 AppKey',
-    [StreamError.GPT4MaxLimit]: '当月GPT-4使用次数已达限额 \n\n 如需长期稳定的 GPT-4 服务，请点击查看[接入指引](https://github.com/user/codemaker)申请',
+    [StreamError.GPT4MaxLimit]: '当月GPT-4使用次数已达限额 \n\n 如需长期稳定的 GPT-4 服务，请点击查看[接入指引](https://g.126.fm/00eDnq2)申请',
     [StreamError.ReturnDataError]: '⚠️ 返回数据错误，请重试',
     [StreamError.NetworkError]: '📶 网络连接已断开，请检查网络后重试',
     [StreamError.FailedToFetch]: '📶 网络连接已断开，请检查网络后重试',
@@ -606,7 +689,9 @@ export const handleStreamError = (
     }
   }
 
-  return `\n\n 出错了，【${error.message}】，稍后重试`;
+  const msg = error.message || error.msg
+
+  return `\n\n 出错了，【${msg}】，稍后重试或联系 CodeMaker 团队(popo：7896636)反馈。`;
 }
 export const filterDocsetsFn = (docsets: Docset[]): Partial<Docset>[] => {
   // 深拷贝输入数据
@@ -759,4 +844,11 @@ export function getValidToolName(name: string) {
     return name.replace('default_api:', '')
   }
   return name
+}
+
+/**
+ * 是图片文件
+ */
+export function isImageFileWithPath(path: string): boolean {
+  return /(\.png)|(\.jpg)|(\.webp)|(\.gif)|(\.jpeg)/.test(path)
 }

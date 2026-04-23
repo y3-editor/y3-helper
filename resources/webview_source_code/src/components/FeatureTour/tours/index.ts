@@ -2,6 +2,7 @@ import { chatEntryTour } from './chatEntryTour';
 import { codebaseSpecTour } from './codebaseSpecTour';
 import { devKnowledgeTour } from './devKnowledgeTour';
 import { parallelSessionTour } from './parallelSessionTour';
+import { userDashboardTour } from './userDashboardTour';
 import type { TourConfig } from './types';
 
 export * from './types';
@@ -9,6 +10,7 @@ export { chatEntryTour } from './chatEntryTour';
 export { codebaseSpecTour, CODEBASE_SESSION_CREATED_EVENT } from './codebaseSpecTour';
 export { devKnowledgeTour } from './devKnowledgeTour';
 export { parallelSessionTour } from './parallelSessionTour';
+export { userDashboardTour } from './userDashboardTour';
 
 /** 所有引导配置的注册表 */
 export const tourRegistry: Record<string, TourConfig> = {
@@ -16,6 +18,7 @@ export const tourRegistry: Record<string, TourConfig> = {
   [codebaseSpecTour.id]: codebaseSpecTour,
   [devKnowledgeTour.id]: devKnowledgeTour,
   [parallelSessionTour.id]: parallelSessionTour,
+  [userDashboardTour.id]: userDashboardTour,
 };
 
 /** 获取所有自动触发类型的引导 */

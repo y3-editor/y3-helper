@@ -86,8 +86,8 @@ export async function proxyRequest(
 
   const defaultHeaders = {
     'X-Access-Token': useAuthStore.getState().accessToken,
-    'X-Auth-User': encodeURIComponent(useAuthStore.getState().username || ''),
-    'y3maker-version': useExtensionStore.getState().codeMakerVersion,
+    'X-Auth-User': useAuthStore.getState().username,
+    'codemaker-version': useExtensionStore.getState().codeMakerVersion,
     'department-code': encodeURI(
       useAuthStore.getState().authExtends.department_code,
     ),
@@ -103,6 +103,11 @@ export async function proxyRequest(
 
   const requestId = nanoid();
   const abortId = nanoid();
+  
+  // 从 URL 中获取 panelId
+  const urlParams = new URLSearchParams(window.location.search);
+  const panelId = urlParams.get('panelId') || undefined;
+  
   window.parent.postMessage(
     {
       type: BroadcastActions.PROXY_REQUEST,
@@ -114,6 +119,7 @@ export async function proxyRequest(
         method,
         abortId,
         traceId,
+        panelId,
       },
     },
     '*',
@@ -216,9 +222,9 @@ export async function proxyRequest(
                     });
                   } else if (options.errorToast) {
                     if (errMsg) {
-                      toastError(`错误信息：${errMsg}，traceId: ${traceId}`);
+                      toastError(`错误信息：${errMsg}。请联系我们：7896636，traceId: ${traceId}`);
                     } else {
-                      toastError(`未知错误，traceId: ${traceId}`);
+                      toastError(`未知错误。请联系我们：7896636，traceId: ${traceId}`);
                     }
                   }
                 } else if (status === 401) {
@@ -242,17 +248,17 @@ export async function proxyRequest(
                   } else if (options.errorToast) {
                     const errMsg = getErrorMessage(data);
                     if (errMsg) {
-                      toastError(`错误信息：${errMsg}，traceId: ${traceId}`);
+                      toastError(`错误信息：${errMsg}。请联系我们：7896636，traceId: ${traceId}`);
                     } else {
-                      toastError(`未知错误，traceId: ${traceId}`);
+                      toastError(`未知错误。请联系我们：7896636，traceId: ${traceId}`);
                     }
                   }
                 } else if (options.errorToast) {
                   const errMsg = getErrorMessage(data);
                   if (errMsg) {
-                    toastError(`错误信息：${errMsg}，traceId: ${traceId}`);
+                    toastError(`错误信息：${errMsg}。请联系我们：7896636，traceId: ${traceId}`);
                   } else {
-                    toastError(`未知错误，traceId: ${traceId}`);
+                    toastError(`未知错误。请联系我们：7896636，traceId: ${traceId}`);
                   }
                 }
               }
@@ -282,7 +288,7 @@ export async function proxyRequest(
             });
             if (!customErrorMsg && options.errorToast) {
               toastError(
-                `错误信息：${proxyRequestErrMsg}，traceId: ${traceId}`,
+                `错误信息：${proxyRequestErrMsg}。请联系我们：7896636，traceId: ${traceId}`,
               );
             }
             cleanup();

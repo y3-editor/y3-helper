@@ -19,7 +19,6 @@ import CodeMakerLogo from '../../assets/codemaker-logo.png';
 import { useWorkspaceStore } from '../../store/workspace';
 import useCustomToast from '../../hooks/useCustomToast';
 import { CODEBASE_CHAT_SAMPLES } from '../../const';
-import { selectIsSpecStaging, useAuthStore } from '../../store/auth';
 
 /** 模式卡片配置 */
 interface ModeCardConfig {
@@ -146,8 +145,6 @@ function CodebaseModePicker({
     () => getRandomExamples(CODEBASE_CHAT_SAMPLES)
   );
 
-  const isSpecStaging = useAuthStore(selectIsSpecStaging);
-
   /** 获取当前 spec 子模式 */
   const getCurrentSpecMode = (): CodebaseChatMode => {
     if (selectedMode === 'openspec' || selectedMode === 'speckit') {
@@ -257,8 +254,7 @@ function CodebaseModePicker({
       </Text>
 
       {/* Mode Cards - 左右两列布局 */}
-      {isSpecStaging && (
-              <Flex gap={3} alignItems="stretch">
+      <Flex gap={3} alignItems="stretch">
         {MODE_CARDS.map((card) => {
           const isSelected = isCardSelected(card.mode);
           const currentSpecMode = getCurrentSpecMode();
@@ -357,10 +353,9 @@ function CodebaseModePicker({
           );
         })}
       </Flex>
-      )}
 
       {/* 适用场景 - 使用 Grid 布局让两侧内容同时渲染占位，避免切换时跳动 */}
-      {isSpecStaging && selectedCardIndex >= 0 && (
+      {selectedCardIndex >= 0 && (
         <Flex gap={3} mt={4}>
           {MODE_CARDS.map((card, index) => {
             const isVisible = index === selectedCardIndex;
@@ -404,7 +399,7 @@ function CodebaseModePicker({
                     </Flex>
                   ))}
                   {/* Vibe 模式添加推荐问题入口 */}
-                  {card.mode === 'vibe' && getCardTips(card).length > 0 && (
+                  {card.mode === 'vibe' && (
                     <Flex align="center" mt={2}>
                       <Button
                         fontSize="12px"
@@ -428,7 +423,7 @@ function CodebaseModePicker({
                     </Flex>
                   )}
                 </Box>
-                {card.mode !== 'vibe' && (
+                {card.mode !== 'vibe' && getCardTips(card).length > 0 && (
                   <>
                     <Text
                       fontSize="12px"

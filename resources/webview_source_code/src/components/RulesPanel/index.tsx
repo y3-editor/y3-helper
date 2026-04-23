@@ -14,8 +14,15 @@ import RulesGrid from './RulesGrid';
 import EventBus from '../../utils/eventbus';
 import MiniButton from '../../components/MiniButton';
 
+interface IProps {
+  disabled: boolean
+}
 
-const RulesPanel: React.FC = () => {
+
+function RulesPanel({
+  disabled,
+}: IProps) {
+  // const { disabled } = props;
   const [isOpen, setIsOpen] = useState<boolean>(false);
   // const { activeTheme } = useTheme();
   // const isLight = activeTheme === 'light';
@@ -99,6 +106,7 @@ const RulesPanel: React.FC = () => {
         <PopoverTrigger>
           <MiniButton
             onClick={() => setIsOpen(prev => !prev)}
+            disabled={disabled}
           >
             {displayCurrent}
           </MiniButton>
@@ -111,6 +119,6 @@ const RulesPanel: React.FC = () => {
       </Popover>
     </div>
   );
-};
+}
 
 export default RulesPanel;

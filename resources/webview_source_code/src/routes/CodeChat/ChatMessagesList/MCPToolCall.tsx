@@ -16,6 +16,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
   const { message, isLatest } = props;
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
   const getChineseNameByServerName = useMCPStore((state) => state.getChineseNameByServerName);
+  const MCPServers = useMCPStore((state) => state.MCPServers);
 
   const toolCallParams: any = useMemo(() => {
     let params: any = {};
@@ -49,11 +50,27 @@ const MCPToolCall = memo(function MCPToolCall(props: {
     return name;
   }, [toolCallParams]);
 
+  // 查找对应的 MCP 服务器配置
+  const mcpServer = useMemo(() => {
+    if (!serverName) return null;
+    return MCPServers.find(s => {
+      let serverName_ = s.name || '';
+      serverName_ = serverName_.replace('\\', '/');
+      serverName_ = serverName_.split('/').slice(-1)[0];
+      return serverName_ === serverName;
+    });
+  }, [serverName, MCPServers]);
+
   // 获取服务器显示名称（优先显示中文名）
   const serverDisplayName = useMemo(() => {
     const chineseName = getChineseNameByServerName(serverName);
     return chineseName || serverName;
   }, [serverName, getChineseNameByServerName]);
+
+  // 判断是否自动调用
+  const isAutoApprove = useMemo(() => {
+    return mcpServer?.config?.autoApprove || false;
+  }, [mcpServer]);
 
   // 生成稳定的 key，基于消息 id 和工具调用 id
   const stableCodeBlockKey = useMemo(() => {
@@ -66,22 +83,23 @@ const MCPToolCall = memo(function MCPToolCall(props: {
     return `${message.id}-${toolCall?.id || 'default'}-params`;
   }, [message.id, message.tool_calls]);
 
-  const renderResult = useCallback((mcpContent: any) => {
+  const renderResult = useCallback((mcpContent: any, shouldExpand: boolean, dynamicKey: string) => {
     let content
     try {
       content = JSON.parse(mcpContent);
     } catch (e) {
       content = mcpContent
     }
+
     if (typeof content === 'string') {
       return <Box>
         <pre style={{ marginBottom: 0 }}>
           <ChatCodeBlock
-            key={stableCodeBlockKey}
+            key={dynamicKey}
             language='result'
             value={truncateContent(content)}
             data={{
-              defaultExpanded: false,
+              defaultExpanded: shouldExpand,
               message: message
             }}
           />
@@ -95,11 +113,11 @@ const MCPToolCall = memo(function MCPToolCall(props: {
               return <Box key={`text-${index}`}>
                 <pre style={{ marginBottom: 0 }}>
                   <ChatCodeBlock
-                    key={`${stableCodeBlockKey}-${index}`}
+                    key={`${dynamicKey}-${index}`}
                     language='result'
                     value={truncateContent(item.text)}
                     data={{
-                      defaultExpanded: false,
+                      defaultExpanded: shouldExpand,
                       message: message
                     }}
                   />
@@ -119,7 +137,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
     } else {
       return null;
     }
-  }, [message, stableCodeBlockKey])
+  }, [message])
 
   if (message.tool_calls && message.tool_calls[0]) {
     const toolCall = message.tool_calls[0];
@@ -127,6 +145,19 @@ const MCPToolCall = memo(function MCPToolCall(props: {
     const response = message.response ? message.response[toolCall.id] : undefined;
     const hasResult = result !== undefined;
     const hasResponse = response !== undefined;
+
+    // 需要用户确认的状态：没有自动授权 且 没有response（用户还未确认）
+    const needsUserConfirmation = !isAutoApprove && !hasResponse && isLatest;
+
+    // 判断参数是否应该展开：需要用户确认时就展开（让用户查看参数来决定是否授权）
+    const shouldExpandParams = needsUserConfirmation;
+
+    // 判断结果是否应该展开：结果始终不展开
+    const shouldExpandResult = false;
+
+    // 动态生成 key，包含展开状态，确保状态变化时组件重新渲染
+    const dynamicParamsKey = `${stableParamsKey}-${shouldExpandParams}`;
+    const dynamicResultKey = `${stableCodeBlockKey}-${shouldExpandResult}`;
 
     const MCPToolName = toolCallParams.tool_name;
     const MCPResourceUri = toolCallParams.uri;
@@ -159,11 +190,11 @@ const MCPToolCall = memo(function MCPToolCall(props: {
               toolCall.function.name === 'use_mcp_tool'
                 ? (
                   <>
-                    Y3Maker 将使用 <Text as="span" fontWeight="500">【{serverDisplayName}】</Text> 工具中的方法： <Text as="span" ml={1} fontWeight="500"> <Icon as={TbCube} mr='4px' />{MCPToolName}</Text>
+                    CodeMaker 将使用 <Text as="span" fontWeight="500">【{serverDisplayName}】</Text> 工具中的方法： <Text as="span" ml={1} fontWeight="500"> <Icon as={TbCube} mr='4px' />{MCPToolName}</Text>
                   </>
                 ) : (
                   <>
-                    Y3Maker 需要获取 <Text as="span" fontWeight="500">【{serverDisplayName}】</Text> 的资源： <Text as="span" ml={1} fontWeight="500"> <Icon as={TbCube} mr='4px' />{MCPResourceUri}</Text>
+                    CodeMaker 需要获取 <Text as="span" fontWeight="500">【{serverDisplayName}】</Text> 的资源： <Text as="span" ml={1} fontWeight="500"> <Icon as={TbCube} mr='4px' />{MCPResourceUri}</Text>
                   </>
                 )
             }
@@ -178,11 +209,11 @@ const MCPToolCall = memo(function MCPToolCall(props: {
               <Box>
                 <pre style={{ marginBottom: 0 }}>
                   <ChatCodeBlock
-                    key={stableParamsKey}
+                    key={dynamicParamsKey}
                     language='params'
                     value={JSON.stringify(mcpParams, null, 2)}
                     data={{
-                      defaultExpanded: false,
+                      defaultExpanded: shouldExpandParams,
                       message: message
                     }}
                   />
@@ -200,7 +231,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
           hasResult && (
             <Box marginTop={'10px'} marginBottom={'10px'}>
               <Box my={1}>结果</Box>
-              {renderResult(result.content)}
+              {renderResult(result.content, shouldExpandResult, dynamicResultKey)}
             </Box>
           )
         }

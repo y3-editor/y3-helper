@@ -41,7 +41,7 @@ export function EditFile(props: {
   updateSnippet?: string;
   replaceSnippet?: string;
   toolCallId: string;
-  isLatest: boolean;
+  isLatest: boolean | undefined;
 }) {
   const { postMessage } = usePostMessage();
   const {

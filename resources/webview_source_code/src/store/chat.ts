@@ -78,6 +78,8 @@ import {
   isCommandSafe,
   getErrorMessage,
   specialErrorPatterns,
+  isImageFileWithPath,
+  getIsolatedStorageKey,
 } from '../utils';
 import { pathsMatch, truncateSessionTopic, versionCompare } from '../utils/common';
 import getEnvironmentDetails from '../utils/getEnvironmentDetail';
@@ -132,6 +134,7 @@ import { ChatModel } from '../services/chatModel';
 import { BAI_CHUAN, ParseImgType } from '../services/chatModel';
 import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
 import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_OPENSPEC_V023, BUILT_IN_PROMPTS_OPENSPEC_V1, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
+import EventBus, { EBusEvent } from '../utils/eventbus';
 
 const CODE_BACKTICKS = '```';
 export const DEFAULT_TOPIC = '';
@@ -1138,12 +1141,7 @@ export const useChatStore = create<ChatStore>()(
       },
     }),
     {
-      name: (() => {
-        // 为每个面板创建独立的存储键名
-        const urlParams = new URLSearchParams(window.location.search);
-        const panelId = urlParams.get('panelId');
-        return panelId ? `codemaker-chat-store-panel-${panelId}` : 'codemaker-chat-store';
-      })(),
+      name: getIsolatedStorageKey('codemaker-chat-store'),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentSessionId: state.currentSessionId,
@@ -3241,6 +3239,7 @@ export const useChatStreamStore = create(
           delete data.tool_choice;
           delete data.tools;
           requestDSCodebaseChatStream(
+            UserEvent.CODE_CHAT_CODEBASE,
             data,
             chatRequestUrl,
             {
@@ -3743,6 +3742,7 @@ export const useChatStreamStore = create(
           // })
           data.codebase_chat_mode = codebaseChatMode || 'vibe';
           requestCodebaseChatStream(
+            UserEvent.CODE_CHAT_CODEBASE,
             data,
             chatRequestUrl,
             {
@@ -4098,6 +4098,11 @@ export const useChatStreamStore = create(
                               '*',
                             );
                           } else if (tool.function.name === 'read_file') {
+                            if (isImageFileWithPath(tool_params.path)) {
+                              set(() => ({
+                                loadingMessage: '解析图片中...',
+                              }));
+                            }
                             window.parent.postMessage(
                               {
                                 type: BroadcastActions.TOOL_CALL,
@@ -4352,6 +4357,25 @@ export const useChatStreamStore = create(
                       '*',
                     );
                   }
+                  let errorData: any
+                  try {
+                    errorData = JSON.parse(error.message)
+                  } catch (e) { /* empty */ }
+                  if (errorData?.error) {
+                    session.data?.messages.push({
+                      ...DEFAULT_ASSISTANT_MESSAGE,
+                      id,
+                      content: '-',
+                      group_tokens: 2,
+                    })
+                    requestAnimationFrame(chatStoreState.syncHistory)
+                    if (errorData.error === 'quotaExceeded') {
+                      EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
+                    }
+                    get().reset();
+                    return
+                  }
+
                   let shouldRetry = false;
                   const errorString = handleStreamError(error, (errorType) => {
                     if (errorType === 'ContextTooLong') {
@@ -5742,7 +5766,7 @@ export const useChatSessionTracker = create<ChatSessionTracker>()(
       },
     }),
     {
-      name: 'chat-session-tracker',
+      name: getIsolatedStorageKey('chat-session-tracker'),
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         sessionIDs: state.sessionIDs,

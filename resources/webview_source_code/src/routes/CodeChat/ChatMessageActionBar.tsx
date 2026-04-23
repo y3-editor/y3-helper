@@ -17,6 +17,7 @@ import Icon from '../../components/Icon';
 import { SmallScreenWidth } from '../../const';
 import { ChatFeedbackType } from '../../services';
 import { ThemeStyle, useTheme } from '../../ThemeContext';
+import { useChatBillStore } from '../../store/chatBill';
 interface ChatMessageActionBarProps {
   onCopyClick?: () => void;
   onNewSessionClick?: () => void;
@@ -48,6 +49,7 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
   } = props;
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const { activeTheme } = useTheme();
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost)
   const showFeedbackAction = React.useMemo(() => {
     if (!feedbackType) {
       return (
@@ -205,7 +207,7 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
         </>
       ) : (
         <>
-          {!hideRetry && (
+          {!hideRetry && !isExceedCost && (
             <Tooltip label="重新回复">
               <IconButton
                 aria-label="重新回复"

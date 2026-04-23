@@ -22,6 +22,14 @@ const MIN_VERSIONS_OPENSPEC_VERSION_SELECTION = {
 } as const;
 
 /**
+ * OpenSpec CLI 升级功能的最低 Extension 版本要求
+ */
+const MIN_VERSIONS_OPENSPEC_CLI_UPGRADE = {
+  VSCODE: '3.0.0-beta.9',
+  JETBRAINS: '2.5.4',
+} as const;
+
+/**
  * JetBrains 版本号格式正则
  */
 const JETBRAINS_VERSION_REGEX = /^(\d+)-([\d.]+.*)/;
@@ -75,6 +83,12 @@ export const supportsSpecInit = (codeMakerVersion: string | null, ide: string | 
  */
 export const supportsOpenSpecVersionSelection = (codeMakerVersion: string | null, ide: string | null) =>
   checkVersionSupport(codeMakerVersion, ide, MIN_VERSIONS_OPENSPEC_VERSION_SELECTION);
+
+/**
+ * 检查当前 Extension 版本是否支持 OpenSpec CLI 升级功能
+ */
+export const supportsOpenSpecCliUpgrade = (codeMakerVersion: string | null, ide: string | null) =>
+  checkVersionSupport(codeMakerVersion, ide, MIN_VERSIONS_OPENSPEC_CLI_UPGRADE);
 
 /**
  * 获取 Spec 初始化功能的最低版本提示文本（SpecKit 和 OpenSpec 通用）

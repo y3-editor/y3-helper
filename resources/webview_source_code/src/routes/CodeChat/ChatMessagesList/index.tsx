@@ -20,10 +20,11 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
     const prevSessionId = React.useRef<string>();
     const abortControllerRef = React.useRef<AbortController | null>(null);
 
-    // 获取 panelId 并监听流状态变化，通知插件端
+    // 获取 panelId 和 mode 并监听流状态变化，通知插件端
     const panelContext = usePanelContextOptional();
-    const panelId = panelContext?.panelId || '';
-    useChatStreamNotification(panelId);
+    const panelId = panelContext?.panelId;
+    const mode = panelContext?.mode;
+    useChatStreamNotification(panelId, mode);
     const [page, setPage] = React.useState(0);  // 历史消息分页，用于折叠和加载更多
     const messagesRef = React.useRef<HTMLDivElement>(null);
     const messagePool = React.useMemo(() => {

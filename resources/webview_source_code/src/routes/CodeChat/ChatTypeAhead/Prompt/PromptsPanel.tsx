@@ -63,8 +63,8 @@ import { createSkillToolId, getSkillSourceLabel, useSkillsStore } from '../../..
 import { usePostMessage, BroadcastActions, SubscribeActions } from '../../../../PostMessageProvider';
 import { useSkillPromptApp } from '../../../../store/skills/skill-prompt';
 import { SKILLS_HUB_API_URL } from '../../../CodeCoverage/const';
-import { selectIsSpecStaging, useAuthStore } from '../../../../store/auth';
 import useCustomToast from '../../../../hooks/useCustomToast';
+import { usePanelContext } from '../../../../context/PanelContext';
 
 const PROMPT_TYPEHEAD_TRIGGER_PREFIX = '/';
 
@@ -89,18 +89,13 @@ const PromptsPanel = (
   const { postMessage, message } = usePostMessage();
   const { toast } = useCustomToast();
   const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
+  const { panelId: currentPanelId } = usePanelContext();
 
   const isVscode = ide === 'vscode';
   const [promptType, setPromptType] = React.useState<
     PromptCategoryType | undefined
   >(focusedType || PromptCategoryType._CodeMaker);
   const [isOpenNewPromptModel, setIsOpenNewPromptModel] = React.useState(false);
-  const [currentHandlePrompt, setCurrentHandlePrompt] =
-    React.useState<Prompt>();
-  const [isOpenEditPromptModel, setIsOpenEditPromptModel] =
-    React.useState(false);
-  const [isOpenRemovePromptModel, setIsOpenRemovePromptModel] =
-    React.useState(false);
   const { loading, prompts, pluginApps, handleOpenProjectPromptManageWebsite } =
     useUserPrompt();
 
@@ -136,8 +131,6 @@ const PromptsPanel = (
     if (!MCPServers?.length) return false;
     return MCPServers.some((server) => (server.prompts?.length ?? 0) > 0);
   }, [MCPServers]);
-
-  const isSpecStaging = useAuthStore(selectIsSpecStaging);
 
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const setOpenspecUpdateModalVisible = useWorkspaceStore(
@@ -348,30 +341,28 @@ const PromptsPanel = (
           type: PromptCategoryType._CodeMaker,
         },
       });
-      if (isSpecStaging) {
-        unionData.push({
+      unionData.push({
+        name: 'set-openspec',
+        description: '将当前会话模式设置为 openspec',
+        type: UnionType.Prompt,
+        meta: {
           name: 'set-openspec',
-          description: '将当前会话模式设置为 openspec',
-          type: UnionType.Prompt,
-          meta: {
-            name: 'set-openspec',
-            prompt: '会话切换到 openspec',
-            _id: '/set-openspec',
-            type: PromptCategoryType._CodeMaker,
-          },
-        });
-        unionData.push({
+          prompt: '会话切换到 openspec',
+          _id: '/set-openspec',
+          type: PromptCategoryType._CodeMaker,
+        },
+      });
+      unionData.push({
+        name: 'set-speckit',
+        description: '将当前会话模式设置为 speckit',
+        type: UnionType.Prompt,
+        meta: {
           name: 'set-speckit',
-          description: '将当前会话模式设置为 speckit',
-          type: UnionType.Prompt,
-          meta: {
-            name: 'set-speckit',
-            prompt: '会话切换到 speckit',
-            _id: '/set-speckit',
-            type: PromptCategoryType._CodeMaker,
-          },
-        });
-      }
+          prompt: '会话切换到 speckit',
+          _id: '/set-speckit',
+          type: PromptCategoryType._CodeMaker,
+        },
+      });
       if (chatType === 'codebase' && !chatModels[chatConfig.model]?.isPrivate)
         unionData.push({
           name: 'Compress',
@@ -479,7 +470,6 @@ const PromptsPanel = (
     promptType,
     skills,
     codebaseChatMode,
-    isSpecStaging,
     installedOpenSpecVersion,
   ]);
 
@@ -527,22 +517,24 @@ const PromptsPanel = (
             updatePromptAppRunner(cloneData);
           } else if (prompt.name === 'Skill Init') {
             const templateContent = `---\nname: template-skill\ndescription: Replace with description of the skill and when Codemaker should use it.\n---\n\n# Insert instructions below\n`;
-            postMessage({
+            window.parent.postMessage({
               type: BroadcastActions.CREATE_SKILL_TEMPLATE,
+              panelId: currentPanelId,
               data: { templateContent },
-            });
+            }, '*');
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
           } else if (prompt.name === 'Skill Creator') {
             setSkillLoading(true);
-            postMessage({
+            window.parent.postMessage({
               type: BroadcastActions.INSTALL_BUILTIN_SKILL,
+              panelId: currentPanelId,
               data: {
                 skillName: 'skill-creator',
                 downloadUrl: `${SKILLS_HUB_API_URL}/api/skills/@skill-creator/download`,
               },
-            });
+            }, '*');
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
@@ -574,7 +566,6 @@ const PromptsPanel = (
                 userInputRef.current.value = '';
               }
             }, 1000);
-            console.log('清空当前');
             clearSession();
           } else if (prompt.name === 'set-openspec') {
             if (userInputRef.current) {
@@ -682,7 +673,8 @@ const PromptsPanel = (
       setSkillLoading,
       setCodebaseChatMode,
       handleNewSessionCommand,
-      setOpenspecUpdateModalVisible
+      setOpenspecUpdateModalVisible,
+      currentPanelId
     ],
   );
 
@@ -759,6 +751,13 @@ const PromptsPanel = (
     if (message?.type !== SubscribeActions.CREATE_SKILL_TEMPLATE_RESULT) {
       return;
     }
+    
+    // 如果消息指定了 targetPanelId，只有匹配的面板处理
+    const targetPanelId = message?.targetPanelId;
+    if (targetPanelId && targetPanelId !== currentPanelId) {
+      return;
+    }
+    
     const result = (message.data || {}) as {
       success?: boolean;
       message?: string;
@@ -788,17 +787,15 @@ const PromptsPanel = (
         isClosable: true,
       });
     }
-  }, [message, toast, postMessage]);
+  }, [message, toast, postMessage, currentPanelId]);
 
 
   const handleEditPrompt = (prompt: Prompt) => {
-    setCurrentHandlePrompt(prompt);
-    setIsOpenEditPromptModel(true);
+    (window as any).__openEditPromptModal?.(prompt);
   };
 
   const handleRemovePrompt = (prompt: Prompt) => {
-    setCurrentHandlePrompt(prompt);
-    setIsOpenRemovePromptModel(true);
+    (window as any).__openRemovePromptModal?.(prompt);
   };
 
   const handleChangePromptType = (type: PromptCategoryType) => {
@@ -808,7 +805,6 @@ const PromptsPanel = (
   const triggerCustomPromptSample = React.useCallback(
     (formValue: PromptSampleFormValue) => {
       setIsOpenNewPromptModel(true);
-      setCurrentHandlePrompt(undefined);
       setTimeout(() => {
         if (newPromptModelRef.current) {
           newPromptModelRef.current.setFormValue({
@@ -1013,7 +1009,6 @@ const PromptsPanel = (
                   icon={<Icon as={TbPlus} size="sm" />}
                   onClick={() => {
                     setIsOpenNewPromptModel(true);
-                    setCurrentHandlePrompt(undefined);
                   }}
                 />
               </Tooltip>
@@ -1044,8 +1039,32 @@ const PromptsPanel = (
         onClose={() => setIsOpenNewPromptModel(false)}
         ref={newPromptModelRef}
       />
+    </>
+  );
+};
+
+// 将编辑和删除 Modal 移到组件外部，作为独立的组件导出
+export function PromptModals() {
+  const [currentHandlePrompt, setCurrentHandlePrompt] = React.useState<Prompt>();
+  const [isOpenEditPromptModel, setIsOpenEditPromptModel] = React.useState(false);
+  const [isOpenRemovePromptModel, setIsOpenRemovePromptModel] = React.useState(false);
+
+  // 暴露方法给外部调用
+  React.useEffect(() => {
+    (window as any).__openEditPromptModal = (prompt: Prompt) => {
+      setCurrentHandlePrompt(prompt);
+      setIsOpenEditPromptModel(true);
+    };
+    (window as any).__openRemovePromptModal = (prompt: Prompt) => {
+      setCurrentHandlePrompt(prompt);
+      setIsOpenRemovePromptModel(true);
+    };
+  }, []);
+
+  return (
+    <>
       {currentHandlePrompt && (
-        <div key={currentHandlePrompt._id}>
+        <>
           <ChatEditPromptModel
             isOpen={isOpenEditPromptModel}
             prompt={currentHandlePrompt}
@@ -1056,10 +1075,10 @@ const PromptsPanel = (
             prompt={currentHandlePrompt}
             onClose={() => setIsOpenRemovePromptModel(false)}
           />
-        </div>
+        </>
       )}
     </>
   );
-};
+}
 
 export default PromptsPanel;

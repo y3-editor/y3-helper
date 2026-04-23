@@ -91,7 +91,7 @@ export interface ReTryProps {
 export interface ToolCallProps {
   message: ChatMessage;
   isShare: boolean;
-  isLatest: boolean;
+  isLatest: boolean | undefined;
 }
 
 export interface ToolCallResultsProps {
@@ -102,7 +102,7 @@ export interface ToolCallResultsProps {
   };
   unselectedResults: Set<string>;
   handleSelectionChange: (id: string, isSelected: boolean, toolId: string) => void;
-  isLatest: boolean;
+  isLatest: boolean | undefined;
 }
 
 export interface AskUserQuestionProps {

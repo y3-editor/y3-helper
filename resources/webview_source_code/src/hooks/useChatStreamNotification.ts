@@ -13,8 +13,9 @@ import {
  * - 当流式请求结束时，通知 CHAT_REPLY_DONE
  *
  * @param panelId 面板 ID，用于插件端识别来源
+ * @param mode 面板模式，用于插件端区分主会话/并行会话
  */
-export function useChatStreamNotification(panelId?: string) {
+export function useChatStreamNotification(panelId?: string, mode?: string) {
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
@@ -65,7 +66,8 @@ export function useChatStreamNotification(panelId?: string) {
             topic: currentSession.topic,
             success: !isError,
             userQuestion,
-            panelId: panelId || undefined,
+            panelId,
+            mode,
             isHighPriority: false,
           });
         }
@@ -81,5 +83,6 @@ export function useChatStreamNotification(panelId?: string) {
     isTerminalProcessing,
     currentSession,
     panelId,
+    mode,
   ]);
 }

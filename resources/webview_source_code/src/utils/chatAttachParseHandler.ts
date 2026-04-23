@@ -3,10 +3,13 @@ import ParseNoneCodeFileStream from "../services/Agents/Stream/ParseNoneCodeFile
 import { AttachType } from "../store/attaches";
 import { FileItem, IMultiAttachment, useChatAttach, useChatStore, useChatStreamStore } from "../store/chat";
 import { toastError } from "../services/error";
-import { ChatMessageAttachType, MultipleAttach } from "../services";
-import { truncateContent } from ".";
+import { ChatMessageAttachType, ChatMessageContent, MultipleAttach } from "../services";
+import { getErrorMessage, truncateContent } from ".";
 import EventBus, { EBusEvent } from "./eventbus";
 import { uploadImg } from "../services/chat";
+import { compressImage } from "../components/ImageUpload/ImageUpload";
+import { useChatConfig } from "../store/chat-config";
+import { ParseImgType } from "../services/chatModel";
 
 
 
@@ -179,11 +182,12 @@ export enum EParsedDocsStatus {
   Parsed = 1,
 }
 
-export const parseReadFileToolContent = async (
+export const parseDocContentFromReadFileTool = async (
   tool_id: string,
   fileToolResult: {
     content: string
     path: string,
+    isError: boolean,
     extra: {
       parseDocStatus: number,
     },
@@ -191,9 +195,12 @@ export const parseReadFileToolContent = async (
 ) => {
   const { updateCurrentSession } = useChatStore.getState()
   const { updateToolCallResults, setLoadingMessage, } = useChatStreamStore.getState()
-  const { content, path, extra } = fileToolResult
-  let hasError = false
+  const { content, path, extra, isError } = fileToolResult
+  let errorContent = ''
   try {
+    if (isError) {
+      throw new Error(content)
+    }
     setLoadingMessage('正在解析文件...')
     const fileNeme = path.split(/[/\\]/).pop() || path
     const formData = new FormData()
@@ -207,7 +214,7 @@ export const parseReadFileToolContent = async (
     const parsedContent = await convertTextByAddress(uploadInfo.url)
     fileToolResult.content = parsedContent
   } catch (e) {
-    hasError = true
+    errorContent = getErrorMessage(e)
   } finally {
     setLoadingMessage('')
     // 显示消息
@@ -222,8 +229,8 @@ export const parseReadFileToolContent = async (
       {
         [tool_id]: {
           path: path,
-          content: hasError ? 'Please note: File cannot be parsed by Y3Maker.' : fileToolResult.content,
-          isError: hasError,
+          content: errorContent ? errorContent : fileToolResult.content,
+          isError: !!errorContent,
           extra: {
             parseDocStatus: EParsedDocsStatus.Parsed,
           }
@@ -231,6 +238,105 @@ export const parseReadFileToolContent = async (
       },
       extra,
     );
+  }
+
+}
+
+/**
+ * 从读取文件工具中解析图片文件
+ * @param tool_id
+ * @param fileToolResult
+ */
+export const parseImageFromReadFileTool = async (
+  tool_id: string,
+  fileToolResult: {
+    content: string
+    path: string,
+    isError: boolean,
+  }
+) => {
+  const { path, content, isError } = fileToolResult
+  const { updateCurrentSession } = useChatStore.getState()
+  const { updateToolCallResults, setLoadingMessage, } = useChatStreamStore.getState()
+  const onFinish = () => {
+    updateCurrentSession((session) => {
+      const messages = session?.data?.messages;
+      if (messages?.length) {
+        const lastMessage = messages[messages.length - 1];
+        lastMessage.processing = false;
+      }
+    })
+  }
+
+  if (isError) {
+    onFinish()
+    updateToolCallResults(
+      {
+        [tool_id]: {
+          path: path,
+          content: content,
+          isError: true,
+        },
+      }
+    );
+    setLoadingMessage('')
+    return
+  }
+
+  try {
+    const chatModels = useChatConfig.getState().chatModels
+    const model = useChatConfig.getState().config.model
+    if (chatModels[model].parseImgType === ParseImgType.NONE) {
+      throw new Error('当前模型不支持解析图片，请更换到Claude或Gemini系列模型~')
+    }
+    const fileNeme = path.split(/[/\\]/).pop() || path
+    const uint8Array = new Uint8Array((content as any)?.data as any);
+    const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
+    // 转换为 File 对象
+    const file = new File([blob], fileNeme, {
+      type: 'application/octet-stream',
+      lastModified: Date.now()
+    });
+    const smallFile = await compressImage(file);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      // 移除 "data:image/xxx;base64," 前缀
+      // const pureBase64 = base64.split(',')[1];
+      onFinish()
+      updateToolCallResults(
+        {
+          [tool_id]: {
+            path: path,
+            content: [{
+              type: ChatMessageContent.ImageUrl,
+              image_url: {
+                url: base64,
+              }
+            }] as unknown as string,
+            isError: false,
+          },
+        }
+      );
+    };
+    reader.onerror = (error) => {
+      throw new Error(getErrorMessage(error))
+    };
+    reader.readAsDataURL(smallFile);
+  } catch (e) {
+    onFinish()
+    updateToolCallResults(
+      {
+        [tool_id]: {
+          path: path,
+          content: getErrorMessage(e),
+          isError: true,
+        },
+      }
+    );
+  } finally {
+    setLoadingMessage('')
   }
 
 }

@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 
 import * as React from 'react';
-import { selectIsSpecStaging, useAuthStore } from './store/auth';
+import { useAuthStore } from './store/auth';
 import { useExtensionStore } from './store/extension';
 import { useEditorFileState } from './store/editor';
 import { useWorkspaceStore, SpecInfo } from './store/workspace';
@@ -269,7 +269,7 @@ export enum SubscribeActions {
   SYNC_MCP_SERVERS = 'SYNC_MCP_SERVERS',
   GET_MCP_PROMPT_SUCCESS = 'GET_MCP_PROMPT_SUCCESS',
   GET_MCP_PROMPT_ERROR = 'GET_MCP_PROMPT_ERROR',
-  SHOW_MCP_ERROR='SHOW_MCP_ERROR',
+  SHOW_MCP_ERROR = 'SHOW_MCP_ERROR',
 
   // New Apply
   SHOW_DIFF_SUCCESS = 'SHOW_DIFF_SUCCESS',
@@ -346,7 +346,6 @@ export default function PostMessageProvider({
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const setUsername = useAuthStore((state) => state.setUsername);
   const extensionStore = useExtensionStore();
-  const isSpecStaging = useAuthStore(selectIsSpecStaging);
   const updateEditState = useEditorFileState((state) => state.update);
   const updateSpecInfo = useWorkspaceStore((state) => state.updateSpecInfo);
 
@@ -366,14 +365,12 @@ export default function PostMessageProvider({
       } else if (event.data.type === SubscribeActions.EDITOR_FILE_STATE) {
         updateEditState(event.data.data as any);
       } else if (event.data.type === SubscribeActions.SYNC_SPEC_INFO) {
-        if (isSpecStaging) {
-          // 更新 Spec 框架检测信息
-          const specInfo = event.data.data as SpecInfo;
-          if (specInfo && specInfo.frameworks) {
-            updateSpecInfo(specInfo);
-            // 自动选择最新的 change 或 feature（如果当前未选中）
-            autoSelectActiveChangeOrFeature(specInfo);
-          }
+        // 更新 Spec 框架检测信息
+        const specInfo = event.data.data as SpecInfo;
+        if (specInfo && specInfo.frameworks) {
+          updateSpecInfo(specInfo);
+          // 自动选择最新的 change 或 feature（如果当前未选中）
+          autoSelectActiveChangeOrFeature(specInfo);
         }
       }
       // 从 event.data 中获取消息内容
@@ -389,7 +386,7 @@ export default function PostMessageProvider({
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [extensionStore, updateEditState, updateSpecInfo, isSpecStaging]);
+  }, [extensionStore, updateEditState, updateSpecInfo]);
 
   // 向目标窗口发送消息的函数
   const postMessage = React.useCallback(

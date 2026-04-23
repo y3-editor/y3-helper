@@ -34,14 +34,6 @@ export const chatEntryTour: TourConfig = {
       },
     } as TourStep,
     {
-      target: '[data-tour="create-session"]',
-      title: '支持发起并行会话',
-      content: '不打断当前任务，创建新对话',
-      placement: 'bottom',
-      // 仅在 VSCode 下显示此步骤
-      showWhen: () => useExtensionStore.getState().IDE === IDE.VisualStudioCode,
-    } as TourStep,
-    {
       target: '[data-tour="more-actions"]',
       title: '精简首屏常用 Chat 操作',
       content: '清空、删除、分享操作仍可在更多中找到',

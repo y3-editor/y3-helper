@@ -65,6 +65,7 @@ import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { ChatModel, ParseImgType } from '../../services/chatModel';
 import ChatTypeSelector from './ChatTypeSelector';
 import RulesPanel from '../../components/RulesPanel';
+import { useChatBillStore } from '../../store/chatBill';
 // import { useDocsetStore } from '../../store/docset';
 // import { usePostMessage } from '../../PostMessageProvider';
 
@@ -118,10 +119,12 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
   const currentSession = useChatStore((state) => state.currentSession());
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost);
 
   // 检查仓库智聊是否应该禁用按钮
   const isCodebaseInputDisabled = React.useMemo(() => {
     if (chatType !== 'codebase') return false;
+    if (isExceedCost) return true
     if (!workspaceInfo.repoName) return true;
     if (
       currentSession?.chat_repo &&
@@ -129,7 +132,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
     )
       return true;
     return false;
-  }, [chatType, workspaceInfo.repoName, currentSession?.chat_repo]);
+  }, [chatType, workspaceInfo.repoName, currentSession?.chat_repo, isExceedCost]);
 
   const lastMessage = React.useMemo(() => {
     const length = currentSession?.data?.messages?.length || 0;
@@ -624,7 +627,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
 
             {/* 知识集选择器 */}
             {ide === IDE.VisualStudioCode || ide === IDE.JetBrains ? (
-              <RulesPanel />
+              <RulesPanel disabled={isCodebaseInputDisabled} />
             ) : (
               <DevSpaceSelect />
             )}
