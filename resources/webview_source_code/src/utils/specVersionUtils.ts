@@ -9,24 +9,24 @@ import { IDE } from '../store/extension';
  * Spec 初始化功能的最低 Extension 版本要求（SpecKit 和 OpenSpec 通用）
  */
 const MIN_VERSIONS_SPEC_INIT = {
-  VSCODE: '3.0.0-beta.6',
-  JETBRAINS: '2.5.1',
+  VSCODE: '0.0.0',  // Y3: 跳过版本检查，Y3 已内置 OpenSpec 支持
+  JETBRAINS: '0.0.0',
 } as const;
 
 /*
  * OpenSpec 版本选择功能的最低 Extension 版本要求
  */
 const MIN_VERSIONS_OPENSPEC_VERSION_SELECTION = {
-  VSCODE: '3.0.0-beta.8',
-  JETBRAINS: '2.5.3',
+  VSCODE: '0.0.0',  // Y3: 跳过版本检查
+  JETBRAINS: '0.0.0',
 } as const;
 
 /**
  * OpenSpec CLI 升级功能的最低 Extension 版本要求
  */
 const MIN_VERSIONS_OPENSPEC_CLI_UPGRADE = {
-  VSCODE: '3.0.0-beta.9',
-  JETBRAINS: '2.5.4',
+  VSCODE: '0.0.0',  // Y3: 跳过版本检查
+  JETBRAINS: '0.0.0',
 } as const;
 
 /**

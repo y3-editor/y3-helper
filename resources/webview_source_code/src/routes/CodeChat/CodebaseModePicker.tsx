@@ -3,7 +3,6 @@ import {
   Box,
   Flex,
   Text,
-  Image,
   Select,
   Button,
   VStack,
@@ -15,7 +14,6 @@ import {
 import { RepeatIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { CodebaseChatMode } from '../../store/chat';
 import { useTheme, ThemeStyle } from '../../ThemeContext';
-import CodeMakerLogo from '../../assets/codemaker-logo.png';
 import { useWorkspaceStore } from '../../store/workspace';
 import useCustomToast from '../../hooks/useCustomToast';
 import { CODEBASE_CHAT_SAMPLES } from '../../const';
@@ -224,34 +222,49 @@ function CodebaseModePicker({
   return (
     <Box className="py-4 px-2 flex flex-col h-full justify-center">
       {/* Header */}
-      <Flex alignItems="center" justifyContent="center" mb={2}>
-        <Image
-          src={CodeMakerLogo}
-          alt="CodeMaker Logo"
-          width="28px"
-          height="28px"
-        />
+      <Flex alignItems="center" justifyContent="center" mb={1}>
         <Text
           color="blue.300"
-          fontSize="20px"
+          fontSize="22px"
           fontWeight="bold"
           lineHeight="1"
           style={{ marginBottom: 0, marginTop: '3px' }}
         >
-          odeMaker Coding Agent
+          Y3 Maker Agent
         </Text>
       </Flex>
 
-      {/* Subtitle */}
-      <Text
-        color="text.default"
-        fontSize="14px"
-        mb={4}
-        textAlign="center"
-        style={{ marginBottom: '16px' }}
-      >
-        让开发像聊天一样简单！
-      </Text>
+      {/* Subtitle - 介绍说明 */}
+      <VStack spacing={0.5} mb={4} style={{ marginBottom: '16px' }}>
+        <Text
+          color="blue.200"
+          fontSize="13px"
+          textAlign="center"
+          opacity={0.9}
+          style={{ marginBottom: '8px' }}
+        >
+          智能 Y3 项目开发助手
+        </Text>
+        <Text
+          color="text.default"
+          fontSize="12px"
+          textAlign="center"
+          opacity={0.65}
+          lineHeight="1.8"
+        >
+          制作与管理 Y3 项目工程，理解与生成项目代码，控制编辑器
+        </Text>
+        <Text
+          color="text.default"
+          fontSize="12px"
+          textAlign="center"
+          opacity={0.45}
+          lineHeight="1.8"
+          mt={1}
+        >
+          在聊天框输入你想了解的内容，或直接开始制作
+        </Text>
+      </VStack>
 
       {/* Mode Cards - 左右两列布局 */}
       <Flex gap={3} alignItems="stretch">

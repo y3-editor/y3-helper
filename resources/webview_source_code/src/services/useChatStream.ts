@@ -27,8 +27,7 @@ import { BMSearch } from '../services';
 import { uniqueId } from 'lodash';
 import { UserEvent } from '../types/report';
 import { getValidToolName } from '../utils';
-// Y3: 内联 execFuncWithoutException（上游来自 CodeReview/utils，Y3 没有该模块）
-const execFuncWithoutException = (func: () => void) => { try { func?.(); } catch { /* empty */ } };
+import { execFuncWithoutException } from '../routes/CodeReview/utils';
 import { ChatModel } from './chatModel';
 
 export enum StreamError {
