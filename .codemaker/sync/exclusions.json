@@ -73,6 +73,12 @@
     "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",
     "src/PostMessageProvider.tsx": "REVIEW: Y3有定制(Skill枚举值: UPDATE_SKILL_CONFIG/REMOVE_SKILL/UPLOAD_SKILL等)，且不需要authRequest/fetchAllUser逻辑。覆盖后需手动恢复Y3定制部分",
     "package.json": "REVIEW: Y3的build命令已精简，不要覆盖scripts段",
-    "vite.config.ts": "REVIEW: Y3已移除codeMakerCoverage插件，不要还原"
+    "vite.config.ts": "REVIEW: Y3已移除codeMakerCoverage插件，不要还原",
+    "src/routes/CodeChat/ChatHeaderToolbar.tsx": "REVIEW: Y3品牌标题'Y3 Maker Agent'不可被覆盖，合并时保留Y3品牌文案",
+    "src/store/chatBill.ts": "REVIEW: isExceedCost默认值必须为false，Y3无积分限制系统",
+    "src/services/useChatStream.ts": "REVIEW: Y3不拼接/${event}后缀，所有stream函数的URL直接用chatRequestUrl，event参数改为_event",
+    "src/store/chat.ts": "REVIEW: Y3定制文件，不可引用FeatureTour/dispatchTourEvent/BUILT_IN_PROMPTS_OPENSPEC",
+    "src/routes/CodeChat/CodebaseModePicker.tsx": "REVIEW: Y3移除了Vibe/Spec选择卡片，仅保留推荐问题Drawer",
+    "src/routes/CodeChat/CodeChatInputActionBar.tsx": "REVIEW: Y3不引用FeatureTour相关import"
   }
 }

@@ -17,6 +17,7 @@ import { useTheme, ThemeStyle } from '../../ThemeContext';
 import { useWorkspaceStore } from '../../store/workspace';
 import useCustomToast from '../../hooks/useCustomToast';
 import { CODEBASE_CHAT_SAMPLES } from '../../const';
+import { selectIsSpecStaging, useAuthStore } from '../../store/auth';
 
 /** 模式卡片配置 */
 interface ModeCardConfig {
@@ -67,7 +68,10 @@ const MODE_CARDS: ModeCardConfig[] = [
           { emoji: '', text: '重视文档完整性和代码质量' },
           { emoji: '', text: '适合：大型项目、团队协作、生产环境' },
         ],
-        tips: []
+        tips: [
+          { emoji: '', text: '当前适配 openspec 0.23.0 版本' },
+          { emoji: '', text: '使用 /openspec-proposal 指令创建提案' },
+        ]
       },
       {
         value: 'speckit',
@@ -142,6 +146,8 @@ function CodebaseModePicker({
   const [randomCodebaseExamples, setRandomCodebaseExamples] = React.useState(
     () => getRandomExamples(CODEBASE_CHAT_SAMPLES)
   );
+
+  const isSpecStaging = useAuthStore(selectIsSpecStaging);
 
   /** 获取当前 spec 子模式 */
   const getCurrentSpecMode = (): CodebaseChatMode => {
@@ -266,8 +272,30 @@ function CodebaseModePicker({
         </Text>
       </VStack>
 
-      {/* Mode Cards - 左右两列布局 */}
-      <Flex gap={3} alignItems="stretch">
+      {/* 推荐问题入口 */}
+      <Flex align="center" justify="center" mt={2} mb={2}>
+        <Button
+          fontSize="13px"
+          color="blue.400"
+          cursor="pointer"
+          variant="link"
+          onClick={() => {
+            setShowRecommendQuestions(!showRecommendQuestions);
+          }}
+          style={{ marginBottom: 0 }}
+        >
+          推荐问题
+          <ChevronUpIcon
+            boxSize={4}
+            ml={1}
+            transition="transform 0.2s"
+            transform={showRecommendQuestions ? 'rotate(180deg)' : 'rotate(0deg)'}
+          />
+        </Button>
+      </Flex>
+
+      {false && (
+              <Flex gap={3} alignItems="stretch">
         {MODE_CARDS.map((card) => {
           const isSelected = isCardSelected(card.mode);
           const currentSpecMode = getCurrentSpecMode();
@@ -366,123 +394,121 @@ function CodebaseModePicker({
           );
         })}
       </Flex>
+      )}
 
-      {/* 适用场景 - 使用 Grid 布局让两侧内容同时渲染占位，避免切换时跳动 */}
-      {selectedCardIndex >= 0 && (
+      {/* 适用场景 - 卡片外部，显示在选中卡片下方对应位置 */}
+      {isSpecStaging && selectedCardIndex >= 0 && (
         <Flex gap={3} mt={4}>
-          {MODE_CARDS.map((card, index) => {
-            const isVisible = index === selectedCardIndex;
-            return (
-              <Box
-                key={card.mode}
-                flex={1}
-                visibility={isVisible ? 'visible' : 'hidden'}
-                opacity={isVisible ? 1 : 0}
-              >
-                <Text
-                  fontSize="12px"
-                  color="text.default"
-                  mb={2}
-                  style={{ marginBottom: '8px' }}
-                >
-                  适用场景：
-                </Text>
+          {MODE_CARDS.map((card, index) => (
+            <Box key={card.mode} flex={1}>
+              {index === selectedCardIndex && (
                 <Box>
-                  {getCardFeatures(card).map((feature, idx) => (
-                    <Flex key={idx} align="center" mb={1}>
-                      <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
-                        •
-                      </Text>
-                      {feature.emoji && (
-                        <Text
-                          fontSize="12px"
-                          mr={1.5}
-                          style={{ marginBottom: 0 }}
-                        >
-                          {feature.emoji}
+                  <Text
+                    fontSize="12px"
+                    color="text.default"
+                    mb={2}
+                    style={{ marginBottom: '8px' }}
+                  >
+                    适用场景：
+                  </Text>
+                  <Box>
+                    {getCardFeatures(card).map((feature, idx) => (
+                      <Flex key={idx} align="center" mb={1}>
+                        <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
+                          •
                         </Text>
-                      )}
-                      <Text
-                        fontSize="12px"
-                        color="text.default"
-                        style={{ marginBottom: 0 }}
-                      >
-                        {feature.text}
-                      </Text>
-                    </Flex>
-                  ))}
-                  {/* Vibe 模式添加推荐问题入口 */}
-                  {card.mode === 'vibe' && (
-                    <Flex align="center" mt={2}>
-                      <Button
-                        fontSize="12px"
-                        color="blue.400"
-                        cursor="pointer"
-                        variant="link"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowRecommendQuestions(!showRecommendQuestions);
-                        }}
-                        style={{ marginBottom: 0 }}
-                      >
-                        推荐问题
-                        <ChevronUpIcon
-                          boxSize={4}
-                          ml={1}
-                          transition="transform 0.2s"
-                          transform={showRecommendQuestions ? 'rotate(180deg)' : 'rotate(0deg)'}
-                        />
-                      </Button>
-                    </Flex>
-                  )}
-                </Box>
-                {card.mode !== 'vibe' && getCardTips(card).length > 0 && (
-                  <>
-                    <Text
-                      fontSize="12px"
-                      color="text.default"
-                      mb={2}
-                      mt={2}
-                      style={{ marginBottom: '8px' }}
-                    >
-                      使用指引:
-                    </Text>
-                    <Box>
-                      {getCardTips(card).map((tip, idx) => (
-                        <Flex key={idx} align="center" mb={1}>
-                          <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
-                            •
-                          </Text>
-                          {tip.emoji && (
-                            <Text
-                              fontSize="12px"
-                              mr={1.5}
-                              style={{ marginBottom: 0 }}
-                            >
-                              {tip.emoji}
-                            </Text>
-                          )}
+                        {feature.emoji && (
                           <Text
                             fontSize="12px"
-                            color="text.default"
+                            mr={1.5}
                             style={{ marginBottom: 0 }}
                           >
-                            {tip.text}
+                            {feature.emoji}
                           </Text>
-                        </Flex>
-                      ))}
-                    </Box>
-                  </>
-                )}
-              </Box>
-            );
-          })}
+                        )}
+                        <Text
+                          fontSize="12px"
+                          color="text.default"
+                          style={{ marginBottom: 0 }}
+                        >
+                          {feature.text}
+                        </Text>
+                      </Flex>
+                    ))}
+                    {/* Vibe 模式添加推荐问题入口 */}
+                    {card.mode === 'vibe' && (
+                      <Flex align="center" mt={2}>
+                        <Button
+                          fontSize="12px"
+                          color="blue.400"
+                          cursor="pointer"
+                          variant="link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowRecommendQuestions(!showRecommendQuestions);
+                          }}
+                          style={{ marginBottom: 0 }}
+                        >
+                          推荐问题
+                          <ChevronUpIcon
+                            boxSize={4}
+                            ml={1}
+                            transition="transform 0.2s"
+                            transform={showRecommendQuestions ? 'rotate(180deg)' : 'rotate(0deg)'}
+                          />
+                        </Button>
+                      </Flex>
+                    )}
+                  </Box>
+                  {
+                    card.mode !== 'vibe' && (
+                      <>
+                        <Text
+                          fontSize="12px"
+                          color="text.default"
+                          mb={2}
+                          style={{ marginBottom: '8px' }}
+                        >
+                          使用指引:
+                        </Text>
+                        <Box>
+                          {getCardTips(card).map((tip, idx) => (
+                            <Flex key={idx} align="center" mb={1}>
+                              <Text fontSize="12px" mr={1} style={{ marginBottom: 0 }}>
+                                •
+                              </Text>
+                              {tip.emoji && (
+                                <Text
+                                  fontSize="12px"
+                                  mr={1.5}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  {tip.emoji}
+                                </Text>
+                              )}
+                              <Text
+                                fontSize="12px"
+                                color="text.default"
+                                style={{ marginBottom: 0 }}
+                              >
+                                {tip.text}
+                              </Text>
+                            </Flex>
+                          ))}
+                        </Box>
+                      </>
+                    )
+                  }
+                </Box>
+              )}
+            </Box>
+          ))}
         </Flex>
       )}
 
       {/* 推荐问题底部抽屉 */}
       <Drawer
-        isOpen={showRecommendQuestions && selectedMode === 'vibe'}
+        isOpen={showRecommendQuestions}
         placement="bottom"
         onClose={() => setShowRecommendQuestions(false)}
         autoFocus={false}
