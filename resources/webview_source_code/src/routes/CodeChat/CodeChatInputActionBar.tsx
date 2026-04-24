@@ -54,18 +54,15 @@ import { HiOutlineDocumentAdd, HiOutlinePhotograph } from 'react-icons/hi';
 import { HandleImageUpload } from '../../components/ImageUpload/ImageUpload';
 import { GrBook } from 'react-icons/gr';
 import userReporter from '../../utils/report';
-// import ChatAutoToolbar from './ChatAutoToolbar';
+import ChatAutoToolbar from './ChatAutoToolbar';
 import { UserEvent } from '../../types/report';
 import ChatFunctionalToolbar from './ChatFunctionalToolbar';
 import { isMacOS } from '../../utils';
 import { SubmitKey, useConfigStore } from '../../store/config';
 import { BroadcastActions } from '../../PostMessageProvider';
-import DevSpaceSelect from '../../components/DevSpaceSelect';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { ChatModel, ParseImgType } from '../../services/chatModel';
-import ChatTypeSelector from './ChatTypeSelector';
 import RulesPanel from '../../components/RulesPanel';
-import { useChatBillStore } from '../../store/chatBill';
 // import { useDocsetStore } from '../../store/docset';
 // import { usePostMessage } from '../../PostMessageProvider';
 
@@ -119,12 +116,10 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
   const currentSession = useChatStore((state) => state.currentSession());
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
-  const isExceedCost = useChatBillStore((state) => state.isExceedCost);
 
   // 检查仓库智聊是否应该禁用按钮
   const isCodebaseInputDisabled = React.useMemo(() => {
     if (chatType !== 'codebase') return false;
-    if (isExceedCost) return true
     if (!workspaceInfo.repoName) return true;
     if (
       currentSession?.chat_repo &&
@@ -132,7 +127,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
     )
       return true;
     return false;
-  }, [chatType, workspaceInfo.repoName, currentSession?.chat_repo, isExceedCost]);
+  }, [chatType, workspaceInfo.repoName, currentSession?.chat_repo]);
 
   const lastMessage = React.useMemo(() => {
     const length = currentSession?.data?.messages?.length || 0;
@@ -324,17 +319,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
         </Menu>
       </HStack>
     );
-  }, [
-    isStreaming,
-    onSend,
-    onStop,
-    isLight,
-    isCodebaseInputDisabled,
-    submitKey,
-    isShortcutMenuOpen,
-    shortcutOptions,
-    handleShortcutChange,
-  ]);
+  }, [isStreaming, isLight, onSend, isCodebaseInputDisabled, isShortcutMenuOpen, shortcutOptions, onStop, lastMessage?.isAutoCompressingMessage, lastMessage?.content, submitKey, handleShortcutChange]);
 
   // 非codebase聊天类型的原有逻辑
   const getIconOrName = React.useCallback(
@@ -610,9 +595,6 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
               </MenuList>
             </Menu>
             <Divider h="14px" mx="1" orientation="vertical" />
-
-            <ChatTypeSelector />
-            <Divider h="14px" mx="1" orientation="vertical" />
             {/* 模型选择器 */}
             <div
               style={{
@@ -626,11 +608,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             {/* <Divider h="14px" mx="1" orientation="vertical" /> */}
 
             {/* 知识集选择器 */}
-            {ide === IDE.VisualStudioCode || ide === IDE.JetBrains ? (
-              <RulesPanel disabled={isCodebaseInputDisabled} />
-            ) : (
-              <DevSpaceSelect />
-            )}
+            <RulesPanel disabled={isCodebaseInputDisabled} />
 
             <Divider h="14px" mx="1" orientation="vertical" />
             <ChatFunctionalToolbar disabled={isCodebaseInputDisabled} />
@@ -647,7 +625,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             {/* <ChatFunctionalToolbar disabled={isCodebaseInputDisabled} /> */}
 
             {/* Auto配置 */}
-            {/* <ChatAutoToolbar disabled={isCodebaseInputDisabled} /> */}
+            <ChatAutoToolbar disabled={isCodebaseInputDisabled} />
 
             {/* <Divider h="14px" mx="1" orientation="vertical" /> */}
 
@@ -712,8 +690,6 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
               </Tooltip>
             </MenuList>
           </Menu>
-          <Divider h="14px" mx="1" orientation="vertical" />
-          <ChatTypeSelector />
           <Divider h="14px" mx="1" orientation="vertical" />
           {/* 模型选择器 */}
           <ChatModelSelector />
