@@ -54,7 +54,7 @@ export type ModelMaxTokenType = Record<IChatModelConfig['code'], number>;
 
 const DEFAULT_CONFIG: ChatConfig = {
   backend: GptBackendService.Azure,
-  model: '' as ChatModel,
+  model: ChatModel.Claude4Sonnet20250514,
   max_tokens: CHAT_MIN_TOKENS,
   temperature: 0.7,
   presence_penalty: 0,
@@ -75,21 +75,6 @@ const MODEL_MAX_TOKENS_MAP = (Object.keys(CHAT_MODELS_MAP))
     {} as { [key in ChatModel]: number },
   );
 
-const CODEBASE_MODEL_MAX_TOKENS_MAP = (Object.keys(CHAT_MODELS_MAP))
-  .reduce(
-    (
-      acc: { [key in ChatModel]: number },
-      modelName: string,
-    ) => {
-      const modelConfig = CHAT_MODELS_MAP[modelName as ChatModel] as IChatModelConfig
-      if (modelConfig) {
-        acc[modelName as ChatModel] = modelConfig.tokenInfo.maxTokensInCodebase
-      }
-      return acc;
-    },
-    {} as { [key in ChatModel]: number },
-  );
-
 interface ChatConfigStore {
   config: ChatConfig;
   update: (updater: (config: ChatConfig) => void) => void;
@@ -101,6 +86,8 @@ interface ChatConfigStore {
   setPlanModeButtonEnabled: (planModeButtonEnabled: boolean) => void;
   chatModels: Record<string, IChatModelConfig>,
   setChatModels: (models: Record<string, IChatModelConfig>) => void;
+  chatModelsLoading: boolean;
+  setChatModelsLoading: (loading: boolean) => void;
 
   /** 分别存储普通聊天和仓库智聊的模型 */
   normalChatModel: IChatModelConfig['code'];
@@ -150,15 +137,19 @@ export const useChatConfig = create<ChatConfigStore>()(
       enableEditableMode: true,
       config: DEFAULT_CONFIG,
       modelMaxToken: MODEL_MAX_TOKENS_MAP,
-      codebaseModelMaxTokens: CODEBASE_MODEL_MAX_TOKENS_MAP,
-      chatModels: CHAT_MODELS_MAP,
+      codebaseModelMaxTokens: MODEL_MAX_TOKENS_MAP,
+      chatModels: {},
       setChatModels: (models: Record<string, IChatModelConfig>) => {
         set(() => ({ chatModels: models }));
       },
+      chatModelsLoading: false,
+      setChatModelsLoading: (loading: boolean) => {
+        set(() => ({ chatModelsLoading: loading }));
+      },
 
       // 分别存储普通聊天和仓库智聊的默认模型
-      normalChatModel: '' as IChatModelConfig['code'],
-      codebaseChatModel: '' as IChatModelConfig['code'],
+      normalChatModel: ChatModel.Claude4Sonnet20250514,
+      codebaseChatModel: ChatModel.Claude4Sonnet20250514,
       setNormalChatModel: (model: IChatModelConfig['code']) => {
         set(() => ({ normalChatModel: model }));
       },
@@ -188,7 +179,7 @@ export const useChatConfig = create<ChatConfigStore>()(
           planModeButtonEnabled,
         }))
       },
-      autoApply: true,
+      autoApply: false,
       updateAutoApply: (autoApply: boolean) => {
         set(() => ({
           autoApply: autoApply
@@ -200,13 +191,13 @@ export const useChatConfig = create<ChatConfigStore>()(
           enableUserQuestion: enableUserQuestion
         }))
       },
-      autoApprove: true,
+      autoApprove: false,
       updateAutoApprove: (autoApprove: boolean) => {
         set(() => ({
           autoApprove: autoApprove
         }))
       },
-      autoExecute: true,
+      autoExecute: false,
       updateAutoExecute: (autoExecute: boolean) => {
         set(() => ({
           autoExecute: autoExecute

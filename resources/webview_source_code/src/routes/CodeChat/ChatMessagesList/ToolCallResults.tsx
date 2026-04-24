@@ -2,7 +2,7 @@ import { Accordion, AccordionButton, AccordionItem, Box, Flex, Icon, VStack, Tex
 import RetrieveResultBlock, { RetrieveResult } from "../RetrieveResultBlock";
 import { ToolCallResultsProps } from "./types";
 import { EditFile } from "./EditFile";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RxCheckCircled, RxCircleBackslash } from "react-icons/rx";
 import { getToolName } from "../../../utils/toolCall";
 import { getSkillSourceLabel, parseSkillToolResult } from "../../../store/skills";
@@ -133,6 +133,12 @@ const ToolCallResult = ({
 
   const { postMessage } = usePostMessage();
 
+  const { hasTerminalTool, ChatTerminalPanel } = useChatTerminal(message);
+
+  // MCP 工具和 Terminal 工具在等待时展开，其他工具都收起
+  const initialIndex = !toolResponseDisabled && (isMCPTool || hasTerminalTool) ? 0 : undefined;
+  const [accordionIndex, setAccordionIndex] = useState<number | undefined>(initialIndex);
+
   const collapseDisabled = useMemo(() => {
     return isReadFileTool && isImageFileWithPath(result.path);
   }, [isReadFileTool, result.path])
@@ -148,8 +154,6 @@ const ToolCallResult = ({
       data: data,
     });
   }, [postMessage]);
-
-  const { hasTerminalTool, ChatTerminalPanel } = useChatTerminal(message);
 
   const displayContent = useMemo(() => {
     if (isSkillTool && result.content) {
@@ -248,7 +252,7 @@ const ToolCallResult = ({
 
   if (isPlan) {
     return (
-      <Accordion allowToggle defaultIndex={[0]}>
+      <Accordion allowToggle index={accordionIndex} onChange={(index) => setAccordionIndex(index as number | undefined)}>
         <AccordionItem>
           <AccordionButton>
             <Box as="span" flex="1" textAlign="left" color="text.primary">
@@ -482,7 +486,7 @@ const ToolCallResult = ({
       {/* 工具调用结果内容 */}
       {
         !result.isError && (
-          <Accordion allowToggle defaultIndex={0}>
+          <Accordion allowToggle index={accordionIndex} onChange={(index) => setAccordionIndex(index as number | undefined)}>
             <AccordionItem
               borderLeftWidth={toolResponseDisabled ? '1px' : undefined}
               borderRightWidth={toolResponseDisabled ? '1px' : undefined}
@@ -519,201 +523,6 @@ const ToolCallResult = ({
   );
 };
 
-// 合并连续的 read_file 工具调用
-interface MergedToolCall {
-  type: 'single' | 'merged';
-  tools: ToolCall[];
-  results: any[];
-}
-
-const mergeConsecutiveReadFiles = (
-  toolCalls: ToolCall[],
-  toolCallResults: Record<string, any>
-): MergedToolCall[] => {
-  const merged: MergedToolCall[] = [];
-  let currentGroup: ToolCall[] = [];
-  let currentResults: any[] = [];
-
-  toolCalls.forEach((tool) => {
-    // 安全检查并判断是否为 read_file
-    const isReadFile = tool?.type === 'function' && tool?.function?.name === 'read_file';
-    const result = toolCallResults[tool.id] || {};
-
-    if (isReadFile) {
-      currentGroup.push(tool);
-      currentResults.push(result);
-    } else {
-      // 如果遇到非 read_file，先处理之前累积的 read_file
-      if (currentGroup.length > 0) {
-        if (currentGroup.length === 1) {
-          // 单个 read_file，不合并
-          merged.push({
-            type: 'single',
-            tools: [currentGroup[0]],
-            results: [currentResults[0]],
-          });
-        } else {
-          // 多个连续的 read_file，合并
-          merged.push({
-            type: 'merged',
-            tools: currentGroup,
-            results: currentResults,
-          });
-        }
-        currentGroup = [];
-        currentResults = [];
-      }
-
-      // 添加当前的非 read_file 工具
-      merged.push({
-        type: 'single',
-        tools: [tool],
-        results: [result],
-      });
-    }
-  });
-
-  // 处理最后累积的 read_file
-  if (currentGroup.length > 0) {
-    if (currentGroup.length === 1) {
-      merged.push({
-        type: 'single',
-        tools: [currentGroup[0]],
-        results: [currentResults[0]],
-      });
-    } else {
-      // 多个连续的 read_file，合并
-      merged.push({
-        type: 'merged',
-        tools: currentGroup,
-        results: currentResults,
-      });
-    }
-  }
-
-  return merged;
-};
-
-// 渲染合并的 read_file 工具调用
-const MergedReadFileToolCall = ({
-  tools,
-  results,
-  toolResponseDisabled,
-}: {
-  tools: ToolCall[];
-  results: any[];
-  toolResponse: { [propName: string]: boolean };
-  toolResponseDisabled: boolean;
-  message: any;
-  isLatest: boolean | undefined;
-}) => {
-  const { postMessage } = usePostMessage();
-
-  const locateFile = useCallback((filePath: string) => {
-    postMessage({
-      type: 'OPEN_FILE',
-      data: {
-        filePath,
-      },
-    });
-  }, [postMessage]);
-
-  return (
-    <Accordion allowToggle>
-      <AccordionItem
-        borderLeftWidth={toolResponseDisabled ? '1px' : undefined}
-        borderRightWidth={toolResponseDisabled ? '1px' : undefined}
-        borderRadius={toolResponseDisabled ? '4px' : undefined}
-      >
-        <AccordionButton>
-          {toolResponseDisabled && (
-            <Icon
-              w="14px"
-              h="14px"
-              mr={1.5}
-              as={RxCheckCircled}
-              color="green"
-            />
-          )}
-          <Box as="span" flex="1" textAlign="left" color="text.primary">
-            读取了 {tools.length} 个文件
-          </Box>
-          <AccordionIcon />
-        </AccordionButton>
-        <AccordionPanel>
-          <VStack gap={0} align="stretch">
-            {tools.map((tool, index) => {
-              const result = results[index];
-              const fileName = getFileName(result.path);
-              const extra = result?.extra;
-              const startLine = extra?.startLine || 0;
-              const endLine = extra?.endLine || 0;
-              const showLine = !!extra?.showLine;
-              const displayContent = truncateContent(result.content);
-
-              return (
-                <Accordion key={tool.id} allowToggle>
-                  <AccordionItem>
-                    <AccordionButton>
-                      <Tooltip label={result.path} hasArrow placement="top">
-                        <Box
-                          color="blue.300"
-                          cursor="pointer"
-                          maxWidth="100%"
-                          whiteSpace="nowrap"
-                          display="flex"
-                          alignItems="center"
-                          gap={1}
-                          minHeight="16px"
-                          flex="1"
-                          textAlign="left"
-                        >
-                          <Box
-                            className="truncate text-nowrap"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              locateFile(result.path);
-                            }}
-                          >
-                            {fileName}
-                          </Box>
-                          <Box
-                            fontSize={'10px'}
-                            fontWeight={'bold'}
-                            hidden={!startLine || !endLine || !showLine}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              locateFile(result.path);
-                            }}
-                          >
-                            引用行数: {startLine}:{endLine}
-                          </Box>
-                        </Box>
-                      </Tooltip>
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel>
-                      <div className="markdown-body">
-                        <pre>
-                          <MemoCodeBlock
-                            maxHeight={500}
-                            hiddenLineNumber={!!extra?.showLine}
-                            language="plaintext"
-                            value={displayContent}
-                          />
-                        </pre>
-                      </div>
-                    </AccordionPanel>
-                  </AccordionItem>
-                </Accordion>
-              );
-            })}
-          </VStack>
-        </AccordionPanel>
-      </AccordionItem>
-    </Accordion>
-  );
-};
 
 export default function ToolCallResults(props: ToolCallResultsProps) {
   const {
@@ -725,13 +534,7 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
     isLatest
   } = props;
 
-  // 合并连续的 read_file 调用
-  const mergedToolCalls = useMemo(() => {
-    if (!message.tool_calls?.length) return [];
-    const toolCallResults = message.tool_result || {};
-    const merged = mergeConsecutiveReadFiles(message.tool_calls, toolCallResults);
-    return merged;
-  }, [message.tool_calls, message.tool_result]);
+  const toolCallResults = message.tool_result || {};
 
   // 如果没有工具调用或者消息正在处理中，返回null
   if (!message.tool_calls?.length || message.processing) {
@@ -740,38 +543,21 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
 
   return (
     <>
-      {mergedToolCalls.map((item) => {
-        if (item.type === 'merged') {
-          // 渲染合并的 read_file
-          return (
-            <MergedReadFileToolCall
-              key={`merged-${item.tools[0].id}`}
-              tools={item.tools}
-              results={item.results}
-              toolResponse={toolResponse}
-              toolResponseDisabled={toolResponseDisabled}
-              message={message}
-              isLatest={isLatest}
-            />
-          );
-        } else {
-          // 渲染单个工具调用
-          const tool = item.tools[0];
-          const result = item.results[0];
-          return (
-            <ToolCallResult
-              key={tool.id}
-              tool={tool}
-              result={result}
-              toolResponse={toolResponse}
-              toolResponseDisabled={toolResponseDisabled}
-              unselectedResults={unselectedResults}
-              handleSelectionChange={handleSelectionChange}
-              message={message}
-              isLatest={isLatest}
-            />
-          );
-        }
+      {message.tool_calls.map((tool) => {
+        const result = toolCallResults[tool.id] || {};
+        return (
+          <ToolCallResult
+            key={tool.id}
+            tool={tool}
+            result={result}
+            toolResponse={toolResponse}
+            toolResponseDisabled={toolResponseDisabled}
+            unselectedResults={unselectedResults}
+            handleSelectionChange={handleSelectionChange}
+            message={message}
+            isLatest={isLatest}
+          />
+        );
       })}
     </>
   );

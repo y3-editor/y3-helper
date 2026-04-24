@@ -17,7 +17,7 @@ export const LANGUAGE_TO_GRAPH_TYPE: Record<string, 'mermaid' | 'plantuml' | 'gr
 /**
  * 根据 URL 参数生成隔离的存储键名
  * 实现主会话和 CM2 会话的数据隔离
- * 
+ *
  * @param baseKey 基础存储键名
  * @returns 隔离后的存储键名
  */
@@ -26,14 +26,14 @@ export function getIsolatedStorageKey(baseKey: string): string {
   const mode = urlParams.get('mode');
   const sessionId = urlParams.get('restoreSessionId');
   const panelId = urlParams.get('panelId');
-  
+
   let storageKey: string;
-  
+
   // 优先使用 sessionId 进行更精确的隔离
   if (mode && sessionId) {
     // 使用新的命名格式：cm_{mode}_codemaker-chat-store
     storageKey = `cm_${mode}_${baseKey}`;
-    
+
     // 并行会话需要额外处理 panelId
     if (mode === 'parallel' && panelId) {
       storageKey = `cm_${mode}_${panelId}_${baseKey}`;
@@ -55,14 +55,14 @@ export function getIsolatedStorageKey(baseKey: string): string {
     // 默认存储键名
     storageKey = baseKey;
   }
-  
+
   return storageKey;
 }
 
 /**
  * 获取会话数据，同步插件端的数据读取逻辑
  * 针对并行会话提供优化的数据获取策略
- * 
+ *
  * @param storageKey 存储键名
  * @param sessionId 会话ID
  * @returns 会话数据
@@ -70,11 +70,11 @@ export function getIsolatedStorageKey(baseKey: string): string {
 export function getSessionData(storageKey: string, sessionId: string): any {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
-  
+
   try {
     // 同步插件端逻辑：从localStorage获取所有数据
     const allData = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    
+
     if (mode === 'parallel') {
       // 并行会话使用sessionId区分数据，从allData中获取对应sessionId的数据
       const sessionData = allData[sessionId] || getDefaultSessionData();
@@ -561,7 +561,7 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => (
-      msg.includes("Error code: 429") && (msg.includes(StreamError.TokenLimitErrorFromAIGW)
+      (msg.includes(StreamError.TokenLimitErrorFromAIGW)
         || msg.includes(StreamError.RateLimitErrorFromAIGW)
         || msg.includes(StreamError.PeerClosedConnection)
       )

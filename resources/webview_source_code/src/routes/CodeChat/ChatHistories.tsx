@@ -181,7 +181,7 @@ const SessionItemComponent = React.memo(
                 justifyContent="space-between"
                 minH="20px"
               >
-                <Text fontSize="sm" isTruncated maxW="160px">
+                <Text title={item.topic || DEFAULT_TOPIC} fontSize="sm" isTruncated maxW="160px">
                   <ChatIcon w={8} fontSize="sm" />
                   {item.topic || DEFAULT_TOPIC}
                 </Text>
@@ -398,7 +398,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
     (id: string) => {
       if (isStreaming || isProcessing || isTerminalProcessing || isSearching) {
         toast({
-          title: 'Y3Maker 正在回复，请稍后再切换会话',
+          title: 'CodeMaker 正在回复，请稍后再切换会话',
           status: 'warning',
           position: 'top',
           isClosable: true,
@@ -442,7 +442,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
     (session: SearchMessageResult) => {
       if (isStreaming || isProcessing || isTerminalProcessing || isSearching) {
         toast({
-          title: 'Y3Maker 正在回复，请稍后再切换会话',
+          title: 'CodeMaker 正在回复，请稍后再切换会话',
           status: 'warning',
           position: 'top',
           isClosable: true,

@@ -241,9 +241,9 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                           </Flex>
                         </Box>
                         {
-                          isExceeded && currentMonth === selectedMonth && (
-                            <Flex color={'gray.500'} fontSize={'small'}>
-                              <Text>恢复服务申请：</Text>
+                          (
+                            <Box color={'gray.500'} fontSize={'small'} style={{ zoom: .92 }}>
+                              若因工作需要提升积分额度，可参阅
                               <Button
                                 size="sm"
                                 variant="link"
@@ -258,9 +258,9 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                                 }}
                                 _hover={{ textDecoration: 'none', opacity: 0.8 }}
                               >
-                                《仓库智聊积分申请》
+                                《积分申请》
                               </Button>
-                            </Flex>
+                            </Box>
                           )
                         }
                       </>
@@ -378,11 +378,17 @@ export const ConsumeTenkenTip = ({
     },
     {
       title: '后续CodeMaker是否会收费，面向团队或是个人？',
-      content: '目前暂未计划收费',
+      content: '不会面向个人收费，具体分摊方案还在制定中。',
     },
     {
-      title: '怎么算使用异常？',
-      content: '异常使用的同学目前我们已经单独沟通了解了情况，大家用于正常工作即可'
+      title: '如何高效使用？',
+      content: (
+        <>
+          <Text mb={1}>* 按需选模型（省流）： 不同模型成本差异巨大。对于翻译、简单润色等任务，推荐使用高性价比模型（如 Claude Haiku）。</Text>
+          <Text mb={1}>* 及时开启新对话（提速）： 避免在一个会话中无限追加提问。历史记录过长不仅消耗成倍的 Token，还会影响模型响应速度。开启新会话，从头开始更高效。</Text>
+          <Text>* 优化提示词（精准）： 尽量一次性给出清晰、完整的指令和背景信息，减少反复纠偏造成的额度浪费。</Text>
+        </>
+      )
     },
     {
       title: '哪个模型最便宜？各模型单价在哪看？',
