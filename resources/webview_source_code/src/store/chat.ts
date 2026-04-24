@@ -1005,7 +1005,7 @@ export const useChatStore = create<ChatStore>()(
 
         const analysis = await compressionService.analyzeContext(
           session.data.messages,
-          getAIGWModel(chatConfig.model),
+          chatConfig.model,
           codebaseModelMaxTokens,
           undefined,
           pendingSavedTokens
@@ -1573,6 +1573,13 @@ export const useChatStreamStore = create(
       for (let i = sendMessages.length - 1; i >= 0; i--) {
         const sendMessage = sendMessages[i];
         if (sendMessage.isCompressionSummary) {
+          const newMessages = cloneDeep(sendMessages).splice(0, i + 1) || [];
+          chatStoreState.updateCurrentSession((session) => {
+            if (session.data?.messages) {
+              session.data.messages = newMessages;
+            }
+          });
+          // 如果是压缩总结，直接从总结的内容开始
           get().onUserSubmit('', { event: UserEvent.CODE_CHAT_CODEBASE, skipUserMessage: true });
           break;
         }

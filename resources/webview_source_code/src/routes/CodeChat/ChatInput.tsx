@@ -42,6 +42,7 @@ import ChatMentionAreatext from './ChatMentionAreatext';
 import { ChatRole } from '../../types/chat';
 import { useSelectImageAttach } from './ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
 import { ParseImgType } from '../../services/chatModel';
+import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
 // import EventBus, { EBusEvent } from '../../utils/eventbus';
 
 interface ChatInputProp {
@@ -112,6 +113,7 @@ function ChatInput(props: ChatInputProp) {
   const cUnrestrict = useAuthStore((state) => state.authExtends.c_unrestrict);
 
   const { updateHistory } = useEventContext();
+  const { stopRunningTerminal } = useTerminalMessage();
 
   const handleSubmitWithTemplate = async (prompt: Prompt) => {
     promptRef.current = prompt;
@@ -559,6 +561,13 @@ function ChatInput(props: ChatInputProp) {
         ) {
           return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库使用或新建会话`;
         } else {
+          // 检查是否需要初始化 - 显示可点击的提示，点击后打开初始化弹窗
+          if (codebaseChatMode === 'openspec' && !isOpenspecInitialized) {
+            return `__INIT_REQUIRED__openspec__openspec 环境未就绪，点击初始化`;
+          }
+          if (codebaseChatMode === 'speckit' && !isSpeckitInitialized) {
+            return `__INIT_REQUIRED__speckit__speckit 环境未就绪，点击初始化`;
+          }
           return `${config.submitKey} 发送`;
         }
       } else {
@@ -706,6 +715,7 @@ function ChatInput(props: ChatInputProp) {
             handleSubmit(userInput);
           }}
           onStop={() => {
+            stopRunningTerminal();
             onStreamStop();
             if (inputRef.current) {
               inputRef.current.focus();

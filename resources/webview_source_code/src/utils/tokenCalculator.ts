@@ -4,6 +4,7 @@ import { ChatRole } from '../types/chat';
 
 import type { ChatMessage } from '../services';
 import { ChatModel } from '../services/chatModel';
+import { getAIGWModel } from '../store/chat-config';
 
 // 编码器单例，避免重复创建和释放
 let encoderInstance: Tiktoken | null = null;
@@ -298,7 +299,7 @@ export async function analyzeTokenUsageWithTools(
   hasExactUsage: boolean;
 }> {
   const exactUsage = calculateLatestTokenUsage(messages);
-  const estimatedUsage = 4063 + await estimateTokensIncludingTools(messages, tools, model);
+  const estimatedUsage = 4063 + await estimateTokensIncludingTools(messages, tools, getAIGWModel(model));
   const maxLimit = getModelContextLimit(model, codebaseModelMaxTokens);
 
 
