@@ -28,6 +28,8 @@
       "resources/webview_source_code/src/routes/CodeChat/GlobalDataLoader.tsx",
       "resources/webview_source_code/src/routes/CodeReview/utils.ts",
       "resources/webview_source_code/src/store/chatBill.ts",
+      "resources/webview_source_code/src/store/chat.ts",
+      "resources/webview_source_code/src/routes/CodeChat/CodeChatInputActionBar.tsx",
       "resources/webview_source_code/src/utils/specVersionUtils.ts"
     ],
     "y3_only": [

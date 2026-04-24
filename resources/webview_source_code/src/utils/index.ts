@@ -35,7 +35,7 @@ export function getIsolatedStorageKey(baseKey: string): string {
     storageKey = `cm_${mode}_${baseKey}`;
 
     // 并行会话需要额外处理 panelId
-    if (mode === 'parallel' && panelId) {
+    if (mode === 'panel' && panelId) {
       storageKey = `cm_${mode}_${panelId}_${baseKey}`;
     }
   } else if (mode === 'sidebar') {
@@ -44,10 +44,10 @@ export function getIsolatedStorageKey(baseKey: string): string {
   } else if (mode === 'newwindow') {
     // 向后兼容：CM2 模式
     storageKey = `${baseKey}-cm2`;
-  } else if (mode === 'parallel') {
+  } else if (mode === 'panel') {
     // 向后兼容：并行会话模式
     const parallelId = panelId || 'default';
-    storageKey = `${baseKey}-parallel-${parallelId}`;
+    storageKey = `${baseKey}-panel-${parallelId}`;
   } else if (panelId) {
     // 兼容现有的 panelId 机制
     storageKey = `${baseKey}-panel-${panelId}`;
@@ -75,7 +75,7 @@ export function getSessionData(storageKey: string, sessionId: string): any {
     // 同步插件端逻辑：从localStorage获取所有数据
     const allData = JSON.parse(localStorage.getItem(storageKey) || '{}');
 
-    if (mode === 'parallel') {
+    if (mode === 'panel') {
       // 并行会话使用sessionId区分数据，从allData中获取对应sessionId的数据
       const sessionData = allData[sessionId] || getDefaultSessionData();
       console.log('[Debug] Parallel session data:', { sessionId, sessionData, mode });
@@ -89,6 +89,53 @@ export function getSessionData(storageKey: string, sessionId: string): any {
   } catch (error) {
     console.error('[Debug] Failed to load session data:', error);
     return getDefaultSessionData();
+  }
+}
+
+/**
+ * 清理 localStorage 中遗留的 panel（并行会话）旧存储数据
+ * 使用 sessionStorage 的 flag 保证每次应用实例只执行一次，避免每次刷新重复扫描。
+ * 后期可以移除
+ */
+export function cleanupLegacyPanelLocalStorage(): void {
+  const FLAG_KEY = '__cm_panel_ls_cleaned__';
+
+  // 同一个会话生命周期内只执行一次
+  if (sessionStorage.getItem(FLAG_KEY)) return;
+
+  try {
+    const keysToRemove: string[] = [];
+    const BASE_KEY = 'codemaker-chat-store';
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      // 匹配所有 panel 相关的聊天 store key：
+      // 1. cm_panel_*_codemaker-chat-store  （新格式）
+      // 2. codemaker-chat-store-panel-*     （兼容格式）
+      const isNewFormat =
+        key.startsWith('cm_panel_') && key.endsWith(BASE_KEY);
+      const isCompatFormat =
+        key.startsWith(`${BASE_KEY}-panel-`);
+
+      if (isNewFormat || isCompatFormat) {
+        keysToRemove.push(key);
+      }
+    }
+
+    if (keysToRemove.length > 0) {
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+      console.log(
+        `[Init] Cleaned ${keysToRemove.length} legacy panel key(s) from localStorage:`,
+        keysToRemove,
+      );
+    }
+
+    // 标记本次会话已执行过清理
+    sessionStorage.setItem(FLAG_KEY, '1');
+  } catch (error) {
+    console.warn('[Init] Failed to clean legacy panel localStorage keys:', error);
   }
 }
 

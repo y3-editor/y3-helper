@@ -12,6 +12,7 @@ import {
   PopoverBody,
   PopoverArrow,
   Spinner,
+  Portal,
 } from '@chakra-ui/react';
 
 export interface TaskItem {
@@ -236,19 +237,21 @@ const TaskProgressPanel = ({
                         </Box>
                       </PopoverTrigger>
                       {item.tip && (
-                        <PopoverContent
-                          onMouseEnter={handleTooltipMouseEnter(index)}
-                          onMouseLeave={handleTooltipMouseLeave(index)}
-                          bg={popoverBg}
-                          borderColor={popoverBorderColor}
-                          width="auto"
-                          maxW="300px"
-                        >
-                          <PopoverArrow bg={popoverBg} />
-                          <PopoverBody fontSize="12px">
-                            {item.tip}
-                          </PopoverBody>
-                        </PopoverContent>
+                        <Portal>
+                          <PopoverContent
+                            onMouseEnter={handleTooltipMouseEnter(index)}
+                            onMouseLeave={handleTooltipMouseLeave(index)}
+                            bg={popoverBg}
+                            borderColor={popoverBorderColor}
+                            width="auto"
+                            maxW="300px"
+                          >
+                            <PopoverArrow bg={popoverBg} />
+                            <PopoverBody fontSize="12px">
+                              {item.tip}
+                            </PopoverBody>
+                          </PopoverContent>
+                        </Portal>
                       )}
                     </Popover>
                   </Box>

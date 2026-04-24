@@ -240,6 +240,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       title: 'Memory 工具',
       icon: <LuMessageSquareTextIcon w="16px" h="16px" color="white" />,
       value: compressConfig.enable,
+      lebalTooltips:
+        '当上下文窗口占用达到100%时，自动进行内容压缩生成memory，增强仓库智聊对上下文的记忆能力',
       onChange: (val) => {
         setCompressConfig({ enable: val });
       },
@@ -249,7 +251,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
 
   return (
     <Box ref={popoverRef} data-tour="chat-functional-toolbar">
-      <Popover placement="top" isOpen={isOpen}>
+      <Popover placement="top" isOpen={isOpen} isLazy lazyBehavior="unmount">
         <PopoverTrigger>
           <MiniButton
             // size="sm"
@@ -278,9 +280,15 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
             </Tooltip>
           </MiniButton>
         </PopoverTrigger>
-        <PopoverContent w={'330px'}>
-          <PopoverBody display="flex" flexDirection="column" p="2">
-            <VStack flex={1} align="stretch" py={1}>
+        <PopoverContent w={'330px'} maxH="80vh" display="flex" flexDirection="column">
+          <Box
+            className="show-scrollbar"
+            flex="1"
+            minH="0"
+            overflowY="auto"
+          >
+            <PopoverBody display="flex" flexDirection="column" p="2">
+              <VStack align="stretch" py={1}>
               {!['openspec', 'speckit'].includes(codebaseChatMode || '') && renderSwitchItem({
                 title: 'Plan Mode',
                 icon: <LuListTodo size={16} />,
@@ -368,6 +376,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
               <MCPConfigCollapse setMcpSettingOpen={setMcpSettingOpen} />
             </VStack>
           </PopoverBody>
+          </Box>
         </PopoverContent>
       </Popover>
       {/* 注入组件 */}

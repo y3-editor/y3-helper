@@ -2736,7 +2736,9 @@ function CodeChat() {
   // 监听消息变化，收集所有用户消息的索引
   React.useEffect(() => {
     const msgs = currentSession?.data?.messages || [];
-    const indexes = ChatNavUtils.calculateUserMsgIndexes(msgs);
+    // 确保 msgs 是数组类型
+    const safeMsgs = Array.isArray(msgs) ? msgs : [];
+    const indexes = ChatNavUtils.calculateUserMsgIndexes(safeMsgs);
 
     setUserMsgIndexes((prev) => {
       if (isEqual(prev, indexes)) {

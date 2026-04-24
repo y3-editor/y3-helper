@@ -139,6 +139,16 @@ export const MAX_SHOW_TIP_NUM = 60;
 
 export const MAX_CHAT_RETRY_NUM = 3;
 
+// 追踪由 onNewSession 本地创建、尚未出现在服务端列表接口中的会话 ID。
+// 用于在 revalidateChatSessions 中区分"刚创建待同步"与"已被其他端删除"的会话。
+// 会话一旦出现在服务端列表中即被移除；模块级变量无需持久化，页面刷新后自然清空。
+const pendingSyncSessionIds = new Set<string>();
+
+// 追踪每个会话当前正在进行的 syncHistory 调用数量（引用计数）。
+// 当 syncHistory 正在将本地数据写入服务端时，loadSessionData 不应用服务端数据覆盖本地，
+// 否则会导致消息回滚。计数归零后自动从 Map 中移除，恢复正常的多端同步行为。
+const pendingSyncCounts = new Map<string, number>();
+
 const SUMMARY_SESSION_PROMPT = `使用四到五个字直接返回上一段话的简要主题，你的回复必须遵守以下原则：
 1. 不要解释
 2. 不要使用语气词
@@ -330,9 +340,20 @@ export const useChatStore = create<ChatStore>()(
         if (isStreaming || isProcessing || isTerminalProcessing || isApplying || isSearching) return
         const filterData = data.filter((item) => item.chat_type === chatType);
         let currentSessionId = get().currentSessionId;
+        const currentSessions = get().sessions;
+
+        // 已出现在服务端列表中的会话，从 pending 集合中移除
+        for (const session of filterData) {
+          pendingSyncSessionIds.delete(session._id);
+        }
+
         // 无本地缓存的 session id，则取历史会话数据最新的 session 作为 currentSessionId
         // 无历史会话记录，则默认创建一个新的会话
         if (!filterData.length) {
+          // 若服务端无数据但当前会话刚创建尚未同步，则跳过，避免重复创建
+          if (currentSessionId && pendingSyncSessionIds.has(currentSessionId)) {
+            return;
+          }
           get().onNewSession();
         } else {
           const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
@@ -342,6 +363,13 @@ export const useChatStore = create<ChatStore>()(
               (item) =>
                 currentSessionId && (item._id === currentSessionId) && (!item.chat_repo || item.chat_repo === workspaceInfo.repoName)
             );
+            // 当前会话可能刚创建尚未出现在服务端列表中，从本地 pending 状态查找
+            if (!targetSession && currentSessionId && pendingSyncSessionIds.has(currentSessionId)) {
+              const localSession = currentSessions.get(currentSessionId);
+              if (localSession?.chat_type === chatType && (!localSession.chat_repo || localSession.chat_repo === workspaceInfo.repoName)) {
+                targetSession = localSession;
+              }
+            }
             if (!targetSession) {
               // 如果有当前 session，那么就启用 attach 的缓存
               targetSession = filterData.find(
@@ -354,13 +382,19 @@ export const useChatStore = create<ChatStore>()(
               get().onNewSession();
             }
           }
-          const currentSessions = get().sessions;
           const nextSessions = new Map();
           for (const session of filterData) {
             nextSessions.set(
               session._id,
               currentSessions.get(session._id) || session,
             );
+          }
+          // 仅保留处于 pending 状态的本地新建会话，已被其他端删除的会话不做保留
+          if (currentSessionId && !nextSessions.has(currentSessionId) && pendingSyncSessionIds.has(currentSessionId)) {
+            const localSession = currentSessions.get(currentSessionId);
+            if (localSession?.chat_type === chatType) {
+              nextSessions.set(currentSessionId, localSession);
+            }
           }
           // 判断缓存的 session id 是否还存在数据库
           if (!currentSessionId || !nextSessions.has(currentSessionId)) {
@@ -414,6 +448,7 @@ export const useChatStore = create<ChatStore>()(
 
         useChatApplyStore.getState().clearChatApplyInfo();
         const newSession = await createSession(sessionParams);
+        pendingSyncSessionIds.add(newSession._id);
         const nextSessions = new Map(get().sessions);
         nextSessions.set(newSession._id, newSession);
         set(() => ({
@@ -504,11 +539,13 @@ export const useChatStore = create<ChatStore>()(
             const attaches = data.data?.attaches
             resumeAttaches(attaches as IMultiAttachment)
             // 避免流式过程中更新 session 导致消息丢失
+            // 避免 syncHistory 正在写入时用服务端旧数据覆盖本地新数据导致消息回滚
             if (
               !useChatStreamStore.getState().isStreaming &&
               !useChatStreamStore.getState().isSearching &&
               !useChatStreamStore.getState().isApplying &&
-              !useChatStreamStore.getState().isTerminalProcessing
+              !useChatStreamStore.getState().isTerminalProcessing &&
+              !pendingSyncCounts.has(id)
             ) {
               set(() => ({ sessions: nextSessions }));
             }
@@ -555,7 +592,25 @@ export const useChatStore = create<ChatStore>()(
         if (!sessions.size || !currentSessionId) {
           return;
         }
-        return sessions.get(currentSessionId);
+        const session = sessions.get(currentSessionId);
+
+        // 安全检查：确保 session 有正确的数据结构
+        if (session && (!session.data || !Array.isArray(session.data.messages))) {
+          const safeConsumedTokens = { input: 0, output: 0, inputCost: 0, outputCost: 0 };
+          if (session.data) {
+            session.data.messages = Array.isArray(session.data.messages)
+              ? session.data.messages
+              : [];
+            if (!session.data.consumedTokens ||
+              typeof session.data.consumedTokens.input !== 'number') {
+              session.data.consumedTokens = safeConsumedTokens;
+            }
+          } else {
+            session.data = { messages: [], consumedTokens: safeConsumedTokens };
+          }
+        }
+
+        return session;
       },
       getRecentUserMessageFromCurrentSession: () => {
         const session = get().currentSession()
@@ -899,10 +954,19 @@ export const useChatStore = create<ChatStore>()(
           })
           latestData.data.codebase_chat_mode = get().codebaseChatMode;
         }
+        const sessionId = session._id;
+        pendingSyncCounts.set(sessionId, (pendingSyncCounts.get(sessionId) || 0) + 1);
         try {
           await updateSession(latestData);
         } catch (error) {
           console.error(error);
+        } finally {
+          const count = (pendingSyncCounts.get(sessionId) || 0) - 1;
+          if (count <= 0) {
+            pendingSyncCounts.delete(sessionId);
+          } else {
+            pendingSyncCounts.set(sessionId, count);
+          }
         }
       },
       updateLastMessagePrompt(prompt: Prompt | undefined) {
