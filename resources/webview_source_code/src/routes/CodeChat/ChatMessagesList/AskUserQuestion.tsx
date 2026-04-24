@@ -18,18 +18,43 @@ import { SubscribeActions } from '../../../PostMessageProvider';
 
 const OTHER_VALUE = '__other__';
 
+/**
+ * 将 option 安全转为字符串
+ * 模型幻觉可能传入对象数组 (如 {label, desc})，需要兜底处理
+ */
+function normalizeOption(opt: unknown): string {
+  if (typeof opt === 'string') return opt;
+  if (opt && typeof opt === 'object') {
+    const obj = opt as Record<string, unknown>;
+    // 优先取 label 字段，其次 name / value，最后 JSON 序列化
+    if (typeof obj.label === 'string') return obj.label;
+    if (typeof obj.name === 'string') return obj.name;
+    if (typeof obj.value === 'string') return obj.value;
+    try {
+      return JSON.stringify(opt);
+    } catch {
+      return String(opt);
+    }
+  }
+  return String(opt);
+}
+
 export default function AskUserQuestion(props: AskUserQuestionProps) {
   const {
     toolCallId,
-    messageId,
     question,
-    options = [],
+    options: rawOptions = [],
     multiSelect = false,
     isSubmitted,
     submittedResult,
   } = props;
 
-  const onUserSubmit = useChatStreamStore((state) => state.onUserSubmit);
+  // 归一化 options，防止模型传入非字符串元素导致渲染崩溃
+  const options = React.useMemo(
+    () => (Array.isArray(rawOptions) ? rawOptions.map(normalizeOption) : []),
+    [rawOptions],
+  );
+
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
 
   const [selectedValues, setSelectedValues] = React.useState<string[]>([]);
@@ -85,18 +110,7 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
       '*'
     );
     
-  }, [
-    canSubmit,
-    selectedValues,
-    isOtherSelected,
-    customInput,
-    messageId,
-    toolCallId,
-    onUserSubmit,
-    options,
-    question,
-    toolCallId
-  ]);
+  }, [canSubmit, selectedValues, isOtherSelected, customInput, toolCallId, question]);
 
   // 已提交状态渲染
   if (isSubmitted && submittedResult) {
