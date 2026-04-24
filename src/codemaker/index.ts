@@ -36,7 +36,6 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
     // 注册打开命令
     context.subscriptions.push(
         vscode.commands.registerCommand('y3-helper.codemaker.open', () => {
-            context.globalState.update('codemaker.userClosed', false);
             vscode.commands.executeCommand('codemaker.webview.focus');
         })
     );
@@ -69,22 +68,6 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
         console.error('[Y3Maker] SkillsHandler initialization failed:', err);
     });
 
-    // 视图关闭状态管理（不涉及自动打开，可立即注册）
-    setupDisposeListener(context);
-}
-
-function setupDisposeListener(context: vscode.ExtensionContext) {
-    // 监听视图关闭
-    if (webviewProvider) {
-        const checkDispose = () => {
-            if (webviewProvider?.view) {
-                webviewProvider.view.onDidDispose(() => {
-                    context.globalState.update('codemaker.userClosed', true);
-                });
-            }
-        };
-        setTimeout(checkDispose, 2000);
-    }
 }
 
 async function startApiServer(context: vscode.ExtensionContext) {
@@ -97,10 +80,11 @@ async function startApiServer(context: vscode.ExtensionContext) {
         }
         console.log(`[Y3Maker] API Server started on port ${port}`);
 
-        // API Server 就绪后，再自动展开面板（避免 iframe 在 Server 启动前加载导致"请重新连接"）
-        const userClosed = context.globalState.get<boolean>('codemaker.userClosed', false);
-        if (!userClosed) {
+        // API Server 就绪后，仅首次自动展开面板（后续交给 VS Code 布局恢复）
+        const everOpened = context.globalState.get<boolean>('codemaker.everOpened', false);
+        if (!everOpened) {
             vscode.commands.executeCommand('codemaker.webview.focus');
+            context.globalState.update('codemaker.everOpened', true);
         }
     } catch (err) {
         console.error('[Y3Maker] Failed to start API Server:', err);
