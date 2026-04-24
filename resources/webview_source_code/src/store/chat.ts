@@ -13,10 +13,6 @@ import {
   MultipleAttach,
 } from '../services';
 import {
-  dispatchTourEvent,
-  CODEBASE_SESSION_CREATED_EVENT,
-} from '../components/FeatureTour';
-import {
   ChatHistoryGetterParams,
   createSession,
   getHistories,
@@ -431,7 +427,6 @@ export const useChatStore = create<ChatStore>()(
 
         // 新建 codebase 会话时触发引导
         if (chatType === 'codebase') {
-          dispatchTourEvent(CODEBASE_SESSION_CREATED_EVENT);
         }
         // mutateService(requestChatSessions);
       },

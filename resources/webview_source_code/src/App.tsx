@@ -41,7 +41,6 @@ import { fetchBuiltInServers, fetchNameMappings, fetchPrivateModelOnlyServers } 
 import { useChatTerminalStore } from './store/chatTerminal';
 import { usePanelContext } from './context/PanelContext';
 import { useSkillsStore } from './store/skills';
-import { FeatureTour } from './components/FeatureTour';
 import { useLoadWorkspace } from './hooks/useLoadWorkspace';
 
 const debouncedToast = createDebouncedToast();
@@ -384,7 +383,6 @@ function App() {
           disableNewApply,
           codeChatTerminalTimeout,
           themeStyle,
-          selectedModel,
           loginFrom,
           login_from,
           fixedModel,
@@ -488,22 +486,6 @@ function App() {
           useChatConfig.getState().update((config) => {
             config.model = fixedModel as ChatModel;
           });
-        }
-
-        // 应用插件传递的模型选择（如果存在）
-        if (selectedModel) {
-          // 设置全局聊天配置模型
-          useChatConfig.getState().update((config) => {
-            config.model = selectedModel;
-          });
-          
-          // 同时设置模型缓存，确保新会话使用正确的模型
-          const { setNormalChatModel, setCodebaseChatModel } = useChatConfig.getState();
-          if (initialChatType === 'codebase') {
-            setCodebaseChatModel(selectedModel);
-          } else {
-            setNormalChatModel(selectedModel);
-          }
         }
 
         setLoginLoading(false);
@@ -750,18 +732,6 @@ function App() {
         bg="answerBgColor"
         overflow="hidden"
       >
-        <FeatureTour />
-        {/* 虚拟锚点：用于 user-dashboard 引导定位到 IDE 标题栏按钮位置 */}
-        <Box
-          data-tour="user-dashboard-anchor"
-          position="fixed"
-          top="-12px"
-          right={ide === IDE.JetBrains ? '120px' : '76px'}
-          width="1px"
-          height="1px"
-          pointerEvents="none"
-          aria-hidden="true"
-        />
         <Box w="full">
           <CodeChat />
         </Box>

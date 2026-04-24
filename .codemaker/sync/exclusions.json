@@ -62,7 +62,12 @@
     "src/routes/CodeReview/ReviewDetail.tsx": "Y3无审查详情页面",
     "src/routes/CodeReview/ReviewList.tsx": "Y3无审查列表页面",
     "src/routes/CodeCoverage/": "Y3无代码覆盖率模块",
-    "src/routes/CodeChat/GlobalDataLoader/": "Y3有自己的GlobalDataLoader.tsx（从VSCode Settings读取固定模型），上游的index.tsx会调getUserModels接口（Y3没有），且目录优先于文件导致Y3版本被覆盖"
+    "src/routes/CodeChat/GlobalDataLoader/": "Y3有自己的GlobalDataLoader.tsx（从VSCode Settings读取固定模型），上游的index.tsx会调getUserModels接口（Y3没有），且目录优先于文件导致Y3版本被覆盖",
+    "src/routes/CodeChat/SpecInitModal.tsx": "[OpenSpec] 初始化弹窗，Y3不需要",
+    "src/routes/CodeChat/OpenSpecUpdateModal.tsx": "[OpenSpec] 升级弹窗，Y3不需要",
+    "src/utils/specVersionUtils.ts": "[OpenSpec] 版本检测工具，Y3不需要",
+    "src/components/FeatureTour/": "[多会话/引导] 功能引导系统，所有tour都不适用于Y3",
+    "src/components/Icon/ParallelSessionIcon.tsx": "[多会话] 并行会话图标，Y3不需要"
   },
   "excluded_upstream_files_notes": {
     "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",

@@ -559,13 +559,6 @@ function ChatInput(props: ChatInputProp) {
         ) {
           return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库使用或新建会话`;
         } else {
-          // 检查是否需要初始化 - 显示可点击的提示，点击后打开初始化弹窗
-          if (codebaseChatMode === 'openspec' && !isOpenspecInitialized) {
-            return `__INIT_REQUIRED__openspec__openspec 环境未就绪，点击初始化`;
-          }
-          if (codebaseChatMode === 'speckit' && !isSpeckitInitialized) {
-            return `__INIT_REQUIRED__speckit__speckit 环境未就绪，点击初始化`;
-          }
           return `${config.submitKey} 发送`;
         }
       } else {
