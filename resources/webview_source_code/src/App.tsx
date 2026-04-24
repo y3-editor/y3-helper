@@ -72,6 +72,7 @@ function App() {
   const { postMessage } = usePostMessage();
 
   const {
+    mode,
     panelId,
     restoreSessionId,
     isPanelMode,
@@ -120,6 +121,8 @@ function App() {
 
   // 未处理事件队列
   const pendingEventsRef = React.useRef<PostMessageSubscribeType[]>([]);
+  // SYNC_WORKSPACE_INFO 只初始化一次，防止广播导致重复创建会话
+  const panelInitializedRef = React.useRef(false);
 
   const { toast } = useCustomToast();
   const [userDashboardOpen, setUserDashboardOpen] = React.useState(false);
@@ -515,6 +518,14 @@ function App() {
         setWorkspaceInfo(workspaceData || {});
 
         if (isPanelMode) {
+          // panel 模式只初始化一次：防止广播消息导致已有 panel 重复执行初始化，
+          // 进而覆盖当前会话或重复创建空会话
+          if (panelInitializedRef.current) {
+            console.log(`[Panel ${panelId}] Already initialized, skipping SYNC_WORKSPACE_INFO`);
+            return;
+          }
+          panelInitializedRef.current = true;
+
           // 使用 URL 参数中的 chatType，默认为 codebase
           const targetChatType = initialChatType || (ide === IDE.VisualStudio ? 'default' : 'codebase');
           setChatType(targetChatType);
@@ -550,6 +561,13 @@ function App() {
           console.log(`[Panel ${panelId}] No restoreSessionId, creating new session`);
           await onNewSession();
           return;
+        } else if (mode === 'sidebar' || mode === 'newwindow') {
+          // 只做初始化保护（防止 pending replay 重复执行），后续走 workspace_session 或自然初始化
+          if (panelInitializedRef.current) {
+            console.log(`[${mode}] Already initialized, skipping SYNC_WORKSPACE_INFO`);
+            return;
+          }
+          panelInitializedRef.current = true;
         }
 
         const workspaceSession = localStorage.getItem('workspace_session');
@@ -655,7 +673,7 @@ function App() {
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, activeIndex, postMessage, chatType, initialChatType, isPanelMode, panelId, restoreSessionId, onNewSession, setShowMcpError]);
+  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, restoreSessionId, onNewSession, setShowMcpError]);
 
   React.useEffect(() => {
     const pendingChatType = pendingChatTypeRef.current;

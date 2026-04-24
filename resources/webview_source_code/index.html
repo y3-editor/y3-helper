@@ -14,13 +14,85 @@
     <script>
       // 替换为 nginx 渲染的环境变量
       try {
+        window.TEAM_REVIEW_API_URL = '__TEAM_REVIEW_API_URL__'
+        if (!window.TEAM_REVIEW_API_URL.startsWith('http')) {
+          throw('TEAM_REVIEW_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`TEAM_REVIEW_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.TEAM_REVIEW_API_URL = 'http://office-code-maker.nie.netease.com/proxy/team_review/prod/api/v1';
+      }
+      try {
+        window.CODE_COVERAGE_API_URL = '__CODE_COVERAGE_API_URL__'
+        if (!window.CODE_COVERAGE_API_URL.startsWith('http')) {
+          throw('CODE_COVERAGE_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODE_COVERAGE_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODE_COVERAGE_API_URL = 'http://office-code-maker.nie.netease.com/proxy/coverage/api/v1';
+      }
+      try {
+        window.CODE_SCAN_API_URL = '__CODE_SCAN_API_URL__'
+        if (!window.CODE_SCAN_API_URL.startsWith('http')) {
+          throw('CODE_SCAN_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODE_SCAN_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODE_SCAN_API_URL = 'http://office-code-maker.nie.netease.com/proxy/team_review/prod/api/v1';
+      }
+      try {
+        window.DEV_CLOUD_UI = '__DEV_CLOUD_UI__'
+        if (!window.DEV_CLOUD_UI.startsWith('http')) {
+          throw('DEV_CLOUD_UI 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`DEV_CLOUD_UI 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.DEV_CLOUD_UI = 'https://devcloud-office.nie.netease.com';
+      }
+      try {
+        window.CODEMAKER_UI = '__CODEMAKER_UI__'
+        if (!window.CODEMAKER_UI.startsWith('http')) {
+          throw('CODEMAKER_UI 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODEMAKER_UI 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODEMAKER_UI = 'https://codemaker.nie.netease.com';
+      }
+      try {
+        window.CODE_DISCUSSION_API_URL = '__CODE_DISCUSSION_API_URL__'
+        if (!window.CODE_DISCUSSION_API_URL.startsWith('http')) {
+          throw('CODE_DISCUSSION_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODE_DISCUSSION_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODE_DISCUSSION_API_URL = 'http://codex-discussion-yy.nie.netease.com/api/v1';
+      }
+      try {
+        window.OFFICE_BM_API_URL = '__OFFICE_BM_API_URL__'
+        if (!window.OFFICE_BM_API_URL.startsWith('http')) {
+          throw('OFFICE_BM_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`OFFICE_BM_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.OFFICE_BM_API_URL = 'https://office-code-maker.nie.netease.com';
+      }
+      try {
         window.CODEMAKER_API_URL = '__CODEMAKER_API_URL__'
         if (!window.CODEMAKER_API_URL.startsWith('http')) {
           throw('CODEMAKER_API_URL 不是一个合法的地址')
         }
       } catch (err) {
         console.error(`CODEMAKER_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
-        window.CODEMAKER_API_URL = 'http://localhost:3001';
+        window.CODEMAKER_API_URL = 'https://api-code-maker.nie.netease.com';
+      }
+      try {
+        window.CODE_MAKER_SEARCH_CONFIG_API_URL = '__CODE_MAKER_SEARCH_CONFIG_API_URL__'
+        if (!window.CODE_MAKER_SEARCH_CONFIG_API_URL.startsWith('http')) {
+          throw('CODE_MAKER_SEARCH_CONFIG_API_URL 不是一个合法的地址')
+        }
+      } catch (err) {
+        console.error(`CODE_MAKER_SEARCH_CONFIG_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
+        window.CODEMAKER_API_URL = 'https://office-codesearch.nie.netease.com';
       }
       try {
         window.MCP_API_URL = '__MCP_API_URL__'
@@ -29,7 +101,7 @@
         }
       } catch (err) {
         console.error(`MCP_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
-        window.MCP_API_URL = 'http://localhost:3001';
+        window.MCP_API_URL = 'https://mcp.netease.com';
       }
       try {
         window.SKILLS_HUB_API_URL = '__SKILLS_HUB_API_URL__'
@@ -38,8 +110,10 @@
         }
       } catch (err) {
         console.error(`SKILLS_HUB_API_URL 未能正确渲染，使用默认地址，错误信息：${err}`)
-        window.SKILLS_HUB_API_URL = 'http://localhost:3001';
+        window.SKILLS_HUB_API_URL = 'https://test-skills.netease.com';
       }
+      window.TRACING_ENV = '__TRACING_ENV__';
+      window.TRACING_PROJECT = '__TRACING_PROJECT__';
     </script>
   </head>
   <body>

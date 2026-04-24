@@ -7,6 +7,8 @@ import { ChatMessageHandle } from './ChatMessagesList/types';
  */
 export const calculateUserMsgIndexes = (messages: ChatMessage[]): number[] => {
   const indexes: number[] = [];
+  // 安全检查：确保 messages 是数组
+  if (!Array.isArray(messages)) return indexes;
   messages.forEach((msg, idx) => {
     if (msg.role === ChatRole.User && !msg.hidden) {
       indexes.push(idx);
