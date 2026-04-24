@@ -372,8 +372,15 @@ export class EditorTable<N extends Table.NameCN = Table.NameCN> extends vscode.D
     get template() {
         if (this._template === undefined) {
             let templateUri = vscode.Uri.joinPath(y3.helper.extensionUri, templateDir, `${this.nameEN}.json`);
-            let template = fs.readFileSync(templateUri.fsPath, 'utf-8');
-            this._template = jsonc.parse(template);
+            let template;
+            try {
+                template = fs.readFileSync(templateUri.fsPath, 'utf-8');
+            } catch {}
+            if (template) {
+                this._template = jsonc.parse(template);
+            } else {
+                this._template = {};
+            }
         }
         return this._template;
     }
@@ -740,10 +747,10 @@ export function openTable<N extends Table.NameCN>(tableName: N): EditorTable<N> 
 }
 
 export async function getAllObjects() {
+    await y3.env.mapReady();
     let map = y3.env.currentTriggerMap;
-    while (!map || !map.editorTable) {
-        await y3.sleep(100);
-        map = y3.env.currentTriggerMap;
+    if (!map) {
+        return [];
     }
     return await map.editorTable.getAllObjects();
 }
@@ -752,10 +759,10 @@ export async function getAllObjects() {
  * 根据key获取对象
  */
 export async function getObjectsByKey(key: number): Promise<EditorObject[]> {
+    await y3.env.mapReady();
     let map = y3.env.currentTriggerMap;
-    while (!map || !map.editorTable) {
-        await y3.sleep(100);
-        map = y3.env.currentTriggerMap;
+    if (!map) {
+        return [];
     }
     return await map.editorTable.getObjectsByKey(key);
 }

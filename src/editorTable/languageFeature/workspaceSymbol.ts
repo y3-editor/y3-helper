@@ -90,7 +90,13 @@ class Provider implements vscode.WorkspaceSymbolProvider {
             return;
         }
         let [_, name, sep, field] = matchResult;
-        let objectResults = this.searchObject(allObjects, name);
+        let objectResults;
+        try {
+            objectResults = this.searchObject(allObjects, name);
+        } catch (e) {
+            y3.log.error(String(e));
+            return;
+        }
         if (objectResults.length === 0) {
             return;
         }
