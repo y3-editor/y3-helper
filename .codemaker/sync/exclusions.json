@@ -56,7 +56,7 @@
     "src/telemetry/": "CodeMaker内部遥测，Y3用stub替代",
     "src/patchSetup.ts": "CodeMaker内部Sentry补丁",
     "src/routes/CodeReview/index.tsx": "Y3无代码审查页面组件，依赖store/localReview等不存在的模块",
-    "src/routes/CodeReview/const.ts": "Y3无TEAM_REVIEW_API_URL等CodeReview常量",
+    "src/routes/CodeReview/TeamReview.tsx": "Y3用轻量版TeamReview.ts替代（仅导出IssueFilter需要的常量），上游完整版依赖链过重",
     "src/routes/CodeReview/ReviewLanding.tsx": "Y3无代码审查着陆页",
     "src/routes/CodeReview/CreateReviewRequest.tsx": "Y3无创建审查请求页面",
     "src/routes/CodeReview/ReviewDetail.tsx": "Y3无审查详情页面",
@@ -67,7 +67,8 @@
     "src/routes/CodeChat/OpenSpecUpdateModal.tsx": "[OpenSpec] 升级弹窗，Y3不需要",
     "src/utils/specVersionUtils.ts": "[OpenSpec] 版本检测工具，Y3不需要",
     "src/components/FeatureTour/": "[多会话/引导] 功能引导系统，所有tour都不适用于Y3",
-    "src/components/Icon/ParallelSessionIcon.tsx": "[多会话] 并行会话图标，Y3不需要"
+    "src/components/Icon/ParallelSessionIcon.tsx": "[多会话] 并行会话图标，Y3不需要",
+    "src/routes/CodeChat/ChatModelSelector.tsx": "Y3不需要模型选择功能，固定使用VSCode Settings中的模型配置"
   },
   "excluded_upstream_files_notes": {
     "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",

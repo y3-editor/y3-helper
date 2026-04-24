@@ -12,10 +12,10 @@ import FileRecommendApplyPanel, { IRecommendFileChangeRecord } from '../FileReco
 import { UserEvent } from '../../../types/report';
 import { ChatRole } from '../../../types/chat';
 import { ChatMessage } from '../../../services';
-import ToolCall from './ToolCall';
 import Icon from '../../../components/Icon';
 import { FaAngleRight, FaAngleDown } from 'react-icons/fa6';
 import * as React from 'react';
+import { usePrevious } from '../../../hooks/usePrevious';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (toolName: string | undefined): 'list' | 'read' | 'search' | null => {
@@ -31,7 +31,7 @@ const getToolCategory = (toolName: string | undefined): 'list' | 'read' | 'searc
   return null;
 };
 
-// 合并消息的渲染器
+// 消息渲染器（不再合并连续的相同工具调用）
 function MergedMessagesRenderer({
   messages,
   isLatest,
@@ -49,142 +49,14 @@ function MergedMessagesRenderer({
   isShare: boolean | undefined;
   setRecommendFileChanges: any;
 }) {
-  const isStreaming = useChatStreamStore((state) => state.isStreaming);
-  const isProcessing = useChatStreamStore((state) => state.isProcessing);
-
-  // 只有当前消息组正在流式输出时不合并，其他情况都合并
-  const shouldMerge = !(isLatest && (isStreaming || isProcessing));
-
-  // 合并连续的包含 read_file 的消息
+  // 不再合并，所有消息都作为单个消息处理
   const mergedMessages = useMemo(() => {
-    // 如果不应该合并，直接返回单个消息
-    if (!shouldMerge) {
-      return messages.map((message, index) => ({
-        type: 'single' as const,
-        messages: [message],
-        indices: [index],
-      }));
-    }
-
-    const result: Array<{
-      type: 'single' | 'merged_read_file';
-      messages: ChatMessage[];
-      indices: number[];
-    }> = [];
-
-    let currentReadFileGroup: ChatMessage[] = [];
-    let currentReadFileIndices: number[] = [];
-    let currentToolCategory: 'list' | 'read' | 'search' | null = null; // 记录当前组的工具类别
-
-    messages.forEach((message, index) => {
-      const isAssistant = message.role === ChatRole.Assistant;
-      if (!isAssistant || message.processing) {
-        // 如果有累积的工具调用，先处理
-        if (currentReadFileGroup.length > 0) {
-          if (currentReadFileGroup.length === 1) {
-            result.push({
-              type: 'single',
-              messages: [currentReadFileGroup[0]],
-              indices: [currentReadFileIndices[0]],
-            });
-          } else {
-            result.push({
-              type: 'merged_read_file',
-              messages: currentReadFileGroup,
-              indices: currentReadFileIndices,
-            });
-          }
-          currentReadFileGroup = [];
-          currentReadFileIndices = [];
-          currentToolCategory = null;
-        }
-        return;
-      }
-
-      // 检查消息是否包含可合并的工具调用
-      const toolName = message.tool_calls?.[0]?.function?.name;
-      const toolCategory = getToolCategory(toolName);
-      const hasEmptyContent = !message.content || message.content === '-' || message.content === '';
-
-      // grep_search 不参与合并，单独显示
-      const shouldMergeThisTool = message.tool_calls?.length === 1
-        && message.tool_calls[0]?.type === 'function'
-        && toolCategory !== null
-        && toolName !== 'grep_search' // grep_search 不合并
-        && hasEmptyContent; // 其他工具只有 content 为空时才合并
-
-      if (shouldMergeThisTool) {
-        // 如果工具类别和当前组的类别不同，先处理之前的组
-        if (currentToolCategory !== null && currentToolCategory !== toolCategory) {
-          if (currentReadFileGroup.length === 1) {
-            result.push({
-              type: 'single',
-              messages: [currentReadFileGroup[0]],
-              indices: [currentReadFileIndices[0]],
-            });
-          } else if (currentReadFileGroup.length > 1) {
-            result.push({
-              type: 'merged_read_file',
-              messages: currentReadFileGroup,
-              indices: currentReadFileIndices,
-            });
-          }
-          currentReadFileGroup = [];
-          currentReadFileIndices = [];
-        }
-
-        currentReadFileGroup.push(message);
-        currentReadFileIndices.push(index);
-        currentToolCategory = toolCategory;
-      } else {
-        // 如果有累积的工具调用，先处理
-        if (currentReadFileGroup.length > 0) {
-          if (currentReadFileGroup.length === 1) {
-            result.push({
-              type: 'single',
-              messages: [currentReadFileGroup[0]],
-              indices: [currentReadFileIndices[0]],
-            });
-          } else {
-            result.push({
-              type: 'merged_read_file',
-              messages: currentReadFileGroup,
-              indices: currentReadFileIndices,
-            });
-          }
-          currentReadFileGroup = [];
-          currentReadFileIndices = [];
-          currentToolCategory = null;
-        }
-
-        // 添加当前的非可合并工具消息
-        result.push({
-          type: 'single',
-          messages: [message],
-          indices: [index],
-        });
-      }
-    });
-
-    // 处理最后累积的工具调用
-    if (currentReadFileGroup.length > 0) {
-      if (currentReadFileGroup.length === 1) {
-        result.push({
-          type: 'single',
-          messages: [currentReadFileGroup[0]],
-          indices: [currentReadFileIndices[0]],
-        });
-      } else {
-        result.push({
-          type: 'merged_read_file',
-          messages: currentReadFileGroup,
-          indices: currentReadFileIndices,
-        });
-      }
-    }
-
-    return result;
-  }, [messages, shouldMerge]);
+    return messages.map((message, index) => ({
+      type: 'single' as const,
+      messages: [message],
+      indices: [index],
+    }));
+  }, [messages]);
 
   return (
     <OuterCollapseWrapper
@@ -210,7 +82,7 @@ function OuterCollapseWrapper({
   setRecommendFileChanges,
 }: {
   mergedMessages: Array<{
-    type: 'single' | 'merged_read_file';
+    type: 'single';
     messages: ChatMessage[];
     indices: number[];
   }>;
@@ -224,7 +96,7 @@ function OuterCollapseWrapper({
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
 
-  // 检查是否有工具调用需要用户确认
+  // 检查是否有工具调用需要用户确认（提前计算，用于初始状态）
   const needsUserConfirmation = React.useMemo(() => {
     return mergedMessages.some(item => {
       return item.messages.some(msg => {
@@ -238,22 +110,46 @@ function OuterCollapseWrapper({
     });
   }, [mergedMessages]);
 
-  // 流式进行中时展开，流式结束后折叠；但需要用户确认时保持展开
-  const [isCollapsed, setIsCollapsed] = React.useState(
-    !isLatest || (!(isStreaming || isProcessing) && !needsUserConfirmation)
-  );
+  // 追踪流式状态的变化
+  const prevIsStreaming = usePrevious(isStreaming);
+  const prevIsProcessing = usePrevious(isProcessing);
 
-  // 监听流式状态变化，自动更新折叠状态
-  React.useEffect(() => {
-    if (isLatest) {
-      // 如果需要用户确认，保持展开
-      if (needsUserConfirmation) {
-        setIsCollapsed(false);
-      } else {
-        setIsCollapsed(!(isStreaming || isProcessing));
-      }
+  // 非最新消息永远折叠，最新消息根据流式状态决定
+  // 使用 useRef 来存储初始折叠状态，避免组件挂载时的状态变化
+  const initialCollapsedRef = React.useRef<boolean | null>(null);
+  if (initialCollapsedRef.current === null) {
+    if (!isLatest) {
+      initialCollapsedRef.current = true;
+    } else if (needsUserConfirmation) {
+      initialCollapsedRef.current = false;
+    } else {
+      initialCollapsedRef.current = !(isStreaming || isProcessing);
     }
-  }, [isLatest, isStreaming, isProcessing, needsUserConfirmation]);
+  }
+
+  const [isCollapsed, setIsCollapsed] = React.useState(initialCollapsedRef.current);
+
+  // 仅在流式传输 **结束** 时自动折叠，不在开始时触发状态变化
+  React.useEffect(() => {
+    // 非最新消息不处理
+    if (!isLatest) return;
+
+    // 需要用户确认时，保持展开
+    if (needsUserConfirmation) {
+      setIsCollapsed(false);
+      return;
+    }
+
+    // 只检测流式传输结束（从运行中变为停止）
+    const wasRunning = prevIsStreaming === true || prevIsProcessing === true;
+    const isNowStopped = !isStreaming && !isProcessing;
+
+    // 只在从运行状态变为停止状态时自动折叠
+    if (wasRunning && isNowStopped) {
+      setIsCollapsed(true);
+    }
+    // 注意：不处理从停止到开始的情况，避免触发滚动
+  }, [isLatest, isStreaming, isProcessing, prevIsStreaming, prevIsProcessing, needsUserConfirmation]);
 
   // 判断一个消息组是否是文件操作
   const isFileOperation = (group: typeof mergedMessages[0]) => {
@@ -347,34 +243,23 @@ function OuterCollapseWrapper({
               </Box>
               {!isCollapsed && (
                 <VStack align="stretch" gap={0}>
-                  {outerGroup.groups.map((group, groupIndex) => {
-                    if (group.type === 'merged_read_file') {
-                      return (
-                        <MergedReadFileMessages
-                          key={`merged-${group.messages[0]?.id || groupIndex}`}
-                          messages={group.messages}
-                          isLatest={isLatest}
-                          isShare={isShare}
-                        />
-                      );
-                    } else {
-                      const message = group.messages[0];
-                      const index = group.indices[0];
-                      return (
-                        <ChatAssistantMessage
-                          key={(message?.id || '') + index}
-                          index={index}
-                          message={message}
-                          isLatest={isLatest}
-                          isRecent={false}
-                          attachs={attachs}
-                          onNewSession={onNewSession}
-                          onFeedback={onFeedback}
-                          isShare={isShare}
-                          setRecommendFileChanges={setRecommendFileChanges}
-                        />
-                      );
-                    }
+                  {outerGroup.groups.map((group) => {
+                    const message = group.messages[0];
+                    const index = group.indices[0];
+                    return (
+                      <ChatAssistantMessage
+                        key={(message?.id || '') + index}
+                        index={index}
+                        message={message}
+                        isLatest={isLatest}
+                        isRecent={false}
+                        attachs={attachs}
+                        onNewSession={onNewSession}
+                        onFeedback={onFeedback}
+                        isShare={isShare}
+                        setRecommendFileChanges={setRecommendFileChanges}
+                      />
+                    );
                   })}
                 </VStack>
               )}
@@ -384,78 +269,29 @@ function OuterCollapseWrapper({
           // 正常渲染
           return (
             <Box key={`outer-${outerIndex}`}>
-              {outerGroup.groups.map((group, groupIndex) => {
-                if (group.type === 'merged_read_file') {
-                  return (
-                    <MergedReadFileMessages
-                      key={`merged-${group.messages[0]?.id || groupIndex}`}
-                      messages={group.messages}
-                      isLatest={isLatest}
-                      isShare={isShare}
-                    />
-                  );
-                } else {
-                  const message = group.messages[0];
-                  const index = group.indices[0];
-                  return (
-                    <ChatAssistantMessage
-                      key={(message?.id || '') + index}
-                      index={index}
-                      message={message}
-                      isLatest={isLatest}
-                      isRecent={index === mergedMessages.length - 1 && isLatest}
-                      attachs={attachs}
-                      onNewSession={onNewSession}
-                      onFeedback={onFeedback}
-                      isShare={isShare}
-                      setRecommendFileChanges={setRecommendFileChanges}
-                    />
-                  );
-                }
+              {outerGroup.groups.map((group) => {
+                const message = group.messages[0];
+                const index = group.indices[0];
+                return (
+                  <ChatAssistantMessage
+                    key={(message?.id || '') + index}
+                    index={index}
+                    message={message}
+                    isLatest={isLatest}
+                    isRecent={index === mergedMessages.length - 1 && isLatest}
+                    attachs={attachs}
+                    onNewSession={onNewSession}
+                    onFeedback={onFeedback}
+                    isShare={isShare}
+                    setRecommendFileChanges={setRecommendFileChanges}
+                  />
+                );
               })}
             </Box>
           );
         }
       })}
     </>
-  );
-}
-
-// 合并的 read_file 消息组件
-function MergedReadFileMessages({
-  messages,
-  isLatest,
-  isShare,
-}: {
-  messages: ChatMessage[];
-  isLatest: boolean | undefined;
-  isShare: boolean | undefined;
-}) {
-  // 合并所有 tool_calls 和 tool_result
-  const mergedMessage = useMemo(() => {
-    const allToolCalls = messages.flatMap(msg => msg.tool_calls || []);
-    const allToolResults = messages.reduce((acc, msg) => {
-      return { ...acc, ...(msg.tool_result || {}) };
-    }, {});
-
-    return {
-      ...messages[0],
-      tool_calls: allToolCalls,
-      tool_result: allToolResults,
-      response: messages.reduce((acc, msg) => {
-        return { ...acc, ...(msg.response || {}) };
-      }, {}),
-    };
-  }, [messages]);
-
-  return (
-    <Box>
-      <ToolCall
-        message={mergedMessage}
-        isShare={!!isShare}
-        isLatest={isLatest}
-      />
-    </Box>
   );
 }
 
