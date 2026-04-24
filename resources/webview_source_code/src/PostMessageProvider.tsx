@@ -151,7 +151,6 @@ export enum BroadcastActions {
   DROP_FILES = 'DROP_FILES',
 
   // 新建并行会话（在新窗口打开 Codebase Chat）
-  OPEN_PARALLEL_SESSION = 'OPEN_PARALLEL_SESSION',
 
   // 更新面板标题（用于并行会话窗口动态更新标题）
   UPDATE_PANEL_TITLE = 'UPDATE_PANEL_TITLE',

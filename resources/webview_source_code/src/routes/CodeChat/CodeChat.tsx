@@ -154,15 +154,8 @@ import {
   BUILT_IN_PROMPTS_OPENSPEC_V1,
   BUILT_IN_PROMPTS_SPECKIT,
 } from '../../services/builtInPrompts';
-import SpecInitModal from './SpecInitModal';
-import OpenSpecUpdateModal from './OpenSpecUpdateModal';
 import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
-import {
-  usePageEntryTour,
-  useEventTriggerTour,
-  CODEBASE_SESSION_CREATED_EVENT,
-} from '../../components/FeatureTour';
 import { usePanelContext } from '../../context/PanelContext';
 
 // 468(原本宽度)+40(token数的宽度)
@@ -269,8 +262,6 @@ function CodeChat() {
   const selectedFolderHook = useSelectedFolderAttach();
 
   // 功能引导触发器
-  usePageEntryTour('/chat');
-  useEventTriggerTour(CODEBASE_SESSION_CREATED_EVENT);
 
   const { stopRunningTerminal } = useTerminalMessage();
 
@@ -3264,9 +3255,7 @@ function CodeChat() {
         </Split>
         <MCPErrorModal />
         {/* Spec 初始化引导弹窗 */}
-        <SpecInitModal />
         {/* OpenSpec 升级弹窗 */}
-        <OpenSpecUpdateModal />
         {/* Prompt 编辑和删除 Modal */}
         <PromptModals />
       </Box>

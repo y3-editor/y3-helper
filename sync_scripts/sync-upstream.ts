@@ -740,11 +740,20 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
         }
     }
 
-    // 打印状态
+    // 打印状态（含所有 commit 列表）
     if (webuiTarget) {
         const marker = (selectedRepo === 'webui') ? '📦' : '⏸️';
         console.log(`  ${marker} webui: ${baseline.webui.lastSyncCommit.slice(0, 8)} → ${webuiTarget.commit.slice(0, 8)} (${webuiTarget.date})`);
         console.log(`     ${webuiTarget.message}`);
+        // 列出 baseline → target 之间所有 commit
+        const commitList = git(
+            local.webui.localPath,
+            `log ${baseline.webui.lastSyncCommit}..${webuiTarget.commit} --format="%h %s" --reverse`
+        ).split('\n').filter(Boolean);
+        if (commitList.length > 0) {
+            console.log(`     📝 涉及 ${commitList.length} 个提交:`);
+            commitList.forEach(c => console.log(`        • ${c}`));
+        }
     } else if (!repoFilter || repoFilter === 'webui') {
         console.log('  ✅ webui: 已是最新版本');
     }
@@ -753,6 +762,15 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
         const marker = (selectedRepo === 'extension') ? '📦' : '⏸️';
         console.log(`  ${marker} extension: ${baseline.extension.lastSyncCommit.slice(0, 8)} → ${extTarget.commit.slice(0, 8)} (${extTarget.date})`);
         console.log(`     ${extTarget.message}`);
+        // 列出 baseline → target 之间所有 commit
+        const commitList = git(
+            local.extension.localPath,
+            `log ${baseline.extension.lastSyncCommit}..${extTarget.commit} --format="%h %s" --reverse`
+        ).split('\n').filter(Boolean);
+        if (commitList.length > 0) {
+            console.log(`     📝 涉及 ${commitList.length} 个提交:`);
+            commitList.forEach(c => console.log(`        • ${c}`));
+        }
     } else if (!repoFilter || repoFilter === 'extension') {
         console.log('  ✅ extension: 已是最新版本');
     }

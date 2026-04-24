@@ -6,8 +6,8 @@ import { getCodeMakerConfig } from './configProvider';
 import { handleExtendedMessage, loadSkillsFromDir, handleGetRules, handleGetSkills } from './messageHandlers';
 import { getWorkspaceTracker } from './handlers/workspaceTracker';
 import { getOpenFilesHandler } from './handlers/openFilesHandler';
-import { isDocsetFile } from './utils/file';
-import { readFileSync } from 'fs';
+import { isDocsetFile, isImageFile, maxDocsetFileSize } from './utils/file';
+import { readFileSync, statSync } from 'fs';
 import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
 import SkillsHandler from './skillsHandler';
 
@@ -1275,7 +1275,15 @@ Provide the complete updated code.`;
                         const uri = vscode.Uri.file(absolutePath);
                         await vscode.workspace.fs.stat(uri);
                         let content: Buffer | string = '';
-                        if (isDocsetFile(absolutePath)) {
+                        if (isImageFile(absolutePath)) {
+                            // 图片文件：检查大小限制（20MB），base64 编码
+                            const stats = statSync(absolutePath);
+                            if (stats.size > maxDocsetFileSize * 2) {
+                                content = `Please note: ${absolutePath} larger than 20MB cannot be parsed.`;
+                            } else {
+                                content = readFileSync(absolutePath).toString('base64');
+                            }
+                        } else if (isDocsetFile(absolutePath)) {
                             content = readFileSync(absolutePath).toString('base64');
                         } else {
                             const document = await vscode.workspace.openTextDocument(uri);
@@ -1365,6 +1373,7 @@ Provide the complete updated code.`;
             this._leftOverMessages.push(message);
         }
     }
+
 
     private _sendToWebview(message: any) {
         this._view?.webview.postMessage(message);

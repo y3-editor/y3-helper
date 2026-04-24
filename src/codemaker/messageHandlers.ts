@@ -10,7 +10,7 @@
  * - SVN/Git 仓库（GET_SVN_REPO_URL, GET_WORKSPACE_REPO_URL, GET_REPO_LOCAL_DIFF, GIT_CHECKOUT_BRANCH）
  * - 网络诊断（START_NETWORK_DIAGNOSTIC）
  * - 并行会话（OPEN_PARALLEL_SESSION, WEBVIEW_BROADCAST, OPEN_WEBVIEW_IN_NEW_WINDOW）
- * - OpenSpec 相关（GET_SPEC_INFO, OPEN_SPEC_SETUP, SPECKIT_SETUP）
+ * - OpenSpec 相关（GET_SPEC_INFO, OPEN_SPEC_SETUP, SPECKIT_SETUP, OPENSPEC_UPDATE）— 已加 stub，待完整实现
  */
 
 import * as vscode from 'vscode';
@@ -596,10 +596,14 @@ export async function handleExtendedMessage(
             return true;
         }
 
-        case 'OPEN_PARALLEL_SESSION':
-        case 'WEBVIEW_BROADCAST':
-        case 'OPEN_WEBVIEW_IN_NEW_WINDOW': {
-            // 简化：Y3Helper 单面板模式
+        // Y3 不需要的功能：静默处理，参见 y3-product-scope.md
+        case 'GET_SPEC_INFO':      // OpenSpec
+        case 'OPEN_SPEC_SETUP':    // OpenSpec
+        case 'SPECKIT_SETUP':      // OpenSpec
+        case 'OPENSPEC_UPDATE':    // OpenSpec
+        case 'OPEN_PARALLEL_SESSION':   // 多会话
+        case 'WEBVIEW_BROADCAST':       // 多会话
+        case 'OPEN_WEBVIEW_IN_NEW_WINDOW': { // 多会话
             return true;
         }
 

@@ -35,9 +35,6 @@ import { debounce } from 'lodash';
 // import { TfiMenuAlt } from 'react-icons/tfi';
 import ChatSearch from './ChatSearch';
 import { AiOutlineClear } from 'react-icons/ai';
-import { BroadcastActions, usePostMessage } from '../../PostMessageProvider';
-import ParallelSessionIcon from '../../components/Icon/ParallelSessionIcon';
-import { useChatConfig } from '../../store/chat-config';
 
 function ChatHeaderToolbar() {
   const chatType = useChatStore((state) => state.chatType);
@@ -46,8 +43,6 @@ function ChatHeaderToolbar() {
     (state) => [state.onNewSession, state.clearSession],
     shallow,
   );
-  const selectedModel = useChatConfig((state) => state.config.model);
-  const { postMessage } = usePostMessage();
   // const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   // const activeChangeId = useChatStore((state) => state.activeChangeId);
   // const activeFeatureId = useChatStore((state) => state.activeFeatureId);
@@ -108,16 +103,6 @@ function ChatHeaderToolbar() {
     stopRunningTerminal();
     createNewSession();
   }, [createNewSession, stopRunningTerminal]);
-
-  const handleCreateParallelSession = React.useCallback(() => {
-    postMessage({
-      type: BroadcastActions.OPEN_PARALLEL_SESSION,
-      data: {
-        chatType,
-        selectedModel,
-      },
-    });
-  }, [chatType, selectedModel, postMessage]);
 
   const handleCreateSession = React.useMemo(
     () =>
@@ -221,17 +206,6 @@ function ChatHeaderToolbar() {
           </Popover>
         </div>
         <ChatHistories ref={historyRef} />
-        <Tooltip label="新建并行会话" data-tour="parallel-session">
-          <IconButton
-            aria-label="新建并行会话"
-            size="xs"
-            isDisabled={disabled}
-            icon={<ParallelSessionIcon size={16} />}
-            onClick={handleCreateParallelSession}
-            bg="none"
-            color="text.default"
-          />
-        </Tooltip>
         <Tooltip label="新建会话">
           <IconButton
             aria-label="新建会话"
