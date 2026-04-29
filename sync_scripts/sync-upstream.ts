@@ -69,6 +69,10 @@ interface ChangeItem {
     diff?: string;
     /** 上游目标 commit 中该文件的完整内容 */
     upstream_content?: string;
+    /** 涉及的 feat commit messages（需要用户确认是否合并） */
+    feat_commits?: string[];
+    /** 是否需要用户确认（feat 新需求） */
+    needs_user_confirm?: boolean;
 }
 
 interface SyncTarget {
@@ -537,6 +541,75 @@ function getFileContentAtCommitSafe(repoPath: string, commit: string, filePath: 
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Phase 1: Feat Commit Detection
+// ═══════════════════════════════════════════════════════════════
+
+interface FeatCommitInfo {
+    hash: string;
+    message: string;
+    files: string[];
+}
+
+/**
+ * 获取 baseline→target 之间所有以 feat 开头的 commit，以及每个 commit 修改的文件列表。
+ * 用于标记哪些变更文件涉及新需求，需要用户确认是否合并。
+ */
+function getFeatCommits(repoPath: string, fromCommit: string, toCommit: string): FeatCommitInfo[] {
+    // 获取所有 commit hash + message
+    const logRaw = git(repoPath, `log ${fromCommit}..${toCommit} --format="%H||%s" --reverse`);
+    if (!logRaw) return [];
+
+    const commits = logRaw.split('\n').filter(Boolean).map(line => {
+        const [hash, ...msgParts] = line.split('||');
+        return { hash, message: msgParts.join('||') };
+    });
+
+    // 筛选 feat 开头的 commit（不区分大小写，支持 feat: feat(...) 等格式）
+    const featCommits = commits.filter(c => /^feat[\s(:]/i.test(c.message));
+
+    if (featCommits.length === 0) return [];
+
+    // 获取每个 feat commit 修改的文件列表
+    return featCommits.map(c => {
+        const filesRaw = git(repoPath, `diff-tree --no-commit-id --name-only -r ${c.hash}`);
+        return {
+            hash: c.hash,
+            message: c.message,
+            files: filesRaw ? filesRaw.split('\n').filter(Boolean) : [],
+        };
+    });
+}
+
+/**
+ * 为 ChangeItem 标记是否涉及 feat commit。
+ * 如果该文件出现在任何 feat commit 的变更文件中，则标记 needs_user_confirm = true。
+ */
+function markFeatItems(items: ChangeItem[], featCommits: FeatCommitInfo[]): void {
+    if (featCommits.length === 0) return;
+
+    // 构建文件 → feat commit messages 的映射
+    const fileToFeatMessages = new Map<string, string[]>();
+    for (const fc of featCommits) {
+        const shortMsg = `${fc.hash.slice(0, 8)} ${fc.message}`;
+        for (const f of fc.files) {
+            if (!fileToFeatMessages.has(f)) {
+                fileToFeatMessages.set(f, []);
+            }
+            fileToFeatMessages.get(f)!.push(shortMsg);
+        }
+    }
+
+    // 标记 items
+    for (const item of items) {
+        const featMsgs = fileToFeatMessages.get(item.upstream_path);
+        if (featMsgs && featMsgs.length > 0) {
+            item.feat_commits = featMsgs;
+            item.needs_user_confirm = true;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  Phase 1: Report Generation
 // ═══════════════════════════════════════════════════════════════
 
@@ -577,6 +650,7 @@ function generateMarkdownReport(report: SyncReport): void {
     const newItems = report.items.filter(i => i.category === 'new');
     const skip = report.items.filter(i => i.category === 'skip');
     const exists = report.items.filter(i => i.category === 'exists');
+    const featItems = report.items.filter(i => i.needs_user_confirm);
 
     lines.push('## 📊 概览');
     lines.push('| 分类 | 数量 |');
@@ -587,15 +661,36 @@ function generateMarkdownReport(report: SyncReport): void {
     lines.push(`| ⏭️ EXISTS (已有实现) | ${exists.length} |`);
     lines.push(`| ⚪ SKIP (已排除) | ${skip.length} |`);
     lines.push(`| 合计 | ${report.items.length} |`);
+    if (featItems.length > 0) {
+        lines.push(`| **🏷️ 涉及新需求 (需用户确认)** | **${featItems.length}** |`);
+    }
     lines.push('');
+
+    // FEAT — 涉及新需求，需用户确认
+    if (featItems.length > 0) {
+        lines.push('## 🏷️ FEAT — 涉及新需求（需用户确认是否合并）');
+        lines.push('');
+        lines.push('> 以下文件的变更来自 `feat` 开头的 commit，表示是上游新需求。');
+        lines.push('> **合并时 AI 必须逐项询问用户是否需要此功能，不得自动合并。**');
+        lines.push('');
+        lines.push('| # | 分类 | 仓库 | 上游文件 | Y3文件 | feat commit |');
+        lines.push('|---|------|------|---------|--------|------------|');
+        for (const item of featItems) {
+            const featInfo = (item.feat_commits || []).join('; ');
+            const catIcon = item.category === 'safe' ? '🟢' : item.category === 'review' ? '🟡' : '🔴';
+            lines.push(`| ${item.id} | ${catIcon} ${item.category.toUpperCase()} | ${item.repo} | ${item.upstream_path} | ${item.local_path || '-'} | ${featInfo} |`);
+        }
+        lines.push('');
+    }
 
     // SAFE
     if (safe.length > 0) {
         lines.push('## 🟢 SAFE - 可直接覆盖');
-        lines.push('| # | 仓库 | 上游文件 | Y3文件 | 变更类型 |');
-        lines.push('|---|------|---------|--------|---------|');
+        lines.push('| # | 仓库 | 上游文件 | Y3文件 | 变更类型 | 新需求? |');
+        lines.push('|---|------|---------|--------|---------|--------|');
         for (const item of safe) {
-            lines.push(`| ${item.id} | ${item.repo} | ${item.upstream_path} | ${item.local_path} | ${item.change_type} |`);
+            const featTag = item.needs_user_confirm ? '🏷️ 需确认' : '';
+            lines.push(`| ${item.id} | ${item.repo} | ${item.upstream_path} | ${item.local_path} | ${item.change_type} | ${featTag} |`);
         }
         lines.push('');
     }
@@ -603,10 +698,11 @@ function generateMarkdownReport(report: SyncReport): void {
     // REVIEW
     if (review.length > 0) {
         lines.push('## 🟡 REVIEW - 需对比决策');
-        lines.push('| # | 仓库 | 上游文件 | Y3文件 | 原因 | 变更类型 |');
-        lines.push('|---|------|---------|--------|------|---------|');
+        lines.push('| # | 仓库 | 上游文件 | Y3文件 | 原因 | 变更类型 | 新需求? |');
+        lines.push('|---|------|---------|--------|------|---------|--------|');
         for (const item of review) {
-            lines.push(`| ${item.id} | ${item.repo} | ${item.upstream_path} | ${item.local_path || '-'} | ${item.reason} | ${item.change_type} |`);
+            const featTag = item.needs_user_confirm ? '🏷️ 需确认' : '';
+            lines.push(`| ${item.id} | ${item.repo} | ${item.upstream_path} | ${item.local_path || '-'} | ${item.reason} | ${item.change_type} | ${featTag} |`);
         }
         lines.push('');
     }
@@ -866,6 +962,33 @@ function analyze(skipToDate?: string, repoFilter?: 'webui' | 'extension'): void 
         if (messageTypeChanges.exists_cases.length > 0) {
             console.log(`  ⏭️ 已有实现: ${messageTypeChanges.exists_cases.join(', ')}`);
         }
+    }
+
+    // Feat commit detection — 标记涉及新需求(feat)的变更文件
+    console.log('🏷️  检测 feat commit（新需求标记）...');
+    if (processWebui && webuiTarget) {
+        const webuiFeatCommits = getFeatCommits(local.webui.localPath, baseline.webui.lastSyncCommit, webuiTarget.commit);
+        if (webuiFeatCommits.length > 0) {
+            console.log(`  webui: 发现 ${webuiFeatCommits.length} 个 feat commit`);
+            webuiFeatCommits.forEach(fc => console.log(`    • ${fc.hash.slice(0, 8)} ${fc.message}`));
+            markFeatItems(items.filter(i => i.repo === 'webui'), webuiFeatCommits);
+        } else {
+            console.log('  webui: 无 feat commit');
+        }
+    }
+    if (processExtension && extTarget) {
+        const extFeatCommits = getFeatCommits(local.extension.localPath, baseline.extension.lastSyncCommit, extTarget.commit);
+        if (extFeatCommits.length > 0) {
+            console.log(`  extension: 发现 ${extFeatCommits.length} 个 feat commit`);
+            extFeatCommits.forEach(fc => console.log(`    • ${fc.hash.slice(0, 8)} ${fc.message}`));
+            markFeatItems(items.filter(i => i.repo === 'extension'), extFeatCommits);
+        } else {
+            console.log('  extension: 无 feat commit');
+        }
+    }
+    const featItemCount = items.filter(i => i.needs_user_confirm).length;
+    if (featItemCount > 0) {
+        console.log(`  ⚠️ ${featItemCount} 个文件涉及新需求，合并时将询问用户确认`);
     }
     console.log('');
 

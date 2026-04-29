@@ -622,7 +622,7 @@ function CodeChat() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      if (!chatModels[model].hasComputableToken) {
+      if (!chatModels[model]?.hasComputableToken) {
         setTokenNumber(0);
         return;
       }
@@ -2945,9 +2945,9 @@ function CodeChat() {
             { type: SplitValueType.Auto },
             {
               type: SplitValueType.Absolute,
-              value: 120,
+              value: 150,
               max: '50%',
-              min: 120,
+              min: 150,
             },
           ]}
         >

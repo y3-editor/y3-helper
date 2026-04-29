@@ -559,12 +559,10 @@ const PromptsPanel = (
             }, 100);
             await handleNewSessionCommand();
           } else if (prompt.name === 'Clean') {
-            setTimeout(() => {
-              if (userInputRef.current) {
-                userInputRef.current.value = '';
-              }
-            }, 1000);
-            clearSession();
+            await clearSession();
+            if (userInputRef.current) {
+              userInputRef.current.value = '';
+            }
           } else if (prompt.name === 'set-openspec') {
             if (userInputRef.current) {
               userInputRef.current.value = '';

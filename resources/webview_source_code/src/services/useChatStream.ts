@@ -2207,6 +2207,7 @@ export async function requestPluginStream(
     onMessage: (message: string, done: boolean, jsonData?: any) => void;
     onError: (error: Error) => void;
     onController?: (controller: AbortController) => void;
+    ntesTraceId?: string;
   },
 ) {
   const url = '/proxy/gpt/app_tool/funcs';
@@ -2227,9 +2228,13 @@ export async function requestPluginStream(
   };
   async function run(promptData: PluginAppRunnerParams) {
     try {
+      const requestHeaders: any = setRequestHeaders() || {};
+      if (options?.ntesTraceId) {
+        requestHeaders['ntes-trace-id'] = options?.ntesTraceId;
+      }
       const req = new Request(url, {
         method: 'POST',
-        headers: setRequestHeaders(),
+        headers: requestHeaders,
         body: JSON.stringify(promptData),
         signal: abortController.signal,
       });
@@ -2293,6 +2298,7 @@ export async function requestNetworkChatStream(
     ) => void;
     onError: (error: Error) => void;
     onController?: (controller: AbortController) => void;
+    ntesTraceId?: string;
   },
 ) {
   const abortController = new AbortController();

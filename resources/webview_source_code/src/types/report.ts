@@ -37,6 +37,7 @@ export enum UserEvent {
   CODE_CHAT_PROMPT_CUSTOM = 'CodeChat.prompt_custom',
   CODE_CHAT_COMPRESS = 'CodeChat.compress',
   CODE_CHAT_COMPRESS_EMPTY = 'CodeChat.compress_empty',
+  CODE_CHAT_COMPRESS_EMPTY_PRUNE = 'CodeChat.compress_empty_prune',
   CODE_CHAT_COMPRESS_EMPTY_RETRY = 'CodeChat.compress_empty_retry',
   CODE_CHAT_COMPRESS_FAILED = 'CodeChat.compress_failed',
   CODE_CHAT_UNIT_TEST = 'CodeChat.prompt_unit_test',

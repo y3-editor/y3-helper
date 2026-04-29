@@ -233,6 +233,7 @@ export interface ChatMessage {
     attachs?: any;
     options?: {
       event?: PrePromptEvent | string;
+      ntesTraceId?: string;
     };
     appliedPaths?: string[] // 已应用文件修改的路径
   };

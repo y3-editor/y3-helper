@@ -99,6 +99,7 @@ function ChatInput(props: ChatInputProp) {
   const [currentSendMessageIndex, setCurrentSendMessageIndex] = React.useState<
     number | null
   >(null);
+  const inputDraftRef = React.useRef<string>('');
   // const ide = useExtensionStore((state) => state.IDE);
   const [workspaceInfo, isSpecFrameworkInitialized] = useWorkspaceStore(
     (state) => [state.workspaceInfo, state.isSpecFrameworkInitialized],
@@ -348,9 +349,10 @@ function ChatInput(props: ChatInputProp) {
     ],
   );
 
-  // 会话改变的时候重置发送消息索引
+  // 会话改变的时候重置发送消息索引和草稿
   React.useEffect(() => {
     setCurrentSendMessageIndex(null);
+    inputDraftRef.current = '';
   }, [currentSession]);
 
   // 监听初始化 prompt 事件（从 ChatMentionAreatext 组件发出）
@@ -376,6 +378,34 @@ function ChatInput(props: ChatInputProp) {
     [inputRef],
   );
 
+  /** 从历史消息中提取纯文本内容 */
+  const getHistoryContent = React.useCallback(
+    (msg: (typeof messagePool)[number]): string => {
+      if (msg.content instanceof Array) {
+        return (
+          (msg.content as ChatMessageContentUnion[]).find(
+            (i) => i.type === ChatMessageContent.Text,
+          )?.text || ''
+        );
+      }
+      return (msg.content as string) || '';
+    },
+    [],
+  );
+
+  /** 切换到指定历史 index，并将对应内容填入输入框 */
+  const switchToHistoryIndex = React.useCallback(
+    (index: number, messages: typeof messagePool) => {
+      setCurrentSendMessageIndex(index);
+      if (inputRef.current) {
+        const content = getHistoryContent(messages[index]);
+        inputRef.current.value = content;
+        focusInput(content.length);
+      }
+    },
+    [inputRef, getHistoryContent, focusInput],
+  );
+
   const handleInputKeyDown = React.useCallback(
     async (event: React.KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey) {
@@ -395,50 +425,31 @@ function ChatInput(props: ChatInputProp) {
         );
         if (checkValueOfPressedKeyboard(event, ['ArrowUp'])) {
           if (filterSendMessage.length > 0) {
+            // 首次按上键时，保存当前输入作为草稿
+            if (currentSendMessageIndex === null) {
+              inputDraftRef.current = inputRef.current?.value || '';
+            }
             let newIndex =
               currentSendMessageIndex !== null
                 ? currentSendMessageIndex - 1
                 : filterSendMessage.length - 1;
             newIndex = Math.max(newIndex, 0);
-            setCurrentSendMessageIndex(newIndex);
-            if (inputRef.current) {
-              let content = '';
-              if (filterSendMessage[newIndex].content instanceof Array) {
-                content =
-                  (
-                    filterSendMessage[newIndex]
-                      .content as ChatMessageContentUnion[]
-                  ).find((i) => i.type === ChatMessageContent.Text)?.text || '';
-              } else {
-                content = filterSendMessage[newIndex].content as string;
-              }
-              inputRef.current.value = content;
-              focusInput(content.length);
-            }
+            switchToHistoryIndex(newIndex, filterSendMessage);
           }
         }
 
         if (checkValueOfPressedKeyboard(event, ['ArrowDown'])) {
-          if (filterSendMessage.length > 0) {
-            let newIndex =
-              currentSendMessageIndex !== null
-                ? currentSendMessageIndex + 1
-                : 0;
-            newIndex = Math.min(newIndex, filterSendMessage.length - 1);
-            setCurrentSendMessageIndex(newIndex);
-            if (inputRef.current) {
-              let content = '';
-              if (filterSendMessage[newIndex].content instanceof Array) {
-                content =
-                  (
-                    filterSendMessage[newIndex]
-                      .content as ChatMessageContentUnion[]
-                  ).find((i) => i.type === ChatMessageContent.Text)?.text || '';
-              } else {
-                content = filterSendMessage[newIndex].content as string;
+          if (filterSendMessage.length > 0 && currentSendMessageIndex !== null) {
+            const newIndex = currentSendMessageIndex + 1;
+            if (newIndex >= filterSendMessage.length) {
+              // 超过最后一条历史消息，恢复草稿
+              setCurrentSendMessageIndex(null);
+              if (inputRef.current) {
+                inputRef.current.value = inputDraftRef.current;
+                focusInput(inputDraftRef.current.length);
               }
-              inputRef.current.value = content;
-              focusInput(content.length);
+            } else {
+              switchToHistoryIndex(newIndex, filterSendMessage);
             }
           }
         }

@@ -53,10 +53,24 @@ npm run sync:analyze -- --skip-to-date 2026-04-01
 AI 会：
 1. **先执行 `npm run sync:analyze`**，确保报告是基于最新 baseline 生成的
 2. 读取 `.codemaker/sync/last-sync-report.json`（含完整 diff）
-3. **SAFE 项**：AI 直接用 `upstream_content` 覆盖 Y3 文件
-4. **REVIEW 项**：见下方 [REVIEW 项合并规则](#review-项合并规则)
-5. **NEW 项**：AI 判断是否与 Y3 相关，给出建议，你确认后执行
-6. **复杂冲突**：AI 标记出来，你用 git merge 工具手动处理
+3. **🏷️ FEAT 项（`needs_user_confirm: true`）**：见下方 [FEAT 项确认规则](#feat-项确认规则)
+4. **SAFE 项**：AI 直接用 `upstream_content` 覆盖 Y3 文件（除非被标记为 FEAT）
+5. **REVIEW 项**：见下方 [REVIEW 项合并规则](#review-项合并规则)
+6. **NEW 项**：AI 判断是否与 Y3 相关，给出建议，你确认后执行
+7. **复杂冲突**：AI 标记出来，你用 git merge 工具手动处理
+
+#### FEAT 项确认规则
+
+> [!CRITICAL]
+> **涉及 `feat` 开头 commit 的变更文件，无论分类为 SAFE 还是 REVIEW，都必须先询问用户是否合并！**
+
+报告中 `needs_user_confirm: true` 的项表示该文件涉及上游新需求。因为有些新功能 Y3Maker 不需要，AI 必须：
+
+1. **列出该文件关联的 feat commit 信息**（`feat_commits` 字段）
+2. **简要说明这个需求是什么**
+3. **询问用户**：是否需要合并该需求？
+   - 用户确认 → 按 SAFE/REVIEW 规则正常合并
+   - 用户拒绝 → 跳过该文件，并建议是否需要加入排除列表
 
 #### REVIEW 项合并规则
 
@@ -146,6 +160,7 @@ npm run sync:analyze
 | 🟡 REVIEW | Y3 有定制修改 | AI 智能合并 + 你 review |
 | 🔴 NEW | 上游新增,Y3 没有 | AI 给建议,你决定 |
 | ⚪ SKIP | 在排除列表中 | 自动跳过 |
+| 🏷️ FEAT | 涉及 feat commit（新需求） | **必须先询问用户**，确认后按原分类处理 |
 
 ## 配置文件说明
 

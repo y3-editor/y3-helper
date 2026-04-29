@@ -156,7 +156,7 @@ function valueToString(key: string, value: any): string {
  * 计算单条消息的内容 token 数量（不包括消息结构开销）
  * 此函数会使用缓存，相同的消息对象只会计算一次
  */
-function calculateSingleMessageContentTokens(message: ChatMessage): number {
+export function calculateSingleMessageContentTokens(message: ChatMessage): number {
   const tokensPerName = 1;
   const fieldStrings: { key: typeof TOKEN_RELEVANT_FIELDS[number]; value: string }[] = [];
 

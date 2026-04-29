@@ -387,7 +387,7 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
         if (!currentSession?._id) return;
         const latestMessage =
           currentSession?.data?.messages[
-            currentSession?.data.messages.length - 1
+          currentSession?.data.messages.length - 1
           ];
         if (latestMessage?.id) {
           const messageRange = findMessageRange(latestMessage?.id);
@@ -451,7 +451,7 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
                     attachs={userAttachs}
                     onFeedback={(feedbackType) => {
                       if (message.messages) {
-                        const lastMessage = message.messages[message.messages.length-1];
+                        const lastMessage = message.messages[message.messages.length - 1];
                         if (lastMessage.id) {
                           submitMessageFeedback(lastMessage.id, feedbackType);
                         } else if (message.id) {

@@ -60,7 +60,14 @@ export default function FeedbackPanel(props: {
       if (!userScrollLock) {
         setTimeout(() => {
           if (feedbackRef.current) {
-            feedbackRef.current.scrollIntoView({ behavior: 'smooth' });
+            // 使用最近的可滚动容器 scrollTo，避免 scrollIntoView 冒泡导致外层 #root 被滚动
+            const container = feedbackRef.current.closest('#code-chat-body');
+            if (container) {
+              container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth',
+              });
+            }
           }
         });
       }

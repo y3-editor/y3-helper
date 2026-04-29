@@ -119,7 +119,12 @@ import { Tool as TodoTool } from '../store/workspace/tools/todo'
 import addCacheMarksToMessages from '../utils/addCacheMarksToMessages';
 import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../utils/truncateMessages';
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
-import { compressionService, getCompressSessionStatus, getPrevCompressSessionStatus, setCompressSessionStatus } from '../services/compressionService';
+import {
+  compressionService,
+  getCompressSessionStatus,
+  setCompressSessionStatus,
+  pruneToolOutputs,
+} from '../services/compressionService';
 import { parseAtMentionedCodeBaseByAttach } from '../utils/codebaseChat';
 import { getImageUrlFromAttachs } from '../routes/CodeChat/ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
 import { getParsedAttachs, parseFileController } from '../utils/chatAttachParseHandler';
@@ -230,7 +235,7 @@ interface ChatStore {
   // 选择会话
   selectSession: (id: string, callback?: () => void) => Promise<void>;
   // 清空会话
-  clearSession: () => void;
+  clearSession: () => Promise<void>;
   // 删除会话中某条问答（包括问和答）
   removeQA: (id: string, lastId?: string) => void;
   // 根据配置获取当前会话下的历史消息
@@ -526,12 +531,10 @@ export const useChatStore = create<ChatStore>()(
           }
         }
 
-        if (
-          !useChatStreamStore.getState().isStreaming &&
-          !useChatStreamStore.getState().isSearching &&
-          !useChatStreamStore.getState().isApplying &&
-          !useChatStreamStore.getState().isTerminalProcessing
-        ) {
+        const { isStreaming, isSearching, isApplying, isTerminalProcessing, isProcessing } = useChatStreamStore.getState()
+        const isPending = !isStreaming && !isSearching && !isApplying && !isTerminalProcessing && !isProcessing
+
+        if (isPending) {
           try {
             const data = await getSessionData(id);
             const nextSessions = new Map(get().sessions);
@@ -540,13 +543,7 @@ export const useChatStore = create<ChatStore>()(
             resumeAttaches(attaches as IMultiAttachment)
             // 避免流式过程中更新 session 导致消息丢失
             // 避免 syncHistory 正在写入时用服务端旧数据覆盖本地新数据导致消息回滚
-            if (
-              !useChatStreamStore.getState().isStreaming &&
-              !useChatStreamStore.getState().isSearching &&
-              !useChatStreamStore.getState().isApplying &&
-              !useChatStreamStore.getState().isTerminalProcessing &&
-              !pendingSyncCounts.has(id)
-            ) {
+            if (!pendingSyncCounts.has(id)) {
               set(() => ({ sessions: nextSessions }));
             }
             // TODO: 恢复会话的 codebaseChatMode、activeChangeId 和 activeFeatureId（新会话忽略，临时解决竞态问题）
@@ -1280,13 +1277,9 @@ export type ChatStreamState = {
   };
   loadingMessage: string;
   setIsStreaming: (isStreaming: boolean) => void;
-  // TODO: 后续看是否可以在 store 内通过事务来改变状态
   setIsProcessing: (isProcessing: boolean) => void;
-  // TODO: 后续看是否可以在 store 内通过事务来改变状态
   setIsMCPProcessing: (isMCPProcessing: boolean) => void;
-  // TODO: 后续看是否可以在 store 内通过事务来改变状态
   setIsApplying: (isApplying: boolean) => void;
-  // TODO: 后续看是否可以在 store 内通过事务来改变状态
   setIsTerminalProcessing: (isTerminalProcessing: boolean) => void;
   setIsAutoApproved: (isAutoApproved: boolean) => void;
   showFeedback: boolean;
@@ -1404,8 +1397,8 @@ export const useChatStreamStore = create(
             })
           )
         });
-        useChatStore.getState().syncHistory()
-        get().reset()
+        useChatStore.getState().syncHistory();
+        get().reset();
       }
     },
     setShowFeedback: (state) => {
@@ -1707,6 +1700,7 @@ export const useChatStreamStore = create(
         // 用来区分是不是 MCP tool 消息
         isMCPToolResponse?: boolean;
         mcpServerUsed?: string;
+        ntesTraceId?: string;
         retryCount?: number;
         skipUserMessage?: boolean;
         specPrompt?: Prompt;
@@ -1801,6 +1795,19 @@ export const useChatStreamStore = create(
       const devSpace = useWorkspaceStore.getState().devSpace;
       const userContent = assembleUserPromptContent(userInputContent || '-');
       const chatModels = useChatConfig.getState().chatModels
+      const ntesTraceId =
+        chatType === 'default'
+          ? get().streamRetryCount > 0
+            ? options.ntesTraceId || generateTraceId()
+            : generateTraceId()
+          : undefined;
+      const submitOptions =
+        ntesTraceId
+          ? {
+              ...options,
+              ntesTraceId,
+            }
+          : options;
 
       /* 2.拼接用户消息
       用户消息 = {
@@ -1834,7 +1841,7 @@ export const useChatStreamStore = create(
           content,
           originPrompt,
           attachs,
-          options,
+          options: submitOptions,
         });
       }
 
@@ -2957,7 +2964,7 @@ export const useChatStreamStore = create(
           ? '/proxy/gpt/gpt/code_chat_stream'
           : '/proxy/gpt/gpt/text_chat_stream';
 
-        requestNetworkChatStream(options.event, data, chatRequestUrl, {
+        requestNetworkChatStream(submitOptions.event, data, chatRequestUrl, {
           onMessage(content, done, webSearch, jsonData) {
             get().setStreamRetryCount(0)
             if (chatStoreState.isError) {
@@ -3067,6 +3074,7 @@ export const useChatStreamStore = create(
               abortController,
             );
           },
+          ntesTraceId,
         });
         userReporter.report({
           event: UserEvent.CODE_CHAT_START_STREAM,
@@ -3097,44 +3105,46 @@ export const useChatStreamStore = create(
           (msg.role === ChatRole.Assistant && self?.[index + 1]?.role === ChatRole.Tool && !self?.[index + 1]?.isCompressed)
         ))
 
-        const [currentCompressStatus, previousCompressStatus] = await Promise.all([getCompressSessionStatus(sessionId), getPrevCompressSessionStatus(sessionId)])
+        const currentCompressStatus = await getCompressSessionStatus(sessionId);
 
-        // 判断 tokens 是否超了需要进行截断，遍历 messages+3
+        const compressionEnabled =
+          compressConfig.enable &&
+          compressConfig.visible &&
+          !chatModels[chatConfig.model].isPrivate;
+        const useCompression =
+          compressionEnabled &&
+          currentCompressStatus !== SessionStatus.FAILED;
+
+        let truncationResult;
+        if (useCompression) {
+          truncationResult = {
+            sendMessages: pruneToolOutputs(unCompressedMessages),
+            containUserMessage: true,
+            newTruncateStart: -1,
+            previousTokens: 0,
+            fallbackToSlideWindow: false,
+          };
+        } else if (cacheEnable) {
+          truncationResult = truncateMessagesIfNeeded({
+            messages: unCompressedMessages,
+            model: chatConfig.model,
+            codebaseModelMaxTokens,
+          });
+        } else {
+          truncationResult = truncatedMessageWithSlideWindow({
+            messages: unCompressedMessages,
+            model: chatConfig.model,
+            codebaseModelMaxTokens,
+          });
+        }
+
         const {
           sendMessages,
           containUserMessage,
           newTruncateStart,
           previousTokens,
-          fallbackToSlideWindow
-        } =
-          (
-            (
-              (previousCompressStatus === SessionStatus.COMPRESSING && currentCompressStatus === SessionStatus.COMPRESSED)
-              || (previousCompressStatus === SessionStatus.COMPRESSED && currentCompressStatus === SessionStatus.COMPRESSING)
-              || (previousCompressStatus === SessionStatus.COMPRESSED && currentCompressStatus === SessionStatus.COMPRESSED)
-            )
-            && compressConfig.enable
-            && compressConfig.visible
-            && !chatModels[chatConfig.model].isPrivate
-          )
-            ? {
-              sendMessages: unCompressedMessages,
-              containUserMessage: true,
-              newTruncateStart: -1,
-              previousTokens: 0,
-              fallbackToSlideWindow: false
-            }
-            : cacheEnable
-              ? truncateMessagesIfNeeded({
-                messages: unCompressedMessages,
-                model: chatConfig.model,
-                codebaseModelMaxTokens
-              })
-              : truncatedMessageWithSlideWindow({
-                messages: unCompressedMessages,
-                model: chatConfig.model,
-                codebaseModelMaxTokens
-              });
+          fallbackToSlideWindow,
+        } = truncationResult;
 
 
         if (sendMessages.length < unCompressedMessages.length

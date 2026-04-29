@@ -1,8 +1,7 @@
 import { MouseEvent, useState, useMemo } from 'react';
 import {
   Text, Box, Flex,
-  IconButton, Icon,
-  Tooltip,
+  IconButton, Icon, Tooltip,
   Input,
   InputGroup,
   InputRightElement,
@@ -63,6 +62,7 @@ const getDevspaceTooltip = (item: any) => {
 
 const DevspaceCollapse = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isHoveringButton, setIsHoveringButton] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { postMessage } = usePostMessage();
 
@@ -177,7 +177,7 @@ const DevspaceCollapse = () => {
       </Flex>
       {enableDevspaceConfig && (
         <Box mt={2}>
-          <Menu isOpen={isOpen} onClose={onClose} onOpen={onOpen} isLazy>
+          <Menu isOpen={isOpen} onClose={onClose} onOpen={onOpen} isLazy placement="top-start">
             <Tooltip
               label={
                 <Box whiteSpace="pre-line" fontSize="12px">
@@ -196,7 +196,31 @@ const DevspaceCollapse = () => {
                 as={Button}
                 size="xs"
                 width="100%"
-                rightIcon={<Icon as={FaChevronDown} />}
+                rightIcon={
+                  devSpace._id && isHoveringButton ? (
+                    <Icon
+                      as={MdOutlineClear}
+                      fontSize="14px"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        setDevSpace({
+                          _id: '',
+                          name: '',
+                          project: '',
+                          knowledge_bases: [],
+                          codebases: [],
+                          code_style: '',
+                          ignore_paths: [],
+                          allow_paths: [],
+                          repos: [],
+                          rules: [],
+                        });
+                      }}
+                    />
+                  ) : (
+                    <Icon as={FaChevronDown} />
+                  )
+                }
                 fontSize="12px"
                 fontWeight="normal"
                 textAlign="left"
@@ -205,6 +229,8 @@ const DevspaceCollapse = () => {
                 py={'14px'}
                 bg={'theme.default'}
                 justifyContent="space-between"
+                onMouseEnter={() => setIsHoveringButton(true)}
+                onMouseLeave={() => setIsHoveringButton(false)}
               >
                 <Text isTruncated>
                   {devSpace._id ? devSpace.name : '选择研发空间'}

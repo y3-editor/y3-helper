@@ -69,7 +69,7 @@ export const DEFAULT_COMPRESSION_CONFIG: CompressionConfig = {
   thresholds: {
     warningThreshold: 0.6,
     errorThreshold: 0.8,
-    compressionThreshold: 0.92,
+    compressionThreshold: 0.99,
   },
   maxOutputTokens: 16384,
   compressionModel: ChatModel.Gemini3Flash, // Default model for compression

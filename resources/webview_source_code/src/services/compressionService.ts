@@ -8,7 +8,12 @@ import {
   COMPRESSION_CONSTANTS,
   SessionStatus
 } from '../types/contextCompression';
-import { analyzeTokenUsageWithTools, calculateLatestTokenUsage, trimMessagesByTokenLimit } from '../utils/tokenCalculator';
+import {
+  analyzeTokenUsageWithTools,
+  calculateLatestTokenUsage,
+  calculateSingleMessageContentTokens,
+  trimMessagesByTokenLimit,
+} from '../utils/tokenCalculator';
 import { Tool, useWorkspaceStore } from '../store/workspace';
 import { generateCompressionPrompt } from '../utils/compressionPrompt';
 import { fetchCompressResponse } from '../services/chat';
@@ -27,6 +32,91 @@ const compressStatusListeners = new Set<(sessionId: string, status: SessionStatu
 
 const COMPRESS_TIMEOUT_MS = 2 * 60 * 1000;
 const FAILED_COOLDOWN_MS = 5 * 60 * 1000; // FAILED 状态冷却时间，过后自动重置为 INITIAL
+
+// Tool output 裁剪相关常量
+const PRUNE_PROTECT = 20_000;
+const PRUNE_MINIMUM = 10_000;
+const PRUNE_PROTECTED_TOOLS = ['use_skill'];
+
+/**
+ * 预构建 tool_call_id → tool_name 的映射，
+ * 避免 pruneToolOutputs 中对每条 tool 消息做 O(n) 反查。
+ */
+function buildToolCallIdMap(
+  messages: ChatMessage[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const msg of messages) {
+    if (msg.role !== ChatRole.Assistant || !msg.tool_calls) continue;
+    for (const tc of msg.tool_calls) {
+      map.set(tc.id, tc.function.name);
+    }
+  }
+  return map;
+}
+
+/**
+ * 裁剪旧的 tool message output，减少 token 总量。
+ *
+ * 1. 从后往前遍历，跳过最近 2 个 user turn 内的 tool output
+ * 2. 遇到压缩摘要消息则停止（不裁剪摘要之前的内容）
+ * 3. 跳过 PRUNE_PROTECTED_TOOLS 的 tool output
+ * 4. 累计 tool output token 量，保护最近 PRUNE_PROTECT tokens
+ * 5. 超出保护范围的 tool output 替换为 '[Tool output cleared]'
+ * 6. 可裁剪总量 >= PRUNE_MINIMUM 时才执行
+ */
+export function pruneToolOutputs(messages: ChatMessage[]): ChatMessage[] {
+  const toolCallIdMap = buildToolCallIdMap(messages);
+  let userCount = 0;
+  let protectedTokens = 0;
+  let prunable: { idx: number; tokens: number }[] = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+
+    if (msg.isCompressionSummary) {
+      break;
+    }
+    if (msg.role === ChatRole.User) {
+      userCount++;
+    }
+    if (msg.role !== 'tool' || userCount < 2) continue;
+
+    const toolName = msg.tool_call_id
+      ? toolCallIdMap.get(msg.tool_call_id) || ''
+      : '';
+    if (PRUNE_PROTECTED_TOOLS.includes(toolName)) continue;
+
+    const tokens = calculateSingleMessageContentTokens(msg);
+    if (protectedTokens < PRUNE_PROTECT) {
+      protectedTokens += tokens;
+      continue;
+    }
+    prunable.push({ idx: i, tokens });
+  }
+
+  const totalPrunable = prunable.reduce((s, p) => s + p.tokens, 0);
+  if (totalPrunable < PRUNE_MINIMUM) return messages;
+
+  const cloned = messages.map((m) => ({ ...m }));
+  for (const { idx } of prunable) {
+    cloned[idx] = { ...cloned[idx], content: '[Tool output cleared]' };
+  }
+
+  console.debug(
+    `[pruneToolOutputs] pruned ${prunable.length} tool msgs, saved ~${totalPrunable} tokens`,
+  );
+
+  userReporter.report({
+    event: UserEvent.CODE_CHAT_COMPRESS_EMPTY_PRUNE,
+    extends: {
+      prunedCount: prunable.length,
+      savedTokens: totalPrunable,
+    },
+  });
+
+  return cloned;
+}
 
 export const getCompressSessionStatus = async (sessionId: string) => {
   const sessionData = await getSessionById(sessionId);
