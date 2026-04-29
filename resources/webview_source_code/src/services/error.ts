@@ -14,12 +14,12 @@ const NETWORK_ERROR = ['ECONNABORTED', 'ETIMEDOUT'];
 const IGNORE_ERROR = ['ERR_CANCELED'];
 
 export const ERROR_MESSAGE = {
-  NETWORK: '请求超时，请检查网络连接',
+  NETWORK: '请求超时，请检查网络连接。如有疑问，请重试或联系我们：7896636',
   WHITE_LIST:
-    '当前网络环境无法使用插件服务，请尝试关掉代理软件',
+    '当前网络环境无法使用插件服务，请连接办公网并尝试关掉代理软件，远程模式请确认机器白名单是否已接入，如有疑问，请重试或联系我们：7896636',
   LOGIN: '登录信息失效，请重新登录，5秒后将跳转登录页',
-  FORBIDDEN: '可尝试重启编辑器',
-  COMMON: '请求异常，请重试',
+  FORBIDDEN: '可尝试重启编辑器或重新登录。如有疑问，请重试或联系我们：7896636',
+  COMMON: '如有疑问，请重试或联系我们：7896636',
 };
 
 const debouncedToast = createDebouncedToast();
@@ -35,7 +35,7 @@ export function toastError(content: string) {
   });
 }
 
-export function handleError(error: any, ) {
+export function handleError(error: any,) {
   const _config = error.config;
   const message = `${_config?.method} ${_config?.url} ${error.code}, ${error.message}`;
   userReporter.report({
@@ -105,7 +105,12 @@ export function handleError(error: any, ) {
       /** 自定义消息错误 */
       EventBus.instance.dispatch(EBusEvent.Exceed_Session_Length)
       return
-    } else if (IGNORE_ERROR.includes(error.code!)) {
+    } else if (error.response?.status === 429) {
+      EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
+      toastError(`错误信息：${displayErrorMessage}, ${ERROR_MESSAGE.COMMON}`);
+      return
+    }
+    else if (IGNORE_ERROR.includes(error.code!)) {
       return;
     } else {
       toastError(`错误信息：${displayErrorMessage}, ${ERROR_MESSAGE.COMMON}`);

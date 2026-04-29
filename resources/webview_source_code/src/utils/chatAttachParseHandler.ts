@@ -10,6 +10,7 @@ import { uploadImg } from "../services/chat";
 import { compressImage } from "../components/ImageUpload/ImageUpload";
 import { useChatConfig } from "../store/chat-config";
 import { ParseImgType } from "../services/chatModel";
+import { getDocsetPrompt } from "../store/workspace/tools/read";
 
 
 
@@ -23,6 +24,11 @@ const otherExtensions = new Set(['exe', 'dll', 'so', 'dylib', 'app']);
 const maxSize = 10 * 1024 * 1024
 
 export let parseFileController = new AbortController()
+
+export const isDocsetFile = (filePath: string) => {
+  const ext = filePath?.split?.('.')?.slice?.(-1)?.[0] || ''
+  return docsetExtensions.has(ext)
+}
 
 export const checkFileTypeValid = (fileName: string) => {
   const fileType = fileName?.split('.')?.pop()
@@ -54,8 +60,7 @@ export const checkFileTypeValid = (fileName: string) => {
   return false
 }
 
-
-export const convertTextByAddress = (address: string): Promise<string> => {
+export const convertTextByAddress = (address: string, filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     let content = ''
     new ParseNoneCodeFileStream(address, {
@@ -63,11 +68,25 @@ export const convertTextByAddress = (address: string): Promise<string> => {
         content += message
       },
       onFinish: () => {
-        return resolve(
-          content.length > 50000
-            ? (truncateContent(content, 50000) + '\n\n Note: This is a binary file. Do not use any tools to read it.')
-            : content
-        )
+        try {
+          const result = JSON.parse(content)
+          if (result?.success && Array.isArray(result.data)) {
+            // 解读excel
+            content = getDocsetPrompt(filePath, JSON.stringify(result.data))
+          } else if (result?.status === 'success' && result?.data?.md_content) {
+            // 解读pdf、word、ppt
+            content = getDocsetPrompt(filePath, result?.data?.md_content)
+          } else if (result.data === 'string') {
+            // 错误情况
+            content = getDocsetPrompt(filePath, result.data)
+          } else {
+            throw new Error('cannot parse file content')
+          }
+        } catch (e) {
+          content = getDocsetPrompt(filePath, content || getErrorMessage(e))
+        }
+
+        return resolve(truncateContent(content, 200000))
       },
       onError: (err: Error) => {
         return reject(err)
@@ -132,7 +151,7 @@ export const getParsedAttachs = async (originalAttachs: MultipleAttach[]) => {
       }
       formData.append('file', blob, item.fileName);
       const uploadInfo = await uploadImg(formData)
-      const parsedContent = await convertTextByAddress(uploadInfo.url)
+      const parsedContent = await convertTextByAddress(uploadInfo.url, item.path)
       item.content = parsedContent
       item.hadParsed = true
       hadParsed = true
@@ -211,7 +230,7 @@ export const parseDocContentFromReadFileTool = async (
     }
     formData.append('file', blob, fileNeme);
     const uploadInfo = await uploadImg(formData)
-    const parsedContent = await convertTextByAddress(uploadInfo.url)
+    const parsedContent = await convertTextByAddress(uploadInfo.url, path)
     fileToolResult.content = parsedContent
   } catch (e) {
     errorContent = getErrorMessage(e)

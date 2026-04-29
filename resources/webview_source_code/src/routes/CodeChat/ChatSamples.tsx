@@ -10,6 +10,7 @@ import { useWorkspaceStore } from '../../store/workspace';
 import useCustomToast from '../../hooks/useCustomToast';
 import CodebaseModePicker from './CodebaseModePicker';
 import { CHAT_SAMPLES, CODEBASE_CHAT_SAMPLES } from '../../const';
+import { useChatBillStore } from '../../store/chatBill';
 
 export interface ChatSamplesProps {
   onSubmit: (prompt: string) => void;
@@ -26,6 +27,7 @@ export const ChatSamples = (props: ChatSamplesProps) => {
   const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost)
 
   // 本地选中的模式（点击只切换本地状态，发送时才确认到 store），新会话默认选中 vibe
   const [localSelectedMode, setLocalSelectedMode] = React.useState<CodebaseChatMode | undefined>(codebaseChatMode || 'vibe');
@@ -36,6 +38,14 @@ export const ChatSamples = (props: ChatSamplesProps) => {
   }, [codebaseChatMode]);
 
   const submitPrompt = (prompt: string) => {
+    if (isExceedCost) {
+      toast({
+        title: `检测到您本月的额度已经用完，恢复使用请申请新的积分`,
+        status: 'warning',
+        duration: 2000,
+      });
+      return
+    }
     if (chatType === 'codebase' && !workspaceInfo.repoName) {
       toast({
         title: `未识别到仓库信息，请先打开代码仓库后使用本功能`,

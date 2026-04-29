@@ -7,7 +7,8 @@ import { useChatConfig } from "../store/chat-config";
 import { processMakePlanDenied, processMakePlanResult } from "../store/workspace/tools/plan";
 import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspace/tools/todo";
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
-import { isImageFileWithPath } from ".";
+import { isImageFileByPath } from ".";
+import { onChunkLoadError } from "./chunkErrorHandler";
 
 
 export function getToolCallQuery(name: string, args: string) {
@@ -21,7 +22,7 @@ export function getToolCallQuery(name: string, args: string) {
   }
   switch (name) {
     case 'read_file':
-      if (isImageFileWithPath(toolParams.path)) {
+      if (isImageFileByPath(toolParams.path)) {
         return '读取此图片';
       }
       return '读取此文件内容';
@@ -312,7 +313,7 @@ function processUseSkillResult(result: ToolResult): string {
         const description = getSkillDescription(skillData.name);
         reportSkillInvoke(skillData.name, { source: 'codemaker-model', description });
       });
-    });
+    }).catch(onChunkLoadError);
     return formatSkillContent(skillData);
   }
   return result.content;

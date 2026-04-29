@@ -2,17 +2,11 @@
 // 避免 WASM 阻塞主线程导致白屏
 import type { Tiktoken, TiktokenModel } from 'tiktoken';
 import { ChatRole } from '../types/chat';
-
 import type { ChatMessage } from '../services';
 import { ChatModel } from '../services/chatModel';
-
-const scheduleWork: (cb: (deadline: IdleDeadline) => void) => void =
-  typeof requestIdleCallback !== 'undefined'
-    ? requestIdleCallback
-    : (cb) => setTimeout(() => cb({
-        didTimeout: false,
-        timeRemaining: () => 50,
-      } as IdleDeadline), 0);
+import { scheduleWork } from './scheduler';
+import type { SchedulerDeadline } from './scheduler';
+import { onChunkLoadError } from './chunkErrorHandler';
 
 // 异步加载 tiktoken 模块
 let tiktokenModule: typeof import('tiktoken') | null = null;
@@ -35,6 +29,7 @@ async function loadTiktoken(): Promise<typeof import('tiktoken')> {
     }).catch((error) => {
       console.error('[tiktoken] Failed to load WASM module:', error);
       tiktokenLoadPromise = null;
+      onChunkLoadError(error);
       throw error;
     });
   }
@@ -208,28 +203,24 @@ function valueToString(key: string, value: any): string {
         .map(item => ('text' in item ? item.text : ''))
         .filter(text => text)
         .join('\n');
-    } else {
-      return JSON.stringify(value);
     }
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    // 其他对象：序列化为 JSON
     return JSON.stringify(value);
   }
 
-  // number, boolean 等：转为字符串
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value);
+  }
+
   return String(value);
 }
 
+type FieldEntry = { key: typeof TOKEN_RELEVANT_FIELDS[number]; value: string };
+
 /**
- * 计算单条消息的内容 token 数量（不包括消息结构开销）
- * 此函数会使用缓存，相同的消息对象只会计算一次
- * 异步版本：等待 tiktoken 加载完成
+ * 提取消息中与 token 计算相关的字段，并生成用于缓存失效的指纹
  */
-export async function calculateSingleMessageContentTokensAsync(message: ChatMessage): Promise<number> {
-  const tokensPerName = 1;
-  const fieldStrings: { key: typeof TOKEN_RELEVANT_FIELDS[number]; value: string }[] = [];
+function extractFieldsAndFingerprint(message: ChatMessage): { fields: FieldEntry[]; fingerprint: string } {
+  const fields: FieldEntry[] = [];
 
   for (const key of TOKEN_RELEVANT_FIELDS) {
     const value = message[key];
@@ -238,64 +229,97 @@ export async function calculateSingleMessageContentTokensAsync(message: ChatMess
     const stringValue = valueToString(key, value);
     if (!stringValue) continue;
 
-    fieldStrings.push({ key, value: stringValue });
+    fields.push({ key, value: stringValue });
   }
 
-  const fingerprint = JSON.stringify(fieldStrings.map(({ key, value }) => [key, value]));
+  const fingerprint = JSON.stringify(fields.map(({ key, value }) => [key, value]));
+  return { fields, fingerprint };
+}
+
+/**
+ * 使用编码器计算字段 token 数量（纯同步，核心编码逻辑）
+ * 会自动读写 messageSingleTokenCache
+ */
+function encodeMessageTokens(enc: Tiktoken, message: ChatMessage): number {
+  const { fields, fingerprint } = extractFieldsAndFingerprint(message);
+
   const cached = messageSingleTokenCache.get(message);
   if (cached && cached.fingerprint === fingerprint) {
     return cached.tokens;
   }
 
-  const enc = await getEncoderAsync();
   let numTokens = 0;
-
-  for (const { key, value } of fieldStrings) {
+  for (const { key, value } of fields) {
     try {
       numTokens += enc.encode(value).length;
     } catch (error) {
       console.error('Error encoding token:', error);
     }
-
     if (key === 'name') {
-      numTokens += tokensPerName;
+      numTokens += 1; // tokensPerName
     }
   }
 
   messageSingleTokenCache.set(message, { tokens: numTokens, fingerprint });
-
   return numTokens;
 }
 
+/**
+ * 计算单条消息的内容 token 数量（不包括消息结构开销）
+ * 异步版本：等待 tiktoken 加载完成
+ */
+export async function calculateSingleMessageContentTokensAsync(message: ChatMessage): Promise<number> {
+  const enc = await getEncoderAsync();
+  return encodeMessageTokens(enc, message);
+}
+
+/**
+ * 获取编码器实例（同步版本）
+ * 仅在 encoder 已通过 getEncoderAsync() 初始化后使用
+ */
+function getEncoderSync(): Tiktoken {
+  if (!encoderInstance) {
+    throw new Error(
+      '[getEncoderSync] Encoder not initialized. Ensure getEncoderAsync() has been awaited before calling sync methods.'
+    );
+  }
+  return encoderInstance;
+}
+
+/**
+ * 计算单条消息的内容 token 数量（同步版本）
+ * 调用前必须确保 encoder 已初始化（通过 await getEncoderAsync()）
+ * 用于时间片调度器的同步循环中，避免 await 破坏时间片逻辑
+ */
+function calculateSingleMessageContentTokensSync(message: ChatMessage): number {
+  return encodeMessageTokens(getEncoderSync(), message);
+}
 
 /**
  * 计算消息数组的 token 数量（使用 tiktoken）
- * 使用 requestIdleCallback 调度，避免阻塞 UI
+ * 使用 MessageChannel 协作式调度，每 5ms 让步一次，避免阻塞 UI
  * 参考 OpenAI 官方计算方式
  * https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
  */
 async function calculateMessageTokens(messages: ChatMessage[]): Promise<number> {
-  // 确保 tiktoken 模块已加载
-  await loadTiktoken();
+  // 确保 encoder 已初始化（同步循环依赖 encoderInstance）
+  await getEncoderAsync();
 
-  // 每条消息的固定结构开销
   const tokensPerMessage = 3;
   let numTokens = 0;
   let currentIndex = 0;
 
   return new Promise<number>((resolve) => {
-    const processMessages = async (deadline: IdleDeadline) => {
-      // 在空闲时间内尽可能多地处理消息
+    const processMessages = (deadline: SchedulerDeadline) => {
       while (deadline.timeRemaining() > 0 && currentIndex < messages.length) {
-        numTokens += tokensPerMessage + await calculateSingleMessageContentTokensAsync(messages[currentIndex]);
+        numTokens += tokensPerMessage
+          + calculateSingleMessageContentTokensSync(messages[currentIndex]);
         currentIndex++;
       }
 
-      // 如果还有消息未处理，继续调度
       if (currentIndex < messages.length) {
         scheduleWork(processMessages);
       } else {
-        // 所有消息处理完毕，加上最后的固定开销
         numTokens += 3;
         resolve(numTokens);
       }
@@ -306,26 +330,28 @@ async function calculateMessageTokens(messages: ChatMessage[]): Promise<number> 
 }
 
 /**
+ * 从 usage 对象汇总 token 总数
+ */
+function sumUsageTokens(usage: NonNullable<ChatMessage['usage']>): number {
+  return (
+    (usage.prompt_tokens || 0) +
+    (usage.completion_tokens || 0) +
+    (usage.cache_creation_input_tokens || 0) +
+    (usage.cache_read_input_tokens || 0)
+  );
+}
+
+/**
  * Calculate latest token usage from message array
  */
 export function calculateLatestTokenUsage(messages: ChatMessage[]): number {
-  let totalTokensUsed = 0;
-  let foundUsage = false;
-
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg.role === ChatRole.Assistant && msg.usage) {
-      totalTokensUsed =
-        msg.usage.prompt_tokens +
-        msg.usage.completion_tokens +
-        (msg.usage.cache_creation_input_tokens || 0) +
-        (msg.usage.cache_read_input_tokens || 0);
-      foundUsage = true;
-      break;
+      return sumUsageTokens(msg.usage);
     }
   }
-
-  return foundUsage ? totalTokensUsed : 0;
+  return 0;
 }
 
 /**
@@ -335,21 +361,20 @@ export function getModelContextLimit(
   model: ChatModel,
   codebaseModelMaxTokens: Record<ChatModel, number>
 ): number {
-  const modelMaxTokens = codebaseModelMaxTokens[model];
+  let currentModelMaxTokens = codebaseModelMaxTokens[model];
 
-  if (!modelMaxTokens) {
-    return 48_000;
+  if (!currentModelMaxTokens) {
+    currentModelMaxTokens = Math.min(currentModelMaxTokens, 48 * 1000);
   }
 
-  return Math.min(modelMaxTokens, 48_000);
+  return currentModelMaxTokens
 }
 
 /**
  * Estimate token count using tiktoken
  */
 export async function estimateTokensByContentLength(messages: ChatMessage[]): Promise<number> {
-  const length = await calculateMessageTokens(messages);
-  return length
+  return calculateMessageTokens(messages);
 }
 
 export async function estimateTokensIncludingTools(
@@ -421,11 +446,7 @@ export async function calculateLastQATokenUsage(messages: ChatMessage[]): Promis
   }
 
   // 3. 计算当前 Assistant 的 total tokens
-  const currentTotalTokens =
-    (lastAssistant.usage!.prompt_tokens || 0) +
-    (lastAssistant.usage!.completion_tokens || 0) +
-    (lastAssistant.usage!.cache_creation_input_tokens || 0) +
-    (lastAssistant.usage!.cache_read_input_tokens || 0);
+  const currentTotalTokens = sumUsageTokens(lastAssistant.usage!);
 
   // 4. 如果没有找到上一个 Assistant，直接返回当前的 total tokens
   if (previousAssistantIndex === -1) {
@@ -443,11 +464,7 @@ export async function calculateLastQATokenUsage(messages: ChatMessage[]): Promis
   }
 
   // 6. 计算上一个 Assistant 的 total tokens
-  const previousTotalTokens =
-    (previousAssistant.usage.prompt_tokens || 0) +
-    (previousAssistant.usage.completion_tokens || 0) +
-    (previousAssistant.usage.cache_creation_input_tokens || 0) +
-    (previousAssistant.usage.cache_read_input_tokens || 0);
+  const previousTotalTokens = sumUsageTokens(previousAssistant.usage);
 
   // 7. 检测异常：如果当前 token 比上一个还小，说明可能发生了异步压缩
   if (currentTotalTokens < previousTotalTokens) {
@@ -471,7 +488,7 @@ export async function calculateLastQATokenUsage(messages: ChatMessage[]): Promis
 
 /**
  * Trim old messages that exceed token limit
- * 使用 requestIdleCallback 调度，避免阻塞 UI
+ * 使用 MessageChannel 协作式调度，每 5ms 让步一次，避免阻塞 UI
  * @param messages - Message array to trim (format: [old -> new])
  * @param maxTokens - Maximum token limit
  * @returns Filtered message array with old messages removed
@@ -484,31 +501,28 @@ export async function trimMessagesByTokenLimit(
     return messages;
   }
 
-  // 确保 tiktoken 模块已加载
-  await loadTiktoken();
+  // 确保 encoder 已初始化（同步循环依赖 encoderInstance）
+  await getEncoderAsync();
 
-  const tokensPerMessage = 3; // 每条消息的固定开销
-  const finalOverhead = 3; // 最后的固定 +3
+  const tokensPerMessage = 3;
+  const finalOverhead = 3;
 
   let currentIndex = messages.length - 1;
   let accumulatedTokens = finalOverhead;
 
   return new Promise<ChatMessage[]>((resolve) => {
-    const processMessages = async (deadline: IdleDeadline) => {
-      // 在空闲时间内尽可能多地处理消息
+    const processMessages = (deadline: SchedulerDeadline) => {
       while (deadline.timeRemaining() > 0 && currentIndex >= 0) {
-        const msgContentTokens = await calculateSingleMessageContentTokensAsync(messages[currentIndex]);
+        const msgContentTokens =
+          calculateSingleMessageContentTokensSync(messages[currentIndex]);
         const msgTotalTokens = tokensPerMessage + msgContentTokens;
 
-        // 检查加入这条消息后是否会超限
         if (accumulatedTokens + msgTotalTokens > maxTokens) {
-          // 如果第一条消息就超限
           if (currentIndex === messages.length - 1) {
             console.warn('[trimMessagesByTokenLimit] Single message exceeds token limit');
             resolve([]);
             return;
           }
-          // 找到截断点
           resolve(messages.slice(currentIndex + 1));
           return;
         }
@@ -517,11 +531,9 @@ export async function trimMessagesByTokenLimit(
         currentIndex--;
       }
 
-      // 如果还有消息未处理，继续调度
       if (currentIndex >= 0) {
         scheduleWork(processMessages);
       } else {
-        // 所有消息都不超限
         resolve(messages);
       }
     };

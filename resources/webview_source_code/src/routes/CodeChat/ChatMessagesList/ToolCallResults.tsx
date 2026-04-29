@@ -12,7 +12,7 @@ import MCPToolCall from "./MCPToolCall";
 import { ToolCall } from "../../../services";
 import { useChatTerminal } from "./TermialPanel";
 import Markdown from "../../../components/Markdown";
-import { getStringContent, isImageFileWithPath, truncateContent } from "../../../utils";
+import { getStringContent, isImageFileByPath, truncateContent } from "../../../utils";
 import CollapsibleMessage from "../../../components/CollapsibleMessage";
 
 // 提取文件名的工具函数
@@ -140,7 +140,7 @@ const ToolCallResult = ({
   const [accordionIndex, setAccordionIndex] = useState<number | undefined>(initialIndex);
 
   const collapseDisabled = useMemo(() => {
-    return isReadFileTool && isImageFileWithPath(result.path);
+    return isReadFileTool && isImageFileByPath(result.path);
   }, [isReadFileTool, result.path])
 
   const locateFile = useCallback((filePath: string, startLine?: number, endLine?: number) => {
@@ -252,7 +252,7 @@ const ToolCallResult = ({
 
   if (isPlan) {
     return (
-      <Accordion allowToggle index={toolResponseDisabled ? undefined : 0}>
+      <Accordion allowToggle defaultIndex={toolResponseDisabled ? undefined : 0}>
         <AccordionItem>
           <AccordionButton>
             <Box as="span" flex="1" textAlign="left" color="text.primary" my={2}>
@@ -381,7 +381,7 @@ const ToolCallResult = ({
 
             <Text as="span" color="text.secondary" mr={1} flexShrink={0}>
               {
-                isImageFileWithPath(result.path) ? '读取此图片' : '读取此文件内容'
+                isImageFileByPath(result.path) ? '读取此图片' : '读取此文件内容'
               }
             </Text>
             <Box

@@ -20,6 +20,7 @@ import {
   Link,
   Progress,
   Button,
+  Tooltip,
 } from '@chakra-ui/react';
 // import { InfoIcon } from '@chakra-ui/icons';
 import { getUserDashboard, UseDashboardData } from '../../services/userDashboard';
@@ -187,9 +188,12 @@ const UserDashboard = (props: { open: boolean; onClose: () => void }) => {
                     ) : (
                       <>
                         <Flex justifyContent="space-between" alignItems="center" mb={4}>
-                          <Flex alignItems={'center'} justifyContent={'center'}>
-                            <Text fontWeight="bold" fontSize="sm">仓库智聊消耗情况</Text>
-                          </Flex>
+                          <Tooltip label='消耗统计包括 Chat 普通聊天、Agent 仓库智聊、CLI Chat'>
+                            <Flex alignItems={'center'} justifyContent={'center'} color={''}>
+                              <Text fontWeight="bold" fontSize="sm">Chat 消耗情况</Text>
+                              <Icon as={AiOutlineQuestionCircle} size="sm" ml={1} style={{ zoom: .9 }} />
+                            </Flex>
+                          </Tooltip>
                           <Select
                             size="sm"
                             w="110px"

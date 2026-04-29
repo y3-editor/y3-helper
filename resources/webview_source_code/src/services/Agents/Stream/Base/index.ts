@@ -5,7 +5,8 @@ import { UserEvent } from "../../../../types/report";
 import { useAuthStore } from "../../../../store/auth";
 import { useExtensionStore } from "../../../../store/extension";
 import userReporter from "../../../../utils/report";
-import { REQUEST_TIMEOUT_NAME, useChatStore } from "../../../../store/chat";
+import { ABORT_REASON_CLEANUP, createAbortReason, REQUEST_TIMEOUT_NAME } from "../../../../utils/abort";
+import { useChatStore } from "../../../../store/chat";
 import { useChatConfig } from "../../../../store/chat-config";
 import { StreamError } from "../../../useChatStream";
 
@@ -102,7 +103,7 @@ export default abstract class BaseStream implements IBaseStream {
       'Content-Type': 'application/json',
       'X-Access-Token': accessToken as string,
       'X-Auth-User': encodeURI(username as string || ''),
-      'y3maker-version': codeMakerVersion as string,
+      'codemaker-version': codeMakerVersion as string,
       ide: IDE as string,
       'department-code': departmentCode as string,
       'code-generate-model-code': codeGenerateModelCode as string,
@@ -233,7 +234,7 @@ export default abstract class BaseStream implements IBaseStream {
   public close() {
     try {
       this._needContinue = false; // 停止流读取
-      this.abortController?.abort?.();
+      this.abortController?.abort?.(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       if (this.pingpongTimer) {
         clearTimeout(this.pingpongTimer);
         this.pingpongTimer = undefined;

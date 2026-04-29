@@ -122,3 +122,13 @@ export interface ReviewRequest {
     file_ids?: string[];
 }
 
+/**
+ * 同步过滤后的 issues 到 diff webview 的消息数据类型
+ */
+export interface SyncFilteredIssuesToDiffData {
+    reviewRequestId: string;
+    fileIndex: string;
+    hiddenIssueIds: string[];
+}
+
+

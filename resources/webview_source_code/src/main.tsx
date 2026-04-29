@@ -1,5 +1,9 @@
 // import './wdyr';
 import './init.ts';
+import { installChunkErrorHandler } from './utils/chunkErrorHandler';
+
+// 必须在 React 渲染之前注册，捕获 Vite preload 和 dynamic import 失败
+installChunkErrorHandler();
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

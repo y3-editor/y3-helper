@@ -42,6 +42,7 @@ import { toastErrorMessage } from '../../utils';
 import { useChatConfig } from '../../store/chat-config';
 import { getHistories } from '../../services/chat';
 import { debounce, isNumber } from 'lodash';
+import { ABORT_REASON_CLEANUP, createAbortReason } from '../../utils/abort';
 import { MdInbox } from 'react-icons/md';
 import {
   SmallScreenWidth,
@@ -517,7 +518,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const debouncedGetSessions = React.useCallback(
     debounce(async (keyword: string) => {
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+        abortControllerRef.current.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       }
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -906,7 +907,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const loadMore = React.useCallback(
     async (page: number) => {
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+        abortControllerRef.current.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       }
       const controller = new AbortController();
       try {

@@ -90,7 +90,7 @@ const ModelIconMap: Record<ChatModel, any> = {
   [ChatModel.Claude46Opus]: claude3Icon
 };
 
-const ChatModelSelector = () => {
+const ChatModelSelector = ({ disabled }: { disabled?: boolean }) => {
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const [isExtraSmallScreen] = useMediaQuery('(max-width: 380px)');
   const [isAbove460px] = useMediaQuery('(min-width: 461px)');
@@ -470,7 +470,9 @@ const ChatModelSelector = () => {
   }, [chatModels])
 
   return (
-    <div id="chat-model-selector" data-tour="chat-model-selector" ref={popoverRef}>
+    <div id="chat-model-selector" data-tour="chat-model-selector" ref={popoverRef}
+      style={disabled ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
+    >
       <Popover isLazy placement="top" isOpen={isOpenPopover}>
         <PopoverTrigger>
           <MiniButton

@@ -1,6 +1,7 @@
 import { OFFICE_BM_API_URL } from '../routes/CodeCoverage/const';
 import { ChatMessage } from '../services';
-import { REQUEST_TIMEOUT_NAME, useChatStore } from '../store/chat';
+import { REQUEST_TIMEOUT_NAME } from './abort';
+import { useChatStore } from '../store/chat';
 import { StreamError } from '../services/useChatStream';
 import { Docset } from '../services/docsets';
 import { cloneDeep } from 'lodash';
@@ -897,6 +898,6 @@ export function getValidToolName(name: string) {
 /**
  * 是图片文件
  */
-export function isImageFileWithPath(path: string): boolean {
-  return /(\.png)|(\.jpg)|(\.webp)|(\.gif)|(\.jpeg)/.test(path)
+export function isImageFileByPath(path: string): boolean {
+  return /\.(png|jpg|webp|gif|jpeg)$/i.test(path)
 }

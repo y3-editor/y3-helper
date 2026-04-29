@@ -462,7 +462,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     )
   }, [maxCostPerMonth, postMessage])
 
-  if (billLoading && chatType === 'codebase' && isExceedCost) {
+  if (billLoading && isExceedCost) {
     return (
       <Flex position={'relative'} w={'full'} h={'full'} fontSize={'12px'} color={'text.default'} pt={2} gap={2}>
         <Spinner size={'sm'} />
@@ -471,7 +471,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     )
   }
 
-  if (isExceedCost && chatType === 'codebase' && !billLoading) {
+  if (isExceedCost && !billLoading) {
     return renderExceededTip()
   }
 

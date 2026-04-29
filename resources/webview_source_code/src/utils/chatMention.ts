@@ -2,6 +2,7 @@ import { getBase64FromUrl } from "."
 import { ChatMessageContent, ChatMessageContentUnion } from "../services"
 import { AttachType } from "../store/attaches"
 import { ChatAttachStore, FileItem, FolderItem, ImageUrl, IMultiAttachment, IProblem } from "../store/chat"
+import { isDocsetFile } from "./chatAttachParseHandler"
 
 // 提及的文件内容表达
 export const mentionRegex = /@((?:\/|\w+:\/\/)[^\s]+?|[a-f0-9]{7,40}\b|problems\b)(?=[.,;:!?]?(?=[\s\r\n]|$))/
@@ -24,6 +25,9 @@ export const convertAttachToMention = (attach: TMixAttach) => {
   switch (attach.attachType) {
     case AttachType.File: {
       const targetAttach = attach as FileItem
+      if (isDocsetFile(targetAttach.path)) {
+        return targetAttach.content
+      }
       // 只有仓库智聊需要总结
       return `${targetAttach.path} content is displayed in cat -n format, starting from line 1.\nBelow is the content of the file\n`
         + (targetAttach.content || '')
@@ -46,7 +50,7 @@ export const convertAttachToMention = (attach: TMixAttach) => {
       const targetAttach = attach as IProblem
       return `<workspace_problems>${targetAttach.problem || 'No workspace problems found'}</workspace_problems>`
     }
-    default: return ''
+    default: return '-'
   }
 }
 
@@ -58,7 +62,9 @@ export const convertAttachToMention = (attach: TMixAttach) => {
 export async function parseMentions(text: string, attaches: ChatAttachStore['attachs']): Promise<ChatMessageContentUnion[]> {
   const mentions: Set<string> = new Set();
   const contentWithMentions: ChatMessageContentUnion[] = [];
-  const parsedText = text.replace(mentionRegexGlobal, (_, mention) => {
+  const parsedText = text.replace(mentionRegexGlobal, (_, keyword) => {
+    const mention = keyword?.replace?.('</user_query>', '')
+    if (!mention) return ''
     mentions.add(mention)
     if (mention === 'problems') {
       return 'Workspace problems(see below for workspace_problems)'
@@ -67,7 +73,7 @@ export async function parseMentions(text: string, attaches: ChatAttachStore['att
       const path = mention.trim().slice(1)
       return isFolder
         ? `${path}`
-        : `${path}(see file for file_content)`
+        : `${path}`
     }
   })
 

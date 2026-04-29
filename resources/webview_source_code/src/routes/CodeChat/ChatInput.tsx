@@ -425,31 +425,52 @@ function ChatInput(props: ChatInputProp) {
         );
         if (checkValueOfPressedKeyboard(event, ['ArrowUp'])) {
           if (filterSendMessage.length > 0) {
-            // 首次按上键时，保存当前输入作为草稿
+            const currentInput = inputRef.current?.value ?? '';
+
             if (currentSendMessageIndex === null) {
-              inputDraftRef.current = inputRef.current?.value || '';
+              // 尚未进入历史模式：保存当前草稿，进入历史模式从最新一条开始
+              inputDraftRef.current = currentInput;
+              switchToHistoryIndex(filterSendMessage.length - 1, filterSendMessage);
+            } else {
+              // 已在历史模式中：检查当前输入是否与该 index 原始历史内容一致
+              const originalContent = getHistoryContent(filterSendMessage[currentSendMessageIndex]);
+              if (currentInput !== originalContent) {
+                // 用户在历史基础上修改了内容 → 将修改内容存为新草稿，重置索引重新翻
+                inputDraftRef.current = currentInput;
+                switchToHistoryIndex(filterSendMessage.length - 1, filterSendMessage);
+              } else {
+                // 未修改，正常向上翻
+                switchToHistoryIndex(Math.max(currentSendMessageIndex - 1, 0), filterSendMessage);
+              }
             }
-            let newIndex =
-              currentSendMessageIndex !== null
-                ? currentSendMessageIndex - 1
-                : filterSendMessage.length - 1;
-            newIndex = Math.max(newIndex, 0);
-            switchToHistoryIndex(newIndex, filterSendMessage);
           }
         }
 
         if (checkValueOfPressedKeyboard(event, ['ArrowDown'])) {
           if (filterSendMessage.length > 0 && currentSendMessageIndex !== null) {
-            const newIndex = currentSendMessageIndex + 1;
-            if (newIndex >= filterSendMessage.length) {
-              // 超过最后一条历史消息，恢复草稿
+            const currentInput = inputRef.current?.value ?? '';
+            const originalContent = getHistoryContent(filterSendMessage[currentSendMessageIndex]);
+
+            if (currentInput !== originalContent) {
+              // 用户在历史基础上修改了内容 → 将修改内容存为新草稿，退出历史模式
+              inputDraftRef.current = currentInput;
               setCurrentSendMessageIndex(null);
-              if (inputRef.current) {
-                inputRef.current.value = inputDraftRef.current;
-                focusInput(inputDraftRef.current.length);
-              }
+              // 退出历史模式时，输入框保持当前内容（即修改后的内容），无需额外赋值
+              focusInput(currentInput.length);
             } else {
-              switchToHistoryIndex(newIndex, filterSendMessage);
+              // 未修改，正常向下翻
+              const newIndex = currentSendMessageIndex + 1;
+              if (newIndex >= filterSendMessage.length) {
+                // 已到达最新，恢复草稿内容
+                setCurrentSendMessageIndex(null);
+                if (inputRef.current) {
+                  const draft = inputDraftRef.current;
+                  inputRef.current.value = draft;
+                  focusInput(draft.length);
+                }
+              } else {
+                switchToHistoryIndex(newIndex, filterSendMessage);
+              }
             }
           }
         }
@@ -506,13 +527,16 @@ function ChatInput(props: ChatInputProp) {
         const trimmedUserInput = inputRef.current?.value.trim() || '';
         // 当有 MCP runner 时，即使没有用户输入也允许发送
         await handleSubmit(trimmedUserInput);
-        // 重置往上查找的历史会话
+        // 重置往上查找的历史会话和草稿
         setCurrentSendMessageIndex(null);
+        inputDraftRef.current = '';
       }
     },
     [
+      switchToHistoryIndex,
       currentSendMessageIndex,
       focusInput,
+      getHistoryContent,
       messagePool,
       shouldSubmit,
       handleSubmit,

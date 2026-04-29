@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useAuthStore } from '../../store/auth';
 import ImagePreview from '../ImagePreview';
+import { ABORT_REASON_CLEANUP, createAbortReason } from '../../utils/abort';
 
 interface BrainMakerImageProps {
   src: string;
@@ -46,7 +47,7 @@ const useImageFetch = (
     fetchImage();
 
     return () => {
-      abortController.abort();
+      abortController.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       if (imageSrc) {
         URL.revokeObjectURL(imageSrc);
       }

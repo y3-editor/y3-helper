@@ -554,7 +554,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
                   />
                 }
               ></MiniMenuButton>
-              <MenuList>
+              <MenuList hidden={isCodebaseInputDisabled}>
                 <MenuItem
                   onClick={() =>
                     promptProtalRef.current?.trigger(
@@ -596,14 +596,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             </Menu>
             <Divider h="14px" mx="1" orientation="vertical" />
             {/* 模型选择器 */}
-            <div
-              style={{
-                opacity: isCodebaseInputDisabled ? 0.4 : 1,
-                pointerEvents: isCodebaseInputDisabled ? 'none' : 'auto',
-              }}
-            >
-              <ChatModelSelector />
-            </div>
+            <ChatModelSelector disabled={isCodebaseInputDisabled} />
             <Divider h="14px" mx="1" orientation="vertical" />
             {/* <Divider h="14px" mx="1" orientation="vertical" /> */}
 

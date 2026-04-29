@@ -43,6 +43,7 @@ export default function ToolCall(props: ToolCallProps) {
   const currentSession = useChatStore((state) => state.currentSession());
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
+  const messageProcessing = message.processing;
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
   );
@@ -595,23 +596,23 @@ export default function ToolCall(props: ToolCallProps) {
       (hasTodoTool && autoTodo) ||           // Plan 自动执行
       (hasMCPTool && mcpServer?.config?.autoApprove) // MCP 自动调用
     );
-    
+
     // 只有最新消息且需要用户操作时才发送通知（如果开启了自动执行则不需要用户操作）
-    const needsUserAction = !toolResponseDisabled && 
-                           !isProcessing && 
-                           !isMCPProcessing && 
-                           !isShare && 
-                           !hasAskUserQuestionTool && 
+    const needsUserAction = !toolResponseDisabled &&
+                           !isProcessing &&
+                           !isMCPProcessing &&
+                           !isShare &&
+                           !hasAskUserQuestionTool &&
                            !repoNotMatch &&
                            !hasAutoExecuteEnabled; // 如果有自动执行开关开启，则不需要用户操作
-    
+
     if (isLatest && needsUserAction && !hasNotifiedRef.current) {
       // 立即标记已通知，防止重复通知
       hasNotifiedRef.current = true;
-      
+
       // 标记高优先级通知已发送
       notificationManager.setHighPriorityNotified(message.id || '');
-      
+
       // 根据不同工具类型生成不同的通知消息
       let notificationMessage = '';
       if (hasTerminalTool) {
@@ -627,7 +628,7 @@ export default function ToolCall(props: ToolCallProps) {
       } else {
         notificationMessage = '需要用户确认操作';
       }
-      
+
       notifyChatReplyDone({
         topic: currentSession?.topic,
         success: true,
@@ -643,11 +644,11 @@ export default function ToolCall(props: ToolCallProps) {
       hasNotifiedRef.current = false;
     }
   }, [
-    isLatest, 
-    toolResponseDisabled, 
-    isProcessing, 
-    isMCPProcessing, 
-    isShare, 
+    isLatest,
+    toolResponseDisabled,
+    isProcessing,
+    isMCPProcessing,
+    isShare,
     hasAskUserQuestionTool,
     repoNotMatch,
     hasTerminalTool,
@@ -872,11 +873,12 @@ export default function ToolCall(props: ToolCallProps) {
   return (
     <TaskProgressPanel
       headerContent={toolCallTitle}
-      autoConfigItems={autoConfigItems}
+      autoConfigItems={!messageProcessing ? autoConfigItems : []}
       showHeader={!hasEditFileTool && !hasTerminalTool && !hasMCPTool && !hasToolCallError && !hasMakePlanTool && !hasAskUserQuestionTool && !hasListFilesTool && !hasReadFileTool}
       footerContent={
         !toolResponseDisabled &&
         !isProcessing &&
+        !messageProcessing &&
         !isMCPProcessing &&
         !isShare &&
         !hasAskUserQuestionTool ? (

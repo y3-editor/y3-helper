@@ -77,7 +77,7 @@ import { debounce, cloneDeep, findLastIndex, isEqual } from 'lodash';
 import useService from '../../hooks/useService';
 // import ChatSessionClearPanel from './ChatSessionClearPanel';
 import { useAuthStore } from '../../store/auth';
-import { countGodeGenerate, DateFormat, isImageFileWithPath, truncateContent } from '../../utils';
+import { countGodeGenerate, DateFormat, isImageFileByPath, truncateContent } from '../../utils';
 import ChatRecommendation from './ChatRecommendation';
 import { Docset, Docsets } from '../../services/docsets';
 import {
@@ -134,6 +134,7 @@ import {
 } from '../../store/workspace/tools/read';
 import { updateCurrentSession as updateCurrentSessionUtil } from '../../hooks/useCurrentSession';
 import { generateTraceId } from '../../utils/trace';
+import { ABORT_REASON_CLEANUP, createAbortReason } from '../../utils/abort';
 // Y3不需要遥测，用空实现代替
 const otel = {
   startToolCallSpan: (..._args: any[]) => undefined,
@@ -144,6 +145,7 @@ import { useGlobalEvent } from '../../hooks/useGlobalEvent';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import {
   EParsedDocsStatus,
+  isDocsetFile,
   parseDocContentFromReadFileTool,
   parseImageFromReadFileTool,
 } from '../../utils/chatAttachParseHandler';
@@ -163,6 +165,7 @@ import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
 // import { usePageEntryTour, useEventTriggerTour, CODEBASE_SESSION_CREATED_EVENT } from '../../components/FeatureTour'; // Y3不需要FeatureTour
 import { usePanelContext } from '../../context/PanelContext';
+import { onChunkLoadError } from '../../utils/chunkErrorHandler';
 
 // 468(原本宽度)+40(token数的宽度)
 // const MAX_SHOW_CONTEXT_WIDTH = '508px';
@@ -629,7 +632,7 @@ function CodeChat() {
     debounce(async () => {
       // 取消之前的异步操作
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+        abortControllerRef.current.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       }
       if (!chatModels[model]?.hasComputableToken) {
         setTokenNumber(0);
@@ -1319,7 +1322,7 @@ function CodeChat() {
             reportSkillInstall(result.skillName!, {
               source: 'codemaker-command',
             });
-          });
+          }).catch(onChunkLoadError);
           toast({
             title: 'Skill 安装成功',
             description: `${result.skillName} 已安装到 ${result.installPath}`,
@@ -1585,21 +1588,19 @@ function CodeChat() {
                         parseDocContentFromReadFileTool(tool_id, tool_result);
                         return;
                       } if (
-                        isImageFileWithPath(tool_result.path)
+                        isImageFileByPath(tool_result.path)
                       ) {
                         parseImageFromReadFileTool(tool_id, tool_result);
                         return
                       } else {
-                        const content = getFilePrompt(
-                          tool_result.path,
-                          tool_result.content,
-                          true
-                        );
+                        const content = tool_result.content;
                         updateToolCallResults(
                           {
                             [tool_id]: {
                               path: tool_result.path,
-                              content: truncateContent(content),
+                              content: isDocsetFile(tool_result.path)
+                                ? content
+                                : truncateContent(getFilePrompt(tool_result.path, content, true)),
                               isError: tool_result.isError,
                               extra: extra, // 读取分页的信息
                             },

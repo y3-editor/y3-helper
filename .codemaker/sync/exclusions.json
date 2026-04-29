@@ -89,6 +89,12 @@
     "src/routes/CodeChat/CodeChat.tsx": "REVIEW: 引用了otel遥测/FeatureTour/SpecInitModal/OpenSpecUpdateModal等Y3不需要的模块，不可直接覆盖",
     "src/store/skills/index.ts": "REVIEW: Y3扩展了SkillSource(y3maker/agents)、SkillIndexItem(display_name/description_cn/hubSkillId等)、SkillConfig、isSkillEnabled/isHubSkillInstalled方法，不可直接覆盖",
     "src/routes/CodeChat/CodebaseModePicker.tsx": "REVIEW: Y3移除了Vibe/Spec选择卡片，仅保留推荐问题Drawer",
-    "src/routes/CodeChat/CodeChatInputActionBar.tsx": "REVIEW: Y3不引用FeatureTour相关import"
+    "src/routes/CodeChat/CodeChatInputActionBar.tsx": "REVIEW: Y3不引用FeatureTour相关import，且上游含isExceedCost限额逻辑，Y3无限额机制需跳过限额相关改动但保留通用UI改进",
+    "src/main.tsx": "REVIEW: Y3没有CodeSearch和CodeReview路由，不可直接覆盖。只cherry-pick通用改进(如chunkErrorHandler)",
+    "src/store/review.ts": "SKIP: 上游CodeReview的store，Y3不需要，不要复制过来",
+    "src/utils/localAiExplain.ts": "SKIP: 依赖authRequest(Y3没有)，Y3不需要本地AI解释功能",
+    "src/utils/report.ts": "REVIEW: 上游引入了@opentelemetry/api和telemetry/otel，Y3不需要OTEL遥测，不可直接覆盖",
+    "src/utils/error.ts": "REVIEW: 依赖DEFAULT_ASSISTANT_MESSAGE(需从chat.ts导出)和ChatStreamErrorMgr，覆盖前确认chat.ts已export该常量",
+    "src/services/useChatStream.ts__abort": "REVIEW: 上游大量使用createAbortReason替换abort()、HttpStreamError替换Error，以及otel.withSpanContext包装。改动量极大，建议逐步cherry-pick而非直接覆盖"
   }
 }

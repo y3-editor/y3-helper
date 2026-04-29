@@ -22,6 +22,8 @@ import {
 } from './docsets';
 import { PluginAppRunnerParams } from './plugin';
 import { REQUEST_TIMEOUT_NAME } from '../store/chat';
+// abort 工具已导入备用，后续 cherry-pick abort 改造时启用
+// import { ABORT_REASON_FINISHED, ABORT_REASON_USER_CANCELLED, createAbortReason } from '../utils/abort';
 import { OFFICE_BM_API_URL } from '../routes/CodeCoverage/const';
 import { BMSearch } from '../services';
 import { uniqueId } from 'lodash';
@@ -153,6 +155,16 @@ const securelyEnqueueValue = (controller: ReadableStreamDefaultController, value
       controller.enqueue(value);
     }
   })
+}
+
+// HttpStreamError 备用，后续 cherry-pick 完整错误处理改造时启用
+// @ts-ignore - HttpStreamError 备用，后续完整错误处理改造时启用
+class HttpStreamError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
 async function createStream(req: Request, parseCallback?: (data: any) => void) {
@@ -2535,29 +2547,35 @@ export async function requestCodebaseChatStream(
           const chunk = await reader?.read();
           lastMessageReceivedTime = new Date().getTime();
           if (!chunk || chunk.done) {
-            // let toolcallParsable = true;
-            // if (toolCalls.length) {
-            //   try {
-            //     JSON.parse(toolCalls[0].function.arguments || '');
-            //   } catch (err) {
-            //     console.error('Error parsing tool call arguments after streaming:', err);
-            //     toolcallParsable = false;
-            //   }
-            // }
-            if (needContinue && continueCount < MAX_CONTINUE_COUNT) {
-              userReporter.report({
-                event: UserEvent.TOOLCALL_STOP_BY_LENGTH,
-                extends: {
-                  model: data.model,
-                  max_tokens: data.max_tokens
+            let toolcallParsable = true;
+            let toolName = '';
+            if (toolCalls.length) {
+              toolCalls.forEach((toolCall) => {
+                if (toolCall?.function?.arguments) {
+                  try {
+                    JSON.parse(toolCall.function.arguments || '');
+                  } catch (err) {
+                    toolcallParsable = false;
+                    toolName = toolCall.function.name;
+                  }
                 }
               })
+            }
+            if ((needContinue || !toolcallParsable) && continueCount < MAX_CONTINUE_COUNT) {
               if (chunkTimeoutId) {
                 clearInterval(chunkTimeoutId);
               }
               needContinue = false;
               continueCount++;
               if (toolCalls && toolCalls.length) {
+                userReporter.report({
+                  event: UserEvent.TOOLCALL_STOP_BY_LENGTH,
+                  extends: {
+                    model: data.model,
+                    continueCount: continueCount,
+                    toolName: toolName
+                  },
+                });
                 const preResponseMessage: ChatMessage = {
                   role: ChatRole.Assistant,
                   content: responseText || '-',

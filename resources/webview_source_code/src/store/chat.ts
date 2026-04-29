@@ -554,7 +554,14 @@ export const useChatStore = create<ChatStore>()(
             // 避免流式过程中更新 session 导致消息丢失
             // 避免 syncHistory 正在写入时用服务端旧数据覆盖本地新数据导致消息回滚
             if (!pendingSyncCounts.has(id)) {
-              set(() => ({ sessions: nextSessions }));
+              // 兜底：如果本地消息数多于服务端，说明本地有尚未同步的新消息，
+              // 不用服务端旧数据覆盖，避免 PUT 失败后 GET 导致消息回滚
+              const localSession = get().sessions.get(id);
+              const localMsgLen = localSession?.data?.messages?.length || 0;
+              const remoteMsgLen = data?.data?.messages?.length || 0;
+              if (remoteMsgLen >= localMsgLen) {
+                set(() => ({ sessions: nextSessions }));
+              }
             }
             // TODO: 恢复会话的 codebaseChatMode、activeChangeId 和 activeFeatureId（新会话忽略，临时解决竞态问题）
             if (get().chatType === 'codebase' && data.data?.messages.length) {
@@ -1346,7 +1353,7 @@ type ChatStreamActions = {
   }, extra?: any) => void;
 };
 
-const DEFAULT_ASSISTANT_MESSAGE = {
+export const DEFAULT_ASSISTANT_MESSAGE = {
   id: '',
   role: ChatRole.Assistant,
   content: '',
@@ -3439,7 +3446,8 @@ export const useChatStreamStore = create(
                     'reapply',
                     'run_terminal_cmd',
                     'replace_in_file',
-                    'ask_user_question'
+                    'ask_user_question',
+                    'make_plan',
                   ].includes(toolCall.function.name))) {
                     isProcessing = false;
                   }
@@ -3973,7 +3981,8 @@ export const useChatStreamStore = create(
                     'reapply',
                     'run_terminal_cmd',
                     'replace_in_file',
-                    'ask_user_question'
+                    'ask_user_question',
+                    'make_plan',
                   ].includes(toolCall.function.name))) {
                     isProcessing = false;
                   }

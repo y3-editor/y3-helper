@@ -204,6 +204,7 @@ const IssueFilter = forwardRef(
         setLabels(null);
         setAiIssueTypes(null);
         setAiIssueSeverities(null);
+        setAiReviewAgents(null);
       },
     }));
 
@@ -366,8 +367,9 @@ const IssueFilter = forwardRef(
       return [...safeBaseData, ...specAgentData].filter((option) => option.enabled).map((option) => ({ value: option.name, label: option.name }));
     }, [address, repoConfig, specAgentConfig]);
 
+    const prevFilterRef = useRef<IssueFilterState | null>(null);
     useEffect(() => {
-      onChange?.({
+      const next: IssueFilterState = {
         assignees: _.map(assignees, (item) => item.value),
         authors: _.map(authors, (item) => item.value),
         status: issueState?.value || '',
@@ -376,7 +378,11 @@ const IssueFilter = forwardRef(
         aiIssueTypes: _.map(aiIssueTypes, (item) => item.value),
         aiIssueSeverities: _.map(aiIssueSeverities, (item) => item.value),
         aiReviewAgents: _.map(aiReviewAgents, (item) => item.value),
-      });
+      };
+      if (!_.isEqual(prevFilterRef.current, next)) {
+        prevFilterRef.current = next;
+        onChange?.(next);
+      }
     }, [
       onChange,
       assignees,

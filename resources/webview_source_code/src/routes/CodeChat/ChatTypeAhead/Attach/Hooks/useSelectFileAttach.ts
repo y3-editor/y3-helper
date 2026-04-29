@@ -4,6 +4,7 @@ import { AttachType } from "../../../../../store/attaches"
 import { cloneDeep } from "lodash"
 import EventBus, { EBusEvent } from "../../../../../utils/eventbus"
 import { getFilePrompt } from "../../../../../store/workspace/tools/read"
+import { isDocsetFile } from "../../../../../utils/chatAttachParseHandler"
 
 export const useSelecteFileAttach = (): {
   selectFileAttaches: (files: FileItem[], autoFill?: boolean, hasSelectFile?: boolean) => void
@@ -15,7 +16,7 @@ export const useSelecteFileAttach = (): {
   const convertToFileAttach = useCallback((file: FileItem) => {
     return {
       ...file,
-      content: getFilePrompt(file.path, file.content),
+      content: isDocsetFile(file.path) ? file.content : getFilePrompt(file.path, file.content),
       attachType: AttachType.File,
     }
   }, [])

@@ -9,6 +9,7 @@ import FeedbackPanel from './FeedbackPanel';
 import StreamingChatMessage from './StreamingChatMessage';
 import { usePanelContextOptional } from '../../../context/PanelContext';
 import { useChatStreamNotification } from '../../../hooks/useChatStreamNotification';
+import { ABORT_REASON_CLEANUP, createAbortReason } from '../../../utils/abort';
 
 const PAGE_SIZE = 30;
 
@@ -43,7 +44,7 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
     React.useEffect(() => {
       abortControllerRef.current = new AbortController();
       return () => {
-        abortControllerRef.current?.abort();
+        abortControllerRef.current?.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
       };
     }, []);
 

@@ -95,7 +95,7 @@ const FileUpload: React.FC<any> = () => {
       for (let i = 0; i < uploads.length; i++) {
         const upload = uploads[i];
         const file = files[i];
-        const parsedContent = await convertTextByAddress(upload.url)
+        const parsedContent = await convertTextByAddress(upload.url, file.name)
         const attachFile: FileItem = {
           attachType: AttachType.File,
           fileName: file.name,
