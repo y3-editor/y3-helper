@@ -4,8 +4,7 @@
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
-
-const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0);
+import { getWorkspaceRootPath } from '../utils/getWorkspaceInfo';
 
 function toPosixPath(p: string) {
     const isExtendedLengthPath = p.startsWith('\\\\?\\');
@@ -37,6 +36,7 @@ class WorkspaceTracker {
     }
 
     async initializeFilePaths() {
+        const cwd = getWorkspaceRootPath();
         if (!cwd) {
             return;
         }
@@ -82,6 +82,7 @@ class WorkspaceTracker {
     }
 
     private normalizeFilePath(filePath: string): string {
+        const cwd = getWorkspaceRootPath();
         const resolvedPath = cwd ? path.resolve(cwd, filePath) : path.resolve(filePath);
         return filePath.endsWith('/') ? resolvedPath + '/' : resolvedPath;
     }
@@ -228,6 +229,7 @@ class WorkspaceTracker {
         type?: string
     }) {
         const { keyword, type } = option;
+        const cwd = getWorkspaceRootPath();
         if (cwd) {
             const filePathsArr = Array.from(this.filePaths).map((file) => {
                 const relativePath = path.relative(cwd, file).toPosix();
@@ -239,10 +241,6 @@ class WorkspaceTracker {
                 .map(item => {
                     let match = true;
                     let score = 0;
-
-                    if (item.endsWith('.c')) {
-                        return null;
-                    }
 
                     if (keyword) {
                         const fuzzyResult = this.fuzzyMatch(keyword, item);
