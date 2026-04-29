@@ -876,7 +876,7 @@ export const useChatStore = create<ChatStore>()(
           const preSystemToolTokens = curSession.data.consumedTokens?.systemToolTokens || 0
 
           curSession.data.consumedTokens.output += completionTokens;
-          if (model?.includes?.('claude')) {
+          if (getModelSupplyChannel(model as ChatModel)?.includes?.('claude')) {
             // 旧版本输入，新版本细化Token使用
             curSession.data.consumedTokens.input += promptTokens
 
@@ -903,7 +903,11 @@ export const useChatStore = create<ChatStore>()(
             curSession.data.consumedTokens.comporessCompletionTokens = preComporessCompletionTokens + comporessCompletionTokens;
           } else {
             curSession.data.consumedTokens.systemTokens = preSystemTokens + systemTokens - skillTokens - ruleTokens - mcpTokens
-            curSession.data.consumedTokens.input += promptTokens - systemTokens // 工具没办法算出来
+            if (promptTokens > systemTokens) {
+              curSession.data.consumedTokens.input += promptTokens - systemTokens // 工具没办法算出来
+            } else {
+              curSession.data.consumedTokens.input += promptTokens
+            }
             curSession.data.consumedTokens.skillTokens += skillTokens
             curSession.data.consumedTokens.ruleTokens += ruleTokens
             curSession.data.consumedTokens.mcpTokens += mcpTokens

@@ -13,18 +13,22 @@ export class PromptLinkMgr {
   public mcpPrompt = "";
   public skillPrompt = "";
   public rulePrompt = "";
+  private hasInit = false; // 防止Prompt被初始化多次
 
   public async init(option: {
     mcpPrompt?: string,
     skillPrompt?: string,
     rulePrompt?: string,
   }) {
+    if (this.hasInit) return
+    this.hasInit = true;
     this.mcpPrompt = option.mcpPrompt || '';
     this.skillPrompt = option.skillPrompt || '';
     this.rulePrompt = option.rulePrompt || '';
   }
 
   public reset() {
+    this.hasInit = false;
     this.mcpPrompt = "";
     this.skillPrompt = "";
     this.rulePrompt = "";

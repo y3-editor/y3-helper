@@ -669,7 +669,7 @@ export const specialErrorPatterns = [
       msg.includes('The system is currently experiencing high demand') ||
       msg.includes('too_many_requests') ||
       msg.includes('Try your request again')
-    ),
+    ) || msg.includes('Try your request again') && msg.includes('AnthropicErrorChunk'),
     message: '⚠️ 当前模型服务繁忙，请稍后重试'
   },
   {

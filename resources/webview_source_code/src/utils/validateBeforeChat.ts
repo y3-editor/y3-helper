@@ -100,6 +100,9 @@ export const serializeCodebaseMessages = async (
   isReAct?: boolean
 ) => {
   const filteredMessages: ChatMessage[] = [];
+
+  let toolContents: ChatMessageContentUnion[] = [] // 工具内容
+
   for (let i = 0; i < sendMessages.length; i++) {
     const message = cloneDeep(sendMessages[i]);
     delete message._originalRequestData;
@@ -179,10 +182,13 @@ export const serializeCodebaseMessages = async (
           if (msgContent.type === ChatMessageContent.ImageUrl) {
             hasToolImageContent = true;
             (extraUserMessage.content as ChatMessageContentUnion[]).push(msgContent)
+            toolContents.push(msgContent)
           }
         }
         message.content = message.content.filter(msgContent => msgContent.type === 'text').map(msgContent => msgContent.text).join('\n');
       }
+    } else if (message.role !== ChatRole.Tool) {
+      toolContents = []
     }
     if (isReAct) {
       const tool_calls = message.tool_calls;
@@ -209,7 +215,11 @@ export const serializeCodebaseMessages = async (
     } else {
       filteredMessages.push(message);
       if (hasToolImageContent) {
-        filteredMessages.push(extraUserMessage);
+        const nextMessage = sendMessages[i + 1]
+        if (!nextMessage || nextMessage?.role !== ChatRole.Tool) {
+          extraUserMessage.content = toolContents
+          filteredMessages.push(extraUserMessage);
+        }
       }
     }
   }

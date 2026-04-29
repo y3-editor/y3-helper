@@ -120,7 +120,7 @@ export default function ChatConsumeTokenPanel() {
           { color: '#94a3b8', label: 'System prompt', value: systemTokens, total: pctBase, isDark },
           { color: '#60a5fa', label: 'System tools', value: systemToolTokens, total: pctBase, isDark, tooltop: '当前只有Claude系列模型支持计算System tools消耗的Tokens' },
           { color: '#34d399', label: 'Messages', value: messageTokens, total: pctBase, isDark },
-          { color: '#a78bfa', label: 'Read Cache', value: readCacheTokens, total: pctBase, isDark, tooltop: '当前只有Claude系列模型才支持缓存' },
+          { color: '#a78bfa', label: 'Read Cache', value: readCacheTokens, total: pctBase, isDark, tooltop: '目前仅 Claude 系列模型支持请求缓存功能，可缓存的内容包括：系统提示词（SystemPrompt）、系统工具（SystemTools）、上传的文件等。当请求命中缓存时，能有效减少 token 消耗，降低使用成本' },
           { color: '#fb7185', label: 'Mcp tokens', value: mcpTokens, total: pctBase, isDark },
           { color: '#fbbf24', label: 'Skill tokens', value: skillTokens, total: pctBase, isDark },
           { color: '#fdba74', label: 'Rule tokens', value: ruleTokens, total: pctBase, isDark },
