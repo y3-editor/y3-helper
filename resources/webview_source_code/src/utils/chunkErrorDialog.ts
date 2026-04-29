@@ -131,6 +131,15 @@ function bindDialogEvents(): void {
       chevron.style.transform = opening ? 'rotate(90deg)' : '';
     });
   }
+
+  // 点击背景层关闭弹窗
+  const overlay = document.getElementById(OVERLAY_ID);
+  const backdrop = overlay?.querySelector<HTMLDivElement>(':scope > div');
+  backdrop?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      overlay?.remove();
+    }
+  });
 }
 
 // ── 导出 ──────────────────────────────────────────────────

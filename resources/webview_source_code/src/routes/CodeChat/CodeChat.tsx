@@ -1441,7 +1441,9 @@ function CodeChat() {
             ].includes(tool_name)
           ) {
             // 部分工具不做判断，避免阻塞
-            if (!isProcessing && !isMCPProcessing && !isApplying) {
+            // 使用 getState() 实时获取最新状态，避免闭包陈旧值导致合法的 TOOL_CALL_RESULT 被丢弃
+            const streamState = useChatStreamStore.getState();
+            if (!streamState.isProcessing && !streamState.isMCPProcessing && !streamState.isApplying) {
               otel.stopToolCallSpan(toolSpan, { isError: false });
               return;
             }

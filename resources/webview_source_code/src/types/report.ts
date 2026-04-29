@@ -116,6 +116,9 @@ export enum UserEvent {
   // 异常错误结果
   SESSION_MESSAGE_EXCEPTION = 'CodeChat.session_message_exception',
 
+  // 修复工具ID
+  FIX_CLAUDE_TOOL_ID = 'CodeChat.fix_claude_tool_id',
+
   // MCP
   CODE_CHAT_MCP_SESSION_TOKEN_USED = 'CodeChat.mcp_session_token_used',
   CODE_CHAT_MCP_MESSAGE_TOKEN_USED = 'CodeChat.mcp_message_token_used',

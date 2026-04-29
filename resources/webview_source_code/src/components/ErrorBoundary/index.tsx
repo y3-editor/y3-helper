@@ -1,5 +1,12 @@
 import { WarningIcon } from '@chakra-ui/icons';
-import { Flex, Text, Button, Box, Collapse } from '@chakra-ui/react';
+import {
+  Flex,
+  Text,
+  Button,
+  Box,
+  Collapse,
+  createStandaloneToast,
+} from '@chakra-ui/react';
 import React, { Component, ReactNode } from 'react';
 import {
   logger as webToolsLogger,
@@ -10,6 +17,9 @@ import {
   formatErrorDetail,
 } from '../../utils/chunkErrorHandler';
 
+const { toast } = createStandaloneToast();
+const CHUNK_TOAST_ID = 'chunk-error-toast';
+
 interface ErrorBoundaryProps {
   children: ReactNode;
 }
@@ -19,6 +29,7 @@ interface ErrorBoundaryState {
   isChunkError: boolean;
   error: Error | null;
   showDetail: boolean;
+  copied: boolean;
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -27,14 +38,24 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     isChunkError: false,
     error: null,
     showDetail: false,
+    copied: false,
   };
 
   static getDerivedStateFromError(error: Error) {
-    return {
-      hasError: true,
-      isChunkError: isChunkLoadError(error),
-      error,
-    };
+    const isChunkError = isChunkLoadError(error);
+    // chunk 错误：在静态方法中触发 toast，避免在 render 中产生副作用
+    if (isChunkError && !toast.isActive(CHUNK_TOAST_ID)) {
+      toast({
+        id: CHUNK_TOAST_ID,
+        title: '应用已更新',
+        description: '检测到新版本已发布，请刷新页面以获取最新功能。',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    }
+    return { hasError: true, isChunkError, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -45,12 +66,40 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
   }
 
+  private copyToClipboard(text: string) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => this.onCopyDone(),
+        () => this.fallbackCopy(text),
+      );
+    } else {
+      this.fallbackCopy(text);
+    }
+  }
+
+  private fallbackCopy(text: string) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    this.onCopyDone();
+  }
+
+  private onCopyDone() {
+    this.setState({ copied: true });
+    setTimeout(() => this.setState({ copied: false }), 2000);
+  }
+
   render() {
     if (!this.state.hasError) {
       return this.props.children;
     }
 
-    const { isChunkError, error, showDetail } = this.state;
+    const { isChunkError, error, showDetail, copied } = this.state;
 
     return (
       <Flex
@@ -121,6 +170,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   {formatErrorDetail(error)}
                 </Text>
               </Box>
+              <Flex justify="center" mt={2}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color="text.muted"
+                  _hover={{ color: 'text.secondary' }}
+                  onClick={() =>
+                    this.copyToClipboard(formatErrorDetail(error))
+                  }
+                >
+                  {copied ? '✓ 已复制' : '📋 复制详情'}
+                </Button>
+              </Flex>
             </Collapse>
           </Box>
         )}

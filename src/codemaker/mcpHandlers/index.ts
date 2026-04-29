@@ -227,9 +227,12 @@ export class McpHub {
 
             switch (config.type) {
                 case "stdio": {
+                    const resolveWorkspaceVars = (value: string): string =>
+                        value.replace(/\$\{WORKSPACE\}/g, workspace);
+
                     transport = new StdioClientTransport({
-                        command: config.command || "",
-                        args: config.args,
+                        command: resolveWorkspaceVars(config.command || ""),
+                        args: config.args?.map(resolveWorkspaceVars),
                         env: {
                             ...(config.env || {}),
                             WORKSPACE: encodeURIComponent(workspace),

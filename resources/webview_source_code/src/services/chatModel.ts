@@ -1,4 +1,4 @@
-import { originalCodeMakerApi } from ".";
+import { originalCodeMakerApi } from '.';
 
 // 解析图片类型
 export enum ParseImgType {
@@ -32,10 +32,10 @@ export interface IChatModelConfig {
   code: ChatModel; // 模型标识
   title: string; // 前端标题
   enabled: boolean; // 是否启用
-  icon: ModelIconType, // 模型展示图标
+  icon: ModelIconType; // 模型展示图标
   chatType: ChatModelType; // 模型类型：0: 全部聊天 1: 普通聊天， 2: 仓库聊天
   parseImgType: ParseImgType; // 解析图片类型
-  isPrivate: boolean, // 是否是私有模型
+  isPrivate: boolean; // 是否是私有模型
   tags: string[]; // 前端显示的标签
   hasComputableToken: boolean; // 支持实时计算Token
   hasTokenCache: boolean; // 缓存Token
@@ -45,21 +45,21 @@ export interface IChatModelConfig {
   peerUserContent: boolean; // 发送消息时，消息扁平化
   displayOrder: number; // 越大前端展示越靠前
   tokenInfo: {
-    maxTokens: number, // 通用token
-    maxTokensInCodebase: number, // 仓库智聊中使用的Token
-  },
+    maxTokens: number; // 通用token
+    maxTokensInCodebase: number; // 仓库智聊中使用的Token
+  };
   priceInfo: {
-    currency: "CNY", // 汇率类型
+    currency: 'CNY'; // 汇率类型
     promptWeight: number; // 输入价格(每1000token费用)
     completionWeight: number; // 输出token价格
-    cacheWeightFor5min: number, // 5min缓存价格
-    hitCacheWeight: number, // 命中缓存价格
-  },
+    cacheWeightFor5min: number; // 5min缓存价格
+    hitCacheWeight: number; // 命中缓存价格
+  };
   authInfo: {
-    allowAll: boolean, // 是否允许所有人使用
-    allowedUsers: string[], // 允许使用的用户
-    allowedDepartments: string[], // 允许使用的部门列表
-  },
+    allowAll: boolean; // 是否允许所有人使用
+    allowedUsers: string[]; // 允许使用的用户
+    allowedDepartments: string[]; // 允许使用的部门列表
+  };
 }
 
 export enum ChatModel {

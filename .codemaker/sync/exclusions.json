@@ -95,6 +95,12 @@
     "src/utils/localAiExplain.ts": "SKIP: 依赖authRequest(Y3没有)，Y3不需要本地AI解释功能",
     "src/utils/report.ts": "REVIEW: 上游引入了@opentelemetry/api和telemetry/otel，Y3不需要OTEL遥测，不可直接覆盖",
     "src/utils/error.ts": "REVIEW: 依赖DEFAULT_ASSISTANT_MESSAGE(需从chat.ts导出)和ChatStreamErrorMgr，覆盖前确认chat.ts已export该常量",
-    "src/services/useChatStream.ts__abort": "REVIEW: 上游大量使用createAbortReason替换abort()、HttpStreamError替换Error，以及otel.withSpanContext包装。改动量极大，建议逐步cherry-pick而非直接覆盖"
+    "src/services/useChatStream.ts__abort": "REVIEW: 上游大量使用createAbortReason替换abort()、HttpStreamError替换Error，以及otel.withSpanContext包装。改动量极大，建议逐步cherry-pick而非直接覆盖",
+
+    "_separator_extension_notes": "── 以下为 extension 仓库 ──",
+    "src/handlers/skillsHandler/index.ts__uploadLocalSkill": "SKIP: Y3没有uploadLocalSkill功能（本地Skill文件导入），相关改动（Base64解码、smartDecode、encoding.ts、文案'上传→导入'）全部跳过",
+    "src/utils/encoding.ts": "SKIP: smartDecode工具函数仅供uploadLocalSkill使用，Y3不需要",
+    "src/routes/CodeChat/ChatModelSelector.tsx": "SKIP: Y3不需要模型选择器UI，模型从VSCode Settings读取。但chatModel.ts中的类型定义和枚举值可以合",
+    "src/provider/webviewProvider/index.ts__getUserModels": "SKIP: getUserModels接口是给模型选择器用的，Y3不需要"
   }
 }

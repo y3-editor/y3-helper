@@ -470,6 +470,7 @@ export const clearContextWithUnrelatedProperties = (
 export const repairToolIdOfMessages = (messages: ChatMessage[], usedModel: string) => {
   if (!usedModel) return messages
 
+  let hasRepairTool = false
   // Claude系列
   if (usedModel.toLocaleLowerCase().includes('claude')) {
 
@@ -491,6 +492,7 @@ export const repairToolIdOfMessages = (messages: ChatMessage[], usedModel: strin
           const originalId = toolCall.id;
           if (!originalId || !toolIdRegex.test(originalId)) {
             const newId = generateValidToolId();
+            hasRepairTool = true
             if (originalId) {
               idMap[originalId] = newId;
             }
@@ -501,6 +503,16 @@ export const repairToolIdOfMessages = (messages: ChatMessage[], usedModel: strin
         message.tool_call_id = idMap[message.tool_call_id];
       }
     }
+  }
+
+  if (hasRepairTool) {
+    webToolsHub.withScope((scope) => {
+      scope.setExtras({
+        event: UserEvent.FIX_CLAUDE_TOOL_ID,
+        model: usedModel,
+      });
+      webToolsLogger.captureMessage('');
+    });
   }
 
   return messages
