@@ -5,7 +5,6 @@ import {
   PopoverBody,
   Text,
   Flex,
-  Link,
   Box,
   Tooltip,
   Icon,
@@ -13,7 +12,6 @@ import {
 import { useTheme, ThemeStyle } from "../../../ThemeContext";
 import { useChatStore } from '../../../store/chat';
 import { useMemo } from 'react';
-import { usePostMessage } from '../../../PostMessageProvider';
 import MiniButton from '../../../components/MiniButton';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 
@@ -76,7 +74,6 @@ function TokenRow({ color, label, value, total, isDark, tooltop }: TokenRowProps
 
 export default function ChatConsumeTokenPanel() {
   const { activeTheme } = useTheme();
-  const { postMessage } = usePostMessage();
   const isDark = activeTheme === ThemeStyle.Dark;
 
   const currentSession = useChatStore((state) => state.currentSession());
@@ -187,25 +184,9 @@ export default function ChatConsumeTokenPanel() {
             />
 
             {/* 底部提示 */}
-            <Flex fontSize="xs" color={isDark ? '#808080' : '#666'} flexWrap="wrap" alignItems="center">
-              <Text>会话消耗 Tokens 将根据</Text>
-              <Link
-                color="blue.300"
-                px="1"
-                cursor="pointer"
-                onClick={() => {
-                  postMessage({
-                    type: 'OPEN_IN_BROWSER',
-                    data: {
-                      url: 'https://modelspace.netease.com/model_app',
-                    },
-                  });
-                }}
-              >
-                模型单价
-              </Link>
-              <Text>转换为消耗积分</Text>
-            </Flex>
+            <Text fontSize="xs" color={isDark ? '#808080' : '#666'}>
+              本次会话消耗
+            </Text>
           </Flex>
         </PopoverBody>
       </PopoverContent>

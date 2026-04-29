@@ -3,6 +3,7 @@ import { CodeMakerWebviewProvider } from './webviewProvider';
 import { CodeMakerApiServer } from './apiServer';
 import { initOpenFilesHandler } from './handlers/openFilesHandler';
 import { initWorkspaceTracker } from './handlers/workspaceTracker';
+// import { initIgnoreHandler } from './handlers/ignoreHandler';
 import SkillsHandler from './skillsHandler';
 
 let webviewProvider: CodeMakerWebviewProvider | undefined;
@@ -61,6 +62,10 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
     // 初始化 workspaceTracker 和 openFilesHandler（与源码版一致：在 extension activate 时初始化）
     initOpenFilesHandler(context);
     initWorkspaceTracker();
+
+    // 初始化 ignoreHandler（.y3makerignore 配置管理）
+    // 上游尚未正式启用，暂时注释掉保持一致
+    // initIgnoreHandler(context);
 
     // 初始化 SkillsHandler（异步，不阻塞扩展激活）
     const skillsHandler = SkillsHandler.getInstance();

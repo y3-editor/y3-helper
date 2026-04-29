@@ -294,6 +294,10 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 codebaseCustomPrompt: '',
             },
         });
+
+        // 同步 .y3makerignore 配置状态
+        const { syncIgnoreState } = require('./syncIgnoreState');
+        syncIgnoreState();
     }
 
     private _getShellFromEnv(): string {
