@@ -16,7 +16,7 @@ import {
 } from '../utils/tokenCalculator';
 import { Tool, useWorkspaceStore } from '../store/workspace';
 import { generateCompressionPrompt } from '../utils/compressionPrompt';
-import { fetchGptResponse } from '../services/chat';
+import { fetchGptResponse, GPTResponse } from '../services/chat';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import userReporter from '../utils/report';
@@ -27,6 +27,7 @@ import { useChatConfig } from '../store/chat-config';
 import { ChatModel } from './chatModel';
 import { getSessionById, syncSessionHistory } from '../hooks/useCurrentSession';
 import { replaceSkillPlaceholders } from '../utils/compressionPrompt';
+import { useChatStore, useChatStreamStore } from '../store/chat';
 
 const compressStatusListeners = new Set<(sessionId: string, status: SessionStatus) => void>();
 
@@ -176,6 +177,38 @@ export const subscribeCompressStatus = (
   };
 }
 
+const updateCompressedTokens = (response: GPTResponse) => {
+  const session = useChatStore.getState().currentSession()
+  if (!session) return
+  useChatStore.getState().updateConsumedTokens({
+    curSession: session,
+    comporessPromptTokens: response?.usage?.prompt_tokens || 0,
+    comporessCompletionTokens: response?.usage?.completion_tokens || 0,
+  })
+}
+
+const syncCompressedTokens = async () => {
+  const {
+    isStreaming,
+    isProcessing,
+    isTerminalProcessing,
+    isApplying,
+    isSearching,
+  } = useChatStreamStore.getState();
+  // 流式过程中，不校验会话有效性
+  if (
+    isStreaming ||
+    isProcessing ||
+    isTerminalProcessing ||
+    isApplying ||
+    isSearching
+  ) {
+    return
+  }
+  return
+  requestAnimationFrame(useChatStore.getState().syncHistory)
+}
+
 /**
  * Context compression service - handles the business logic of compression
  */
@@ -302,6 +335,7 @@ export class CompressionService {
       const runCompressionWithFallback = async () => {
         // 第 1 次：全量消息压缩
         let response = await requestCompression(filteredMessages);
+        updateCompressedTokens(response)
         let summary = extractSummaryText(response);
 
         if (summary.trim()) {
@@ -320,6 +354,7 @@ export class CompressionService {
         const prunedMessages = await pruneToolOutputs(filteredMessages);
         if (prunedMessages !== filteredMessages) {
           response = await requestCompression(prunedMessages);
+          updateCompressedTokens(response)
           summary = extractSummaryText(response);
 
           if (summary.trim()) {
@@ -350,6 +385,7 @@ export class CompressionService {
         }
 
         response = await requestCompression(fallbackMessages);
+        updateCompressedTokens(response)
         summary = extractSummaryText(response);
 
         if (summary.trim()) {
@@ -413,7 +449,7 @@ ${summaryText}
         isCompressionSummary: true,
         compressionMetadata: metadata,
       };
-
+      syncCompressedTokens()
       await setCompressSessionStatus(context.sessionId, SessionStatus.COMPRESSED);
       return {
         success: true,

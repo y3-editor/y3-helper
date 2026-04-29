@@ -601,6 +601,8 @@ interface StreamErrorType {
   msg?: string;
 }
 
+const checkAIGWError = (msg: string) => msg.includes("'type': 'SupplierResponseFailedErrorFromAIGW'")
+
 // 处理需要特殊匹配的错误
 export const specialErrorPatterns = [
   {
@@ -644,7 +646,7 @@ export const specialErrorPatterns = [
       ].some(i => msg.includes(i))
       && msg.includes('credit limit reached')
     ),
-    message: '💰 模型积分不足，系统充值中，请稍等'
+    message: '当前资源不足，管理员正在紧急处理中，请稍等'
   },
   {
     condition: (msg: string) => /Error code: [54]\d{2}/.test(msg),
@@ -653,6 +655,26 @@ export const specialErrorPatterns = [
   {
     condition: (msg: string) => msg.includes("anthropic_error_chunk type:overloaded_error message:Overloaded"),
     message: '💰 模型资源不足，请稍后重试或切换其他模型使用'
+  },
+  {
+    condition: (msg: string) => checkAIGWError(msg) && msg.includes('dimensions exceed max allowed size for many-image requests: 2000 pixels'),
+    message: '⚠️ 该图片像素大于2000，请删除图片输入，调整后重试'
+  },
+  {
+    condition: (msg: string) => checkAIGWError(msg) && msg.includes('sse response first timeout'),
+    message: '⚠️ 请求超时，请稍后重试'
+  },
+  {
+    condition: (msg: string) => msg.includes('AzureaiErrorChunk') && (
+      msg.includes('The system is currently experiencing high demand') ||
+      msg.includes('too_many_requests') ||
+      msg.includes('Try your request again')
+    ),
+    message: '⚠️ 当前模型服务繁忙，请稍后重试'
+  },
+  {
+    condition: (msg: string) => msg.includes('AzureaiErrorChunk') && msg.includes('Please check your inputs and try again'),
+    message: '⚠️ 当前模型无法识别输入内容，建议更换模型后重试'
   },
   {
     condition: (msg: string) => (

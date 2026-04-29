@@ -127,7 +127,7 @@ export type ToolDef = {
   };
 };
 
-async function countToolDefinitionTokensAsync(tools: ToolDef[] | undefined, model?: string): Promise<number> {
+export async function countToolDefinitionTokensAsync(tools: ToolDef[] | undefined, model?: string): Promise<number> {
   if (!tools || !tools.length) return 0;
   const norm = normalizeModelForToolCounting(model);
   const enc = await getEncoderByModelAsync(model || 'gpt-4o-mini');
@@ -301,7 +301,7 @@ function calculateSingleMessageContentTokensSync(message: ChatMessage): number {
  * 参考 OpenAI 官方计算方式
  * https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
  */
-async function calculateMessageTokens(messages: ChatMessage[]): Promise<number> {
+export async function calculateMessageTokens(messages: ChatMessage[]): Promise<number> {
   // 确保 encoder 已初始化（同步循环依赖 encoderInstance）
   await getEncoderAsync();
 

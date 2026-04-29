@@ -6,6 +6,7 @@ import { CodeBase, IMultiAttachment, useChatAttach, useChatStore } from "../../.
 import { AttachType } from "../../../../../store/attaches";
 import { cloneDeep } from "lodash";
 import { GroupValue } from "../CodeBase/useCodeBase";
+import { createConsumedTokens } from "../../../../../utils/chat";
 
 
 export const useSelectCodebaseAttach = (): {
@@ -23,7 +24,7 @@ export const useSelectCodebaseAttach = (): {
     updateCurrentSession((session) => {
       session.data = session.data || {
         messages: [],
-        consumedTokens: { input: 0, output: 0, inputCost: 0, outputCost: 0, },
+        consumedTokens: createConsumedTokens(),
         attaches: { attachType: AttachType.MultiAttachment, dataSource: [] },
       }
       session.data.attaches = {

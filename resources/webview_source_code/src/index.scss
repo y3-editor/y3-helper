@@ -201,6 +201,12 @@ button:focus-visible {
   font-size: 14px !important;
   background-color: transparent !important;
 
+  // 消除 markdown-content 最后一个块级元素的 margin-bottom，
+  // 避免与 ChatMessageActionBar 之间产生多余间距
+  .markdown-content > *:last-child {
+    margin-bottom: 0 !important;
+  }
+
   pre {
     // background-color: rgb(30, 30, 30);
     font-size: 13px !important;

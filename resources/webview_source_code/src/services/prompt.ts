@@ -65,6 +65,7 @@ export interface Prompt {
   category_id?: string;
   description?: string;
   name: string;
+  display_name?: string;
   prompt: string;
   _id: string;
   type?: PromptCategoryType;

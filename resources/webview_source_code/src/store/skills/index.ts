@@ -121,9 +121,31 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
   skillConfigs: {},
 
   setSkills: (skills) => {
-    set(() => ({
-      skills,
-    }));
+    set((state) => {
+      // 以新的 skills 列表为准，清理已卸载 skill 的旧 config
+      const activeNames = new Set(skills.map((s) => s.name));
+      const updatedConfigs: Record<string, SkillConfig> = {};
+
+      skills.forEach((skill) => {
+        const existing = state.skillConfigs[skill.name];
+        updatedConfigs[skill.name] = {
+          name: skill.name,
+          disabled: existing !== undefined ? existing.disabled : (skill.disabled ?? false),
+        };
+      });
+
+      // 保留仍存在的 skill 的其他配置字段，剔除已卸载的 key
+      Object.keys(state.skillConfigs).forEach((name) => {
+        if (activeNames.has(name) && updatedConfigs[name]) {
+          updatedConfigs[name] = {
+            ...state.skillConfigs[name],
+            ...updatedConfigs[name],
+          };
+        }
+      });
+
+      return { skills, skillConfigs: updatedConfigs };
+    });
   },
 
   setSkillConfig: (name, config) => {

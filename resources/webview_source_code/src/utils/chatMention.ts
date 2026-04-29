@@ -1,7 +1,7 @@
-import { getBase64FromUrl } from "."
+import { getBase64FromUrl, truncateContent } from "."
 import { ChatMessageContent, ChatMessageContentUnion } from "../services"
 import { AttachType } from "../store/attaches"
-import { ChatAttachStore, FileItem, FolderItem, ImageUrl, IMultiAttachment, IProblem } from "../store/chat"
+import { ChatAttachStore, FileItem, FolderItem, ImageUrl, IMultiAttachment, IProblem, useChatStore } from "../store/chat"
 import { isDocsetFile } from "./chatAttachParseHandler"
 
 // 提及的文件内容表达
@@ -25,6 +25,10 @@ export const convertAttachToMention = (attach: TMixAttach) => {
   switch (attach.attachType) {
     case AttachType.File: {
       const targetAttach = attach as FileItem
+      const chatType = useChatStore.getState().chatType;
+      if (chatType !== 'codebase') {
+        return `<file_content path="${targetAttach?.path}">${truncateContent(targetAttach?.content, 100000)}</file_content>`
+      }
       if (isDocsetFile(targetAttach.path)) {
         return targetAttach.content
       }

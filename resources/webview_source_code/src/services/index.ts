@@ -289,6 +289,8 @@ export interface ChatMessage {
   }[];
 
   specPrompt?: string;
+  /** 消息创建时间戳（ms）：user 消息为发送时间，assistant 消息为回复完成时间 */
+  createdAt?: number;
 }
 
 // interface WebSearchType {

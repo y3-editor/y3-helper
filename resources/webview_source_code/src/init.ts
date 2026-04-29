@@ -1,5 +1,4 @@
 import {
-	patchAxios,
 	addVSCShortcutListener,
 	patchConsoleError,
 	patchConsoleWarn,
@@ -11,7 +10,6 @@ import { useAuthStore } from './store/auth';
 import { useExtensionStore } from './store/extension';
 import { useChatStore } from './store/chat';
 
-patchAxios.patchAxiosCreate();
 patchConsoleError();
 patchConsoleWarn();
 patchOnError();

@@ -634,7 +634,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           return constructH75Prompt({ workspace, osName, openFilePaths, codebaseCustomPrompt: customPrompt });
         }
 
-        const skills = useSkillsStore.getState().skills;
+        const skillsStore = useSkillsStore.getState();
+        const skills = skillsStore.skills.filter(s => skillsStore.isSkillEnabled(s.name));
 
         if (enableNewApply) {
           const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
@@ -677,6 +678,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const attach = recentUserMessage?._originalRequestData?.attachs as IMultiAttachment
           hasCodeTable = attach?.attachType === AttachType.MultiAttachment && attach.dataSource.some(i => i.attachType === AttachType.CodeBase)
         }
+        const skillsStoreForTools = useSkillsStore.getState();
+        const skills = skillsStoreForTools.skills.filter(s => skillsStoreForTools.isSkillEnabled(s.name));
         if (enableNewApply) {
           return getToolsEN({
             workspace,
@@ -684,7 +687,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             MCPServers: filteredMCPServers,
             enableTerminal,
             codeMakerVersion,
-            isVSCode
+            isVSCode,
+            skills
           });
         } else {
           return getTools({

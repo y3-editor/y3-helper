@@ -6,6 +6,7 @@ import { MCPServer, useMCPStore } from "../mcp";
 import { SkillIndexItem } from "../skills";
 import { generateSkillsPromptSection } from "../skills/prompt";
 import { OPENSPEC_RULES } from "./openSpecRules";
+import { PromptLinkMgr } from "./pomptLinkMgr";
 
 export default function constructRemixPrompt(options: {
   info: Partial<WorkspaceInfo>;
@@ -83,8 +84,14 @@ ${MCPServers.filter((server) => server.status === "connected" && !server.disable
 </mcp_tool_call>`
   }
 
-  return `You are a powerful agentic AI coding assistant, powered by CodeMaker. You operate exclusively in CodeMaker, the best AI Assistant.
+  const skillsPromptSection = enableSkills ? generateSkillsPromptSection(skills) : '';
+  PromptLinkMgr.ins.init({
+    mcpPrompt: mcpToolsPrompt,
+    skillPrompt: skillsPromptSection,
+    rulePrompt: rulesPrompt,
+  });
 
+  return `You are a powerful agentic AI coding assistant, powered by CodeMaker.
 You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question. Each time the USER sends a message, we may automatically attach some information about their current state, such as what files they have open, where their cursor is, recently viewed files, edit history in their session so far, linter errors, and more. This information may or may not be relevant to the coding task, it is up for you to decide.
 
 Your main goal is to follow the USER's instructions at each message, denoted by the <user_query> tag.

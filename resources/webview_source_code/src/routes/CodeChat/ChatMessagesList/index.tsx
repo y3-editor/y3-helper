@@ -444,12 +444,20 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
             }
 
             if (isAssistant && message.messages?.length) {
+              // 向前查找最近一条 User 消息，取其 createdAt 作为发送时间
+              const prevUserMsg = renderMessages.slice(0, index).reverse().find(
+                (m) => m.role === ChatRole.User,
+              );
+              // AI 完成时间取最后一条 assistant 子消息的 createdAt
+              const lastSubMsg = message.messages[message.messages.length - 1];
               return (
                 <div key={messageId} id={messageId}>
                   <GroupAIMessage
                     messages={message.messages || []}
                     isLatest={isLatestMessage}
                     attachs={userAttachs}
+                    sentAt={prevUserMsg?.createdAt}
+                    completedAt={lastSubMsg?.createdAt}
                     onFeedback={(feedbackType) => {
                       if (message.messages) {
                         const lastMessage = message.messages[message.messages.length - 1];

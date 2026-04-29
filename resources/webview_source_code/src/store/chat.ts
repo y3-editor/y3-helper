@@ -140,6 +140,10 @@ import { BAI_CHUAN, ParseImgType } from '../services/chatModel';
 import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
 import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
 
+import { createConsumedTokens } from '../utils/chat';
+import { estimateSystemPromptTokens, estimateTokens } from '../utils/tokenEstimate';
+import { PromptLinkMgr } from './workspace/pomptLinkMgr';
+
 const CODE_BACKTICKS = '```';
 export const DEFAULT_TOPIC = '';
 const ABORT_ERROR_NAME = 'AbortError';
@@ -196,6 +200,16 @@ export interface ChatSession {
       output: number
       inputCost: number
       outputCost: number
+      systemTokens: number
+      systemToolTokens: number
+      promptTokens: number
+      completionTokens: number
+      comporessPromptTokens: number
+      comporessCompletionTokens: number
+      readCacheTokens: number
+      skillTokens: number
+      ruleTokens: number
+      mcpTokens: number
     }
     model?: ChatModel;
     attaches?: (Docsets | IMultiAttachment)
@@ -259,12 +273,18 @@ interface ChatStore {
   syncHistory: () => void;
   // 更新消费token信息
   updateConsumedTokens: (options: {
-    curSession: ChatSession,
-    promptTokens: number,
-    completionTokens: number,
-    cacheCreationInputTokens: number,
-    cacheReadInputTokens: number,
-    model: ChatModel,
+    curSession: ChatSession;
+    model?: ChatModel;
+    promptTokens?: number;
+    completionTokens?: number;
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
+    systemTokens?: number;
+    comporessPromptTokens?: number;
+    comporessCompletionTokens?: number;
+    skillTokens?: number;
+    ruleTokens?: number;
+    mcpTokens?: number;
   }) => void;
   // 加载 session data
   loadSessionData: (
@@ -610,7 +630,7 @@ export const useChatStore = create<ChatStore>()(
 
         // 安全检查：确保 session 有正确的数据结构
         if (session && (!session.data || !Array.isArray(session.data.messages))) {
-          const safeConsumedTokens = { input: 0, output: 0, inputCost: 0, outputCost: 0 };
+          const safeConsumedTokens = createConsumedTokens();
           if (session.data) {
             session.data.messages = Array.isArray(session.data.messages)
               ? session.data.messages
@@ -743,12 +763,7 @@ export const useChatStore = create<ChatStore>()(
           data: {
             ...session.data,
             messages: [],
-            consumedTokens: session.data?.consumedTokens || {
-              input: 0,
-              output: 0,
-              inputCost: 0,
-              outputCost: 0,
-            },
+            consumedTokens: session.data?.consumedTokens || createConsumedTokens(),
           },
         };
         try {
@@ -782,12 +797,10 @@ export const useChatStore = create<ChatStore>()(
           ...session,
           data: {
             ...sessionData,
-            consumedTokens: Object.assign({
-              input: 0,
-              output: 0,
-              inputCost: 0,
-              outputCost: 0,
-            }, sessionData?.consumedTokens || {}),
+            consumedTokens: Object.assign(
+              createConsumedTokens(),
+              sessionData?.consumedTokens || {},
+            ),
             messages: filteredMessages,
           },
         };
@@ -813,25 +826,41 @@ export const useChatStore = create<ChatStore>()(
         );
       },
       updateConsumedTokens: (options: {
-        model: ChatModel,
-        curSession: ChatSession,
-        promptTokens: number,
-        completionTokens: number,
-        cacheCreationInputTokens: number,
-        cacheReadInputTokens: number,
+        curSession: ChatSession;
+        model?: ChatModel;
+        promptTokens?: number;
+        completionTokens?: number;
+        cacheCreationInputTokens?: number;
+        cacheReadInputTokens?: number;
+        systemTokens?: number;
+        comporessPromptTokens?: number;
+        comporessCompletionTokens?: number;
+        skillTokens?: number;
+        ruleTokens?: number;
+        mcpTokens?: number;
       }) => {
         const {
           curSession,
+          model,
           promptTokens = 0,
+          systemTokens = 0,
           completionTokens = 0,
           cacheCreationInputTokens = 0,
           cacheReadInputTokens = 0,
+          comporessPromptTokens = 0,
+          comporessCompletionTokens = 0,
+          skillTokens = 0,
+          ruleTokens = 0,
+          mcpTokens = 0,
         } = options;
         if (curSession.data) {
           if (!curSession.data.consumedTokens) {
-            curSession.data.consumedTokens = { input: 0, output: 0, inputCost: 0, outputCost: 0, }
+            curSession.data.consumedTokens = createConsumedTokens()
           }
-          const modelCostInfo = useChatConfig.getState().chatModels?.[options.model]?.priceInfo
+          let modelCostInfo
+          if (model) {
+            modelCostInfo = useChatConfig.getState().chatModels?.[model]?.priceInfo;
+          }
           if (modelCostInfo) {
             const inputCost = curSession.data?.consumedTokens?.inputCost || 0
             const outputCost = curSession.data?.consumedTokens?.outputCost || 0
@@ -843,8 +872,42 @@ export const useChatStore = create<ChatStore>()(
             );
             curSession.data.consumedTokens.outputCost = outputCost + completionTokens / 1000 * (modelCostInfo?.completionWeight || 0);
           }
+          const preSystemTokens = curSession.data.consumedTokens?.systemTokens || 0
+          const preSystemToolTokens = curSession.data.consumedTokens?.systemToolTokens || 0
+
           curSession.data.consumedTokens.output += completionTokens;
-          curSession.data.consumedTokens.input += promptTokens + cacheReadInputTokens + cacheCreationInputTokens;
+          if (model?.includes?.('claude')) {
+            // 旧版本输入，新版本细化Token使用
+            curSession.data.consumedTokens.input += promptTokens
+
+            // 系统token 计算
+            // 如果估算的值小于创建 min缓存，区分工具和系统的缓存
+            if (systemTokens <= cacheCreationInputTokens) {
+              curSession.data.consumedTokens.systemTokens = preSystemTokens + systemTokens - skillTokens - ruleTokens - mcpTokens
+              curSession.data.consumedTokens.systemToolTokens = preSystemToolTokens + (cacheCreationInputTokens - systemTokens)
+              curSession.data.consumedTokens.skillTokens += skillTokens
+              curSession.data.consumedTokens.ruleTokens += ruleTokens
+              curSession.data.consumedTokens.mcpTokens += mcpTokens
+            } else {
+              curSession.data.consumedTokens.systemTokens = preSystemTokens + cacheCreationInputTokens
+            }
+
+            // 命中缓存
+            const prereadCacheTokens = curSession.data.consumedTokens?.readCacheTokens || 0
+            curSession.data.consumedTokens.readCacheTokens = prereadCacheTokens + cacheReadInputTokens;
+
+            // 压缩使用的token
+            const preComporessPromptTokens = curSession.data.consumedTokens?.comporessPromptTokens || 0
+            const preComporessCompletionTokens = curSession.data.consumedTokens?.comporessCompletionTokens || 0
+            curSession.data.consumedTokens.comporessPromptTokens = preComporessPromptTokens + comporessPromptTokens;
+            curSession.data.consumedTokens.comporessCompletionTokens = preComporessCompletionTokens + comporessCompletionTokens;
+          } else {
+            curSession.data.consumedTokens.systemTokens = preSystemTokens + systemTokens - skillTokens - ruleTokens - mcpTokens
+            curSession.data.consumedTokens.input += promptTokens - systemTokens // 工具没办法算出来
+            curSession.data.consumedTokens.skillTokens += skillTokens
+            curSession.data.consumedTokens.ruleTokens += ruleTokens
+            curSession.data.consumedTokens.mcpTokens += mcpTokens
+          }
         }
 
         if (curSession.data?.compression?.pendingSavedTokens) {
@@ -1845,6 +1908,7 @@ export const useChatStreamStore = create(
         id,
         role: ChatRole.User,
         content: userContent,
+        createdAt: Date.now(),
       };
 
       const mask = useMaskStore.getState().currentMask();
@@ -1856,7 +1920,8 @@ export const useChatStreamStore = create(
       if (hasMentionKnowledgeBases && currentSessionId) {
         mentionKnowledgeMap.set(currentSessionId, true)
       }
-
+      // 重置关联Skill&Mcp&Rule Prompt
+      PromptLinkMgr.ins.reset()
       // 消息重发时此依赖原始数据恢复状态。但发送消息不要携带此消息体，否则会加大token计算
       if (!userMessage._originalRequestData) {
         userMessage._originalRequestData = {};
@@ -2423,7 +2488,7 @@ export const useChatStreamStore = create(
         }
         const { docsets } = attachs as Docsets;
         chatStoreState.updateCurrentSession((session) => {
-          session.data = session.data || { messages: [], consumedTokens: { input: 0, output: 0, inputCost: 0, outputCost: 0, }, attaches: { docsets: [], attachType: AttachType.Docset } };
+          session.data = session.data || { messages: [], consumedTokens: createConsumedTokens(), attaches: { docsets: [], attachType: AttachType.Docset } };
           session.data.attaches = session.data.attaches || { docsets: [], attachType: AttachType.Docset };
           session.data.attaches = { attachType: AttachType.Docset, docsets: filterDocsetsFn(docsets) as Docset[] };
           return session;
@@ -3895,8 +3960,8 @@ export const useChatStreamStore = create(
                 get().setStreamRetryCount(0)
 
                 if (toolCalls && toolCalls.length) {
-                  // 只取第一个 tool call
-                  toolCalls = toolCalls.slice(0, 1);
+                  // 仅当本轮工具全部属于可批白名单时，保留前两个；否则只保留第一个
+                  toolCalls = toolCalls.slice(0, toolCalls.every(tc => ['view_source_code_definitions_top_level', 'grep_search', 'read_file'].includes(tc.function?.name ?? '')) ? 2 : 1);
                 }
                 if (chatStoreState.isError) {
                   chatStoreState.setError(false);
@@ -4038,8 +4103,13 @@ export const useChatStreamStore = create(
                       promptTokens: promptTokens || 0,
                       completionTokens: completionTokens || 0,
                       cacheCreationInputTokens: cacheCreationInputTokens || 0,
-                      cacheReadInputTokens: cacheReadInputTokens || 0
+                      cacheReadInputTokens: cacheReadInputTokens || 0,
+                      systemTokens: estimateSystemPromptTokens(data.messages),
+                      skillTokens: estimateTokens(PromptLinkMgr.ins.skillPrompt),
+                      ruleTokens: estimateTokens(PromptLinkMgr.ins.rulePrompt),
+                      mcpTokens: estimateTokens(PromptLinkMgr.ins.mcpPrompt),
                     });
+                    PromptLinkMgr.ins.reset();
                   });
                   if (MCPServers && MCPServers.length) {
                     let mcpServersUsed: string[] = [];

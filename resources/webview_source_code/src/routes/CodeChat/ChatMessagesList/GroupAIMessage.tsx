@@ -1,4 +1,16 @@
-import { Box, Flex, Avatar, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Flex,
+  Avatar,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  VStack,
+} from '@chakra-ui/react';
 import CodeMakerLogo from '../../../assets/cmlogo.png';
 import ChatAssistantMessage from './AssistantMessage';
 import { GroupAIMessageProps } from './types';
@@ -8,7 +20,9 @@ import { useChatStore, useChatStreamStore } from '../../../store/chat';
 import { useCallback, useMemo, useState } from 'react';
 import { BroadcastActions, usePostMessage } from '../../../PostMessageProvider';
 import { createNewSession } from '../../../utils/chat';
-import FileRecommendApplyPanel, { IRecommendFileChangeRecord } from '../FileRecommendApplyPanel';
+import FileRecommendApplyPanel, {
+  IRecommendFileChangeRecord,
+} from '../FileRecommendApplyPanel';
 import { UserEvent } from '../../../types/report';
 import { ChatRole } from '../../../types/chat';
 import { ChatMessage } from '../../../services';
@@ -18,8 +32,14 @@ import * as React from 'react';
 import { usePrevious } from '../../../hooks/usePrevious';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
-const getToolCategory = (toolName: string | undefined): 'list' | 'read' | 'search' | null => {
-  if (toolName === 'list_files_recursive' || toolName === 'list_files_top_level' || toolName === 'view_source_code_definitions_top_level') {
+const getToolCategory = (
+  toolName: string | undefined,
+): 'list' | 'read' | 'search' | null => {
+  if (
+    toolName === 'list_files_recursive' ||
+    toolName === 'list_files_top_level' ||
+    toolName === 'view_source_code_definitions_top_level'
+  ) {
     return 'list';
   }
   if (toolName === 'read_file') {

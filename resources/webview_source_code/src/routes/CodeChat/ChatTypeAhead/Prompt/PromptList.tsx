@@ -139,7 +139,7 @@ function SystemPrompt(props: { prompt: Prompt }) {
   return (
     <Box display="flex" h="24px" alignItems="center" overflow="hidden">
       <Text fontSize="12px" whiteSpace="nowrap">
-        / {prompt.name}
+        / {prompt.display_name || prompt.name}
       </Text>
       <Tooltip label={displayText} placement="top" hasArrow openDelay={300}>
         <Text
@@ -238,6 +238,7 @@ function SkillPrompt(props: { prompt: Prompt; source?: string; active?: boolean 
             overflow="hidden"
             textOverflow="ellipsis"
             whiteSpace="nowrap"
+            title={source}
           >
             {source}
           </Text>

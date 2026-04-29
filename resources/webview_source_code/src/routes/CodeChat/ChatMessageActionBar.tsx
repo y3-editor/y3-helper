@@ -18,6 +18,7 @@ import { SmallScreenWidth } from '../../const';
 import { ChatFeedbackType } from '../../services';
 import { ThemeStyle, useTheme } from '../../ThemeContext';
 import { useChatBillStore } from '../../store/chatBill';
+
 interface ChatMessageActionBarProps {
   onCopyClick?: () => void;
   onNewSessionClick?: () => void;
@@ -49,7 +50,9 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
   } = props;
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const { activeTheme } = useTheme();
-  const isExceedCost = useChatBillStore((state) => state.isExceedCost)
+
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost);
+
   const showFeedbackAction = React.useMemo(() => {
     if (!feedbackType) {
       return (
@@ -144,7 +147,7 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
   // }, [hideNewSession, isCompressedMessage, isCompressionSummary]);
 
   return (
-    <Box display="flex" backgroundColor="answerBgColor" ml="auto">
+    <Box display="flex" backgroundColor="answerBgColor" ml="auto" alignItems="center" justifyContent="end" w="100%" minW="0">
       {isSmallScreen ? (
         <>
           <Menu>

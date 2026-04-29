@@ -432,7 +432,8 @@ Critical rules:
     tools.push(generateCodewikiStructure({ language: 'en' }));
   }
 
-  const skills = options.skills || useSkillsStore.getState().skills;
+  const skillsStore = useSkillsStore.getState();
+  const skills = options.skills ?? skillsStore.skills.filter(s => skillsStore.isSkillEnabled(s.name));
   if (enableSkills && skills.length > 0) {
     const skillNames = skills.map(s => s.name);
     tools.push({

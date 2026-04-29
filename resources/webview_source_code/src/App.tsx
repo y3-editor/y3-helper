@@ -40,7 +40,7 @@ import { ChatModel, ParseImgType, ModelIconType, ChatModelType } from './service
 import { fetchBuiltInServers, fetchNameMappings, fetchPrivateModelOnlyServers } from './services/mcp';
 import { useChatTerminalStore } from './store/chatTerminal';
 import { usePanelContext } from './context/PanelContext';
-import { useSkillsStore } from './store/skills';
+import { useSkillsStore, SkillIndexItem } from './store/skills';
 import { useLoadWorkspace } from './hooks/useLoadWorkspace';
 
 const debouncedToast = createDebouncedToast();
@@ -653,8 +653,17 @@ function App() {
         setUserDashboardOpen(!userDashboardOpen);
       } else if (event.data.type === SubscribeActions.SYNC_RULES) {
         setRules(event.data?.data as any || []);
+      } else if (event.data.type === SubscribeActions.NOTIFY_SKILL_CONFIG_SUCCESS) {
+        // Skill 操作成功通知
+        const { message } = event.data?.data as any;
+        if (message) {
+          toast({
+            title: message,
+            status: 'success',
+          });
+        }
       } else if (event.data.type === SubscribeActions.SYNC_SKILLS) {
-        const skillsData = event.data?.data as unknown;
+        const skillsData = event.data?.data as SkillIndexItem[] | undefined;
         if (Array.isArray(skillsData)) {
           setSkills(skillsData);
         }

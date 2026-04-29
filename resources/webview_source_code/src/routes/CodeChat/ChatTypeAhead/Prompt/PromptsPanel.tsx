@@ -126,6 +126,7 @@ const PromptsPanel = (
   const updateAttachs = useChatAttach((state) => state.update);
   const MCPServers = useMCPStore((state) => state.MCPServers);
   const skills = useSkillsStore((state) => state.skills);
+  const skillConfigs = useSkillsStore((state) => state.skillConfigs);
   const setPendingRunner = useMcpPromptApp((state) => state.setPendingRunner);
   const setSkillLoading = useSkillPromptApp((state) => state.setLoading);
   const hasMcpPrompts = React.useMemo(() => {
@@ -184,7 +185,7 @@ const PromptsPanel = (
     const unionData: UnionData[] = [];
 
     for (const skill of skills) {
-      if (skill.userInvocable === false) {
+      if (skill.userInvocable === false || skillConfigs[skill.name]?.disabled === true) {
         continue;
       }
       const sourceLabel = getSkillSourceLabel(skill.source);
@@ -194,6 +195,7 @@ const PromptsPanel = (
         type: UnionType.Prompt,
         meta: {
           name: skill.name,
+          display_name: skill.display_name,
           prompt: `/${skill.name}`,
           _id: `/skill/${skill.name}`,
           type: PromptCategoryType.Skill,
@@ -470,6 +472,7 @@ const PromptsPanel = (
     pluginApps,
     promptType,
     skills,
+    skillConfigs,
     codebaseChatMode,
     installedOpenSpecVersion,
   ]);

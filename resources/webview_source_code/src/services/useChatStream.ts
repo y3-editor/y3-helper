@@ -186,9 +186,11 @@ async function createStream(req: Request, parseCallback?: (data: any) => void) {
     if (result.msg === StreamError.GPT4MaxLimit) {
       throw new Error(StreamError.GPT4MaxLimit);
     }
-    // 兼容 BrainMaker 的错误情况
+    // 兼容 BrainMaker 的错误情况（detail.error/msg 可能为对象，需序列化为字符串避免显示 [object Object]）
     if (result.code) {
-      throw new Error(result.detail.error || result.msg);
+      const raw = result.detail?.error ?? result.msg;
+      const message = typeof raw === 'string' ? raw : JSON.stringify(raw ?? res.statusText);
+      throw new Error(message);
     }
     // TODO: 先hardcode 处理这个错误，后续跟后端对接一下这个错误的返回
     const msg = result.detail[0].msg;
@@ -576,9 +578,11 @@ async function createBMStream(
     if (result.msg === StreamError.GPT4MaxLimit) {
       throw new Error(StreamError.GPT4MaxLimit);
     }
-    // 兼容 BrainMaker 的错误情况
+    // 兼容 BrainMaker 的错误情况（detail.error/msg 可能为对象，需序列化为字符串避免显示 [object Object]）
     if (result.code) {
-      throw new Error(result.detail.error || result.msg);
+      const raw = result.detail?.error ?? result.msg;
+      const message = typeof raw === 'string' ? raw : JSON.stringify(raw ?? res.statusText);
+      throw new Error(message);
     }
     // TODO: 先hardcode 处理这个错误，后续跟后端对接一下这个错误的返回
     const msg = result.detail[0].msg;

@@ -70,6 +70,10 @@ export interface GroupAIMessageProps {
   attachs: AttachType[];
   onFeedback: (feedbackType: ChatFeedbackType) => void;
   isShare?: boolean;
+  /** 用户发送消息的时间戳（ms） */
+  sentAt?: number;
+  /** AI 回复完成的时间戳（ms），用于计算耗时 */
+  completedAt?: number;
 }
 
 export interface ChatCodeBlockProps {

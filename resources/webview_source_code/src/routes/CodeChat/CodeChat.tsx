@@ -557,7 +557,7 @@ function CodeChat() {
   // 质量问题修复功能
   React.useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.data.type === SubscribeActions.CODEBASE_QUALITY_ISSUE_AUTOFIX) {
+      if ([SubscribeActions.CODEBASE_QUALITY_ISSUE_AUTOFIX, SubscribeActions.TRIGGERT_CODEBASE_QUALITY_ISSUE_AUTOFIX].includes(event.data.type)) {
         const autofixData = event.data.data;
         if (
           isStreaming ||

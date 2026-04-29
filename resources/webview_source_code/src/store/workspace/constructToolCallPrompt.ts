@@ -1,9 +1,10 @@
-import { Rule, WorkspaceInfo } from ".";
+﻿import { Rule, WorkspaceInfo } from ".";
 import { getContentByValidateFlag } from "../../utils";
 import { useChatConfig } from "../chat-config";
 import { MCPServer } from "../mcp";
 import { SkillIndexItem } from "../skills";
 import { generateSkillsPromptSection } from "../skills/prompt";
+import { PromptLinkMgr } from "./pomptLinkMgr";
 
 export default function constructToolCallPrompt(options: {
   info: Partial<WorkspaceInfo>,
@@ -74,6 +75,13 @@ ${rule.content}
     }
     if (withCodeTable) {
         const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch
+
+    const skillsPromptSection = enableSkills ? generateSkillsPromptSection(skills) : '';
+    PromptLinkMgr.ins.init({
+      mcpPrompt: mcpToolsPrompt,
+      skillPrompt: skillsPromptSection,
+      rulePrompt: rulesPrompt,
+    });
         return `你叫 Y3Maker，是一个技术精湛的软件开发助手，精通多种编程语言、框架、设计模式和最佳实践。你的任务是和用户进行智能聊天，为他们提供编码技术上的帮助。
 
         ====

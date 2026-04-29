@@ -22,6 +22,7 @@ import Icon from '../../../components/Icon';
 import { createNewSession } from '../../../utils/chat';
 import { useFilteredAttach } from '../ChatTypeAhead/Attach/Hooks/useFilteredAttach';
 import { useChatConfig } from '../../../store/chat-config';
+import { DateFormat } from '../../../utils';
 
 export default function ChatUserMessage(
   props: ChatMessageProps & {
@@ -48,6 +49,11 @@ export default function ChatUserMessage(
   const filterAttachHook = useFilteredAttach()
   const enableCodeMapSearch = useChatConfig((state) => state.enableCodeMapSearch);
   const enableKnowledgeLibSearch = useChatConfig((state) => state.enableKnowledgeLibSearch);
+
+  const sentAtText = useMemo(() => {
+    if (!message.createdAt) return null;
+    return DateFormat(new Date(message.createdAt), 'YYYY-MM-DD HH:mm:ss');
+  }, [message.createdAt]);
 
   const attachType = useMemo(() => {
     if (!message?.attachs?.length) return '';
@@ -166,25 +172,23 @@ export default function ChatUserMessage(
             color="text.default"
           />
         </Tooltip>
-        {!message.isCompressed && (
-          <Tooltip label="从此处重新发起对话">
-            <IconButton
-              aria-label="从此处重新发起对话"
-              variant="ghost"
-              size="sm"
-              icon={<Icon as={RiFileAddLine} size="sm" />}
-              isDisabled={isStreaming || isSearching}
-              onClick={() => {
-                if (message._originalRequestData?.attachs) {
-                  updateAttachs(message._originalRequestData?.attachs);
-                }
-                props.onResetPrompt?.(content);
-                handleNewSession();
-              }}
-              color="text.default"
-            />
-          </Tooltip>
-        )}
+        <Tooltip label="从此处重新发起对话">
+          <IconButton
+            aria-label="从此处重新发起对话"
+            variant="ghost"
+            size="sm"
+            icon={<Icon as={RiFileAddLine} size="sm" />}
+            isDisabled={isStreaming || isSearching}
+            onClick={() => {
+              if (message._originalRequestData?.attachs) {
+                updateAttachs(message._originalRequestData?.attachs);
+              }
+              props.onResetPrompt?.(content);
+              handleNewSession();
+            }}
+            color="text.default"
+          />
+        </Tooltip>
         {
           message.checkPointFiles && (
             <Tooltip label="回退文件">
@@ -417,6 +421,11 @@ export default function ChatUserMessage(
                 <Box flex={1} color="text.secondary" fontSize="12px">
                   {displayName || username}
                 </Box>
+                {sentAtText && (
+                  <Box color="text.tertiary" fontSize="11px" ml={2} flexShrink={0}>
+                    {sentAtText}
+                  </Box>
+                )}
               </Box>
               <Box>{renderAction}</Box>
             </Flex>

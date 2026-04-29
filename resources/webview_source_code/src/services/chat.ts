@@ -157,7 +157,7 @@ export async function checkGPT4QuotaAvailability() {
   return data?.azure[ChatModel.Gpt4];
 }
 
-interface GPTResponse {
+export interface GPTResponse {
   choices: {
     message: {
       role: string;

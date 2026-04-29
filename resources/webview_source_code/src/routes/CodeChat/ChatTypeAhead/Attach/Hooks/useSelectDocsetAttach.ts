@@ -8,6 +8,7 @@ import { Docset, Docsets } from "../../../../../services/docsets";
 import { AttachType } from "../../../../../store/attaches";
 import { cloneDeep } from "lodash";
 import { filterDocsetsFn } from "../../../../../utils";
+import { createConsumedTokens } from "../../../../../utils/chat";
 
 
 export const useSelectDocsetAttach = (): {
@@ -29,7 +30,7 @@ export const useSelectDocsetAttach = (): {
     updateCurrentSession((session) => {
       session.data = session.data || {
         messages: [],
-        consumedTokens: { input: 0, output: 0, inputCost: 0, outputCost: 0, },
+        consumedTokens: createConsumedTokens(),
         attaches: chatType === 'codebase'
           ? { attachType: AttachType.MultiAttachment, dataSource: [] }
           : { attachType: AttachType.Docset, docsets: [], },
