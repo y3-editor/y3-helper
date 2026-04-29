@@ -42,6 +42,7 @@ export interface SkillIndexItem {
   source: SkillSource;
   path: string;
   userInvocable?: boolean;
+  disabled?: boolean;
 }
 
 export interface UseSkillResult {
@@ -280,7 +281,29 @@ export class SkillsHandler {
 
     result.skills = Array.from(this.skills.values());
     console.log('[SkillsHandler] Skills loaded - total:', this.skills.size);
+
+    // 清理已删除 skill 的旧配置
+    this.cleanupSkillConfigs();
+
     return result;
+  }
+
+  /**
+   * 清理 skillConfigs 中已不存在的 skill 配置
+   */
+  private cleanupSkillConfigs(): void {
+    const loadedNames = new Set(this.skills.keys());
+    let removed = 0;
+    for (const name of this.skillConfigs.keys()) {
+      if (!loadedNames.has(name)) {
+        this.skillConfigs.delete(name);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      this.persistSkillConfigs();
+      console.log(`[SkillsHandler] Cleaned up ${removed} stale skillConfigs`);
+    }
   }
 
   private getSourceBasePaths(sourceConfig: SkillSourceConfig): string[] {
@@ -549,14 +572,18 @@ export class SkillsHandler {
   // ── 查询接口 ──
 
   public getSkillIndex(): SkillIndexItem[] {
-    return Array.from(this.skills.values()).map(skill => ({
-      name: skill.name,
-      description: skill.metaData.description,
-      description_cn: skill.metaData.description_cn,
-      source: skill.source,
-      path: skill.path,
-      userInvocable: skill.metaData.userInvocable,
-    }));
+    return Array.from(this.skills.values()).map(skill => {
+      const cfg = this.skillConfigs.get(skill.name);
+      return {
+        name: skill.name,
+        description: skill.metaData.description,
+        description_cn: skill.metaData.description_cn,
+        source: skill.source,
+        path: skill.path,
+        userInvocable: skill.metaData.userInvocable,
+        ...(cfg ? { disabled: cfg.disabled } : {}),
+      };
+    });
   }
 
   public getSkillByName(name: string): Skill | undefined {
@@ -675,6 +702,18 @@ export class SkillsHandler {
       this.skillConfigs.set(name, { name, disabled: !!disabled });
       this.persistSkillConfigs();
       console.log(`[SkillsHandler] Updated skillConfig: ${name} disabled=${disabled}`);
+
+      // 推送通知到 Webview
+      const statusText = disabled ? '已关闭' : '已启用';
+      try {
+        const { webviewProvider } = require('./index');
+        webviewProvider?.sendMessage({
+          type: 'NOTIFY_SKILL_CONFIG_SUCCESS',
+          data: { message: `Skill "${name}" ${statusText}` },
+        });
+      } catch { /* ignore */ }
+
+      this.syncSkills();
     } catch (error: any) {
       console.log('[SkillsHandler] handleUpdateSkillConfig error:', error?.message);
     }
@@ -697,6 +736,15 @@ export class SkillsHandler {
       }
 
       console.log(`[SkillsHandler] Removed skill at: ${targetPath}`);
+
+      // 推送通知到 Webview
+      try {
+        const { webviewProvider } = require('./index');
+        webviewProvider?.sendMessage({
+          type: 'NOTIFY_SKILL_CONFIG_SUCCESS',
+          data: { message: `Skill "${name}" 已删除` },
+        });
+      } catch { /* ignore */ }
 
       // 刷新列表
       await this.loadSkills();
@@ -759,6 +807,15 @@ export class SkillsHandler {
         await fs.promises.writeFile(filePath, buffer);
         console.log(`[SkillsHandler] Uploaded skill to: ${filePath}`);
       }
+
+      // 推送通知到 Webview
+      try {
+        const { webviewProvider } = require('./index');
+        webviewProvider?.sendMessage({
+          type: 'NOTIFY_SKILL_CONFIG_SUCCESS',
+          data: { message: `Skill 上传成功` },
+        });
+      } catch { /* ignore */ }
 
       // 刷新列表
       await this.loadSkills();
