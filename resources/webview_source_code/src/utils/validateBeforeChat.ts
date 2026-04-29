@@ -443,6 +443,18 @@ export const convertDeepseekMessages = (
 }
 
 /**
+ * 清洗上下文无关的属性
+ */
+export const clearContextWithUnrelatedProperties = (
+  sendMessages: ChatMessage[],
+) => {
+  sendMessages.forEach(message => {
+    delete message?.rules
+    delete message?.attachs
+  })
+}
+
+/**
  * @name 修复上下文工具Id异常，导致无法访问Claude系列模型
  */
 export const repairToolIdOfMessages = (messages: ChatMessage[], usedModel: string) => {

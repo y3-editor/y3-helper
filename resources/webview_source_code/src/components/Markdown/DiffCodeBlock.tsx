@@ -119,8 +119,7 @@ function DiffCodeBlock(props: CodeBlockProps) {
                   background: 'white',
                   padding: '1rem',
                   color: 'black',
-                  paddingLeft:
-                    codeWhiteSpace === CodeWhiteSpace.Wrap ? '20px' : '40px',
+                  paddingLeft: codeWhiteSpace === CodeWhiteSpace.Wrap ? '4px' : '40px',
                 }}
                 codeTagProps={{
                   style: {},
@@ -129,10 +128,11 @@ function DiffCodeBlock(props: CodeBlockProps) {
                       ? 'codeblock-highlighter-code'
                       : '',
                 }}
-                lineNumberStyle={{display: 'none'}}
+                lineNumberStyle={codeWhiteSpace === CodeWhiteSpace.Wrap ? { color: '#71717a' } : {display: 'none'}}
                 showLineNumbers={true}
                 wrapLines={true}
                 lineProps={diffLineProps}
+                startingLineNumber={startLineNumber}
               >
                 {value}
               </Light>
@@ -147,8 +147,7 @@ function DiffCodeBlock(props: CodeBlockProps) {
                   width: '100%',
                   background: 'transparent',
                   padding: '1rem',
-                  paddingLeft:
-                    codeWhiteSpace === CodeWhiteSpace.Wrap ? '20px' : '40px',
+                  paddingLeft: codeWhiteSpace === CodeWhiteSpace.Wrap ? '4px' : '40px',
                 }}
                 codeTagProps={{
                   style: {},
@@ -157,10 +156,11 @@ function DiffCodeBlock(props: CodeBlockProps) {
                       ? 'codeblock-highlighter-code'
                       : '',
                 }}
-                lineNumberStyle={{display: 'none'}}
+                lineNumberStyle={codeWhiteSpace === CodeWhiteSpace.Wrap ? { color: '#71717a' } : {display: 'none'}}
                 showLineNumbers={true}
                 wrapLines={true}
                 lineProps={diffLineProps}
+                startingLineNumber={startLineNumber}
               >
                 {value}
               </SyntaxHighlighter>

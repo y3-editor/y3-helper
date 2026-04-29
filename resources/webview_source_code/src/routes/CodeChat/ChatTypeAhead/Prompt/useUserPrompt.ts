@@ -19,10 +19,10 @@ import { toastErrorMessage } from '../../../../utils';
 import { toastUserPromptCategoryWithoutInit } from '../../../../utils/toast';
 import useCustomToast from '../../../../hooks/useCustomToast';
 import {
+  extensionStore,
   IDE,
   useExtensionStore,
 } from '../../../../store/extension';
-import { useAuthStore } from '../../../../store/auth';
 import { getPlugins } from '../../../../services/plugin';
 import { useUserConfig } from '../../../../store/user-config';
 import { useMaskStore } from '../../../../store/mask';
@@ -47,23 +47,19 @@ export const prePromptEventMap = new Map([
 ]);
 
 export const prePromptIdsMap = new Map([
-  [PrePrompt.Optimize, '000000000000000000000001'],
-  [PrePrompt.Explain, '000000000000000000000002'],
-  [PrePrompt.FindProblem, '000000000000000000000003'],
-  [PrePrompt.UnitTest, '000000000000000000000004'],
+  [PrePrompt.Optimize, '64cca6b00d40da33d799ef50'],
+  [PrePrompt.Explain, '64cca63a0d40da33d799ef4e'],
+  [PrePrompt.FindProblem, '64cca6970d40da33d799ef4f'],
+  [PrePrompt.UnitTest, '663c3aeec65c317f6eb1529d'],
 ]);
 
-// 定义的三个通用的 prompt，见：http://localhost:3001
+// 定义的三个通用的 prompt，见：https://prompt.nie.netease.com/category/64cca5a50d40da33d799ef4d
 export const prePromptEventIdsMap = new Map([
-  ['000000000000000000000001', UserEvent.CODE_CHAT_PROMPT_OPTIMIZE],
-  ['000000000000000000000002', UserEvent.CODE_CHAT_PROMPT_EXPLAIN],
-  ['000000000000000000000003', UserEvent.CODE_CHAT_PROMPT_FIND_PROBLEM],
-  ['000000000000000000000004', UserEvent.CODE_CHAT_UNIT_TEST],
+  ['64cca6b00d40da33d799ef50', UserEvent.CODE_CHAT_PROMPT_OPTIMIZE],
+  ['64cca63a0d40da33d799ef4e', UserEvent.CODE_CHAT_PROMPT_EXPLAIN],
+  ['64cca6970d40da33d799ef4f', UserEvent.CODE_CHAT_PROMPT_FIND_PROBLEM],
+  ['663c3aeec65c317f6eb1529d', UserEvent.CODE_CHAT_UNIT_TEST],
 ]);
-
-export const COMMIT_MSG_PROMPT = '基于当前仓库修改内容，生成 Commit Message';
-export const COMMIT_MSG_SHORT_PROMPT =
-  '基于当前仓库修改内容，生成一段简短的 Commit Message';
 
 export const PROMPT_CODE_VARIABLE = '{{%code%}}';
 
@@ -109,7 +105,7 @@ export const COMMON_VARIABLE: { [key in CommonVariable]: string } = (
   {} as { [key in CommonVariable]: string },
 );
 
-const PROJECT_PROMPT_MANAGE_URL = 'https://github.com/user/codemaker';
+const PROJECT_PROMPT_MANAGE_URL = 'https://g.126.fm/02Fh8tA';
 
 
 // 1. /Codewiki 调试Rules：基于Codewiki Rules生成可预览的文件目录
@@ -120,53 +116,20 @@ function formatPromptCategory({
   projectPrompts,
   userPrompts,
   ide,
-  cUnrestrict,
   isCodebaseChat = false,
 }: {
   systemPrompts: Prompt[] | undefined;
   projectPrompts: Prompt[] | undefined;
   userPrompts: Prompt[] | undefined;
   ide: string | undefined | null;
-  cUnrestrict: boolean;
   isCodebaseChat?: boolean;
 }) {
   const isVsCodeIDE = ide === IDE.VisualStudioCode;
-  const isJetBrainsIDE = ide === IDE.JetBrains;
   const _prompts: Prompt[] = [];
   // 系统级别 prompt
   for (const prompt of systemPrompts || []) {
     if (prompt.name && !prompt.name.includes('CodeMap')) {
       _prompts.push({ ...prompt, type: PromptCategoryType._CodeMaker });
-    }
-  }
-  // TEMP: MVP 版本验证 hardcode 插入指令，只在 VSCode 上生效
-  if (isJetBrainsIDE || isVsCodeIDE) {
-    if (cUnrestrict) {
-      _prompts.push({
-        name: 'CommitMSG',
-        prompt: COMMIT_MSG_PROMPT,
-        _id: '1710382461695',
-        type: PromptCategoryType._CodeMaker,
-      });
-      _prompts.push({
-        name: 'CommitMSG(short)',
-        prompt: COMMIT_MSG_SHORT_PROMPT,
-        _id: '1712716352824',
-        type: PromptCategoryType._CodeMaker,
-      });
-    } else {
-      _prompts.push({
-        name: 'CommitMSG',
-        prompt: COMMIT_MSG_PROMPT,
-        _id: '1710917213033',
-        type: PromptCategoryType._CodeMaker,
-      });
-      _prompts.push({
-        name: 'CommitMSG(short)',
-        prompt: COMMIT_MSG_SHORT_PROMPT,
-        _id: '1712718099091',
-        type: PromptCategoryType._CodeMaker,
-      });
     }
   }
 
@@ -207,8 +170,21 @@ function formatPromptCategory({
   return _prompts;
 }
 
-export async function getLatestPrompts(): Promise<any> {
-  return [];
+export async function getLatestPrompts(isCodebaseChat = false) {
+  const ide = extensionStore.getState().IDE;
+  const [systemPrompts, projectPrompts, userPrompts] = await Promise.all([
+    getSystemPrompts(),
+    getProjectPrompts(),
+    getUserPrompts(),
+  ]);
+
+  return formatPromptCategory({
+    systemPrompts,
+    projectPrompts,
+    userPrompts,
+    ide,
+    isCodebaseChat,
+  });
 }
 
 function useUserPrompt() {
@@ -227,7 +203,6 @@ function useUserPrompt() {
 
   // 判断是否是 VSCode IDE 的提示，仅在 VSCode IDE 上生效
   const isVsCodeIDE = ide === IDE.VisualStudioCode;
-  const cUnrestrict = useAuthStore((state) => state.authExtends.c_unrestrict);
 
   const { data: systemPrompts, isLoading: isLoadingSystemPrompts } = useService(
     getSystemPrompts,
@@ -259,11 +234,10 @@ function useUserPrompt() {
       projectPrompts,
       userPrompts,
       ide,
-      cUnrestrict,
       isCodebaseChat,
     });
     setPrompts(_prompts);
-  }, [cUnrestrict, ide, projectPrompts, systemPrompts, userPrompts, isCodebaseChat]);
+  }, [ide, projectPrompts, systemPrompts, userPrompts, isCodebaseChat]);
 
   const shortcuts = React.useMemo(() => {
     const _shortcuts = [];

@@ -4,7 +4,8 @@ export type SkillSource =
   | 'y3maker-project' | 'y3maker-user'
   | 'codemaker-project' | 'codemaker-user'
   | 'claude-project' | 'claude-user'
-  | 'agents-project' | 'agents-user';
+  | 'agents-project' | 'agents-user'
+  | 'builtin';
 
 export interface SkillIndexItem {
   name: string;

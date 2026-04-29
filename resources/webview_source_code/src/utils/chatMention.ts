@@ -1,9 +1,7 @@
-import { getBase64FromUrl, truncateContent } from "."
+import { getBase64FromUrl } from "."
 import { ChatMessageContent, ChatMessageContentUnion } from "../services"
 import { AttachType } from "../store/attaches"
-import { ChatAttachStore, FileItem, FolderItem, ImageUrl, IMultiAttachment, IProblem, useChatStore } from "../store/chat"
-import { IDE, useExtensionStore } from "../store/extension"
-import { exceedsMaxLines, getLargeFilePrombt } from "../store/workspace/tools/read"
+import { ChatAttachStore, FileItem, FolderItem, ImageUrl, IMultiAttachment, IProblem } from "../store/chat"
 
 // 提及的文件内容表达
 export const mentionRegex = /@((?:\/|\w+:\/\/)[^\s]+?|[a-f0-9]{7,40}\b|problems\b)(?=[.,;:!?]?(?=[\s\r\n]|$))/
@@ -26,16 +24,9 @@ export const convertAttachToMention = (attach: TMixAttach) => {
   switch (attach.attachType) {
     case AttachType.File: {
       const targetAttach = attach as FileItem
-      const lineCount = targetAttach?.content?.split('\n')?.length || 0
       // 只有仓库智聊需要总结
-      if (lineCount > exceedsMaxLines
-        && useChatStore.getState().chatType === 'codebase'
-        && useExtensionStore.getState().IDE === IDE.VisualStudioCode
-      ) {
-        return getLargeFilePrombt(targetAttach.path, targetAttach?.content || '')
-      } else {
-        return `<file_content path="${targetAttach.path}">${truncateContent(targetAttach.content)}</file_content>`
-      }
+      return `${targetAttach.path} content is displayed in cat -n format, starting from line 1.\nBelow is the content of the file\n`
+        + (targetAttach.content || '')
     }
     case AttachType.Folder: {
       const targetAttach = attach as FolderItem
@@ -75,7 +66,7 @@ export async function parseMentions(text: string, attaches: ChatAttachStore['att
       const isFolder = mention.trim().endsWith('/')
       const path = mention.trim().slice(1)
       return isFolder
-        ? `${path}(see below for folder_content)`
+        ? `${path}`
         : `${path}(see file for file_content)`
     }
   })

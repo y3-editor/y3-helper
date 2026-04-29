@@ -1,6 +1,6 @@
-import { Tool } from ".";
+import { Tool, useWorkspaceStore } from ".";
 import { versionCompare } from "../../utils/common";
-import { useChatStore } from "../chat";
+import { mentionKnowledgeMap, useChatStore } from "../chat";
 import { useChatConfig } from "../chat-config";
 import { MCPServer } from "../mcp";
 import { useSkillsStore, SkillIndexItem } from "../skills";
@@ -27,13 +27,22 @@ export function getToolsEN(options: {
     codeMakerVersion,
     isVSCode
   } = options;
-  const { enableEditableMode, enableSkills, enableUserQuestion } = useChatConfig.getState();
+  const { enableCodeMapSearch, enableKnowledgeLibSearch, enableEditableMode, enableSkills, enableUserQuestion } = useChatConfig.getState();
   const planModeState = useChatStore.getState().currentSession()?.data?.planModeState || 'off';
-  const enableCloudSearch = false;
-  const enableKnowledgeLibSearch = true;
+  const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch;
 
-  const enableReplaceInFile = true;
-  const enableGrep = true;
+  const enableReplaceInFile = codeMakerVersion && (versionCompare('2.4.9', codeMakerVersion) > 0);
+  let enableGrep = false;
+  if (codeMakerVersion) {
+    if (isVSCode) {
+      enableGrep = versionCompare('2.7.0', codeMakerVersion) >= 0;
+    } else {
+      if (codeMakerVersion.includes('-')) {
+        const [_, pluginVersion] = codeMakerVersion.split('-');
+        enableGrep = !!pluginVersion && versionCompare('2.4.4', pluginVersion) >= 0;
+      }
+    }
+  }
 
   let enablePlanMode = useChatStore.getState().currentSession()?.data?.enablePlanMode || false;
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
@@ -41,6 +50,9 @@ export function getToolsEN(options: {
     enablePlanMode = false;
   }
 
+  const selectedKnowledgeBases = useWorkspaceStore.getState().selectedKnowledgeBases;
+  const hasMentionKnowledgeBases = !!mentionKnowledgeMap.get(useChatStore.getState().currentSessionId || '');
+  const hasSelectedKnowledgeBases = hasMentionKnowledgeBases || selectedKnowledgeBases.length > 0;
   const tools: Tool[] = [
     {
       type: 'function',
@@ -118,6 +130,58 @@ export function getToolsEN(options: {
     //   }
     // }
   ];
+  if (enableEditableMode) {
+    tools.push({
+      type: 'function',
+      function: {
+        "description": `Use this tool to propose an edit to an existing file.
+
+        This will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.
+        When writing the edit, you should specify each edit in sequence, with the special comment \`// ... existing code ...\` to represent unchanged code in between edited lines.
+
+        For example:
+
+        \`\`\`
+        // ... existing code ...
+        FIRST_EDIT
+        // ... existing code ...
+        SECOND_EDIT
+        // ... existing code ...
+        THIRD_EDIT
+        // ... existing code ...
+        \`\`\`
+
+        You should still bias towards repeating as few lines of the original file as possible to convey the change.
+        But, each edit should contain sufficient context of unchanged lines around the code you're editing to resolve ambiguity.
+        DO NOT omit spans of pre-existing code (or comments) without using the \`// ... existing code ...\` comment to indicate its absence. If you omit the existing code comment, the model may inadvertently delete these lines.
+        Make sure it is clear what the edit should be, and where it should be accepted.
+
+        You should specify the following arguments before the others: [target_file]`,
+        "name": "edit_file",
+        "parameters": {
+          "properties": {
+            "code_edit": {
+              "description": "Specify ONLY the precise lines of code that you wish to edit. **NEVER specify or write out unchanged code**. Instead, represent all unchanged code using the comment of the language you're editing in - example: `// ... existing code ...`",
+              "type": "string"
+            },
+            "target_file": {
+              "description": "The target file to modify. Always specify the target file as the first argument. You can use either a relative path in the workspace or an absolute path. If an absolute path is provided, it will be preserved as is.",
+              "type": "string"
+            },
+            "is_create_file": {
+              "description": "Whether the target file is a new file or an existing one. Defaults to false. If true, the target file is a new file.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "target_file",
+            "code_edit"
+          ],
+          "type": "object"
+        }
+      }
+    })
+  }
   if (enableGrep) {
     tools.push({
       type: 'function',
@@ -279,13 +343,13 @@ Critical rules:
       },
     });
   }
-  if (enableKnowledgeLibSearch) {
+  if (enableKnowledgeLibSearch && hasSelectedKnowledgeBases) {
     tools.push({
       type: 'function',
       function: {
         name: 'retrieve_knowledge',
         description:
-          'Retrieve knowledge snippets from the knowledge base. You can use this tool to get related knowledge snippets.',
+          'Retrieve knowledge snippets from the knowledge base. When users mention specific terms or specialized terminology, you can use this tool to get related knowledge snippets. If the `retrieve_code` tool exists, this must be used together with `retrieve_code`.',
         parameters: {
           type: 'object',
           properties: {
@@ -294,13 +358,8 @@ Critical rules:
               description:
                 'Input for retrieving knowledge base snippets, derived from the user\'s question, with some information supplementation and refinement.',
             },
-            docset_id: {
-              type: 'string',
-              description:
-                'The docset code specifying which knowledge base dataset to search.',
-            },
           },
-          required: ['search_query', 'docset_id'],
+          required: ['search_query'],
         },
       },
     })
@@ -373,39 +432,21 @@ Critical rules:
     tools.push(generateCodewikiStructure({ language: 'en' }));
   }
 
-  const skillsStore = useSkillsStore.getState();
-  const skills =
-    options.skills ??
-    skillsStore.skills.filter((s) => skillsStore.isSkillEnabled(s.name));
+  const skills = options.skills || useSkillsStore.getState().skills;
   if (enableSkills && skills.length > 0) {
-    const skillNames = skills.map((s) => s.name);
+    const skillNames = skills.map(s => s.name);
     tools.push({
       type: 'function',
       function: {
         name: 'use_skill',
-        description:
-          "Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. You can activate multiple skills at once by passing an array of skill names. Only call this when the user's request clearly matches an available skill.",
+        description: 'Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. Only call this when the user\'s request clearly matches an available skill.',
         parameters: {
           type: 'object',
           properties: {
             skill_name: {
-              oneOf: [
-                {
-                  type: 'string',
-                  enum: skillNames,
-                  description: `A single skill name. Must be one of: ${skillNames.join(', ')}`,
-                },
-                {
-                  type: 'array',
-                  items: {
-                    type: 'string',
-                    enum: skillNames,
-                  },
-                  minItems: 1,
-                  description: `An array of skill names to activate multiple skills. Each must be one of: ${skillNames.join(', ')}`,
-                },
-              ],
-              description: `The name(s) of the skill(s) to activate. Can be a single skill name or an array of multiple skill names. Available skills: ${skillNames.join(', ')}`,
+              type: 'string',
+              description: `The name of the skill to activate. Must be one of the available skills: ${skillNames.join(', ')}`,
+              enum: skillNames,
             },
           },
           required: ['skill_name'],

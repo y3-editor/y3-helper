@@ -117,6 +117,112 @@ class WorkspaceTracker {
         return this.filePaths.delete(normalizedPath) || this.filePaths.delete(normalizedPath + '/');
     }
 
+    /**
+     * 归一化字符串：转为小写并移除分隔符
+     */
+    private normalize(str: string): string {
+        return str.toLowerCase().replace(/[_\-./\\s]/g, '');
+    }
+
+    /**
+     * 将路径分割成单词（基于分隔符和驼峰命名）
+     */
+    private splitIntoWords(str: string): string[] {
+        const parts = str.split(/[_\-./\\s]+/);
+        const words: string[] = [];
+        for (const part of parts) {
+            if (!part) continue;
+            const camelWords = part.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ');
+            words.push(...camelWords.filter(w => w.length > 0));
+        }
+        return words.map(w => w.toLowerCase());
+    }
+
+    /**
+     * 模糊匹配算法
+     */
+    private fuzzyMatch(query: string, target: string): { match: boolean; score: number } {
+        const q = query.toLowerCase();
+        const t = target.toLowerCase();
+        const nq = this.normalize(query);
+        const nt = this.normalize(target);
+
+        // 1. 精确子串匹配（最高分）
+        if (t.includes(q)) {
+            const index = t.indexOf(q);
+            const positionBonus = Math.max(0, 20 - index);
+            return { match: true, score: 100 + positionBonus };
+        }
+
+        // 2. 去分隔符子串匹配
+        if (nt.includes(nq)) {
+            const index = nt.indexOf(nq);
+            const positionBonus = Math.max(0, 15 - index);
+            return { match: true, score: 80 + positionBonus };
+        }
+
+        // 3. 单词边界匹配
+        const words = this.splitIntoWords(target);
+        const normalizedWords = words.map(w => this.normalize(w));
+
+        for (let i = 0; i < words.length; i++) {
+            if (words[i] === q || normalizedWords[i] === nq) {
+                return { match: true, score: 75 };
+            }
+        }
+
+        // 3.2 连续单词组合匹配
+        const joinedWords = normalizedWords.join('');
+        if (joinedWords.includes(nq)) {
+            let currentPos = 0;
+            let matchedWords = 0;
+            for (const word of normalizedWords) {
+                const wordInQuery = nq.substring(currentPos, currentPos + word.length);
+                if (word === wordInQuery) {
+                    currentPos += word.length;
+                    matchedWords++;
+                }
+                if (currentPos >= nq.length) break;
+            }
+            if (currentPos >= nq.length && matchedWords > 1) {
+                return { match: true, score: 70 };
+            }
+        }
+
+        // 4. 首字母缩写匹配
+        const initials = words.map(w => w[0]).join('');
+        if (initials.includes(q)) {
+            return { match: true, score: 60 };
+        }
+
+        // 5. 子序列匹配
+        let qi = 0;
+        let lastMatchIndex = -1;
+        let consecutiveMatches = 0;
+        let maxConsecutive = 0;
+
+        for (let ti = 0; ti < nt.length && qi < nq.length; ti++) {
+            if (nq[qi] === nt[ti]) {
+                if (ti === lastMatchIndex + 1) {
+                    consecutiveMatches++;
+                } else {
+                    maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
+                    consecutiveMatches = 1;
+                }
+                lastMatchIndex = ti;
+                qi++;
+            }
+        }
+        maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
+
+        if (qi === nq.length) {
+            const continuityBonus = Math.min(20, maxConsecutive * 2);
+            return { match: true, score: 40 + continuityBonus };
+        }
+
+        return { match: false, score: 0 };
+    }
+
     public getFilePaths(option: {
         keyword: string,
         type?: string
@@ -127,27 +233,43 @@ class WorkspaceTracker {
                 const relativePath = path.relative(cwd, file).toPosix();
                 return file.endsWith('/') ? relativePath + '/' : relativePath;
             });
-            return filePathsArr.filter(item => {
-                let match = true;
-                if (item.endsWith('.c')) {
-                    return false;
-                }
-                if (keyword) {
-                    if (!item.toLowerCase().includes(keyword.toLowerCase())) {
-                        match = false;
+
+            // 使用模糊匹配并按分数排序
+            const matchedFiles = filePathsArr
+                .map(item => {
+                    let match = true;
+                    let score = 0;
+
+                    if (item.endsWith('.c')) {
+                        return null;
                     }
-                }
-                if (type === 'file') {
-                    if (item.endsWith('/')) {
-                        match = false;
+
+                    if (keyword) {
+                        const fuzzyResult = this.fuzzyMatch(keyword, item);
+                        if (!fuzzyResult.match) {
+                            match = false;
+                        } else {
+                            score = fuzzyResult.score;
+                        }
                     }
-                } else if (type === 'folder') {
-                    if (!item.endsWith('/')) {
-                        match = false;
+
+                    if (type === 'file') {
+                        if (item.endsWith('/')) {
+                            match = false;
+                        }
+                    } else if (type === 'folder') {
+                        if (!item.endsWith('/')) {
+                            match = false;
+                        }
                     }
-                }
-                return match;
-            });
+
+                    return match ? { path: item, score } : null;
+                })
+                .filter((item): item is { path: string; score: number } => item !== null)
+                .sort((a, b) => b.score - a.score)
+                .map(item => item.path);
+
+            return matchedFiles;
         } else {
             return [];
         }

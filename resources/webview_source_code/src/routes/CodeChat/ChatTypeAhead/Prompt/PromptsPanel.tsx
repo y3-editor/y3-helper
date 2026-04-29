@@ -56,6 +56,8 @@ import { useMCPStore } from '../../../../store/mcp';
 import { useMcpPromptApp } from '../../../../store/mcp-prompt';
 // import { CODEBASE_EXAMPLE } from '../../ChatSamples';
 import { checkValueOfPressedKeyboard } from '../../../../utils';
+// import { supportsOpenSpecVersionSelection } from '../../../../utils/specVersionUtils'; // Y3不需要OpenSpec
+const supportsOpenSpecVersionSelection = (..._args: any[]) => false; // Y3不支持OpenSpec
 import { McpPrompt } from '../../../../services/mcp';
 import { RULES_PROMPT } from '../../../../services/builtInPrompts/rules';
 import { createSkillToolId, getSkillSourceLabel, useSkillsStore } from '../../../../store/skills';
@@ -84,6 +86,7 @@ const PromptsPanel = (
     onTypeAheadModeChange,
   } = props;
   const ide = useExtensionStore((state) => state.IDE);
+  const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion);
   const { postMessage, message } = usePostMessage();
   const { toast } = useCustomToast();
   const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
@@ -205,7 +208,7 @@ const PromptsPanel = (
     if (chatType === 'codebase' && codebaseChatMode === 'openspec') {
       // 根据安装的 OpenSpec 版本动态选择命令集
       const openspecPrompts = getOpenSpecPromptsByVersion(installedOpenSpecVersion);
-      const canShowUpdate = false; // Y3 不需要 OpenSpec 版本选择
+      const canShowUpdate = supportsOpenSpecVersionSelection(codeMakerVersion, ide);
       for (const builtIn of openspecPrompts) {
         // openspec-update 仅在 Extension 版本满足 Spec 版本选择要求时提供
         if (builtIn.name === 'openspec-update' && !canShowUpdate) continue;
@@ -617,9 +620,7 @@ const PromptsPanel = (
                   tool_id: createSkillToolId(),
                 },
               });
-              if (userInputRef.current) {
-                userInputRef.current.value = '';
-              }
+              // 不清空输入框，保留用户已输入的文字内容
             } else if (prompt.meta.type === PromptCategoryType.CodeWiki) {
               updatePromptAppRunner(prompt);
             } else {

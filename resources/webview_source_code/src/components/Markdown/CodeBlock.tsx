@@ -120,7 +120,7 @@ function CodeBlock(props: CodeBlockProps) {
                   padding: '1rem',
                   color: 'black',
                   paddingLeft:
-                    codeWhiteSpace === CodeWhiteSpace.Wrap ? '20px' : '40px',
+                    codeWhiteSpace === CodeWhiteSpace.Wrap ? (!hiddenLineNumber ? '4px' : '4px') : '40px',
                 }}
                 codeTagProps={{
                   style: {},
@@ -129,6 +129,9 @@ function CodeBlock(props: CodeBlockProps) {
                       ? 'codeblock-highlighter-code'
                       : '',
                 }}
+                showLineNumbers={!hiddenLineNumber && codeWhiteSpace === CodeWhiteSpace.Wrap}
+                startingLineNumber={startLineNumber}
+                lineNumberStyle={codeWhiteSpace === CodeWhiteSpace.Wrap ? { color: '#71717a' } : undefined}
               >
                 {value}
               </Light>
@@ -144,7 +147,7 @@ function CodeBlock(props: CodeBlockProps) {
                   background: 'transparent',
                   padding: '1rem',
                   paddingLeft:
-                    !hiddenLineNumber ? codeWhiteSpace === CodeWhiteSpace.Wrap ? '20px' : '40px' : '20px'
+                    !hiddenLineNumber ? (codeWhiteSpace === CodeWhiteSpace.Wrap ? '4px' : '40px') : (codeWhiteSpace === CodeWhiteSpace.Wrap ? '4px' : '40px')
                 }}
                 codeTagProps={{
                   style: {},
@@ -153,6 +156,9 @@ function CodeBlock(props: CodeBlockProps) {
                       ? 'codeblock-highlighter-code'
                       : '',
                 }}
+                showLineNumbers={!hiddenLineNumber && codeWhiteSpace === CodeWhiteSpace.Wrap}
+                startingLineNumber={startLineNumber}
+                lineNumberStyle={codeWhiteSpace === CodeWhiteSpace.Wrap ? { color: '#71717a' } : undefined}
               >
                 {value}
               </SyntaxHighlighter>

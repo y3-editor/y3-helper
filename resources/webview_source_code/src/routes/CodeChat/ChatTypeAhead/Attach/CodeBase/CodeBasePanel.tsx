@@ -10,6 +10,7 @@ import AttachIcon from '../AttachIcon';
 import AttachActionBar from '../AttachActionBar';
 import { checkValueOfPressedKeyboard } from '../../../../../utils';
 import { useSelectCodebaseAttach } from '../Hooks/useSelectCodebaseAttach';
+import { fuzzySearch } from '../../../../../utils/fuzzyMatch';
 
 function CodeBaseSelector(props: TypeAheadSubProps) {
   const {
@@ -48,9 +49,18 @@ function CodeBaseSelector(props: TypeAheadSubProps) {
     const attachLastIndex = inputValue.lastIndexOf(TypeAheadModePrefix.Attach);
     const searchKeyword = inputValue.slice(attachLastIndex + 1);
     if (searchKeyword) {
-      return codeBaseOptions.filter((item) =>
-        item.label.toLowerCase().includes(searchKeyword.toLowerCase()),
+      // 使用 fuzzySearch 进行模糊匹配并按分数排序
+      const matchedResults = fuzzySearch(
+        codeBaseOptions,
+        searchKeyword,
+        (item) => item.label
       );
+      // 移除 _matchScore 属性，返回原始类型
+      return matchedResults.map((item) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { _matchScore, ...rest } = item;
+        return rest as GroupValue;
+      });
     }
     return codeBaseOptions;
   }, [inputValue, codeBaseOptions]);
@@ -164,7 +174,7 @@ function CodeBaseList(props: {
             postMessage({
               type: 'OPEN_IN_BROWSER',
               data: {
-                url: 'https://github.com/user/codemaker',
+                url: 'https://g.126.fm/03PbIEW',
               },
             });
           }}

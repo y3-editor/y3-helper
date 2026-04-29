@@ -11,12 +11,12 @@ import {
 import {
   analyzeTokenUsageWithTools,
   calculateLatestTokenUsage,
-  calculateSingleMessageContentTokens,
+  calculateSingleMessageContentTokensAsync,
   trimMessagesByTokenLimit,
 } from '../utils/tokenCalculator';
 import { Tool, useWorkspaceStore } from '../store/workspace';
 import { generateCompressionPrompt } from '../utils/compressionPrompt';
-import { fetchCompressResponse } from '../services/chat';
+import { fetchGptResponse } from '../services/chat';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import userReporter from '../utils/report';
@@ -65,57 +65,54 @@ function buildToolCallIdMap(
  * 5. 超出保护范围的 tool output 替换为 '[Tool output cleared]'
  * 6. 可裁剪总量 >= PRUNE_MINIMUM 时才执行
  */
-export function pruneToolOutputs(messages: ChatMessage[]): ChatMessage[] {
-  const toolCallIdMap = buildToolCallIdMap(messages);
-  let userCount = 0;
-  let protectedTokens = 0;
-  let prunable: { idx: number; tokens: number }[] = [];
+export async function pruneToolOutputs(messages: ChatMessage[]): Promise<ChatMessage[]> {
+  const toolNameMap = buildToolCallIdMap(messages);
+
+  let total = 0;
+  let prunedTokens = 0;
+  const toPrune: number[] = [];
+  let turns = 0;
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
 
-    if (msg.isCompressionSummary) {
-      break;
-    }
-    if (msg.role === ChatRole.User) {
-      userCount++;
-    }
-    if (msg.role !== 'tool' || userCount < 2) continue;
+    if (msg.role === ChatRole.User) turns++;
+    if (turns < 2) continue;
+    if (msg.isCompressionSummary) break;
+    if (msg.role !== ChatRole.Tool) continue;
 
+    // 跳过受保护的工具
     const toolName = msg.tool_call_id
-      ? toolCallIdMap.get(msg.tool_call_id) || ''
-      : '';
-    if (PRUNE_PROTECTED_TOOLS.includes(toolName)) continue;
-
-    const tokens = calculateSingleMessageContentTokens(msg);
-    if (protectedTokens < PRUNE_PROTECT) {
-      protectedTokens += tokens;
+      ? toolNameMap.get(msg.tool_call_id)
+      : undefined;
+    if (toolName && PRUNE_PROTECTED_TOOLS.includes(toolName)) {
       continue;
     }
-    prunable.push({ idx: i, tokens });
+
+    const estimate = await calculateSingleMessageContentTokensAsync(msg);
+    total += estimate;
+
+    if (total > PRUNE_PROTECT) {
+      prunedTokens += estimate;
+      toPrune.push(i);
+    }
   }
 
-  const totalPrunable = prunable.reduce((s, p) => s + p.tokens, 0);
-  if (totalPrunable < PRUNE_MINIMUM) return messages;
-
-  const cloned = messages.map((m) => ({ ...m }));
-  for (const { idx } of prunable) {
-    cloned[idx] = { ...cloned[idx], content: '[Tool output cleared]' };
+  if (prunedTokens < PRUNE_MINIMUM) {
+    return messages;
   }
 
-  console.debug(
-    `[pruneToolOutputs] pruned ${prunable.length} tool msgs, saved ~${totalPrunable} tokens`,
-  );
-
-  userReporter.report({
-    event: UserEvent.CODE_CHAT_COMPRESS_EMPTY_PRUNE,
-    extends: {
-      prunedCount: prunable.length,
-      savedTokens: totalPrunable,
-    },
+  const indicesToPrune = new Set(toPrune);
+  const result = messages.map((msg, index) => {
+    if (!indicesToPrune.has(index)) return msg;
+    return { ...msg, content: '[Tool output cleared]' };
   });
 
-  return cloned;
+  console.log(
+    `[CompressionService] Pruned old tool outputs:`,
+    `~${prunedTokens} tokens from ${toPrune.length} tool messages`,
+  );
+  return result;
 }
 
 export const getCompressSessionStatus = async (sessionId: string) => {
@@ -275,12 +272,20 @@ export class CompressionService {
         DEFAULT_COMPRESSION_CONFIG.maxTokens,
       );
 
-      const requestCompression = async (payload: ChatMessage[]) =>
-        fetchCompressResponse({
-          messages: await serializeCodebaseMessages(
-            model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
-            payload,
-          ),
+      const requestCompression = async (payload: ChatMessage[]) => {
+        const serialized = await serializeCodebaseMessages(
+          model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
+          payload,
+        );
+        const cleanMessages = serialized.map(({
+          redacted_thinking: _redacted_thinking,
+          thinking_signature: _thinking_signature,
+          reasoning_content: _reasoning_content,
+          reasoningContent: _reasoningContent,
+          ...rest
+        }) => rest);
+        return fetchGptResponse(UserEvent.CODE_CHAT_COMPRESS, {
+          messages: cleanMessages,
           model: model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
           max_tokens: DEFAULT_COMPRESSION_CONFIG.maxOutputTokens, // Compression output limit
           vertexai: {
@@ -289,11 +294,13 @@ export class CompressionService {
             },
           },
         });
+      };
 
       const extractSummaryText = (response: Awaited<ReturnType<typeof requestCompression>>) =>
         response?.choices?.[0]?.message?.content ?? '';
 
       const runCompressionWithFallback = async () => {
+        // 第 1 次：全量消息压缩
         let response = await requestCompression(filteredMessages);
         let summary = extractSummaryText(response);
 
@@ -309,11 +316,31 @@ export class CompressionService {
           webToolsLogger.captureException(UserEvent.CODE_CHAT_COMPRESS_EMPTY);
         });
 
+        // 第 2 次：裁剪旧 tool output 后重试（保持消息条数不变，减少 token 量）
+        const prunedMessages = await pruneToolOutputs(filteredMessages);
+        if (prunedMessages !== filteredMessages) {
+          response = await requestCompression(prunedMessages);
+          summary = extractSummaryText(response);
+
+          if (summary.trim()) {
+            return { response, summary };
+          }
+
+          userReporter.report({
+            event: UserEvent.CODE_CHAT_COMPRESS_EMPTY_PRUNE,
+          });
+          webToolsLogger.hub.withScope((scope) => {
+            scope.setExtra('compressionResponse', response);
+            webToolsLogger.captureException(UserEvent.CODE_CHAT_COMPRESS_EMPTY_PRUNE);
+          });
+        }
+
+        // 第 3 次：裁剪消息条数后重试
         const codebaseModelMaxTokens = useChatConfig.getState().codebaseModelMaxTokens;
         const compressionModel = model || DEFAULT_COMPRESSION_CONFIG.compressionModel;
 
         const { sendMessages: fallbackMessages } = truncateMessagesIfNeeded({
-          messages: filteredMessages,
+          messages: prunedMessages,
           model: compressionModel,
           codebaseModelMaxTokens
         });
@@ -463,3 +490,11 @@ ${summaryText}
 }
 
 export const compressionService = new CompressionService();
+
+if (process.env.NODE_ENV === 'development') {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  window.compressionService = {
+    pruneToolOutputs
+  }
+}

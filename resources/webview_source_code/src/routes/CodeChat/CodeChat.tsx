@@ -51,8 +51,6 @@ import {
   INNER_VARIABLE,
   PROMPT_CODE_VARIABLE,
   prePromptEventIdsMap,
-  COMMIT_MSG_PROMPT,
-  COMMIT_MSG_SHORT_PROMPT,
   prePromptIdsMap,
   PrePrompt,
   getLatestPrompts,
@@ -114,7 +112,9 @@ import {
   useTerminalMessage,
 } from './ChatMessagesList/TermialPanel';
 import { useChatTerminalStore } from '../../store/chatTerminal';
-import ChatBottomTabs, { ChatBottomTabsRef } from './ChatBottomTabs/ChatBottomTabsV2';
+import ChatBottomTabs, {
+  ChatBottomTabsRef,
+} from './ChatBottomTabs/ChatBottomTabsV2';
 // import { LuListTodo } from 'react-icons/lu';
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
@@ -128,12 +128,17 @@ import { shallow } from 'zustand/shallow';
 import { useSelecteFileAttach } from './ChatTypeAhead/Attach/Hooks/useSelectFileAttach';
 import { useSelectedFolderAttach } from './ChatTypeAhead/Attach/Hooks/useSelectFolderAttach';
 import {
-  exceedsMaxLines,
+  maxTruncatedLine,
   getDiffPatchOfContent,
-  getLargeFilePrombt,
+  getFilePrompt,
 } from '../../store/workspace/tools/read';
 import { updateCurrentSession as updateCurrentSessionUtil } from '../../hooks/useCurrentSession';
 import { generateTraceId } from '../../utils/trace';
+// Y3不需要遥测，用空实现代替
+const otel = {
+  startToolCallSpan: (..._args: any[]) => undefined,
+  stopToolCallSpan: (..._args: any[]) => {},
+};
 import * as ChatNavUtils from './chatNavigationUtils';
 import { useGlobalEvent } from '../../hooks/useGlobalEvent';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
@@ -150,12 +155,13 @@ import { useSelectImageAttach } from './ChatTypeAhead/Attach/Hooks/useSelectImag
 import { useUploadRes } from '../../components/ImageUpload/useUploadRes';
 import MCPErrorModal from './MCPErrorModal';
 import {
-  BUILT_IN_PROMPTS_OPENSPEC_V023,
-  BUILT_IN_PROMPTS_OPENSPEC_V1,
   BUILT_IN_PROMPTS_SPECKIT,
 } from '../../services/builtInPrompts';
+// import SpecInitModal from './SpecInitModal'; // Y3不需要OpenSpec
+// import OpenSpecUpdateModal from './OpenSpecUpdateModal'; // Y3不需要OpenSpec
 import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
+// import { usePageEntryTour, useEventTriggerTour, CODEBASE_SESSION_CREATED_EVENT } from '../../components/FeatureTour'; // Y3不需要FeatureTour
 import { usePanelContext } from '../../context/PanelContext';
 
 // 468(原本宽度)+40(token数的宽度)
@@ -223,6 +229,7 @@ function CodeChat() {
     (state) => state.isTerminalProcessing,
   );
   const isApplying = useChatStreamStore((state) => state.isApplying);
+  // const endSubmitSpan = useChatStreamStore((state) => state.endSubmitSpan); // Y3不需要遥测
   const onUserSubmit = useChatStreamStore((state) => state.onUserSubmit);
   const onStreamStop = useChatStreamStore((state) => state.onStop);
   const [getCodebaseChatSystemPrompt, getCodebaseFunctionPrompt] =
@@ -261,7 +268,9 @@ function CodeChat() {
   const selectedFileHook = useSelecteFileAttach();
   const selectedFolderHook = useSelectedFolderAttach();
 
-  // 功能引导触发器
+  // 功能引导触发器 (Y3不需要FeatureTour)
+  // usePageEntryTour('/chat');
+  // useEventTriggerTour(CODEBASE_SESSION_CREATED_EVENT);
 
   const { stopRunningTerminal } = useTerminalMessage();
 
@@ -720,12 +729,7 @@ function CodeChat() {
       if (promptApp && !promptApp?.meta?._id.includes('codewiki')) {
         if (
           [
-            ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(
-              (openspecPrompt) => openspecPrompt.name,
-            ),
-            ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(
-              (openspecPrompt) => openspecPrompt.name,
-            ),
+            // Y3不需要OpenSpec prompts
             ...BUILT_IN_PROMPTS_SPECKIT.map(
               (speckitPrompt) => speckitPrompt.name,
             ),
@@ -826,44 +830,6 @@ function CodeChat() {
           loading: false,
         };
         // let userStatue: SteryBoxStatus | null = null;
-        updateCurrentSession((session) => {
-          session.data?.messages.push(cloneDeep(user));
-          session.data?.messages.push(cloneDeep(assistant));
-        });
-        await syncHistory();
-        scrollToBottom();
-        return;
-      }
-
-      // TODO: Commit Msg 让用户跳转到 source control 操作
-      if (
-        _prompt === COMMIT_MSG_PROMPT ||
-        _prompt === COMMIT_MSG_SHORT_PROMPT
-      ) {
-        userReporter.submit();
-        promptRef.current = null;
-        onRemovePrePromptCodeBlock();
-        if (inputRef.current) {
-          inputRef.current.value = '';
-          inputRef.current.focus();
-          setFocused(true);
-          clearInputDraft(); // 清空草稿
-        }
-        const id = nanoid();
-        const user = {
-          id,
-          content: _prompt,
-          role: ChatRole.User,
-        };
-        const assistant = {
-          id,
-          content: '-',
-          role: ChatRole.Assistant,
-          loading: false,
-          commitMsgPayload: {
-            short: _prompt === COMMIT_MSG_SHORT_PROMPT,
-          },
-        };
         updateCurrentSession((session) => {
           session.data?.messages.push(cloneDeep(user));
           session.data?.messages.push(cloneDeep(assistant));
@@ -1084,7 +1050,11 @@ function CodeChat() {
       const eventData = event.data as any;
 
       // 多面板模式下，只处理指定给自己的消息或广播消息（无 targetPanelId）
-      if (isPanelMode && eventData?.targetPanelId && eventData.targetPanelId !== currentPanelId) {
+      if (
+        isPanelMode &&
+        eventData?.targetPanelId &&
+        eventData.targetPanelId !== currentPanelId
+      ) {
         return;
       }
 
@@ -1126,7 +1096,7 @@ function CodeChat() {
             break;
         }
         const currentPrompt = (await getLatestPrompts()).find(
-          (item: any) => item._id === promptId,
+          (item) => item._id === promptId,
         );
         if (!currentPrompt) return;
         handlePrePromptSubmit(currentPrompt, code, language);
@@ -1346,7 +1316,9 @@ function CodeChat() {
         if (result.success && result.skillName) {
           // 上报安装事件
           import('../../services/skillUsage').then(({ reportSkillInstall }) => {
-            reportSkillInstall(result.skillName!, { source: 'codemaker-command' });
+            reportSkillInstall(result.skillName!, {
+              source: 'codemaker-command',
+            });
           });
           toast({
             title: 'Skill 安装成功',
@@ -1389,6 +1361,11 @@ function CodeChat() {
           tool_name,
           extra = {},
         } = eventData?.data || {};
+        const toolSpan = otel.startToolCallSpan(
+          tool_name,
+          tool_id,
+          (useChatStreamStore.getState() as any).conversationRound ?? 0,
+        );
         if (tool_name === 'use_skill' && isSkillToolId(tool_id)) {
           if (compressionSkillToolIds.has(tool_id)) {
             return;
@@ -1397,14 +1374,23 @@ function CodeChat() {
           const targetPanelId = eventData?.targetPanelId;
           if (targetPanelId) {
             if (targetPanelId !== currentPanelId) {
+              otel.stopToolCallSpan(toolSpan, { isError: false });
               return;
             }
           }
-          const { parseSkillToolResult, getSkillSourceLabel } = await import('../../store/skills');
-          const { useSkillPromptApp } = await import('../../store/skills/skill-prompt');
+          const { parseSkillToolResult, getSkillSourceLabel } = await import(
+            '../../store/skills'
+          );
+          const { useSkillPromptApp } = await import(
+            '../../store/skills/skill-prompt'
+          );
           const skillData = parseSkillToolResult(tool_result?.content || '');
           if (tool_result?.isError || !skillData) {
             useSkillPromptApp.getState().setLoading(false);
+            otel.stopToolCallSpan(toolSpan, {
+              content: tool_result?.content,
+              isError: tool_result?.isError,
+            });
           } else {
             useSkillPromptApp.getState().setRunner(
               {
@@ -1412,8 +1398,12 @@ function CodeChat() {
                 title: `/${skillData.name}`,
                 source: getSkillSourceLabel(skillData.source),
               },
-              skillData
+              skillData,
             );
+            otel.stopToolCallSpan(toolSpan, {
+              content: tool_result?.content,
+              isError: false,
+            });
           }
           return;
         }
@@ -1428,6 +1418,10 @@ function CodeChat() {
           updateTerminals(tool_id, {
             id: tool_id,
             status: extra?.terminalStatusForJetbrains || extra?.status || '',
+          });
+          otel.stopToolCallSpan(toolSpan, {
+            content: tool_result.content,
+            isError: tool_result?.isError,
           });
           return;
         }
@@ -1445,9 +1439,11 @@ function CodeChat() {
           ) {
             // 部分工具不做判断，避免阻塞
             if (!isProcessing && !isMCPProcessing && !isApplying) {
+              otel.stopToolCallSpan(toolSpan, { isError: false });
               return;
             }
             if (!lastMessage.tool_calls) {
+              otel.stopToolCallSpan(toolSpan, { isError: false });
               return;
             }
             if (
@@ -1455,6 +1451,7 @@ function CodeChat() {
                 (toolCall) => toolCall.id === tool_id,
               ) < 0
             ) {
+              otel.stopToolCallSpan(toolSpan, { isError: false });
               return;
             }
           }
@@ -1593,15 +1590,11 @@ function CodeChat() {
                         parseImageFromReadFileTool(tool_id, tool_result);
                         return
                       } else {
-                        let content = tool_result.content;
-                        const lines = content.split('\n');
-                        // 允许误差行数
-                        if (lines?.length > exceedsMaxLines + 10) {
-                          content = getLargeFilePrombt(
-                            tool_result.path,
-                            content,
-                          );
-                        }
+                        const content = getFilePrompt(
+                          tool_result.path,
+                          tool_result.content,
+                          true
+                        );
                         updateToolCallResults(
                           {
                             [tool_id]: {
@@ -1629,7 +1622,7 @@ function CodeChat() {
                       finalResult = extra?.finalResult || '';
                       isLargeFile =
                         (finalResult?.split('\n')?.length || 0) >
-                        exceedsMaxLines;
+                        maxTruncatedLine;
                       if (isLargeFile) {
                         finalResult = getDiffPatchOfContent(
                           beforeEdit,
@@ -1737,6 +1730,10 @@ function CodeChat() {
               }
             }
           }
+        });
+        otel.stopToolCallSpan(toolSpan, {
+          content: tool_result?.content,
+          isError: tool_result?.isError,
         });
       }
       if (eventData?.type === SubscribeActions.APPLY_EDIT_START) {
@@ -2347,7 +2344,7 @@ function CodeChat() {
               allow_paths: [],
               repos: [],
               allow_public_model_access: false,
-              rules: []
+              rules: [],
             });
           }
           setEnableEditableMode(readOnly ? false : true);
@@ -2574,6 +2571,25 @@ function CodeChat() {
   React.useEffect(() => {
     prevStreamState.current = isStreaming;
   }, [isStreaming]);
+
+  React.useEffect(() => {
+    if (
+      isStreaming ||
+      isProcessing ||
+      isMCPProcessing ||
+      isTerminalProcessing ||
+      isApplying
+    ) {
+      return;
+    }
+    // endSubmitSpan(); // Y3不需要遥测
+  }, [
+    isStreaming,
+    isProcessing,
+    isMCPProcessing,
+    isTerminalProcessing,
+    isApplying,
+  ]);
 
   // TODO: attachs 更新的时候，是否需要滚动到底部
   React.useEffect(() => {
@@ -3100,7 +3116,8 @@ function CodeChat() {
                   }}
                   zIndex={2}
                 >
-                  <Icon as={FaFolderOpen} /> <span className='mx-1'>代码仓库</span>
+                  <Icon as={FaFolderOpen} />{' '}
+                  <span className="mx-1">代码仓库</span>
                   {workspaceInfo.repoName}
                 </Box>
               ) : (
@@ -3228,7 +3245,10 @@ function CodeChat() {
             <FileUpload />
             {/* )} */}
           </Grid>
-          <Grid className="h-full w-full px-2 pb-2 gap-2" gridTemplateRows="1fr">
+          <Grid
+            className="h-full w-full px-2 pb-2 gap-2"
+            gridTemplateRows="1fr"
+          >
             {showCodebaseFeedBack && feedbackDetail ? (
               <CodeBaseFeedback
                 feedbackDetail={feedbackDetail}
@@ -3256,8 +3276,7 @@ function CodeChat() {
           </Grid>
         </Split>
         <MCPErrorModal />
-        {/* Spec 初始化引导弹窗 */}
-        {/* OpenSpec 升级弹窗 */}
+        {/* Y3不需要OpenSpec弹窗 */}
         {/* Prompt 编辑和删除 Modal */}
         <PromptModals />
       </Box>

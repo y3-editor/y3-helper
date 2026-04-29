@@ -3,7 +3,7 @@ import MemoCodeBlock from "../../../components/Markdown/CodeBlock";
 import { FiCheck, FiCopy, FiLogOut, FiX } from "react-icons/fi";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BroadcastActions, usePostMessage } from "../../../PostMessageProvider";
-import { TbReload } from "react-icons/tb";
+import { TbReload, TbTextWrapDisabled } from "react-icons/tb";
 import { useChatApplyStore } from "../../../store/chatApply";
 import { GoArrowSwitch, GoFileDiff } from "react-icons/go";
 import { RxCheckCircled, RxCircleBackslash, RxCrossCircled } from "react-icons/rx";
@@ -15,9 +15,10 @@ import MemoDiffCodeBlock from "../../../components/Markdown/DiffCodeBlock";
 import { diffLines } from "diff";
 import { useChatStreamStore } from "../../../store/chat";
 import { FaStop } from "react-icons/fa6";
-import { MdExpandLess, MdExpandMore } from "react-icons/md";
+import { MdExpandLess, MdExpandMore, MdWrapText } from "react-icons/md";
 import { UserEvent } from "../../../types/report";
 import { shallow } from "zustand/shallow";
+import { CodeWhiteSpace, useConfigStore } from "../../../store/config";
 // import { useTheme } from "../../../ThemeContext";
 
 const btn_xs = {
@@ -66,6 +67,8 @@ export function EditFile(props: {
   const [displayMode, setDisplayMode] = useState<'diff' | 'update' | 'finalResult'>('diff');
   const targetApplyItem = chatApplyInfo[toolCallId];
   const [isExpanded, setIsExpanded] = useState(!!targetApplyItem);
+  const codeWhiteSpace = useConfigStore((state) => state.config.codeWhiteSpace);
+  const updateConfig = useConfigStore((state) => state.updateConfig);
   //  const { activeTheme } = useTheme();
 
   const [
@@ -331,6 +334,31 @@ export function EditFile(props: {
     </Menu>
   }, [])
 
+  // @ts-expect-error renderWrapToggle will be used later
+  const renderWrapToggle = useCallback(() => {
+    const isWrap = codeWhiteSpace === CodeWhiteSpace.Wrap;
+    return (
+      <Tooltip label={isWrap ? "不换行" : "换行"}>
+        <IconButton
+          aria-label={'切换换行'}
+          size="xs"
+          icon={<Icon fontSize='14px' as={isWrap ? MdWrapText : TbTextWrapDisabled} />}
+          bg="none"
+          padding={1}
+          color="text.default"
+          onClick={() => {
+            updateConfig((config) => {
+              config.codeWhiteSpace =
+                codeWhiteSpace === CodeWhiteSpace.Wrap
+                  ? CodeWhiteSpace.NoWrap
+                  : CodeWhiteSpace.Wrap;
+            });
+          }}
+        />
+      </Tooltip>
+    );
+  }, [codeWhiteSpace, updateConfig])
+
   const renderActionButtons = useCallback(() => {
     return <>
       {
@@ -503,6 +531,9 @@ export function EditFile(props: {
       {
         !!finalResult && renderSwitch()
       }
+      {/* {
+        renderWrapToggle()
+      } */}
       {renderMore()}
     </>
   }, [
@@ -657,6 +688,7 @@ export function EditFile(props: {
             removedLines={diffInfo.removed || []}
             collapsable={true}
             metaData={metaData}
+            codeWhiteSpace={codeWhiteSpace}
           />
         )
       }
@@ -667,6 +699,7 @@ export function EditFile(props: {
             value={displayedCode}
             collapsable={true}
             metaData={metaData}
+            codeWhiteSpace={codeWhiteSpace}
           />
         )
       }

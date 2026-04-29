@@ -1,23 +1,88 @@
-import { encoding_for_model } from 'tiktoken';
-import type { Tiktoken } from 'tiktoken';
+// tiktoken 异步加载模块
+// 避免 WASM 阻塞主线程导致白屏
+import type { Tiktoken, TiktokenModel } from 'tiktoken';
 import { ChatRole } from '../types/chat';
 
 import type { ChatMessage } from '../services';
 import { ChatModel } from '../services/chatModel';
-import { getAIGWModel } from '../store/chat-config';
+
+const scheduleWork: (cb: (deadline: IdleDeadline) => void) => void =
+  typeof requestIdleCallback !== 'undefined'
+    ? requestIdleCallback
+    : (cb) => setTimeout(() => cb({
+        didTimeout: false,
+        timeRemaining: () => 50,
+      } as IdleDeadline), 0);
+
+// 异步加载 tiktoken 模块
+let tiktokenModule: typeof import('tiktoken') | null = null;
+let tiktokenLoadPromise: Promise<typeof import('tiktoken')> | null = null;
+
+/**
+ * 异步加载 tiktoken 模块
+ * 使用懒加载方式避免阻塞主线程
+ */
+async function loadTiktoken(): Promise<typeof import('tiktoken')> {
+  if (tiktokenModule) {
+    return tiktokenModule;
+  }
+
+  if (!tiktokenLoadPromise) {
+    tiktokenLoadPromise = import('tiktoken').then((module) => {
+      tiktokenModule = module;
+      console.debug('[tiktoken] WASM module loaded successfully');
+      return module;
+    }).catch((error) => {
+      console.error('[tiktoken] Failed to load WASM module:', error);
+      tiktokenLoadPromise = null;
+      throw error;
+    });
+  }
+
+  return tiktokenLoadPromise;
+}
+
+// 预加载 tiktoken（在空闲时触发）
+if (typeof window !== 'undefined') {
+  const preloadTiktoken = () => {
+    scheduleWork(() => {
+      loadTiktoken().catch(() => {
+        // 预加载失败不影响后续使用，会在实际使用时重试
+      });
+    });
+  };
+
+  // 等待页面加载完成后再预加载
+  if (document.readyState === 'complete') {
+    preloadTiktoken();
+  } else {
+    window.addEventListener('load', preloadTiktoken, { once: true });
+  }
+}
 
 // 编码器单例，避免重复创建和释放
 let encoderInstance: Tiktoken | null = null;
-const scheduleWork = typeof requestIdleCallback !== 'undefined'
-  ? requestIdleCallback
-  : (callback: IdleRequestCallback) => setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 16 } as IdleDeadline), 0);
+let encoderPromise: Promise<Tiktoken> | null = null;
 
-
-function getEncoder(): Tiktoken {
-  if (!encoderInstance) {
-    encoderInstance = encoding_for_model("gpt-4o-mini");
+/**
+ * 异步获取编码器实例
+ */
+async function getEncoderAsync(): Promise<Tiktoken> {
+  if (encoderInstance) {
+    return encoderInstance;
   }
-  return encoderInstance;
+
+  if (!encoderPromise) {
+    encoderPromise = loadTiktoken().then((tiktoken) => {
+      encoderInstance = tiktoken.encoding_for_model('gpt-4o-mini');
+      return encoderInstance;
+    }).catch((error) => {
+      encoderPromise = null;
+      throw error;
+    });
+  }
+
+  return encoderPromise;
 }
 
 type MessageTokenCacheEntry = {
@@ -28,17 +93,22 @@ type MessageTokenCacheEntry = {
 const TOKEN_RELEVANT_FIELDS = ['role', 'content', 'name', 'tool_calls', 'tool_call_id'] as const;
 
 const encoderCacheByModel = new Map<string, Tiktoken>();
-function getEncoderByModel(model: string): Tiktoken {
-  let enc = encoderCacheByModel.get(model);
-  if (!enc) {
-    try {
-      enc = (encoding_for_model as any)(model);
-    } catch {
-      enc = getEncoder();
-    }
-    encoderCacheByModel.set(model, enc!);
+
+async function getEncoderByModelAsync(model: string): Promise<Tiktoken> {
+  const cached = encoderCacheByModel.get(model);
+  if (cached) {
+    return cached;
   }
-  return enc!;
+
+  const tiktoken = await loadTiktoken();
+  let enc: Tiktoken;
+  try {
+    enc = tiktoken.encoding_for_model(model as TiktokenModel);
+  } catch {
+    enc = await getEncoderAsync();
+  }
+  encoderCacheByModel.set(model, enc);
+  return enc;
 }
 
 function normalizeModelForToolCounting(model?: string): 'gpt-4o' | 'gpt-4' | 'gpt-3.5' {
@@ -62,10 +132,10 @@ export type ToolDef = {
   };
 };
 
-function countToolDefinitionTokens(tools: ToolDef[] | undefined, model?: string): number {
+async function countToolDefinitionTokensAsync(tools: ToolDef[] | undefined, model?: string): Promise<number> {
   if (!tools || !tools.length) return 0;
   const norm = normalizeModelForToolCounting(model);
-  const enc = getEncoderByModel(model || 'gpt-4o-mini');
+  const enc = await getEncoderByModelAsync(model || 'gpt-4o-mini');
   let func_init = 0, prop_init = 0, prop_key = 0, enum_init = 0, enum_item = 0, func_end = 0;
   if (norm === 'gpt-4o') {
     func_init = 7; prop_init = 3; prop_key = 3; enum_init = -3; enum_item = 3; func_end = 12;
@@ -155,8 +225,9 @@ function valueToString(key: string, value: any): string {
 /**
  * 计算单条消息的内容 token 数量（不包括消息结构开销）
  * 此函数会使用缓存，相同的消息对象只会计算一次
+ * 异步版本：等待 tiktoken 加载完成
  */
-export function calculateSingleMessageContentTokens(message: ChatMessage): number {
+export async function calculateSingleMessageContentTokensAsync(message: ChatMessage): Promise<number> {
   const tokensPerName = 1;
   const fieldStrings: { key: typeof TOKEN_RELEVANT_FIELDS[number]; value: string }[] = [];
 
@@ -176,7 +247,7 @@ export function calculateSingleMessageContentTokens(message: ChatMessage): numbe
     return cached.tokens;
   }
 
-  const enc = getEncoder();
+  const enc = await getEncoderAsync();
   let numTokens = 0;
 
   for (const { key, value } of fieldStrings) {
@@ -196,23 +267,27 @@ export function calculateSingleMessageContentTokens(message: ChatMessage): numbe
   return numTokens;
 }
 
+
 /**
  * 计算消息数组的 token 数量（使用 tiktoken）
- * 使用 requestIdleCallback 避免阻塞 UI
+ * 使用 requestIdleCallback 调度，避免阻塞 UI
  * 参考 OpenAI 官方计算方式
  * https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
  */
 async function calculateMessageTokens(messages: ChatMessage[]): Promise<number> {
+  // 确保 tiktoken 模块已加载
+  await loadTiktoken();
+
   // 每条消息的固定结构开销
   const tokensPerMessage = 3;
   let numTokens = 0;
   let currentIndex = 0;
 
   return new Promise<number>((resolve) => {
-    const processMessages = (deadline: IdleDeadline) => {
+    const processMessages = async (deadline: IdleDeadline) => {
       // 在空闲时间内尽可能多地处理消息
       while (deadline.timeRemaining() > 0 && currentIndex < messages.length) {
-        numTokens += tokensPerMessage + calculateSingleMessageContentTokens(messages[currentIndex]);
+        numTokens += tokensPerMessage + await calculateSingleMessageContentTokensAsync(messages[currentIndex]);
         currentIndex++;
       }
 
@@ -260,13 +335,13 @@ export function getModelContextLimit(
   model: ChatModel,
   codebaseModelMaxTokens: Record<ChatModel, number>
 ): number {
-  let currentModelMaxTokens = codebaseModelMaxTokens[model];
+  const modelMaxTokens = codebaseModelMaxTokens[model];
 
-  if (!currentModelMaxTokens) {
-    currentModelMaxTokens = Math.min(currentModelMaxTokens, 48 * 1000);
+  if (!modelMaxTokens) {
+    return 48_000;
   }
 
-  return currentModelMaxTokens
+  return Math.min(modelMaxTokens, 48_000);
 }
 
 /**
@@ -283,7 +358,7 @@ export async function estimateTokensIncludingTools(
   model?: ChatModel | string,
 ): Promise<number> {
   const base = await calculateMessageTokens(messages);
-  const toolDefs = countToolDefinitionTokens(tools, typeof model === 'string' ? model : (model as string | undefined));
+  const toolDefs = await countToolDefinitionTokensAsync(tools, typeof model === 'string' ? model : (model as string | undefined));
   return base + toolDefs;
 }
 
@@ -299,9 +374,8 @@ export async function analyzeTokenUsageWithTools(
   hasExactUsage: boolean;
 }> {
   const exactUsage = calculateLatestTokenUsage(messages);
-  const estimatedUsage = 4063 + await estimateTokensIncludingTools(messages, tools, getAIGWModel(model));
+  const estimatedUsage = 4063 + await estimateTokensIncludingTools(messages, tools, model);
   const maxLimit = getModelContextLimit(model, codebaseModelMaxTokens);
-
 
   console.debug(`[Token Analysis] Model: ${model}, Exact Usage: ${exactUsage}, Estimated Usage: ${estimatedUsage}, Max Limit: ${maxLimit}`);
   return {
@@ -397,7 +471,7 @@ export async function calculateLastQATokenUsage(messages: ChatMessage[]): Promis
 
 /**
  * Trim old messages that exceed token limit
- * 使用 requestIdleCallback 避免阻塞 UI
+ * 使用 requestIdleCallback 调度，避免阻塞 UI
  * @param messages - Message array to trim (format: [old -> new])
  * @param maxTokens - Maximum token limit
  * @returns Filtered message array with old messages removed
@@ -410,18 +484,20 @@ export async function trimMessagesByTokenLimit(
     return messages;
   }
 
+  // 确保 tiktoken 模块已加载
+  await loadTiktoken();
+
   const tokensPerMessage = 3; // 每条消息的固定开销
   const finalOverhead = 3; // 最后的固定 +3
 
-  return new Promise<ChatMessage[]>((resolve) => {
-    let currentIndex = messages.length - 1;
-    let accumulatedTokens = finalOverhead;
-    let foundCutoffIndex = -1;
+  let currentIndex = messages.length - 1;
+  let accumulatedTokens = finalOverhead;
 
-    const processMessages = (deadline: IdleDeadline) => {
+  return new Promise<ChatMessage[]>((resolve) => {
+    const processMessages = async (deadline: IdleDeadline) => {
       // 在空闲时间内尽可能多地处理消息
       while (deadline.timeRemaining() > 0 && currentIndex >= 0) {
-        const msgContentTokens = calculateSingleMessageContentTokens(messages[currentIndex]);
+        const msgContentTokens = await calculateSingleMessageContentTokensAsync(messages[currentIndex]);
         const msgTotalTokens = tokensPerMessage + msgContentTokens;
 
         // 检查加入这条消息后是否会超限
@@ -433,8 +509,7 @@ export async function trimMessagesByTokenLimit(
             return;
           }
           // 找到截断点
-          foundCutoffIndex = currentIndex + 1;
-          resolve(messages.slice(foundCutoffIndex));
+          resolve(messages.slice(currentIndex + 1));
           return;
         }
 

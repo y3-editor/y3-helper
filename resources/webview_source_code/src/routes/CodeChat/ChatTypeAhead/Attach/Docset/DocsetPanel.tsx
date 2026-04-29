@@ -22,6 +22,7 @@ import {
   checkValueOfPressedKeyboard,
 } from '../../../../../utils';
 import { useSelectDocsetAttach } from '../Hooks/useSelectDocsetAttach';
+import { fuzzySearch } from '../../../../../utils/fuzzyMatch';
 
 function DocsetSelectorPanel(props: TypeAheadSubProps) {
   const {
@@ -282,7 +283,6 @@ const searchDocsets = (
   options: DocsetItem[],
   keyword: string,
 ): DocsetItem[] => {
-  const lowercaseKeyword = keyword.toLowerCase();
   if (!keyword) return [];
   const flattenDocsets = (items: DocsetItem[]): DocsetItem[] => {
     return items.flatMap((item) => {
@@ -294,9 +294,18 @@ const searchDocsets = (
   };
 
   const flattenedOptions = flattenDocsets(options);
-  return flattenedOptions.filter((option) =>
-    option.label.toLowerCase().includes(lowercaseKeyword),
+  // 使用 fuzzySearch 进行模糊匹配并按分数排序
+  const matchedResults = fuzzySearch(
+    flattenedOptions,
+    keyword,
+    (option) => option.label
   );
+  // 移除 _matchScore 属性，返回原始类型
+  return matchedResults.map((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _matchScore, ...rest } = item;
+    return rest as DocsetItem;
+  });
 };
 
 export default DocsetSelectorPanel;

@@ -124,6 +124,10 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // tiktoken WASM 模块单独打包，支持异步加载
+            if (id.includes('tiktoken')) {
+              return 'tiktoken-vendor';
+            }
             if (id.includes('react') || id.includes('react-dom')
               || id.includes('react-router')) {
               return 'react-vendor';

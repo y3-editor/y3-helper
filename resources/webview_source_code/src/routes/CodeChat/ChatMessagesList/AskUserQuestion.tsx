@@ -5,16 +5,19 @@ import {
   Checkbox,
   CheckboxGroup,
   Flex,
-  Input,
   Radio,
   RadioGroup,
   Stack,
   Text,
   VStack,
+  Textarea,
+  IconButton,
+  useToast,
 } from '@chakra-ui/react';
+import { CopyIcon } from '@chakra-ui/icons';
 import { AskUserQuestionProps } from './types';
 import { useChatStreamStore } from '../../../store/chat';
-import { SubscribeActions } from '../../../PostMessageProvider';
+import { BroadcastActions, SubscribeActions, usePostMessage } from '../../../PostMessageProvider';
 
 const OTHER_VALUE = '__other__';
 
@@ -60,6 +63,25 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
   const [selectedValues, setSelectedValues] = React.useState<string[]>([]);
   const [customInput, setCustomInput] = React.useState('');
   const [isOtherSelected, setIsOtherSelected] = React.useState(false);
+  const toast = useToast();
+  const { postMessage } = usePostMessage();
+
+  // 复制文本到剪贴板
+  const handleCopy = React.useCallback((text: string) => {
+    console.log('text',text);
+
+     postMessage({
+         type: BroadcastActions.COPY_TO_CLIPBOARD,
+         data: text,
+       });
+       toast({
+         title: '复制成功',
+         position: 'top',
+         isClosable: true,
+         duration: 1000,
+         status: 'success',
+       });
+  }, [postMessage, toast]);
 
   // 处理单选变化
   const handleRadioChange = React.useCallback((value: string) => {
@@ -109,7 +131,7 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
     },
       '*'
     );
-    
+
   }, [canSubmit, selectedValues, isOtherSelected, customInput, toolCallId, question]);
 
   // 已提交状态渲染
@@ -150,20 +172,49 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
           >
             <Stack spacing={2}>
               {options.map((option) => (
-                <Checkbox
+                <Flex
                   key={option}
-                  value={option}
-                  isDisabled={isProcessing}
-                  colorScheme='blue'
                   alignItems="center"
+                  gap={1}
+                  className="group"
+                  _hover={{ bg: 'whiteAlpha.50' }}
+                  borderRadius="md"
+                  px={1}
+                  py={0.5}
+                  ml={-1}
                 >
-                  <Box
-                    as="span"
-                    color='text.primary'
+                  <Checkbox
+                    value={option}
+                    isDisabled={isProcessing}
+                    colorScheme='blue'
+                    alignItems="center"
+                    flex="1"
                   >
-                    {option}
-                  </Box>
-                </Checkbox>
+                    <Box
+                      as="span"
+                      color='text.primary'
+                      userSelect="text"
+                      cursor="text"
+                    >
+                      {option}
+                    </Box>
+                  </Checkbox>
+                  <IconButton
+                    aria-label="复制"
+                    icon={<CopyIcon />}
+                    size="xs"
+                    variant="ghost"
+                    minW="20px"
+                    h="20px"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopy(option);
+                    }}
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    transition="opacity 0.2s"
+                  />
+                </Flex>
               ))}
               {/* Other 选项 */}
               <Checkbox
@@ -185,20 +236,49 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
           >
             <Stack spacing={2}>
               {options.map((option) => (
-                <Radio
+                <Flex
                   key={option}
-                  value={option}
-                  isDisabled={isProcessing}
-                  colorScheme='blue'
                   alignItems="center"
+                  gap={1}
+                  className="group"
+                  _hover={{ bg: 'whiteAlpha.50' }}
+                  borderRadius="md"
+                  px={1}
+                  py={0.5}
+                  ml={-1}
                 >
-                  <Box
-                    as="span"
-                    color='text.primary'
+                  <Radio
+                    value={option}
+                    isDisabled={isProcessing}
+                    colorScheme='blue'
+                    alignItems="center"
+                    flex="1"
                   >
-                    {option}
-                  </Box>
-                </Radio>
+                    <Box
+                      as="span"
+                      color='text.primary'
+                      userSelect="text"
+                      cursor="text"
+                    >
+                      {option}
+                    </Box>
+                  </Radio>
+                  <IconButton
+                    aria-label="复制"
+                    icon={<CopyIcon />}
+                    size="xs"
+                    variant="ghost"
+                    minW="20px"
+                    h="20px"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopy(option);
+                    }}
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    transition="opacity 0.2s"
+                  />
+                </Flex>
               ))}
               {/* Other 选项 */}
               <Radio
@@ -217,13 +297,36 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
 
         {/* 自定义输入框 */}
         {isOtherSelected && (
-          <Input
+          <Textarea
             placeholder="请输入您的答案..."
             value={customInput}
-            onChange={(e) => setCustomInput(e.target.value)}
+            onChange={(e) => {
+              setCustomInput(e.target.value);
+              // 自动调整高度
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            onInput={(e) => {
+              // 捕获所有输入事件，包括撤销操作
+              const target = e.target as HTMLTextAreaElement;
+              setCustomInput(target.value);
+            }}
+            onKeyDown={(e) => {
+              // 回车提交，Shift+Enter 换行
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (canSubmit && !isProcessing) {
+                  handleSubmit();
+                }
+              }
+            }}
             isDisabled={isProcessing}
             size="sm"
             mt={2}
+            // minH="30px"
+            // maxH="300px"
+            // resize="none"
+            // overflow="hidden"
           />
         )}
 

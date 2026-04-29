@@ -28,6 +28,7 @@ import { uniqueId } from 'lodash';
 import { UserEvent } from '../types/report';
 import { getValidToolName } from '../utils';
 import { ChatModel } from './chatModel';
+import { httpErrorType } from '../utils/error';
 
 /**
  * @name 执行函数时，忽略异常
@@ -919,7 +920,15 @@ async function createGoogleGeminiNetworkStream(
 
   const res = await fetch(req);
   if (!res.ok) {
-    const result = await res.json();
+    let result: any
+    try {
+      result = await res.json();
+    } catch (e) {
+      throw new Error(JSON.stringify({
+        error: res.status,
+        content: httpErrorType[res.status] || (httpErrorType['unknown'] + `(${res.status})`),
+      }));
+    }
     if (
       result.extra &&
       result.extra.code === 30002 &&

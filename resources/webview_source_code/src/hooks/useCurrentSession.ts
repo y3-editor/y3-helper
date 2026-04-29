@@ -26,8 +26,9 @@ export const getSessionById = async (sessionId: string): Promise<ChatSession | u
 
   try {
     const session = await getSessionData(sessionId);
+    const freshState = useChatStore.getState();
     if (session) {
-      const newSessions = new Map(state.sessions);
+      const newSessions = new Map(freshState.sessions);
       newSessions.set(sessionId, session);
       useChatStore.setState({ sessions: newSessions });
     }

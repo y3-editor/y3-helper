@@ -3,6 +3,11 @@ import { Flex, Text, Box, VStack, Grid, Tooltip } from '@chakra-ui/react';
 import { getListIndex, scrollToFocusItem } from '../utils';
 import { TypeAheadSubProps, TypeAheadModePrefix } from '../const';
 import DocsetSelectorPanel from './Docset/DocsetPanel';
+import {
+  // CODEMAKER_TAG,
+  // LABEL_TAG,
+  generateDocsetOptions,
+} from './Docset/generateDocsetOptions';
 import CodeBaseSelectorPanel from './CodeBase/CodeBasePanel';
 import TypeAheadRowItem from '../TypeAheadRowItem';
 import UploadImagePanel from './UploadImagePanel/UploadImagePanel';
@@ -11,6 +16,7 @@ import { TbChevronRight } from 'react-icons/tb';
 import FileSelectorPanel from './File/FilePanel';
 import { IDE, useExtensionStore } from '../../../../store/extension';
 import { AttachType } from '../../../../store/attaches';
+import useUserDocset from './Docset/useUserDocset';
 import {
   BroadcastActions,
   usePostMessage,
@@ -18,13 +24,15 @@ import {
   SubscribeActions,
 } from '../../../../PostMessageProvider';
 import { FileItem, useChatAttach, useChatStore, FolderItem } from '../../../../store/chat';
-import { GroupValue } from './CodeBase/useCodeBase';
+import useCodeBase, { GroupValue } from './CodeBase/useCodeBase';
 import { nanoid } from 'nanoid';
 import AttachIcon from './AttachIcon';
+import { fuzzyMatch } from '../../../../utils/fuzzyMatch';
 import {
   Docset,
   DocsetOptions,
   DocsetType,
+  DocsetFile,
   DocsetItem,
 } from '../../../../services/docsets';
 import useFirstFocusedEffect from '../../../../hooks/useFirstFocusEffect';
@@ -46,7 +54,15 @@ const DEFAULT_ATTACH_OPTIONS = [
   {
     _id: AttachType.File,
     key: '文件',
-  }
+  },
+  {
+    _id: AttachType.CodeBase,
+    key: '代码地图',
+  },
+  {
+    _id: AttachType.Docset,
+    key: '知识库',
+  },
 ];
 
 const CODEBASE_ATTACH_OPTIONS = [
@@ -61,6 +77,14 @@ const CODEBASE_ATTACH_OPTIONS = [
   {
     _id: AttachType.Problems,
     key: '问题',
+  },
+  {
+    _id: AttachType.CodeBase,
+    key: '代码地图',
+  },
+  {
+    _id: AttachType.Docset,
+    key: '知识库',
   },
   {
     _id: AttachType.Rules,
@@ -92,8 +116,10 @@ function AttachSelectorPanel(props: TypeAheadSubProps) {
   const ide = useExtensionStore((state) => state.IDE);
   // const config = useChatConfig((state) => state.config);
   const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);
+  const { docsets } = useUserDocset();
   const { postMessage } = usePostMessage();
   const [fileOptions, setFileOptions] = React.useState<FileItem[]>([]);
+  const { codeOptions } = useCodeBase();
   const [filterGlobalOption, setFilterGlobalOption] = React.useState<
     AttachOption[]
   >([]);
@@ -157,6 +183,44 @@ function AttachSelectorPanel(props: TypeAheadSubProps) {
     };
   }, []);
 
+  const docsetOptions = React.useMemo(() => {
+    if (!docsets) return [];
+    const options = generateDocsetOptions(docsets);
+    // 遍历 options , 假如 options 中有 children,那么就加上 parent 属性
+    options.forEach((option) => {
+      if (option.children?.length) {
+        option.children.forEach((child) => {
+          (child as DocsetOptions).parent = [option];
+        });
+      }
+      option.parent = options;
+    });
+
+    return options;
+  }, [docsets]);
+
+  const flattenDocsets = (docsets: DocsetItem[]): AttachOption[] => {
+    const result: AttachOption[] = [];
+    const flatten = (items: DocsetItem[]) => {
+      items.forEach((item) => {
+        result.push({
+          ...item,
+          label: item.label,
+          value: item.label,
+          type: AttachType.Docset,
+          _id: item._id,
+        });
+
+        if ((item as DocsetFile).children?.length) {
+          flatten((item as DocsetFile).children);
+        }
+      });
+    };
+
+    flatten(docsets);
+    return result;
+  };
+
   const searchKeyword = React.useMemo(() => {
     return mentionKeyword || ''
   }, [mentionKeyword]);
@@ -179,6 +243,17 @@ function AttachSelectorPanel(props: TypeAheadSubProps) {
 
   const globalOptions = React.useMemo(() => {
     const allOptions: AttachOption[] = [];
+    codeOptions.forEach((codeBase) => {
+      codeBase.options.forEach((option) => {
+        allOptions.push({
+          ...option,
+          label: option.label,
+          value: option.value,
+          type: AttachType.CodeBase,
+          _id: nanoid(),
+        });
+      });
+    });
     fileOptions.forEach((file) => {
       allOptions.push({
         ...file,
@@ -188,9 +263,11 @@ function AttachSelectorPanel(props: TypeAheadSubProps) {
         _id: nanoid(),
       });
     });
+    const flattenedDocsets = flattenDocsets(docsetOptions);
+    allOptions.push(...flattenedDocsets);
 
     return allOptions;
-  }, [fileOptions]);
+  }, [codeOptions, fileOptions, docsetOptions]);
 
   const currentIndex = React.useMemo(() => {
     if (searchKeyword) {
@@ -219,38 +296,75 @@ function AttachSelectorPanel(props: TypeAheadSubProps) {
   React.useEffect(() => {
     if (searchKeyword) {
       setShowGlobalSearch(true);
-      const lowercaseKeyword = searchKeyword.toLowerCase();
-      const filterOptions: AttachOption[] = [];
       if (chatType === 'codebase') {
-        globalOptions.flatMap((option) => {
-          const isMatch = option.label.toLowerCase().includes(lowercaseKeyword);
-          if (isMatch && [AttachType.File, AttachType.Folder, AttachType.CodeBase, AttachType.Docset].includes(option.type)) {
+        // Codebase 模式：使用 fuzzyMatch 进行模糊匹配
+        const matchedOptions: Array<AttachOption & { _score: number }> = [];
+
+        globalOptions.forEach((option) => {
+          const fuzzyResult = fuzzyMatch(searchKeyword, option.label);
+          if (fuzzyResult.match && [AttachType.File, AttachType.Folder, AttachType.CodeBase, AttachType.Docset].includes(option.type)) {
             if (option?.isActive) {
               option.tags = ['当前']
             }
-            filterOptions.push(option);
+            matchedOptions.push({ ...option, _score: fuzzyResult.score });
           }
         });
+
+        // 按分数排序
+        matchedOptions.sort((a, b) => b._score - a._score);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const filterOptions = matchedOptions.map(({ _score, ...option }) => option);
+
+        resetIndex(0);
+        setFilterGlobalOption(filterOptions);
       } else {
-        globalOptions.flatMap((option) => {
-          const isMatch = option.label.toLowerCase().includes(lowercaseKeyword);
-          if (isMatch) {
+        // 普通模式：使用 fuzzyMatch 并按类型分类
+        const fileMatches: Array<AttachOption & { _score: number }> = [];
+        const folderMatches: Array<AttachOption & { _score: number }> = [];
+        const otherMatches: Array<AttachOption & { _score: number }> = [];
+
+        globalOptions.forEach((option) => {
+          const fuzzyResult = fuzzyMatch(searchKeyword, option.label);
+          if (fuzzyResult.match) {
+            const matchedOption = { ...option, _score: fuzzyResult.score };
+
             // Docset 是多层级的，需要特殊处理
             if (option.type === AttachType.Docset) {
               const { docsetType } = option as unknown as DocsetOptions;
               if (docsetType !== DocsetType.Folder) {
-                filterOptions.push(option);
+                otherMatches.push(matchedOption);
               }
-            } else if (option?.isActive) {
-              filterOptions.unshift(option);
+            } else if (option.type === AttachType.File) {
+              // 文件类型优先
+              fileMatches.push(matchedOption);
+            } else if (option.type === AttachType.Folder) {
+              // 目录类型次优先
+              folderMatches.push(matchedOption);
             } else {
-              filterOptions.push(option);
+              // 其他类型（知识库、代码地图、规则等）
+              otherMatches.push(matchedOption);
             }
           }
         });
+
+        // 每个分类内部按分数排序
+        fileMatches.sort((a, b) => b._score - a._score);
+        folderMatches.sort((a, b) => b._score - a._score);
+        otherMatches.sort((a, b) => b._score - a._score);
+
+        // 按优先级合并：文件 > 目录 > 其他，移除 _score 属性
+        const filterOptions = [
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          ...fileMatches.map(({ _score, ...option }) => option),
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          ...folderMatches.map(({ _score, ...option }) => option),
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          ...otherMatches.map(({ _score, ...option }) => option),
+        ];
+
+        resetIndex(0);
+        setFilterGlobalOption(filterOptions);
       }
-      resetIndex(0);
-      setFilterGlobalOption(filterOptions);
     } else {
       setShowGlobalSearch(false);
     }

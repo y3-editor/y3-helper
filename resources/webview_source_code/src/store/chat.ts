@@ -98,7 +98,14 @@ import {
 import { generateTraceId } from '../utils/trace';
 import { logger as webToolsLogger, hub as webToolsHub } from '@dep305/codemaker-web-tools';
 import { parseMentions } from '../utils/chatMention';
-import { checkThinkingSignatureValid, convertDeepseekMessages, repairToolIdOfMessages, reuseDuplicateFileRead, serializeCodebaseMessages } from '../utils/validateBeforeChat';
+import {
+  checkThinkingSignatureValid,
+  // clearContextWithUnrelatedProperties, // 已导出但暂未在Y3中使用
+  convertDeepseekMessages,
+  repairToolIdOfMessages,
+  reuseDuplicateFileRead,
+  serializeCodebaseMessages
+} from '../utils/validateBeforeChat';
 import { injectTodoListToLastUserMessage, processWriteTodoDenied } from './workspace/tools/todo';
 import { useMCPStore } from './mcp';
 import { useMcpPromptApp } from './mcp-prompt';
@@ -143,6 +150,9 @@ export const REQUEST_TIMEOUT_NAME = 'RequestTimeout';
 export const MAX_SHOW_TIP_NUM = 60;
 
 export const MAX_CHAT_RETRY_NUM = 3;
+
+// 记录有提及知识库的会话
+export const mentionKnowledgeMap: Map<string, boolean> = new Map()
 
 // 追踪由 onNewSession 本地创建、尚未出现在服务端列表接口中的会话 ID。
 // 用于在 revalidateChatSessions 中区分"刚创建待同步"与"已被其他端删除"的会话。
@@ -1834,6 +1844,12 @@ export const useChatStreamStore = create(
       // 非默认模型的 ID 都认为是编程模式
       const isProgrammingMode = IS_PROGRAMMING_MODE.includes(mask?._id || '');
 
+      const hasMentionKnowledgeBases = !!(attachs as IMultiAttachment)?.dataSource?.some(i => i?.attachType === AttachType.Docset)
+      const currentSessionId = useChatStore.getState().currentSessionId
+      if (hasMentionKnowledgeBases && currentSessionId) {
+        mentionKnowledgeMap.set(currentSessionId, true)
+      }
+
       // 消息重发时此依赖原始数据恢复状态。但发送消息不要携带此消息体，否则会加大token计算
       if (!userMessage._originalRequestData) {
         userMessage._originalRequestData = {};
@@ -3118,7 +3134,7 @@ export const useChatStreamStore = create(
         let truncationResult;
         if (useCompression) {
           truncationResult = {
-            sendMessages: pruneToolOutputs(unCompressedMessages),
+            sendMessages: await pruneToolOutputs(unCompressedMessages),
             containUserMessage: true,
             newTruncateStart: -1,
             previousTokens: 0,

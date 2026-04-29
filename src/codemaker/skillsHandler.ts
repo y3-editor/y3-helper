@@ -99,17 +99,59 @@ function parseMdc(raw: string): MdcParseResult {
   const content = match[2];
   const metaData: Record<string, any> = {};
 
+  // 支持 block scalar 格式（|-）的多行值收集
+  let currentKey: string | null = null;
+  let blockLines: string[] = [];
+  let inBlock = false;
+
+  const flushBlock = () => {
+    if (currentKey && blockLines.length > 0) {
+      metaData[currentKey] = blockLines.join('\n').trim();
+    }
+    currentKey = null;
+    blockLines = [];
+    inBlock = false;
+  };
+
   for (const line of yamlBlock.split('\n')) {
-    const kv = line.match(/^(\S+):\s*(.+)$/);
+    // 跳过注释和空行
+    if (line.trim().startsWith('#') || line.trim() === '') {
+      continue;
+    }
+
+    // 缩进行属于 block scalar 续行
+    if (inBlock && line.match(/^\s+/)) {
+      blockLines.push(line.replace(/^\s{2}/, '')); // 去掉 2 空格缩进
+      continue;
+    }
+
+    // 遇到新的顶层 key，先 flush 之前的 block
+    flushBlock();
+
+    const kv = line.match(/^(\S+):\s*(.*)$/);
     if (kv) {
       const key = kv[1].trim();
       let value: any = kv[2].trim();
+
+      // block scalar 标记（|- 或 |）
+      if (value === '|-' || value === '|' || value === '>') {
+        currentKey = key;
+        inBlock = true;
+        continue;
+      }
+
+      // 去除引号包裹
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
       // boolean coercion
       if (value === 'true') { value = true; }
       else if (value === 'false') { value = false; }
       metaData[key] = value;
     }
   }
+  flushBlock(); // flush 最后一个 block
 
   return { success: true, metaData, content };
 }

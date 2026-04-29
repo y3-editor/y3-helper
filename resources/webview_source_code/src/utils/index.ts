@@ -665,6 +665,7 @@ export const specialErrorPatterns = [
     message: '🤨 本次模型没有回复，可点击重新回复'
   },
   {
+    // 由于访问流接口时，出现非200的http编码错误，导致无法正常解析流信息
     condition: (msg: string) => msg.includes(`Unexpected token`) && msg.includes(`is not valid JSON`),
     message: '🤔 无法正常解析模型数据，请点击重新回复'
   },

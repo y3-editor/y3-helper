@@ -252,10 +252,10 @@ const ToolCallResult = ({
 
   if (isPlan) {
     return (
-      <Accordion allowToggle index={accordionIndex} onChange={(index) => setAccordionIndex(index as number | undefined)}>
+      <Accordion allowToggle index={toolResponseDisabled ? undefined : 0}>
         <AccordionItem>
           <AccordionButton>
-            <Box as="span" flex="1" textAlign="left" color="text.primary">
+            <Box as="span" flex="1" textAlign="left" color="text.primary" my={2}>
               制定计划如下
             </Box>
             <AccordionIcon />
@@ -344,8 +344,8 @@ const ToolCallResult = ({
   // 工具结果标题
   const renderResultTitle = () => {
     if (isSkillTool) {
-      const skillName = result.path || '';
       const skillData = parseSkillToolResult(result.content);
+      const skillName = skillData?.name || result.path || '';
       const sourcePath = skillData ? getSkillSourceLabel(skillData.source) : '';
 
       return (
