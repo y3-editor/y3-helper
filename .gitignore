@@ -16,3 +16,5 @@ resources/webview_source_code/node_modules/
 .codemaker/sync/config.local.json
 .codemaker/sync/*.diff
 .codemaker/sync/merge-progress.json
+.codemaker/sync/history/
+.codemaker/sync/last-sync-report.json
