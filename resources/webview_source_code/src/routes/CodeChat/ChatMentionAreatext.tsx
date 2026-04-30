@@ -130,8 +130,11 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const hightlightLayerRef = useRef<HTMLDivElement>(null)
   const { postMessage } = usePostMessage();
   const chatType = useChatStore((state) => state.chatType);
+  const currentSession = useChatStore((state) => state.currentSession());
+  const associateSessionToCurrentWorkspace = useChatStore((state) => state.associateSessionToCurrentWorkspace);
   const updateAttachs = useChatAttach((state) => state.update);
   const workspaceList = useWorkspaceStore((state) => state.workspaceList);
+  const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const maxCostPerMonth = useChatBillStore(state => state.maxCostPerMonth)
   const ide = useExtensionStore((state) => state.IDE);
   const isVscode = ide === IDE.VisualStudioCode;
@@ -144,7 +147,11 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const { saveCurrentDraft } = useDraftInput(chatType, inputRef, workspaceReady);
   // 抽取条件判断，避免重复代码
   const shouldEnableComplexFeatures = useCallback(() => {
-    return isVscode && (placeholder?.includes('打开该仓库使用或新建会话') || placeholder?.includes('打开该仓库后可继续对话'));
+    return isVscode && (
+      placeholder?.includes('打开该仓库使用或新建会话') || 
+      placeholder?.includes('打开该仓库后可继续对话') ||
+      placeholder?.includes('关联至当前仓库')
+    );
   }, [isVscode, placeholder]);
 
   // 获取 setInitModalVisible 用于打开初始化弹窗
@@ -555,30 +562,37 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             >
               <Box>
                 {(() => {
-                  // 匹配"当前会话关联仓库 仓库名称"的模式，并查找"打开该仓库"文本
-                  const repoMatch = placeholder.match(/当前会话关联仓库\s+([^，,]+)/);
+                  // 匹配"当前会话关联仓库 仓库名称"或"当前旧会话仅关联仓库名"的模式
+                  const repoMatch = placeholder.match(/当前(?:会话关联仓库|旧会话仅关联仓库名)\s+([^，,]+)/);
                   const openRepoMatch = placeholder.match(/打开该仓库/);
+                  const associateMatch = placeholder.match(/关联至当前仓库/);
 
-                  if (repoMatch && openRepoMatch) {
+                  if (repoMatch && (openRepoMatch || associateMatch)) {
                     const repoName = repoMatch[1].trim();
-                    const beforeOpen = placeholder.substring(0, openRepoMatch.index!);
-                    const afterOpen = placeholder.substring(openRepoMatch.index! + '打开该仓库'.length);
+                    const parts: JSX.Element[] = [];
+                    let lastIndex = 0;
 
-                    return (
-                      <>
-                        <Box as="span">
-                          {beforeOpen}
-                        </Box>
+                    // 处理"打开该仓库"链接
+                    if (openRepoMatch && openRepoMatch.index !== undefined) {
+                      // 添加"打开该仓库"之前的文本
+                      if (openRepoMatch.index > lastIndex) {
+                        parts.push(
+                          <Box key={`text-before-open-${lastIndex}`} as="span">
+                            {placeholder.substring(lastIndex, openRepoMatch.index)}
+                          </Box>
+                        );
+                      }
+                      // 添加"打开该仓库"可点击链接
+                      parts.push(
                         <Box
+                          key="open-repo"
                           as="span"
                           color="blue.400"
                           cursor="pointer"
                           textDecoration="underline"
                           _hover={{ color: "blue.500" }}
                           onClick={() => {
-                            // 根据仓库名称在workspaceList中查找对应的path
                             const matchedWorkspace = workspaceList.find((workspace: any) => {
-                              // 假设workspaceList中的每个项目都有name或repoName字段
                               return workspace.name === repoName ||
                                 workspace.repoName === repoName ||
                                 workspace.workspace === repoName ||
@@ -586,7 +600,6 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                             });
 
                             if (matchedWorkspace) {
-                              // 调用OPEN_NEW_WINDOW打开文件
                               postMessage({
                                 type: SubscribeActions.OPEN_NEW_WINDOW,
                                 data: {
@@ -604,11 +617,71 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                         >
                           打开该仓库
                         </Box>
-                        <Box as="span">
-                          {afterOpen}
+                      );
+                      lastIndex = openRepoMatch.index + '打开该仓库'.length;
+                    }
+
+                    // 处理"关联至当前仓库"链接
+                    if (associateMatch && associateMatch.index !== undefined) {
+                      // 添加"关联至当前仓库"之前的文本
+                      if (associateMatch.index > lastIndex) {
+                        parts.push(
+                          <Box key={`text-before-associate-${lastIndex}`} as="span">
+                            {placeholder.substring(lastIndex, associateMatch.index)}
+                          </Box>
+                        );
+                      }
+                      // 添加"关联至当前仓库"可点击链接
+                      parts.push(
+                        <Box
+                          key="associate-repo"
+                          as="span"
+                          color="blue.400"
+                          cursor="pointer"
+                          textDecoration="underline"
+                          _hover={{ color: "blue.500" }}
+                          onClick={async () => {
+                            if (!currentSession?._id) {
+                              toast({
+                                title: '未找到当前会话',
+                                status: 'error',
+                                duration: 2000,
+                              });
+                              return;
+                            }
+                            try {
+                              await associateSessionToCurrentWorkspace(currentSession._id);
+                              toast({
+                                title: `关联成功，已绑定到 ${workspaceInfo.workspace}`,
+                                status: 'success',
+                                duration: 2000,
+                              });
+                            } catch (error) {
+                              console.error('关联失败:', error);
+                              toast({
+                                title: '关联失败',
+                                status: 'error',
+                                duration: 2000,
+                              });
+                            }
+                          }}
+                        >
+                          关联至当前仓库
                         </Box>
-                      </>
-                    );
+                      );
+                      lastIndex = associateMatch.index + '关联至当前仓库'.length;
+                    }
+
+                    // 添加剩余文本
+                    if (lastIndex < placeholder.length) {
+                      parts.push(
+                        <Box key={`text-after-${lastIndex}`} as="span">
+                          {placeholder.substring(lastIndex)}
+                        </Box>
+                      );
+                    }
+
+                    return <>{parts}</>;
                   }
                   return placeholder;
                 })()

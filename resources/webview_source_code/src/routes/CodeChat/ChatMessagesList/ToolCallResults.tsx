@@ -1,19 +1,51 @@
-import { Accordion, AccordionButton, AccordionItem, Box, Flex, Icon, VStack, Text, AccordionIcon, AccordionPanel, Tooltip } from "@chakra-ui/react";
-import RetrieveResultBlock, { RetrieveResult } from "../RetrieveResultBlock";
-import { ToolCallResultsProps } from "./types";
-import { EditFile } from "./EditFile";
-import { useCallback, useMemo, useState } from "react";
-import { RxCheckCircled, RxCircleBackslash } from "react-icons/rx";
-import { getToolName } from "../../../utils/toolCall";
-import { getSkillSourceLabel, parseSkillToolResult } from "../../../store/skills";
-import MemoCodeBlock from "../../../components/Markdown/CodeBlock";
-import { usePostMessage } from "../../../PostMessageProvider";
-import MCPToolCall from "./MCPToolCall";
-import { ToolCall } from "../../../services";
-import { useChatTerminal } from "./TermialPanel";
-import Markdown from "../../../components/Markdown";
-import { getStringContent, isImageFileByPath, truncateContent } from "../../../utils";
-import CollapsibleMessage from "../../../components/CollapsibleMessage";
+import {
+  Accordion,
+  AccordionButton,
+  AccordionItem,
+  Box,
+  Flex,
+  Icon,
+  VStack,
+  Text,
+  AccordionIcon,
+  AccordionPanel,
+  Tooltip,
+} from '@chakra-ui/react';
+import RetrieveResultBlock, { RetrieveResult } from '../RetrieveResultBlock';
+import { ToolCallResultsProps } from './types';
+import { EditFile } from './EditFile';
+import { useCallback, useMemo, useState } from 'react';
+import { RxCheckCircled, RxCircleBackslash } from 'react-icons/rx';
+import { getToolName } from '../../../utils/toolCall';
+import {
+  getSkillSourceLabel,
+  parseSkillToolResult,
+} from '../../../store/skills';
+import MemoCodeBlock from '../../../components/Markdown/CodeBlock';
+import { usePostMessage } from '../../../PostMessageProvider';
+import MCPToolCall from './MCPToolCall';
+import { ToolCall } from '../../../services';
+import { useChatTerminal } from './TermialPanel';
+import Markdown from '../../../components/Markdown';
+import {
+  getStringContent,
+  isImageFileByPath,
+  truncateContent,
+} from '../../../utils';
+import CollapsibleMessage from '../../../components/CollapsibleMessage';
+import SubagentTaskCard from './ToolCallCard/Task';
+import TodoList from '../../../components/TodoList';
+import {
+  TodoList as TodoListType,
+  getToolParams as getTodoToolParams,
+} from '../../../store/workspace/tools/todo';
+import {
+  generatePlanText,
+  getToolParams as getPlanToolParams,
+} from '../../../store/workspace/tools/plan';
+import PreviewCodewikiStructure from './PreviewCodewikiStructure';
+import AskUserQuestion from './AskUserQuestion';
+import { getToolParams as getAskUserQuestionToolParams } from '../../../store/workspace/tools/askUserQuestion';
 
 // 提取文件名的工具函数
 const getFileName = (filePath: string): string => {
@@ -23,12 +55,6 @@ const getFileName = (filePath: string): string => {
   const parts = normalizedPath.split('/');
   return parts[parts.length - 1];
 };
-import TodoList from "../../../components/TodoList";
-import { TodoList as TodoListType, getToolParams as getTodoToolParams } from "../../../store/workspace/tools/todo";
-import { generatePlanText, getToolParams as getPlanToolParams } from "../../../store/workspace/tools/plan";
-import PreviewCodewikiStructure from "./PreviewCodewikiStructure";
-import AskUserQuestion from "./AskUserQuestion";
-import { getToolParams as getAskUserQuestionToolParams } from "../../../store/workspace/tools/askUserQuestion";
 
 // 处理检索代码结果的数据转换
 const parseRetrievedCodeResults = (content: string): RetrieveResult[] => {
@@ -39,8 +65,12 @@ const parseRetrievedCodeResults = (content: string): RetrieveResult[] => {
     searchResult.forEach((item: any, index: number) => {
       // 处理主结果
       const path = item.path ? item.path.split('/').slice(1).join('/') : '';
-      const filename = path ? path.replace(/\\/g, '/').split('/').slice(-1)[0] : '';
-      const funcName = item.func_name ? item.func_name.split('\n').slice(-1)[0] : '';
+      const filename = path
+        ? path.replace(/\\/g, '/').split('/').slice(-1)[0]
+        : '';
+      const funcName = item.func_name
+        ? item.func_name.split('\n').slice(-1)[0]
+        : '';
       const name = item.name ? item.name.split('\n').slice(-1)[0] : '';
       const func = item.func ? item.func.split('\n').slice(-1)[0] : '';
       const language = filename ? filename.split('.').slice(-1)[0] : undefined;
@@ -58,9 +88,15 @@ const parseRetrievedCodeResults = (content: string): RetrieveResult[] => {
       // 处理关联结果
       if (item.to_func) {
         item.to_func.forEach((subItem: any) => {
-          const subPath = subItem.path ? subItem.path.split('/').slice(1).join('/') : '';
-          const subFilename = subPath ? subPath.replace(/\\/g, '/').split('/').slice(-1)[0] : '';
-          const subLanguage = subFilename ? subFilename.split('.').slice(-1)[0] : undefined;
+          const subPath = subItem.path
+            ? subItem.path.split('/').slice(1).join('/')
+            : '';
+          const subFilename = subPath
+            ? subPath.replace(/\\/g, '/').split('/').slice(-1)[0]
+            : '';
+          const subLanguage = subFilename
+            ? subFilename.split('.').slice(-1)[0]
+            : undefined;
 
           results.push({
             id: funcName + index + subFilename,
@@ -118,42 +154,58 @@ const ToolCallResult = ({
   unselectedResults,
   handleSelectionChange,
   message,
-  isLatest
+  isLatest,
 }: ToolCallResultProps) => {
   const isRetrievedCode = tool.function.name === 'retrieve_code';
   const isRetrievedKnowledge = tool.function.name === 'retrieve_knowledge';
-  const isEditFileTool = ['edit_file', 'replace_in_file', 'reapply'].includes(tool.function.name);
-  const isMCPTool = tool.function.name === 'use_mcp_tool' || tool.function.name === 'access_mcp_resource';
+  const isEditFileTool = ['edit_file', 'replace_in_file', 'reapply'].includes(
+    tool.function.name,
+  );
+  const isMCPTool =
+    tool.function.name === 'use_mcp_tool' ||
+    tool.function.name === 'access_mcp_resource';
   const isAskUserQuestionTool = tool.function.name === 'ask_user_question';
   const isReadFileTool = ['read_file'].includes(tool.function.name);
-  const isListFilesTool = ['list_files_top_level', 'list_files_recursive'].includes(tool.function.name);
+  const isListFilesTool = [
+    'list_files_top_level',
+    'list_files_recursive',
+  ].includes(tool.function.name);
   const isPlan = tool.function.name === 'make_plan';
-  const isPreviewCodewikiStructure = tool.function.name === 'generate_codewiki_structure';
+  const isPreviewCodewikiStructure =
+    tool.function.name === 'generate_codewiki_structure';
   const isSkillTool = tool.function.name === 'use_skill';
+
+  const isTaskTool = tool.function.name === 'task';
 
   const { postMessage } = usePostMessage();
 
   const { hasTerminalTool, ChatTerminalPanel } = useChatTerminal(message);
 
   // MCP 工具和 Terminal 工具在等待时展开，其他工具都收起
-  const initialIndex = !toolResponseDisabled && (isMCPTool || hasTerminalTool) ? 0 : undefined;
-  const [accordionIndex, setAccordionIndex] = useState<number | undefined>(initialIndex);
+  const initialIndex =
+    !toolResponseDisabled && (isMCPTool || hasTerminalTool || isPlan) ? 0 : undefined;
+  const [accordionIndex, setAccordionIndex] = useState<number | undefined>(
+    initialIndex,
+  );
 
   const collapseDisabled = useMemo(() => {
     return isReadFileTool && isImageFileByPath(result.path);
-  }, [isReadFileTool, result.path])
+  }, [isReadFileTool, result.path]);
 
-  const locateFile = useCallback((filePath: string, startLine?: number, endLine?: number) => {
-    const data = { filePath, startLine, endLine }
-    if (!startLine || !endLine) {
-      delete data.startLine
-      delete data.endLine
-    }
-    postMessage({
-      type: 'OPEN_FILE',
-      data: data,
-    });
-  }, [postMessage]);
+  const locateFile = useCallback(
+    (filePath: string, startLine?: number, endLine?: number) => {
+      const data = { filePath, startLine, endLine };
+      if (!startLine || !endLine) {
+        delete data.startLine;
+        delete data.endLine;
+      }
+      postMessage({
+        type: 'OPEN_FILE',
+        data: data,
+      });
+    },
+    [postMessage],
+  );
 
   const displayContent = useMemo(() => {
     if (isSkillTool && result.content) {
@@ -172,8 +224,8 @@ const ToolCallResult = ({
         // fallback
       }
     }
-    return truncateContent(result.content)
-  }, [result.content, isSkillTool])
+    return truncateContent(result.content);
+  }, [result.content, isSkillTool]);
 
   // 解析工具参数
   const toolParams = useMemo(() => {
@@ -184,7 +236,6 @@ const ToolCallResult = ({
       return {};
     }
   }, [tool.function.arguments]);
-
 
   // 处理检索结果
   const retrievedResults = useMemo(() => {
@@ -213,20 +264,22 @@ const ToolCallResult = ({
       }
     }
     return content;
-  }, [isPlan, tool])
-
+  }, [isPlan, tool]);
 
   const renderError = () => {
     return (
       <Box px={2} py={1}>
-        <CollapsibleMessage title={`${getToolName(tool)}遇到问题`} titleColor="text.default" opacity={0.7} useQuote>
-          <Box color="text.default">
-            {getStringContent(result.content)}
-          </Box>
+        <CollapsibleMessage
+          title={`${getToolName(tool)}遇到问题`}
+          titleColor="text.default"
+          opacity={0.7}
+          useQuote
+        >
+          <Box color="text.default">{getStringContent(result.content)}</Box>
         </CollapsibleMessage>
       </Box>
-    )
-  }
+    );
+  };
 
   const todoList = useMemo((): TodoListType['todos'] => {
     if (tool.function.name === 'write_todo' && result.content) {
@@ -247,15 +300,19 @@ const ToolCallResult = ({
         content={result.content}
         isLatest={isLatest}
       />
-    )
+    );
   }
 
   if (isPlan) {
     return (
-      <Accordion allowToggle defaultIndex={toolResponseDisabled ? undefined : 0}>
+      <Accordion
+        allowToggle
+        index={accordionIndex}
+        onChange={(index) => setAccordionIndex(index as number | undefined)}
+      >
         <AccordionItem>
           <AccordionButton>
-            <Box as="span" flex="1" textAlign="left" color="text.primary" my={2}>
+            <Box as="span" flex="1" textAlign="left" color="text.primary">
               制定计划如下
             </Box>
             <AccordionIcon />
@@ -263,9 +320,7 @@ const ToolCallResult = ({
           <AccordionPanel>
             <VStack gap={1} align="stretch">
               <div className="markdown-body">
-                <Markdown data={null}>
-                  {planContent}
-                </Markdown>
+                <Markdown data={null}>{planContent}</Markdown>
               </div>
             </VStack>
           </AccordionPanel>
@@ -293,7 +348,11 @@ const ToolCallResult = ({
         toolCallId={tool.id}
         messageId={message.id}
         question={askUserQuestionParams.question}
-        options={Array.isArray(askUserQuestionParams.options) ? askUserQuestionParams.options : []}
+        options={
+          Array.isArray(askUserQuestionParams.options)
+            ? askUserQuestionParams.options
+            : []
+        }
         multiSelect={askUserQuestionParams.multiSelect}
         isSubmitted={isSubmitted}
         submittedResult={submittedResult}
@@ -310,9 +369,9 @@ const ToolCallResult = ({
           toolCallId={tool.id}
           hasResponse={toolResponse[tool.id] !== undefined}
           filePath={result.path || toolParams.target_file}
-          updateSnippet={toolParams.code_edit as string || ''}
-          replaceSnippet={toolParams.diff as string || ''}
-          isCreateFile={toolParams.is_create_file as boolean || false}
+          updateSnippet={(toolParams.code_edit as string) || ''}
+          replaceSnippet={(toolParams.diff as string) || ''}
+          isCreateFile={(toolParams.is_create_file as boolean) || false}
           isLatest={isLatest}
           type={toolParams.diff ? 'replace' : 'edit'}
         />
@@ -338,18 +397,35 @@ const ToolCallResult = ({
       <VStack gap={1} align="stretch">
         {ChatTerminalPanel}
       </VStack>
-    )
+    );
+  }
+
+  // 渲染子代理任务工具
+  if (isTaskTool) {
+    return (
+      <SubagentTaskCard
+        tool={tool}
+        toolParams={toolParams}
+        result={result}
+        toolResponseDisabled={toolResponseDisabled}
+      />
+    );
   }
 
   // 工具结果标题
   const renderResultTitle = () => {
     if (isSkillTool) {
+      const skillName = result.path || '';
       const skillData = parseSkillToolResult(result.content);
-      const skillName = skillData?.name || result.path || '';
       const sourcePath = skillData ? getSkillSourceLabel(skillData.source) : '';
 
       return (
-        <Flex flex="1" justifyContent="space-between" alignItems="center" gap={2}>
+        <Flex
+          flex="1"
+          justifyContent="space-between"
+          alignItems="center"
+          gap={2}
+        >
           <Box as="span" color="text.primary" className="truncate">
             {skillName}
           </Box>
@@ -364,10 +440,11 @@ const ToolCallResult = ({
 
     if (isReadFileTool) {
       const fileName = getFileName(result.path);
-      const extra = result?.extra
+      const extra = result?.extra;
       const startLine = extra?.startLine || 0;
       const endLine = extra?.endLine || 0;
       const showLine = !!extra?.showLine;
+
       return (
         <Tooltip label={result.path} hasArrow placement="top">
           <Box
@@ -378,11 +455,10 @@ const ToolCallResult = ({
             gap={1}
             minHeight="16px"
           >
-
             <Text as="span" color="text.secondary" mr={1} flexShrink={0}>
-              {
-                isImageFileByPath(result.path) ? '读取此图片' : '读取此文件内容'
-              }
+              {isImageFileByPath(result.path)
+                ? '读取此图片'
+                : '读取此文件内容'}
             </Text>
             <Box
               color="blue.300"
@@ -390,7 +466,11 @@ const ToolCallResult = ({
               className="truncate text-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
-                locateFile(result.path, result?.extra?.startLine, result?.extra?.endLine);
+                locateFile(
+                  result.path,
+                  result?.extra?.startLine,
+                  result?.extra?.endLine,
+                );
               }}
             >
               {fileName}
@@ -403,7 +483,11 @@ const ToolCallResult = ({
               cursor="pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                locateFile(result.path, result?.extra?.startLine, result?.extra?.endLine);
+                locateFile(
+                  result.path,
+                  result?.extra?.startLine,
+                  result?.extra?.endLine,
+                );
               }}
             >
               引用行数: {startLine}:{endLine}
@@ -413,10 +497,13 @@ const ToolCallResult = ({
       );
     }
 
-    const isCloudResult = result.path === '云端代码库检索结果' || result.path === '云端知识库检索结果';
-    const displayPath = isCloudResult && toolResponseDisabled
-      ? result.path.replace('检索结果', '发送内容')
-      : result.path;
+    const isCloudResult =
+      result.path === '云端代码库检索结果' ||
+      result.path === '云端知识库检索结果';
+    const displayPath =
+      isCloudResult && toolResponseDisabled
+        ? result.path.replace('检索结果', '发送内容')
+        : result.path;
 
     return (
       <Box
@@ -429,30 +516,42 @@ const ToolCallResult = ({
         minHeight="16px"
       >
         <Box>
-          {isListFilesTool && <Text as="span" color="text.secondary" mr={1}>读取路径（不含代码内容）：</Text>}
-          {isReadFileTool && <Text as="span" color="text.secondary" mr={1}>读取此文件内容：</Text>}
-          {displayPath}
-          {(isRetrievedCode || isRetrievedKnowledge) && retrievedResults.length > 0 && (
-            <Text ml={1} style={{ display: 'inline', fontSize: '12px' }} color="#776fff">
-              {toolResponseDisabled
-                ? toolResponse[tool.id] === false
-                  ? '(共发送0条结果)'
-                  : `(共发送${retrievedResults.length}条结果)`
-                : `(共返回${retrievedResults.length}条结果)`
-              }
+          {isListFilesTool && (
+            <Text as="span" color="text.secondary" mr={1}>
+              读取路径（不含代码内容）：
             </Text>
           )}
+          {isReadFileTool && (
+            <Text as="span" color="text.secondary" mr={1}>
+              读取此文件内容：
+            </Text>
+          )}
+          {displayPath}
+          {(isRetrievedCode || isRetrievedKnowledge) &&
+            retrievedResults.length > 0 && (
+              <Text
+                ml={1}
+                style={{ display: 'inline', fontSize: '12px' }}
+                color="#776fff"
+              >
+                {toolResponseDisabled
+                  ? toolResponse[tool.id] === false
+                    ? '(共发送0条结果)'
+                    : `(共发送${retrievedResults.length}条结果)`
+                  : `(共返回${retrievedResults.length}条结果)`}
+              </Text>
+            )}
         </Box>
       </Box>
     );
   };
 
-
   // 渲染内容
   const renderContent = () => {
     if ((isRetrievedCode || isRetrievedKnowledge) && retrievedResults.length) {
       // 判断用户是否拒绝了这个工具
-      const isRejected = toolResponseDisabled && toolResponse[tool.id] === false;
+      const isRejected =
+        toolResponseDisabled && toolResponse[tool.id] === false;
 
       return retrievedResults.map((item, index) => (
         <RetrieveResultBlock
@@ -461,7 +560,9 @@ const ToolCallResult = ({
           key={index}
           toolResponseDisabled={toolResponseDisabled && !isRejected}
           isSelected={isRejected ? false : !unselectedResults.has(item.id)}
-          onSelectionChange={(isSelected) => handleSelectionChange(item.id, isSelected, tool.id)}
+          onSelectionChange={(isSelected) =>
+            handleSelectionChange(item.id, isSelected, tool.id)
+          }
           toolId={tool.id}
         />
       ));
@@ -484,45 +585,53 @@ const ToolCallResult = ({
   return (
     <VStack gap={1} align="stretch">
       {/* 工具调用结果内容 */}
-      {
-        !result.isError && (
-          <Accordion allowToggle index={accordionIndex} onChange={(index) => setAccordionIndex(index as number | undefined)}>
-            <AccordionItem
-              borderLeftWidth={toolResponseDisabled ? '1px' : undefined}
-              borderRightWidth={toolResponseDisabled ? '1px' : undefined}
-              borderRadius={toolResponseDisabled ? '4px' : undefined}
-            >
-              <AccordionButton flex={1}>
-                {toolResponseDisabled && (
-                  <Icon
-                    w="14px"
-                    h="14px"
-                    mr={1.5}
-                    as={toolResponse[tool.id] === false ? RxCircleBackslash : RxCheckCircled}
-                    color={toolResponse[tool.id] ? 'green' : 'gray'}
-                  />
-                )}
-                <Box as="span" flex="1" textAlign="left" color="text.primary" overflow="hidden" minWidth="0">
-                  {renderResultTitle()}
-                </Box>
-                {!collapseDisabled && <AccordionIcon />}
-              </AccordionButton>
-              {
-                !collapseDisabled && (
-                  <AccordionPanel>
-                    {renderContent()}
-                  </AccordionPanel>
-                )
-              }
-            </AccordionItem>
-          </Accordion>
-        )
-      }
+      {!result.isError && (
+        <Accordion
+          allowToggle
+          index={accordionIndex}
+          onChange={(index) => setAccordionIndex(index as number | undefined)}
+        >
+          <AccordionItem
+            borderLeftWidth={toolResponseDisabled ? '1px' : undefined}
+            borderRightWidth={toolResponseDisabled ? '1px' : undefined}
+            borderRadius={toolResponseDisabled ? '4px' : undefined}
+          >
+            <AccordionButton flex={1}>
+              {toolResponseDisabled && (
+                <Icon
+                  w="14px"
+                  h="14px"
+                  mr={1.5}
+                  as={
+                    toolResponse[tool.id] === false
+                      ? RxCircleBackslash
+                      : RxCheckCircled
+                  }
+                  color={toolResponse[tool.id] ? 'green' : 'gray'}
+                />
+              )}
+              <Box
+                as="span"
+                flex="1"
+                textAlign="left"
+                color="text.primary"
+                overflow="hidden"
+                minWidth="0"
+              >
+                {renderResultTitle()}
+              </Box>
+              {!collapseDisabled && <AccordionIcon />}
+            </AccordionButton>
+            {!collapseDisabled && (
+              <AccordionPanel>{renderContent()}</AccordionPanel>
+            )}
+          </AccordionItem>
+        </Accordion>
+      )}
       {result.isError && renderError()}
     </VStack>
   );
 };
-
 
 export default function ToolCallResults(props: ToolCallResultsProps) {
   const {
@@ -531,7 +640,7 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
     toolResponse,
     unselectedResults,
     handleSelectionChange,
-    isLatest
+    isLatest,
   } = props;
 
   const toolCallResults = message.tool_result || {};
@@ -543,11 +652,11 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
 
   return (
     <>
-      {message.tool_calls.map((tool) => {
+      {message.tool_calls.map((tool, index) => {
         const result = toolCallResults[tool.id] || {};
         return (
           <ToolCallResult
-            key={tool.id}
+            key={`${tool.id}-${index}`}
             tool={tool}
             result={result}
             toolResponse={toolResponse}

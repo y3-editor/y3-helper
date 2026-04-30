@@ -923,3 +923,26 @@ export function getValidToolName(name: string) {
 export function isImageFileByPath(path: string): boolean {
   return /\.(png|jpg|webp|gif|jpeg)$/i.test(path)
 }
+
+/**
+ * 格式化 Token 数量为人类可读的简短字符串。
+ * - >= 1B → '1B'
+ * - >= 1M → '2M'
+ * - >= 1K → '35K'
+ * - < 1K  → 原始数值字符串
+ */
+export function formatTokenCount(tokens: number): string {
+  const billion = 1_000_000_000;
+  const million = 1_000_000;
+  const thousand = 1_000;
+
+  if (tokens >= billion) {
+    return (tokens / billion).toFixed(0) + 'B';
+  } else if (tokens >= million) {
+    return (tokens / million).toFixed(0) + 'M';
+  } else if (tokens >= thousand) {
+    return (tokens / thousand).toFixed(0) + 'K';
+  } else {
+    return String(tokens);
+  }
+}

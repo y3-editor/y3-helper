@@ -1,0 +1,37 @@
+.taskCard {
+  display: flex;
+  flex-direction: column;
+  margin: 8px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  overflow: hidden;
+  background: var(--chakra-colors-bg-surface);
+
+  // 重置 .markdown-body 影响
+  p {
+    margin-bottom: 0;
+  }
+
+  pre {
+    margin-bottom: 0;
+    font-size: 11px !important;
+  }
+
+  // Accordion 面板内的滚动条美化
+  :global {
+    .chakra-accordion__panel {
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--chakra-colors-border-default);
+        border-radius: 2px;
+      }
+    }
+  }
+}

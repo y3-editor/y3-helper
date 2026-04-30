@@ -96,6 +96,7 @@ import {
   SEQUENCE_PROMPT,
 } from '../utils/prompt';
 import { generateTraceId } from '../utils/trace';
+import { SubagentTokens } from '../modules/subagent/types';
 import { logger as webToolsLogger, hub as webToolsHub } from '@dep305/codemaker-web-tools';
 import { parseMentions } from '../utils/chatMention';
 import {
@@ -192,6 +193,7 @@ export interface ChatSession {
   user: string;
   chat_type?: ChatType;
   chat_repo?: string;
+  chat_workspace?: string;
   message_count: number | null;
   data?: {
     messages: ChatMessage[];
@@ -210,6 +212,7 @@ export interface ChatSession {
       skillTokens: number
       ruleTokens: number
       mcpTokens: number
+      subagentTokens?: SubagentTokens
     }
     model?: ChatModel;
     attaches?: (Docsets | IMultiAttachment)
@@ -271,6 +274,7 @@ interface ChatStore {
   ) => Promise<void>;
   // 历史会话数据同步到数据库
   syncHistory: () => void;
+  associateSessionToCurrentWorkspace: (sessionId: string) => Promise<void>;
   // 更新消费token信息
   updateConsumedTokens: (options: {
     curSession: ChatSession;
@@ -1011,6 +1015,39 @@ export const useChatStore = create<ChatStore>()(
         }
       },
 
+      associateSessionToCurrentWorkspace: async (sessionId: string) => {
+        const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
+        const session = get().sessions.get(sessionId);
+        if (!session || !workspaceInfo.workspace) {
+          console.warn('无法关联会话：会话或工作区信息不存在');
+          return;
+        }
+
+        try {
+          await updateSession({
+            _id: sessionId,
+            topic: session.topic,
+            data: session.data,
+            chat_workspace: workspaceInfo.workspace,
+          });
+
+          // 更新本地状态
+          const nextSessions = new Map(get().sessions);
+          nextSessions.set(sessionId, {
+            ...session,
+            chat_workspace: workspaceInfo.workspace,
+          });
+          set({ sessions: nextSessions });
+
+          console.log(
+            `会话 ${sessionId} 已关联到工作区 ${workspaceInfo.workspace}`,
+          );
+        } catch (error) {
+          console.error('关联会话失败:', error);
+          throw error;
+        }
+      },
+
       async syncHistory() {
         const session = get().currentSession();
         if (!session) {
@@ -1021,6 +1058,7 @@ export const useChatStore = create<ChatStore>()(
           topic: session.topic,
           data: session.data,
           chat_repo: session.chat_repo,
+          chat_workspace: session.chat_workspace,
         };
         // 仓库智聊去掉无用的缓存内容
         if (session.chat_type === 'codebase' && latestData.data?.messages) {

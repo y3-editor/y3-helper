@@ -7,7 +7,7 @@
  * - 换行符和特殊字符适当加权
  */
 
-import { ChatMessage } from "../services";
+import { ChatMessage, ChatMessageContentText } from "../services";
 import { ChatRole } from "../types/chat";
 
 /** CJK 字符正则（中文、平假名、片假名） */
@@ -62,7 +62,7 @@ export function estimateTokens(text: string): number {
   tokens += newlineCount * 0.5;
 
   // 特殊字符额外加权（每个 +0.1 token）
-  const specialCharCount = (text.match(/[{}\[\]().,;:!?<>]/g) || []).length;
+  const specialCharCount = (text.match(/[{}[\]().,;:!?<>]/g) || []).length;
   tokens += specialCharCount * 0.1;
 
   return Math.ceil(tokens);
@@ -74,6 +74,16 @@ export function estimateTokens(text: string): number {
  */
 export function estimateSystemPromptTokens(messages: ChatMessage[]): number {
   const systemMessage = messages?.[0] || { role: ChatRole.System, content: '' }
-  const content = systemMessage.role === ChatRole.System ? (systemMessage.content as string || '') : ''
-  return estimateTokens(content)
+  if (systemMessage.role !== ChatRole.System) return 0;
+
+  let content = '';
+  if (typeof systemMessage.content === 'string') {
+    content = systemMessage.content;
+  } else if (Array.isArray(systemMessage.content)) {
+    content = systemMessage.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as ChatMessageContentText).text)
+      .join('\n');
+  }
+  return estimateTokens(content);
 }

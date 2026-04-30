@@ -9,7 +9,7 @@ import {
 } from '@chakra-ui/react';
 import { TbPlus, TbCube, TbWand } from 'react-icons/tb';
 import { LuAirplay, LuBox, LuUser } from 'react-icons/lu';
-import { RiStoreFill } from 'react-icons/ri';
+import { RiRobot2Line } from 'react-icons/ri';
 import {
   Prompt,
   PromptCategoryType,
@@ -22,7 +22,7 @@ import {
   BUILT_IN_PROMPTS_OPENSPEC_V023,
   BUILT_IN_PROMPTS_OPENSPEC_V1,
 } from '../../../../services/builtInPrompts';
-import useUserPrompt from './useUserPrompt';
+import useUserPrompt, { CODE_QUALITY_AUTOFIX_PROMPT_APP } from './useUserPrompt';
 import PromptList from './PromptList';
 import { getListIndex } from '../utils';
 import {
@@ -56,16 +56,25 @@ import { useMCPStore } from '../../../../store/mcp';
 import { useMcpPromptApp } from '../../../../store/mcp-prompt';
 // import { CODEBASE_EXAMPLE } from '../../ChatSamples';
 import { checkValueOfPressedKeyboard } from '../../../../utils';
-// import { supportsOpenSpecVersionSelection } from '../../../../utils/specVersionUtils'; // Y3不需要OpenSpec
-const supportsOpenSpecVersionSelection = (..._args: any[]) => false; // Y3不支持OpenSpec
+import { supportsOpenSpecVersionSelection } from '../../../../utils/specVersionUtils';
 import { McpPrompt } from '../../../../services/mcp';
 import { RULES_PROMPT } from '../../../../services/builtInPrompts/rules';
-import { createSkillToolId, getSkillSourceLabel, useSkillsStore } from '../../../../store/skills';
-import { usePostMessage, BroadcastActions, SubscribeActions } from '../../../../PostMessageProvider';
+import {
+  createSkillToolId,
+  getSkillSourceLabel,
+  useSkillsStore,
+} from '../../../../store/skills';
+import {
+  usePostMessage,
+  BroadcastActions,
+  SubscribeActions,
+} from '../../../../PostMessageProvider';
 import { useSkillPromptApp } from '../../../../store/skills/skill-prompt';
 import { SKILLS_HUB_API_URL } from '../../../CodeCoverage/const';
 import useCustomToast from '../../../../hooks/useCustomToast';
 import { usePanelContext } from '../../../../context/PanelContext';
+import { useSubagentStore } from '../../../../modules/subagent';
+import { useAgentPromptStore } from '../../../../store/agent-prompt';
 
 
 const PromptsPanel = (
@@ -87,7 +96,9 @@ const PromptsPanel = (
   const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion);
   const { postMessage, message } = usePostMessage();
   const { toast } = useCustomToast();
-  const setCodebaseChatMode = useChatStore((state) => state.setCodebaseChatMode);
+  const setCodebaseChatMode = useChatStore(
+    (state) => state.setCodebaseChatMode,
+  );
   const { panelId: currentPanelId } = usePanelContext();
 
   const isVscode = ide === 'vscode';
@@ -133,12 +144,17 @@ const PromptsPanel = (
   }, [MCPServers]);
 
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
+  const subagents = useSubagentStore((state) => state.agents);
+  const subagentEnable = useExtensionStore((state) => state.subagentEnable);
+  const setAgentRunner = useAgentPromptStore((state) => state.setRunner);
   const setOpenspecUpdateModalVisible = useWorkspaceStore(
-    (state) => state.setOpenspecUpdateModalVisible
+    (state) => state.setOpenspecUpdateModalVisible,
   );
 
   // 获取 OpenSpec 版本
-  const getFrameworkSpecInfo = useWorkspaceStore((state) => state.getFrameworkSpecInfo);
+  const getFrameworkSpecInfo = useWorkspaceStore(
+    (state) => state.getFrameworkSpecInfo,
+  );
   const openspecFrameworkInfo = getFrameworkSpecInfo(SpecFramework.OpenSpec);
   const installedOpenSpecVersion = openspecFrameworkInfo?.version;
 
@@ -156,17 +172,17 @@ const PromptsPanel = (
     const isEmptySession = session?.data?.messages.length === 0;
     const hasWorkspace = !!workspaceInfo.repoName;
     const sessionRepo = session?.chat_repo;
-    const isRepoMismatch = sessionRepo && sessionRepo !== workspaceInfo.repoName;
+    const isRepoMismatch =
+      sessionRepo && sessionRepo !== workspaceInfo.repoName;
 
-    const shouldShowAlreadyNewToast = isEmptySession && (
-      (hasWorkspace && !isRepoMismatch) ||
-      (!hasWorkspace && !sessionRepo)
-    );
+    const shouldShowAlreadyNewToast =
+      isEmptySession &&
+      ((hasWorkspace && !isRepoMismatch) || (!hasWorkspace && !sessionRepo));
 
     if (shouldShowAlreadyNewToast) {
       toast({
         title: '当前已是新对话',
-        status: 'info'
+        status: 'info',
       });
       return;
     }
@@ -180,7 +196,10 @@ const PromptsPanel = (
     const unionData: UnionData[] = [];
 
     for (const skill of skills) {
-      if (skill.userInvocable === false || skillConfigs[skill.name]?.disabled === true) {
+      if (
+        skill.userInvocable === false ||
+        skillConfigs[skill.name]?.disabled === true
+      ) {
         continue;
       }
       const sourceLabel = getSkillSourceLabel(skill.source);
@@ -204,8 +223,13 @@ const PromptsPanel = (
 
     if (chatType === 'codebase' && codebaseChatMode === 'openspec') {
       // 根据安装的 OpenSpec 版本动态选择命令集
-      const openspecPrompts = getOpenSpecPromptsByVersion(installedOpenSpecVersion);
-      const canShowUpdate = supportsOpenSpecVersionSelection(codeMakerVersion, ide);
+      const openspecPrompts = getOpenSpecPromptsByVersion(
+        installedOpenSpecVersion,
+      );
+      const canShowUpdate = supportsOpenSpecVersionSelection(
+        codeMakerVersion,
+        ide,
+      );
       for (const builtIn of openspecPrompts) {
         // openspec-update 仅在 Extension 版本满足 Spec 版本选择要求时提供
         if (builtIn.name === 'openspec-update' && !canShowUpdate) continue;
@@ -375,6 +399,24 @@ const PromptsPanel = (
         });
     }
 
+    if (chatType === 'codebase' && subagentEnable) {
+      for (const agent of subagents) {
+        unionData.push({
+          name: agent.name,
+          description: agent.description,
+          type: UnionType.Prompt,
+          meta: {
+            name: agent.name,
+            display_name: agent.name,
+            prompt: `/${agent.name}`,
+            _id: `/agent/${agent.name}`,
+            type: PromptCategoryType.Agent,
+            description: agent.description,
+          },
+        });
+      }
+    }
+
     const subscribeApps = userConfig?.subscribe_app_tools;
     for (const plugin of pluginApps || []) {
       if (!subscribeApps?.includes(plugin._id)) {
@@ -441,6 +483,13 @@ const PromptsPanel = (
               item.meta.type === PromptCategoryType.MCP,
           );
         }
+        case PromptCategoryType.Agent: {
+          return unionData.filter(
+            (item) =>
+              item.type === UnionType.Prompt &&
+              item.meta.type === PromptCategoryType.Agent,
+          );
+        }
         case PromptCategoryType.Plugin: {
           return unionData.filter((item) => item.type === UnionType.Plugin);
         }
@@ -456,20 +505,24 @@ const PromptsPanel = (
       }
     }
   }, [
-    chatModels,
     chatType,
+    codebaseChatMode,
     disabled,
     userConfig?.subscribe_app_tools,
     mentionKeyword,
-    prompts,
-    MCPServers,
-    chatConfig.model,
-    pluginApps,
-    promptType,
     skills,
     skillConfigs,
-    codebaseChatMode,
     installedOpenSpecVersion,
+    codeMakerVersion,
+    ide,
+    prompts,
+    MCPServers,
+    chatModels,
+    chatConfig.model,
+    subagents,
+    subagentEnable,
+    pluginApps,
+    promptType,
   ]);
 
   const currentIndex = getListIndex(renderPrompts, focusIndex);
@@ -504,6 +557,57 @@ const PromptsPanel = (
 
   const handleSubmitPrompt = React.useCallback(
     async (prompt: UnionData) => {
+      const currentChatType = useChatStore.getState().chatType;
+      if (
+        prompt.type === UnionType.Prompt &&
+        prompt.meta.type === PromptCategoryType.Agent
+      ) {
+        // 检查 Subagent 功能是否启用
+        if (!subagentEnable) {
+          toast({
+            title: 'Subagent 功能已禁用',
+            status: 'warning',
+            position: 'top',
+            duration: 2500,
+            isClosable: true,
+          });
+          return;
+        }
+
+        if (currentChatType !== 'codebase') {
+          toast({
+            title: '当前模式不支持 Agent',
+            status: 'warning',
+            position: 'top',
+            duration: 2500,
+            isClosable: true,
+          });
+          return;
+        }
+
+        const agentName = prompt.meta.name;
+        const agentExists = subagents.some((item) => item.name === agentName);
+
+        if (!agentExists) {
+          toast({
+            title: '未找到对应 Agent',
+            description: agentName,
+            status: 'error',
+            position: 'top',
+            duration: 2500,
+            isClosable: true,
+          });
+          return;
+        }
+
+        setAgentRunner({
+          name: agentName,
+          description: prompt.meta.description,
+        });
+        removeMentionKeyword();
+        props.updateOpenState(false);
+        return;
+      }
       // 根据 Plugin 和 Prompt 进行对应的逻辑处理
       // 1. Plugin App 进行挂载
       // 2. Prompt 直接提交
@@ -516,24 +620,30 @@ const PromptsPanel = (
             updatePromptAppRunner(cloneData);
           } else if (prompt.name === 'Skill Init') {
             const templateContent = `---\nname: template-skill\ndescription: Replace with description of the skill and when Codemaker should use it.\n---\n\n# Insert instructions below\n`;
-            window.parent.postMessage({
-              type: BroadcastActions.CREATE_SKILL_TEMPLATE,
-              panelId: currentPanelId,
-              data: { templateContent },
-            }, '*');
+            window.parent.postMessage(
+              {
+                type: BroadcastActions.CREATE_SKILL_TEMPLATE,
+                panelId: currentPanelId,
+                data: { templateContent },
+              },
+              '*',
+            );
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
           } else if (prompt.name === 'Skill Creator') {
             setSkillLoading(true);
-            window.parent.postMessage({
-              type: BroadcastActions.INSTALL_BUILTIN_SKILL,
-              panelId: currentPanelId,
-              data: {
-                skillName: 'skill-creator',
-                downloadUrl: `${SKILLS_HUB_API_URL}/api/skills/@skill-creator/download`,
+            window.parent.postMessage(
+              {
+                type: BroadcastActions.INSTALL_BUILTIN_SKILL,
+                panelId: currentPanelId,
+                data: {
+                  skillName: 'skill-creator',
+                  downloadUrl: `${SKILLS_HUB_API_URL}/api/skills/@skill-creator/download`,
+                },
               },
-            }, '*');
+              '*',
+            );
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
@@ -545,9 +655,15 @@ const PromptsPanel = (
           } else if (
             [
               // 支持 OpenSpec 0.23 和 1.x 的所有命令
-              ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(openspecPrompt => openspecPrompt.name),
-              ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(openspecPrompt => openspecPrompt.name),
-              ...BUILT_IN_PROMPTS_SPECKIT.map(speckitPrompt => speckitPrompt.name)
+              ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(
+                (openspecPrompt) => openspecPrompt.name,
+              ),
+              ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(
+                (openspecPrompt) => openspecPrompt.name,
+              ),
+              ...BUILT_IN_PROMPTS_SPECKIT.map(
+                (speckitPrompt) => speckitPrompt.name,
+              ),
             ].includes(prompt.name)
           ) {
             updatePromptAppRunner(prompt);
@@ -619,7 +735,7 @@ const PromptsPanel = (
                 },
               });
               // 不清空输入框，保留用户已输入的文字内容
-            } else if (prompt.meta.type === PromptCategoryType.CodeWiki) {
+            } else if (prompt.meta.type === PromptCategoryType.CodeWiki || prompt.meta._id === CODE_QUALITY_AUTOFIX_PROMPT_APP._id) {
               updatePromptAppRunner(prompt);
             } else {
               props.onSubmit(prompt.meta);
@@ -656,22 +772,33 @@ const PromptsPanel = (
     [
       removeMentionKeyword,
       props,
+      subagents,
+      subagentEnable,
+      setAgentRunner,
+      toast,
       updatePromptAppRunner,
-      attachs?.attachType,
-      updatePluginAppRunner,
+      currentPanelId,
       userInputRef,
-      updateAttachs,
+      setSkillLoading,
+      setOpenspecUpdateModalVisible,
+      handleNewSessionCommand,
+      clearSession,
+      setCodebaseChatMode,
       MCPServers,
       setPendingRunner,
-      clearSession,
       postMessage,
-      setSkillLoading,
-      setCodebaseChatMode,
-      handleNewSessionCommand,
-      setOpenspecUpdateModalVisible,
-      currentPanelId
+      attachs?.attachType,
+      updatePluginAppRunner,
+      updateAttachs,
     ],
   );
+
+  // 如果 Subagent 功能被禁用，且当前选择的是 Agent 类别，自动切换到系统类别
+  React.useEffect(() => {
+    if (!subagentEnable && promptType === PromptCategoryType.Agent) {
+      setPromptType(PromptCategoryType._CodeMaker);
+    }
+  }, [subagentEnable, promptType]);
 
   React.useEffect(() => {
     const element = userInputRef?.current;
@@ -746,13 +873,13 @@ const PromptsPanel = (
     if (message?.type !== SubscribeActions.CREATE_SKILL_TEMPLATE_RESULT) {
       return;
     }
-    
+
     // 如果消息指定了 targetPanelId，只有匹配的面板处理
     const targetPanelId = message?.targetPanelId;
     if (targetPanelId && targetPanelId !== currentPanelId) {
       return;
     }
-    
+
     const result = (message.data || {}) as {
       success?: boolean;
       message?: string;
@@ -783,7 +910,6 @@ const PromptsPanel = (
       });
     }
   }, [message, toast, postMessage, currentPanelId]);
-
 
   const handleEditPrompt = (prompt: Prompt) => {
     (window as any).__openEditPromptModal?.(prompt);
@@ -923,6 +1049,31 @@ const PromptsPanel = (
               onClick={() => handleChangePromptType(PromptCategoryType.Skill)}
             />
           </Tooltip>
+          {subagentEnable && (
+            <Tooltip label="Agent" placement="right">
+              <IconButton
+                fontSize="xl"
+                aria-label="agent"
+                colorScheme={
+                  promptType === PromptCategoryType.Agent ? 'blue' : undefined
+                }
+                color={
+                  promptType === PromptCategoryType.Agent
+                    ? 'white'
+                    : 'text.primary'
+                }
+                bg={
+                  promptType === PromptCategoryType.Agent
+                    ? 'blue.300'
+                    : 'buttonBgColor'
+                }
+                border="1px solid"
+                borderColor="customBorder"
+                icon={<Icon as={RiRobot2Line} size="md" />}
+                onClick={() => handleChangePromptType(PromptCategoryType.Agent)}
+              />
+            </Tooltip>
+          )}
           {hasMcpPrompts && (
             <Tooltip label="MCP 指令" placement="right">
               <IconButton
@@ -948,7 +1099,7 @@ const PromptsPanel = (
               />
             </Tooltip>
           )}
-          {isVscode && (
+          {false && isVscode && (
             <Tooltip label="我订阅的插件指令" placement="right">
               <IconButton
                 fontSize="xl"
@@ -968,7 +1119,7 @@ const PromptsPanel = (
                 }
                 border="1px solid"
                 borderColor="customBorder"
-                icon={<Icon as={RiStoreFill} size="md" />}
+                icon={<Icon as={RiRobot2Line} size="md" />}
                 onClick={() =>
                   handleChangePromptType(PromptCategoryType.Plugin)
                 }
@@ -1018,6 +1169,11 @@ const PromptsPanel = (
                 </Button>
               </Tooltip>
             )}
+            {promptType === PromptCategoryType.Agent && (
+              <Text p={1} pb={2} fontSize="sm" color="text.secondary">
+                选择 Agent 后，请继续在输入框中填写任务内容。
+              </Text>
+            )}
           </Flex>
         )}
         <PromptList
@@ -1040,9 +1196,12 @@ const PromptsPanel = (
 
 // 将编辑和删除 Modal 移到组件外部，作为独立的组件导出
 export function PromptModals() {
-  const [currentHandlePrompt, setCurrentHandlePrompt] = React.useState<Prompt>();
-  const [isOpenEditPromptModel, setIsOpenEditPromptModel] = React.useState(false);
-  const [isOpenRemovePromptModel, setIsOpenRemovePromptModel] = React.useState(false);
+  const [currentHandlePrompt, setCurrentHandlePrompt] =
+    React.useState<Prompt>();
+  const [isOpenEditPromptModel, setIsOpenEditPromptModel] =
+    React.useState(false);
+  const [isOpenRemovePromptModel, setIsOpenRemovePromptModel] =
+    React.useState(false);
 
   // 暴露方法给外部调用
   React.useEffect(() => {

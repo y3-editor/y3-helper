@@ -57,8 +57,13 @@ export function useChatStreamNotification(panelId?: string, mode?: string) {
         const lastAssistantMsg = assistantMessages[assistantMessages.length - 1];
         const messageId = lastAssistantMsg?.id;
 
+        // 检查是否包含 task 工具调用（subagent），如果是的话不需要通知
+        const hasTaskTool = lastAssistantMsg?.tool_calls?.some(
+          (tc) => tc.function.name === 'task'
+        ) || false;
+
         // 检查是否应该发送低优先级的"回答完成"通知
-        if (notificationManager.shouldSendNotification(false, messageId)) {
+        if (!hasTaskTool && notificationManager.shouldSendNotification(false, messageId)) {
           // 判断回答是否成功
           const { isError } = useChatStore.getState();
 

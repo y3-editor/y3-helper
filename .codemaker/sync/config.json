@@ -38,7 +38,6 @@
       "resources/webview_source_code/src/stubs/"
     ],
     "excluded_upstream": [
-      "src/modules/",
       "src/patchSetup.ts",
       "src/telemetry/",
       ".github/",

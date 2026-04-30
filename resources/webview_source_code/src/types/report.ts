@@ -43,6 +43,7 @@ export enum UserEvent {
   CODE_CHAT_UNIT_TEST = 'CodeChat.prompt_unit_test',
   CODE_CHAT_CLEAN = 'CodeChat.prompt_clean',
   CODE_CHAT_CODEBASE = 'CodeChat.codebase',
+  CODE_CHAT_SUBAGENT = 'CodeChat.subagent',
   CHAT_TOOL_CALL_ERROR = 'CodeChat.tool_call_error',
 
   CODE_CHAT_DEFINE_PROMPT = 'CodeChat.define_prompt',
@@ -152,15 +153,15 @@ export enum UserEvent {
 
   MAX_AUTO_APPROVED_REACHED = 'CodeChat.max_auto_approved_reached',
 
-  // skill相关埋点
-  CODE_CHAT_SKILL_MANAGE_PANEL = 'CodeChat.skill_manage_panel',
-
   //mcp相关埋点
   CODE_CHAT_MCP_MANAGE_PANEL = 'CodeChat.mcp_manage_panel',
   CODE_CHAT_MCP_INSTALL_BUILTIN_SERVER = 'CodeChat.mcp_install_builtin_server',
   CODE_CHAT_MCP_ADD_CUSTOM_SERVER = 'CodeChat.mcp_add_custom_server',
   CODE_CHAT_MCP_CONFIG_BUTTON = 'CodeChat.mcp_config_button',
   CODE_CHAT_MCP_OPEN_CONFIG_FILE = 'CodeChat.mcp_open_config_file',
+
+  //skill相关埋点
+  CODE_CHAT_SKILL_MANAGE_PANEL = 'CodeChat.skill_manage_panel',
 
   // plan mode
   CODE_CHAT_ENABLE_PLAN_MODE = 'CodeChat.enable_plan_mode',

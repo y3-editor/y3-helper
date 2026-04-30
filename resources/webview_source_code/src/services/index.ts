@@ -73,6 +73,9 @@ interface ChatMessageContentType {
 export interface ChatMessageContentText extends ChatMessageContentType {
   type: ChatMessageContent.Text;
   text: string;
+  cache_control?: {
+    type: "ephemeral";
+  };
 }
 export interface ChatMessageContentImageUrl extends ChatMessageContentType {
   type: ChatMessageContent.ImageUrl;
@@ -316,7 +319,6 @@ export interface ChatPromptBody {
   timeout?: number;
   app_id?: string;
   app_key?: string;
-  base_url?: string;
   stream?: boolean;
   tool_choice?: string;
   tools?: Tool[];
@@ -334,6 +336,7 @@ export interface ChatPromptBody {
   }
 
   codebase_chat_mode?: CodebaseChatMode;
+  base_url?: string;
 }
 
 export const codemakerChatRequest = axios.create({
@@ -378,15 +381,9 @@ originalCodeMakerApi.interceptors.response.use(undefined, handleError);
 export function setDefaultHeaders(
   request: InternalAxiosRequestConfig<unknown>,
 ) {
-  const loginFrom = useAuthStore.getState().loginFrom;
-  if (loginFrom) {
-    request.headers['Login-From'] = loginFrom;
-  } else {
-    request.headers['Login-From'] = 'mobile';
-  }
   request.headers['X-Access-Token'] = useAuthStore.getState().accessToken;
-  request.headers['X-Auth-User'] = encodeURIComponent(useAuthStore.getState().username || '');
-  request.headers['y3maker-version'] =
+  request.headers['X-Auth-User'] = useAuthStore.getState().username;
+  request.headers['codemaker-version'] =
     useExtensionStore.getState().codeMakerVersion;
   request.headers['ide'] = useExtensionStore.getState().IDE;
   try {

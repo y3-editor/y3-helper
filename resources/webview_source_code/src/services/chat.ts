@@ -9,7 +9,7 @@ import { ChatModel } from './chatModel';
 import { getAIGWModel } from '../store/chat-config';
 
 export const codemakerChatHistoryRequest = axios.create({
-  baseURL: '/proxy/gpt/u5_chat',
+  baseURL: '/proxy/gpt/chat',
   timeout: 40000,
 });
 
@@ -48,7 +48,7 @@ export async function getHistories(
 
 export async function preloadSessionData(id: string) {
   const { data } = await axios.get<ChatSession>(
-    '/proxy/gpt/u5_chat/chat_histories/' + id,
+    '/proxy/gpt/chat/chat_histories/' + id,
   );
   return data;
 }
@@ -69,6 +69,10 @@ interface ChatHistoryData {
 interface ChatHistoryPostBody {
   topic: string;
   chat_type: ChatType;
+  /** 会话类型标识：'master_agent' 为主会话，'sub_agent' 为子代理会话 */
+  agent_type?: 'master_agent' | 'sub_agent';
+  /** 关联的主会话 ID（仅 subagent 类型使用） */
+  parent_session_id?: string;
   data: ChatHistoryData;
 }
 
@@ -85,7 +89,7 @@ export async function removeSession(id: string) {
 }
 
 export async function updateSession(
-  data: Pick<ChatSession, '_id' | 'topic' | 'data'>,
+  data: Pick<ChatSession, '_id'> & Partial<Pick<ChatSession, 'topic' | 'data' | 'chat_workspace' | 'chat_repo'>>,
 ) {
   return await codemakerChatHistoryRequest.put(
     `/chat_histories/${data._id}`,
@@ -174,16 +178,8 @@ export async function fetchGptResponse(event: string, params: ChatPromptBody) {
   return data;
 }
 
-export async function fetchCompressResponse(params: ChatPromptBody) {
-  const { data } = await codemakerChatHistoryRequest.post<GPTResponse>(
-    `/codebase_agent_chat`,
-    params,
-  );
-  return data;
-}
-
 export async function uploadImg(params: FormData) {
-  const { data } = await codemakerChatHistoryRequest.post<{
+  const { data } = await codemakderChatGptRequest.post<{
     url: string;
     message: string;
   }>('/upload_img', params);

@@ -10,6 +10,7 @@ import {
   ModalFooter,
   Button,
   VStack,
+  Tooltip,
 } from '@chakra-ui/react';
 import CodeMakerLogo from '../../../assets/cmlogo.png';
 import ChatAssistantMessage from './AssistantMessage';
@@ -17,6 +18,7 @@ import { GroupAIMessageProps } from './types';
 import ChatMessageActionBar from '../ChatMessageActionBar';
 import userReporter from '../../../utils/report';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
+import { useSubagentStore } from '../../../modules/subagent';
 import { useCallback, useMemo, useState } from 'react';
 import { BroadcastActions, usePostMessage } from '../../../PostMessageProvider';
 import { createNewSession } from '../../../utils/chat';
@@ -30,6 +32,7 @@ import Icon from '../../../components/Icon';
 import { FaAngleRight, FaAngleDown } from 'react-icons/fa6';
 import * as React from 'react';
 import { usePrevious } from '../../../hooks/usePrevious';
+import { DateFormat } from '../../../utils';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (
@@ -118,11 +121,11 @@ function OuterCollapseWrapper({
 
   // 检查是否有工具调用需要用户确认（提前计算，用于初始状态）
   const needsUserConfirmation = React.useMemo(() => {
-    return mergedMessages.some(item => {
-      return item.messages.some(msg => {
+    return mergedMessages.some((item) => {
+      return item.messages.some((msg) => {
         if (!msg.tool_calls || !msg.tool_calls.length) return false;
         // 检查是否所有工具调用都已经有 response
-        const hasAllResponses = msg.tool_calls.every(tool => {
+        const hasAllResponses = msg.tool_calls.every((tool) => {
           return msg.response && msg.response[tool.id] !== undefined;
         });
         return !hasAllResponses; // 如果有工具调用没有 response，说明需要确认
@@ -147,7 +150,9 @@ function OuterCollapseWrapper({
     }
   }
 
-  const [isCollapsed, setIsCollapsed] = React.useState(initialCollapsedRef.current);
+  const [isCollapsed, setIsCollapsed] = React.useState(
+    initialCollapsedRef.current,
+  );
 
   // 仅在流式传输 **结束** 时自动折叠，不在开始时触发状态变化
   React.useEffect(() => {
@@ -169,10 +174,17 @@ function OuterCollapseWrapper({
       setIsCollapsed(true);
     }
     // 注意：不处理从停止到开始的情况，避免触发滚动
-  }, [isLatest, isStreaming, isProcessing, prevIsStreaming, prevIsProcessing, needsUserConfirmation]);
+  }, [
+    isLatest,
+    isStreaming,
+    isProcessing,
+    prevIsStreaming,
+    prevIsProcessing,
+    needsUserConfirmation,
+  ]);
 
   // 判断一个消息组是否是文件操作
-  const isFileOperation = (group: typeof mergedMessages[0]) => {
+  const isFileOperation = (group: (typeof mergedMessages)[0]) => {
     const firstMessage = group.messages[0];
     const toolName = firstMessage.tool_calls?.[0]?.function?.name;
     return getToolCategory(toolName) !== null;
@@ -197,13 +209,17 @@ function OuterCollapseWrapper({
   });
 
   // 如果第一个和最后一个文件操作不是同一个，且都存在，就折叠这个范围
-  const shouldWrapRange = firstFileOpIndex !== -1
-    && lastFileOpIndex !== -1
-    && firstFileOpIndex !== lastFileOpIndex;
+  const shouldWrapRange =
+    firstFileOpIndex !== -1 &&
+    lastFileOpIndex !== -1 &&
+    firstFileOpIndex !== lastFileOpIndex;
 
   if (shouldWrapRange) {
     // 将第一个文件操作到最后一个文件操作之间的所有消息包裹起来
-    const rangeGroups = mergedMessages.slice(firstFileOpIndex, lastFileOpIndex + 1);
+    const rangeGroups = mergedMessages.slice(
+      firstFileOpIndex,
+      lastFileOpIndex + 1,
+    );
     // const totalFileOps = rangeGroups.filter(g => isFileOperation(g)).length;
 
     // 前面的消息
@@ -212,7 +228,7 @@ function OuterCollapseWrapper({
     const afterGroups = mergedMessages.slice(lastFileOpIndex + 1);
 
     outerGroups.push(
-      ...beforeGroups.map(group => ({
+      ...beforeGroups.map((group) => ({
         type: 'normal' as const,
         groups: [group],
       })),
@@ -220,17 +236,19 @@ function OuterCollapseWrapper({
         type: 'file_operations' as const,
         groups: rangeGroups,
       },
-      ...afterGroups.map(group => ({
+      ...afterGroups.map((group) => ({
         type: 'normal' as const,
         groups: [group],
-      }))
+      })),
     );
   } else {
     // 不需要包裹，所有消息正常显示
-    outerGroups.push(...mergedMessages.map(group => ({
-      type: 'normal' as const,
-      groups: [group],
-    })));
+    outerGroups.push(
+      ...mergedMessages.map((group) => ({
+        type: 'normal' as const,
+        groups: [group],
+      })),
+    );
   }
 
   return (
@@ -321,20 +339,32 @@ export function GroupAIMessage({
   attachs = [],
   onFeedback,
   isShare,
+  sentAt,
+  completedAt,
 }: GroupAIMessageProps) {
   const message = messages[0];
   const [isShowAction, setIsShowAction] = useState(false);
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [removeQA, onNewSession, chatType] = useChatStore((state) => [state.removeQA, state.onNewSession, state.chatType]);
+  const [removeQA, onNewSession, chatType] = useChatStore((state) => [
+    state.removeQA,
+    state.onNewSession,
+    state.chatType,
+  ]);
   const currentSession = useChatStore((state) => state.currentSession());
   const { postMessage } = usePostMessage();
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isSearching = useChatStreamStore((state) => state.isSearching);
+  const isSubagentProcessing = useSubagentStore((state) =>
+    state.hasActiveSubagents(),
+  );
   const showFeedback = useChatStreamStore((state) => state.showFeedback);
   const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
-  const setStreamRetryCount = useChatStreamStore((state) => state.setStreamRetryCount);
-  const [recommendFileChanges, setRecommendFileChanges] = useState<IRecommendFileChangeRecord>({});
+  const setStreamRetryCount = useChatStreamStore(
+    (state) => state.setStreamRetryCount,
+  );
+  const [recommendFileChanges, setRecommendFileChanges] =
+    useState<IRecommendFileChangeRecord>({});
   const enableReply = useMemo(() => {
     if (isStreaming || isSearching) return false;
     if (!currentSession?.data?.messages?.length) return false;
@@ -351,26 +381,23 @@ export function GroupAIMessage({
     return false;
   }, [isStreaming, isSearching, currentSession?.data?.messages]);
 
-  const handleCopyToClipboard = useCallback(
-    () => {
-      let content = '';
-      for (const msg of messages) {
-        content += msg.content as string;
-      }
-      userReporter.report({
-        event: UserEvent.CODE_CHAT_COPY,
-        extends: {
-          session_id: currentSession?._id,
-          message_id: message.id,
-        },
-      });
-      postMessage({
-        type: BroadcastActions.COPY_TO_CLIPBOARD,
-        data: content,
-      });
-    },
-    [postMessage, currentSession?._id, message.id, messages],
-  );
+  const handleCopyToClipboard = useCallback(() => {
+    let content = '';
+    for (const msg of messages) {
+      content += msg.content as string;
+    }
+    userReporter.report({
+      event: UserEvent.CODE_CHAT_COPY,
+      extends: {
+        session_id: currentSession?._id,
+        message_id: message.id,
+      },
+    });
+    postMessage({
+      type: BroadcastActions.COPY_TO_CLIPBOARD,
+      data: content,
+    });
+  }, [postMessage, currentSession?._id, message.id, messages]);
 
   const handleNewSession = useCallback(() => {
     if (!currentSession || !message.id) return;
@@ -379,15 +406,27 @@ export function GroupAIMessage({
   }, [message, currentSession, onNewSession, chatType]);
 
   const onRetryClick = useCallback(() => {
-    setStreamRetryCount(0)
-    onUserResubmit()
-  }, [onUserResubmit, setStreamRetryCount])
+    setStreamRetryCount(0);
+    onUserResubmit();
+  }, [onUserResubmit, setStreamRetryCount]);
 
   const renderActionBar = useMemo(() => {
-    if (isShowAction && !isStreaming && !isProcessing && !isSearching) {
+    if (
+      isShowAction &&
+      !isStreaming &&
+      !isProcessing &&
+      !isSearching &&
+      !isSubagentProcessing
+    ) {
       const hideNewSession = false; // 允许所有聊天类型都支持从此处重新发起对话
       const hideRemove = false;
-      const hideRetry = isSearching || isStreaming || !isLatest || !enableReply || !!message.revertedFiles;
+      const hideRetry =
+        isSearching ||
+        isStreaming ||
+        isSubagentProcessing ||
+        !isLatest ||
+        !enableReply ||
+        !!message.revertedFiles;
       const shouldShowFeedback = !isLatest || (isLatest && !showFeedback);
       const feedbackType = message.feedback;
 
@@ -422,18 +461,40 @@ export function GroupAIMessage({
     }
   }, [
     isShowAction,
-    message,
-    isSearching,
     isStreaming,
     isProcessing,
-    enableReply,
-    handleNewSession,
-    handleCopyToClipboard,
+    isSearching,
+    isSubagentProcessing,
     isLatest,
-    onRetryClick,
-    onFeedback,
+    enableReply,
+    message.revertedFiles,
+    message.feedback,
+    message.isCompressed,
+    message.isCompressionSummary,
     showFeedback,
+    onFeedback,
+    onRetryClick,
+    handleCopyToClipboard,
+    handleNewSession,
   ]);
+
+  const sentAtText = useMemo(() => {
+    if (!sentAt) return null;
+    return DateFormat(new Date(sentAt), 'MM/DD HH:mm:ss');
+  }, [sentAt]);
+
+  const durationText = useMemo(() => {
+    if (!sentAt || !completedAt || completedAt <= sentAt) return null;
+    const seconds = Math.round((completedAt - sentAt) / 1000);
+    return `${seconds}s`;
+  }, [sentAt, completedAt]);
+
+  const timeInfoText = useMemo(() => {
+    const parts: string[] = [];
+    if (sentAtText) parts.push(sentAtText);
+    if (durationText) parts.push(durationText);
+    return parts.join(' | ') || null;
+  }, [sentAtText, durationText]);
 
   const data = { message, defaultExpanded: isLatest };
 
@@ -450,15 +511,40 @@ export function GroupAIMessage({
         }}
       >
         <Flex gap={2} h={8} mx={4} alignItems="center">
-          <Box display="flex" alignItems="center">
+          <Box display="flex" alignItems="center" flexShrink={0}>
             <Avatar w="16px" h="18px" src={CodeMakerLogo} mr="2" />
-            <Box flex={1} color="text.secondary" fontSize="12px">
+            <Box color="text.secondary" fontSize="12px" whiteSpace="nowrap">
               CodeMaker
             </Box>
           </Box>
-          {!isShare && renderActionBar}
+          {isShowAction && timeInfoText && (
+            <Tooltip
+              label={`${sentAtText ? `发送时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
+            >
+              <Box
+                color="text.muted"
+                fontSize="12px"
+                whiteSpace="nowrap"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                minW="0"
+                dir="rtl"
+              >
+                <span
+                  style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+                >
+                  {timeInfoText}
+                </span>
+              </Box>
+            </Tooltip>
+          )}
+          {!isShare && (
+            <Box flex="0 0 auto" ml="auto">
+              {renderActionBar}
+            </Box>
+          )}
         </Flex>
-        <Box className="m-2 mx-4 px-0 py-1" color="text.primary">
+        <Box className="m-2 mx-4 mb-1 px-0 py-1" color="text.primary">
           <MergedMessagesRenderer
             messages={messages}
             isLatest={isLatest}
@@ -469,25 +555,44 @@ export function GroupAIMessage({
             setRecommendFileChanges={setRecommendFileChanges}
           />
         </Box>
-        {
-          !isShare && !isStreaming && !isProcessing && !isSearching &&
-          <Flex
-            gap={2}
-            h={8}
-            mx={4}
-            mb={4}
-            alignItems="center"
-            justifyContent="right"
-          >
-            {renderActionBar}
-          </Flex>
-        }
+        {!isShare &&
+          !isStreaming &&
+          !isProcessing &&
+          !isSearching &&
+          !isSubagentProcessing && (
+            <Flex gap={2} h={8} mx={4} mb={4} alignItems="center">
+              {isShowAction && timeInfoText && (
+                <Tooltip
+                  label={`${sentAtText ? `发送时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
+                >
+                  <Box
+                    color="text.muted"
+                    fontSize="12px"
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                    minW="0"
+                    dir="rtl"
+                  >
+                    <span
+                      style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+                    >
+                      {timeInfoText}
+                    </span>
+                  </Box>
+                </Tooltip>
+              )}
+              <Box flex="0 0 auto" ml="auto">
+                {renderActionBar}
+              </Box>
+            </Flex>
+          )}
       </Box>
       {isLatest && !!Object?.keys(recommendFileChanges)?.length && (
         <FileRecommendApplyPanel
           data={{
             ...data,
-            sessionId: currentSession?._id || ''
+            sessionId: currentSession?._id || '',
           }}
           recommendFileChanges={recommendFileChanges}
         />

@@ -43,7 +43,7 @@ import { useChatConfig } from '../../store/chat-config';
 import { useExtensionStore } from '../../store/extension';
 
 // 模型图标映射
-const ModelIconMap: Record<ChatModel, any> = {
+const ModelIconMap: Partial<Record<ChatModel, any>> = {
   [ChatModel.Claude45Opus20251101]: claude3Icon,
   [ChatModel.Claude45Opus20251101Thinking]: claude3Icon,
   [ChatModel.QWen]: qwenIcon,
@@ -87,7 +87,7 @@ const ModelIconMap: Record<ChatModel, any> = {
   [ChatModel.Glm46]: glmIcon,
   [ChatModel.Glm47]: glmIcon,
   [ChatModel.Glm5]: glmIcon,
-  [ChatModel.Claude46Opus]: claude3Icon
+  [ChatModel.Claude46]: claude3Icon,
 };
 
 const ChatModelSelector = ({ disabled }: { disabled?: boolean }) => {

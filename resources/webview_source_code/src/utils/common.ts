@@ -1,10 +1,10 @@
 import { minimatch } from 'minimatch';
 
 export const CODE_SEARCH_URL =
-  'http://localhost:3001';
+  'http://office-code-maker.nie.netease.com/proxy/code_search/api/v1';
 
 export const CODE_SEARCH_URL_NEW =
-  'http://localhost:3001';
+  'https://office-ai.nie.netease.com/api/v1/apps/a01dde01-b213-459f-84ce-96f3f82c21fc/chat';
 
 export function removeTrailingPunctuation(str: string) {
   const regex = /[.。?？!！]+$/;
@@ -189,6 +189,31 @@ export const pathsMatch = (
   return allPathsMatch;
 };
 
+/**
+ * 标准化工作区路径
+ * - 统一使用正斜杠
+ * - 转换为小写（Windows 路径不区分大小写）
+ * - 去除末尾斜杠
+ * @param path 工作区路径
+ * @returns 标准化后的路径
+ */
+export function normalizeWorkspacePath(path: string): string {
+  if (!path) return '';
+  return removeTrailingSlash(path.replace(/\\/g, '/').toLowerCase());
+}
+
+/**
+ * 判断两个工作区路径是否相同
+ * - 忽略大小写和分隔符差异
+ * @param path1 路径1
+ * @param path2 路径2
+ * @returns 是否相同
+ */
+export function isSameWorkspace(path1?: string, path2?: string): boolean {
+  if (!path1 || !path2) return false;
+  return normalizeWorkspacePath(path1) === normalizeWorkspacePath(path2);
+}
+
 export function versionCompare(a: string, b: string) {
   if (a === b) {
     return 0;
@@ -216,4 +241,38 @@ export function versionCompare(a: string, b: string) {
   }
   // Otherwise they are the same.
   return 0;
+}
+
+export function jetbrainsVersionCompare(a: string, b: string): number {
+  if (a === b) {
+    return 0;
+  }
+
+  // 处理复杂版本号，将非数字字符替换为点号进行分割
+  const normalizeVersion = (version: string): string[] => {
+    return version
+      .replace(/[^0-9.]/g, '.') // 将非数字非点号字符替换为点号
+      .split('.')
+      .filter(part => part !== '') // 移除空字符串
+      .map(part => part || '0'); // 确保没有空值
+  };
+
+  const a_components = normalizeVersion(a);
+  const b_components = normalizeVersion(b);
+  const maxLen = Math.max(a_components.length, b_components.length);
+
+  // 补齐较短的版本号组件
+  for (let i = 0; i < maxLen; i++) {
+    const aNum = parseInt(a_components[i] || '0');
+    const bNum = parseInt(b_components[i] || '0');
+
+    if (aNum > bNum) {
+      return 1;  // a 大于 b
+    }
+    if (aNum < bNum) {
+      return -1; // a 小于 b
+    }
+  }
+
+  return 0; // 版本相等
 }

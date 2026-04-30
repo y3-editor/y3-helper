@@ -55,11 +55,14 @@ export function getToolCallQuery(name: string, args: string) {
     case 'generate_codewiki_structure':
       return 'Codewiki目录架构';
     case 'grep_search':
-      return <div>使用 grep 搜索 <code>{toolParams.regex}</code></div>;
+      return `使用 grep 搜索 ${toolParams.regex}`;
     case 'use_skill':
       return '使用Skill:';
     case 'ask_user_question':
       return '向用户提问';
+    case 'task': {
+      return `运行 Subagent`
+    }
     default:
       return '获取如下信息';
   }
@@ -122,6 +125,17 @@ export function formatResultContent(options: {
   } = options;
   let resultContent = result.content;
   try {
+    // Task 工具（subagent）特殊处理：
+    // 1. 如果有内容，直接返回
+    // 2. 如果没有内容（subagent 正在执行中），返回占位符
+    // 3. 不走 toolResponse 检查，因为 subagent 工具调用是全自动的
+    if (tool.function.name === 'task') {
+      if (result.content) {
+        return result.content;
+      }
+      // Subagent 正在执行中，返回占位符（UI 层会显示执行状态）
+      return '[Subagent executing...]';
+    }
     // 首先检查 toolResponse[tool.id] 是否为 false
     if (!toolResponse) {
       switch (tool.function.name) {
@@ -132,6 +146,8 @@ export function formatResultContent(options: {
           resultContent = processWriteTodoDenied();
           break;
         default:
+          console.log('format user deni');
+
           resultContent = 'The user denied this operation.';
       }
     } else if (tool.function.name === 'retrieve_code') {

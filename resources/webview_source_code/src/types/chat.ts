@@ -17,3 +17,20 @@ export interface TokenUsage {
     "text_tokens": number
   }
 }
+
+export interface TokenComsumed {
+  input: number;
+  output: number;
+  inputCost: number;
+  outputCost: number;
+  systemTokens: number;
+  systemToolTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  comporessPromptTokens: number;
+  comporessCompletionTokens: number;
+  readCacheTokens: number;
+  skillTokens: number;
+  ruleTokens: number;
+  mcpTokens: number;
+}

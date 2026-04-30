@@ -22,6 +22,7 @@ export enum ChatModelSupplyChannel {
   GEMINI = 'gemini',
   CLAUDE = 'claude',
   KIMI = 'kimi',
+  GLM = 'glm',
 }
 
 // TODO: 兼容老会话为百川的情况，后续不需要可以删除
@@ -30,6 +31,30 @@ export const BAI_CHUAN = 'baichuan2' as ChatModel;
 
 export const getAIGWModel = (model: ChatModel) => {
   return (useChatConfig.getState().chatModels[model]?.useModel || model) as ChatModel
+}
+
+/**
+ * 获取可用的模型，当指定模型不在可用列表中时提供 fallback
+ * @param model 目标模型（应该是实际使用的模型，即 useModel 或等效值）
+ * @param fallback 当模型不可用时的备选模型，默认为 Claude4Sonnet20250514
+ * @returns 可用的模型
+ */
+export const getAIGWModelWithFallback = (model: ChatModel, fallback?: ChatModel): ChatModel => {
+  const modelCodeList = []
+  for (const key in useChatConfig.getState().chatModels) {
+    const modelConfig = useChatConfig.getState().chatModels[key];
+    if (modelConfig && modelConfig.useModel) {
+      modelCodeList.push(modelConfig.useModel);
+    }
+  }
+
+  // 如果找到模型配置，使用它的 useModel 或原始名称
+  if (modelCodeList.includes(model)) {
+    return model as ChatModel;
+  }
+
+  // 如果没有找到模型配置，使用指定的 fallback 或默认的模型
+  return (fallback || ChatModel.Claude4Sonnet20250514) as ChatModel;
 }
 
 export const getModelSupplyChannel = (model: ChatModel) => {
@@ -52,9 +77,11 @@ export interface ChatConfig {
 
 export type ModelMaxTokenType = Record<IChatModelConfig['code'], number>;
 
+export const DEFAULT_USAGE_MODEL = ChatModel.Claude46
+
 const DEFAULT_CONFIG: ChatConfig = {
   backend: GptBackendService.Azure,
-  model: ChatModel.Claude4Sonnet20250514,
+  model: DEFAULT_USAGE_MODEL,
   max_tokens: CHAT_MIN_TOKENS,
   temperature: 0.7,
   presence_penalty: 0,
@@ -148,8 +175,8 @@ export const useChatConfig = create<ChatConfigStore>()(
       },
 
       // 分别存储普通聊天和仓库智聊的默认模型
-      normalChatModel: ChatModel.Claude4Sonnet20250514,
-      codebaseChatModel: ChatModel.Claude4Sonnet20250514,
+      normalChatModel: DEFAULT_USAGE_MODEL,
+      codebaseChatModel: DEFAULT_USAGE_MODEL,
       setNormalChatModel: (model: IChatModelConfig['code']) => {
         set(() => ({ normalChatModel: model }));
       },
@@ -276,3 +303,9 @@ export const useChatConfig = create<ChatConfigStore>()(
 );
 
 export const MERMAID_SIGN = 'Graph';
+
+if (process.env.NODE_ENV === 'development') {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  window.chatConfigStore = useChatConfig;
+}

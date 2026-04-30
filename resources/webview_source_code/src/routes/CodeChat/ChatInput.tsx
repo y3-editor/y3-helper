@@ -18,6 +18,7 @@ import { Box } from '@chakra-ui/react';
 import ChatPluginAppRunner from './ChatPluginAppRunner';
 import ChatMcpPromptRunner from './ChatMcpPromptRunner';
 import ChatSkillPromptRunner from './ChatSkillPromptRunner';
+import ChatAgentPromptRunner from './ChatAgentPromptRunner';
 import ChatPromptAppRunner from './ChatPromptAppRunner';
 import ChatAttachs from './ChatAttachs';
 import CodeChatInputActionBar from './CodeChatInputActionBar';
@@ -43,10 +44,19 @@ import { ChatRole } from '../../types/chat';
 import { useSelectImageAttach } from './ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
 import { ParseImgType } from '../../services/chatModel';
 import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
+import { useAgentPromptStore } from '../../store/agent-prompt';
+import {
+  AgentTaskDirective,
+  buildAgentTaskDirective,
+} from '../../modules/subagent/utils/messages';
+import { isSameWorkspace } from '../../utils/common';
 // import EventBus, { EBusEvent } from '../../utils/eventbus';
 
 interface ChatInputProp {
-  handleSubmit: (prompt: string) => Promise<void>;
+  handleSubmit: (
+    prompt: string,
+    options?: { agentTaskDirective?: AgentTaskDirective },
+  ) => Promise<void>;
   handleInputChange: DebouncedFunc<() => Promise<void>>;
   tokenNumber: number;
   isFocused: boolean;
@@ -80,9 +90,9 @@ function ChatInput(props: ChatInputProp) {
 
   const { toast } = useCustomToast();
   const attachs = useChatAttach((state) => state.attachs);
-  const chatModels = useChatConfig((state) => state.chatModels)
+  const chatModels = useChatConfig((state) => state.chatModels);
   const { shouldSubmit } = useSubmitHandler();
-  const selectImageHook = useSelectImageAttach()
+  const selectImageHook = useSelectImageAttach();
 
   const updateChatPrompt = useChatPromptStore((state) => state.update);
   // const isStreaming = useChatStreamStore((state) => state.isStreaming);
@@ -116,10 +126,45 @@ function ChatInput(props: ChatInputProp) {
   const { updateHistory } = useEventContext();
   const { stopRunningTerminal } = useTerminalMessage();
 
+  const agentRunner = useAgentPromptStore((state) => state.runner);
+  const clearAgentRunner = useAgentPromptStore((state) => state.clear);
+
+  const submitChatInput = React.useCallback(async () => {
+    const userInput = inputRef.current?.value.trim() || '';
+    // 当用户选择了 Agent Runner 时，构建约束指令注入到消息中，
+    // 强制主模型调用 task 工具并携带对应的 subagent_type
+    const agentTaskDirective = buildAgentTaskDirective({
+      chatType,
+      agentName: agentRunner?.name,
+    });
+
+    await handleSubmit(userInput, { agentTaskDirective });
+
+    if (agentTaskDirective) {
+      clearAgentRunner();
+    }
+
+    // 重置往上查找的历史会话和草稿
+    setCurrentSendMessageIndex(null);
+    inputDraftRef.current = '';
+  }, [agentRunner?.name, chatType, clearAgentRunner, handleSubmit, inputRef]);
+
+  React.useEffect(() => {
+    if (chatType !== 'codebase' && agentRunner) {
+      clearAgentRunner();
+    }
+  }, [agentRunner, chatType, clearAgentRunner]);
+
   const handleSubmitWithTemplate = async (prompt: Prompt) => {
     promptRef.current = prompt;
     updateChatPrompt(prompt);
-    handleSubmit(prompt.prompt);
+    // 兼容 Prompt.extra_parameters 中携带的约束指令（如特殊内置模板）
+    const extraParams = prompt.extra_parameters as
+      | { agentTaskDirective?: AgentTaskDirective }
+      | undefined;
+    handleSubmit(prompt.prompt, {
+      agentTaskDirective: extraParams?.agentTaskDirective,
+    });
     // 重置往上查找的历史会话
     setCurrentSendMessageIndex(null);
   };
@@ -139,10 +184,12 @@ function ChatInput(props: ChatInputProp) {
           const start = inputRef.current.selectionStart || 0;
           const end = inputRef.current.selectionEnd || 0;
           const value = inputRef.current.value;
-          const newValue = value.substring(0, start) + text + value.substring(end);
+          const newValue =
+            value.substring(0, start) + text + value.substring(end);
           inputRef.current.value = newValue;
           // 将光标移动到插入文本后
-          inputRef.current.selectionStart = inputRef.current.selectionEnd = start + text.length;
+          inputRef.current.selectionStart = inputRef.current.selectionEnd =
+            start + text.length;
         }
 
         setFocused(true);
@@ -291,7 +338,10 @@ function ChatInput(props: ChatInputProp) {
             const idealScrollTop = cursorHeight - textareaHeight / 2;
 
             // 确保滚动位置不会超出范围
-            input.scrollTop = Math.max(0, Math.min(idealScrollTop, input.scrollHeight - textareaHeight));
+            input.scrollTop = Math.max(
+              0,
+              Math.min(idealScrollTop, input.scrollHeight - textareaHeight),
+            );
           }
         });
       };
@@ -430,26 +480,42 @@ function ChatInput(props: ChatInputProp) {
             if (currentSendMessageIndex === null) {
               // 尚未进入历史模式：保存当前草稿，进入历史模式从最新一条开始
               inputDraftRef.current = currentInput;
-              switchToHistoryIndex(filterSendMessage.length - 1, filterSendMessage);
+              switchToHistoryIndex(
+                filterSendMessage.length - 1,
+                filterSendMessage,
+              );
             } else {
               // 已在历史模式中：检查当前输入是否与该 index 原始历史内容一致
-              const originalContent = getHistoryContent(filterSendMessage[currentSendMessageIndex]);
+              const originalContent = getHistoryContent(
+                filterSendMessage[currentSendMessageIndex],
+              );
               if (currentInput !== originalContent) {
                 // 用户在历史基础上修改了内容 → 将修改内容存为新草稿，重置索引重新翻
                 inputDraftRef.current = currentInput;
-                switchToHistoryIndex(filterSendMessage.length - 1, filterSendMessage);
+                switchToHistoryIndex(
+                  filterSendMessage.length - 1,
+                  filterSendMessage,
+                );
               } else {
                 // 未修改，正常向上翻
-                switchToHistoryIndex(Math.max(currentSendMessageIndex - 1, 0), filterSendMessage);
+                switchToHistoryIndex(
+                  Math.max(currentSendMessageIndex - 1, 0),
+                  filterSendMessage,
+                );
               }
             }
           }
         }
 
         if (checkValueOfPressedKeyboard(event, ['ArrowDown'])) {
-          if (filterSendMessage.length > 0 && currentSendMessageIndex !== null) {
+          if (
+            filterSendMessage.length > 0 &&
+            currentSendMessageIndex !== null
+          ) {
             const currentInput = inputRef.current?.value ?? '';
-            const originalContent = getHistoryContent(filterSendMessage[currentSendMessageIndex]);
+            const originalContent = getHistoryContent(
+              filterSendMessage[currentSendMessageIndex],
+            );
 
             if (currentInput !== originalContent) {
               // 用户在历史基础上修改了内容 → 将修改内容存为新草稿，退出历史模式
@@ -524,12 +590,7 @@ function ChatInput(props: ChatInputProp) {
       if (shouldSubmit(event)) {
         event.stopPropagation();
         event.preventDefault();
-        const trimmedUserInput = inputRef.current?.value.trim() || '';
-        // 当有 MCP runner 时，即使没有用户输入也允许发送
-        await handleSubmit(trimmedUserInput);
-        // 重置往上查找的历史会话和草稿
-        setCurrentSendMessageIndex(null);
-        inputDraftRef.current = '';
+        await submitChatInput();
       }
     },
     [
@@ -539,11 +600,11 @@ function ChatInput(props: ChatInputProp) {
       getHistoryContent,
       messagePool,
       shouldSubmit,
-      handleSubmit,
-      inputRef,
       config.submitKey,
       handleInputChange,
+      inputRef,
       isMac,
+      submitChatInput,
     ],
   );
 
@@ -591,8 +652,23 @@ function ChatInput(props: ChatInputProp) {
     if (chatType === 'codebase') {
       if (workspaceInfo.repoName) {
         if (
+          currentSession?.chat_workspace &&
+          !isSameWorkspace(
+            currentSession.chat_workspace,
+            workspaceInfo.workspace,
+          )
+        ) {
+          return `当前会话关联仓库 ${currentSession.chat_workspace}，打开该仓库使用或关联至当前仓库`;
+        } else if (
+          !currentSession?.chat_workspace &&
           currentSession?.chat_repo &&
-          currentSession?.chat_repo !== workspaceInfo.repoName
+          currentSession?.chat_repo === workspaceInfo.repoName
+        ) {
+          return `当前旧会话仅关联仓库名 ${currentSession.chat_repo}，建议新建会话或关联至当前仓库`;
+        } else if (
+          currentSession?.chat_repo &&
+          currentSession?.chat_repo !== workspaceInfo.repoName &&
+          !currentSession?.chat_workspace
         ) {
           return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库使用或新建会话`;
         } else {
@@ -606,8 +682,10 @@ function ChatInput(props: ChatInputProp) {
           return `${config.submitKey} 发送`;
         }
       } else {
-        if (currentSession?.chat_repo) {
-          return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库后可继续对话`;
+        if (currentSession?.chat_workspace || currentSession?.chat_repo) {
+          const repoInfo =
+            currentSession?.chat_workspace || currentSession?.chat_repo;
+          return `当前会话关联仓库 ${repoInfo}，打开该仓库后可继续对话`;
         } else {
           return `未识别到仓库信息，请打开代码仓库后使用本功能`;
         }
@@ -628,14 +706,16 @@ function ChatInput(props: ChatInputProp) {
     }
     return _placeholder;
   }, [
-    attachs,
-    config.submitKey,
-    isDisabledAttachs,
     pluginApp,
     chatType,
-    workspaceInfo.repoName,
-    currentSession,
+    attachs?.attachType,
+    config.submitKey,
     isMac,
+    isDisabledAttachs,
+    workspaceInfo.repoName,
+    workspaceInfo.workspace,
+    currentSession?.chat_workspace,
+    currentSession?.chat_repo,
     codebaseChatMode,
     isOpenspecInitialized,
     isSpeckitInitialized,
@@ -647,8 +727,23 @@ function ChatInput(props: ChatInputProp) {
       if (!workspaceInfo.repoName) {
         inputDisabled = true;
       } else if (
+        // 优先检查 chat_workspace 匹配
+        currentSession?.chat_workspace &&
+        !isSameWorkspace(currentSession.chat_workspace, workspaceInfo.workspace)
+      ) {
+        inputDisabled = true;
+      } else if (
+        // 同仓库名但没有 chat_workspace 的旧会话 - 需要禁用
+        !currentSession?.chat_workspace &&
         currentSession?.chat_repo &&
-        currentSession?.chat_repo !== workspaceInfo.repoName
+        currentSession?.chat_repo === workspaceInfo.repoName
+      ) {
+        inputDisabled = true;
+      } else if (
+        // 不同仓库名且没有 chat_workspace 的旧会话
+        currentSession?.chat_repo &&
+        currentSession?.chat_repo !== workspaceInfo.repoName &&
+        !currentSession?.chat_workspace
       ) {
         inputDisabled = true;
       } else if (
@@ -657,10 +752,7 @@ function ChatInput(props: ChatInputProp) {
         !isOpenspecInitialized
       ) {
         inputDisabled = true;
-      } else if (
-        codebaseChatMode === 'speckit' &&
-        !isSpeckitInitialized
-      ) {
+      } else if (codebaseChatMode === 'speckit' && !isSpeckitInitialized) {
         inputDisabled = true;
       }
 
@@ -691,18 +783,20 @@ function ChatInput(props: ChatInputProp) {
       );
     }
   }, [
-    currentSession?.chat_repo,
-    placeholder,
-    handleInputKeyDown,
-    handlePaste,
-    inputRef,
-    setFocused,
     chatType,
     workspaceInfo.repoName,
-    handleInputChange,
+    workspaceInfo.workspace,
+    currentSession?.chat_workspace,
+    currentSession?.chat_repo,
     codebaseChatMode,
     isOpenspecInitialized,
     isSpeckitInitialized,
+    inputRef,
+    placeholder,
+    handlePaste,
+    handleInputKeyDown,
+    handleInputChange,
+    setFocused,
   ]);
 
   return (
@@ -733,6 +827,7 @@ function ChatInput(props: ChatInputProp) {
           <ChatPluginAppRunner />
           <ChatMcpPromptRunner />
           <ChatSkillPromptRunner />
+          <ChatAgentPromptRunner />
           <ChatPromptAppRunner />
           <ChatAttachs />
         </Box>
@@ -745,10 +840,7 @@ function ChatInput(props: ChatInputProp) {
           triggerPluginProtalRef={triggerPluginProtalRef}
           promptProtalRef={promptProtalRef}
           uploadImgRef={uploadImgRef}
-          onSend={() => {
-            const userInput = inputRef.current?.value || '';
-            handleSubmit(userInput);
-          }}
+          onSend={submitChatInput}
           onStop={() => {
             stopRunningTerminal();
             onStreamStop();

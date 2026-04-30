@@ -29,7 +29,10 @@ interface ExtensionStore {
   // IDE 版本号
   appVersion: string | null;
   setAppVersion: (version: string) => void;
-  // Y3Helper: 固定模型名（用户自定义模型）
+  // Subagent 功能开关
+  subagentEnable: boolean;
+  setSubagentEnable: (enable: boolean) => void;
+  // Y3Helper: 固定模型（从 VSCode Settings 读取）
   fixedModel: string;
   setFixedModel: (model: string) => void;
 }
@@ -71,6 +74,12 @@ export const useExtensionStore = create<ExtensionStore>()((set) => ({
   setAppVersion: (version) => {
     set(() => ({ appVersion: version }));
   },
+  // 默认关闭 subagent 功能，由 INIT_DATA 控制
+  subagentEnable: false,
+  setSubagentEnable: (enable: boolean) => {
+    set(() => ({ subagentEnable: enable }));
+  },
+  // Y3Helper: 固定模型
   fixedModel: '',
   setFixedModel: (model: string) => {
     set(() => ({ fixedModel: model }));

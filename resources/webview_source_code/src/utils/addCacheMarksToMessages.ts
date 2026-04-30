@@ -1,24 +1,38 @@
 import { cloneDeep, findLastIndex, isEqual } from "lodash";
-import { ChatMessage } from "../services";
+import { ChatMessage, ChatMessageContent } from "../services";
 import { Tool } from "../store/workspace";
 
 export default function addCacheMarksToMessages(messages: ChatMessage[]): ChatMessage[] {
   const sendMessages = cloneDeep(messages);
+
+  // Breakpoints 1-3: 标记 system message 的各 content block
+  const systemMessage = sendMessages.find(m => m.role === 'system');
+  if (systemMessage && Array.isArray(systemMessage.content)) {
+    for (const block of systemMessage.content) {
+      if (block.type === 'text') {
+        (block as any).cache_control = { type: "ephemeral" };
+      }
+    }
+  }
+
+  // Breakpoint 4: 标记最后一条 user/tool 消息
   const lastIndex = sendMessages.length - 1;
   const lastMessage = sendMessages[lastIndex];
   if (lastMessage.role === 'user') {
-    lastMessage.content = typeof lastMessage.content === "string"
-      ? [
+    if (typeof lastMessage.content === "string") {
+      lastMessage.content = [
         {
-          type: "text",
+          type: ChatMessageContent.Text,
           text: lastMessage.content,
           cache_control: {
             type: "ephemeral",
           },
         },
-      ]
-      : lastMessage.content.map((content, contentIndex) =>
-        contentIndex === lastMessage.content.length - 1
+      ];
+    } else {
+      const len = lastMessage.content.length;
+      lastMessage.content = lastMessage.content.map((content: any, contentIndex: number) =>
+        contentIndex === len - 1
           ? {
             ...content,
             cache_control: {
@@ -26,21 +40,25 @@ export default function addCacheMarksToMessages(messages: ChatMessage[]): ChatMe
             },
           }
           : content
-      ) as any
+      ) as any;
+    }
   } else if (lastMessage.role === 'tool') {
-    const secondLastMessage = sendMessages[lastIndex - 1];
-    if (secondLastMessage.role === 'assistant' && secondLastMessage.tool_calls) {
-      secondLastMessage.tool_calls = secondLastMessage.tool_calls.map((toolCall) => ({
-        ...toolCall,
+    // 统一处理串行/并行: 向前查找对应的 assistant 消息
+    let i = lastIndex - 1;
+    while (i >= 0 && sendMessages[i].role === 'tool') i--;
+    const assistantMessage = sendMessages[i];
+    if (assistantMessage?.role === 'assistant' && assistantMessage.tool_calls) {
+      // BP4: 标记最后一个 tool_call（AIGW 当前唯一识别的 tool 侧缓存位置）
+      const tcs = assistantMessage.tool_calls;
+      tcs[tcs.length - 1] = {
+        ...tcs[tcs.length - 1],
         cache_control: {
           type: "ephemeral",
         },
-      }));
-      lastMessage.cache_control = {
-        type: "ephemeral",
-      }
+      } as any;
     }
   }
+
   return sendMessages;
 }
 

@@ -1,4 +1,4 @@
-import { c as en, g as il } from "./react-vendor-f5e19699.js";
+import { c as en, g as il } from "./react-vendor-c9b42ec6.js";
 function ol(r, o) {
   return function() {
     return r.apply(o, arguments);
@@ -4495,283 +4495,6 @@ function print() { __p += __j.call(arguments, '') }
 })($o, $o.exports);
 var _y = $o.exports;
 const lT = il(_y);
-function wn() {
-}
-wn.prototype = { diff: function(o, i) {
-  var a, l = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, p = l.callback;
-  typeof l == "function" && (p = l, l = {}), this.options = l;
-  var d = this;
-  function w(M) {
-    return p ? (setTimeout(function() {
-      p(void 0, M);
-    }, 0), true) : M;
-  }
-  o = this.castInput(o), i = this.castInput(i), o = this.removeEmpty(this.tokenize(o)), i = this.removeEmpty(this.tokenize(i));
-  var I = i.length, S = o.length, E = 1, $ = I + S;
-  l.maxEditLength && ($ = Math.min($, l.maxEditLength));
-  var W = (a = l.timeout) !== null && a !== void 0 ? a : 1 / 0, V = Date.now() + W, O = [{ oldPos: -1, lastComponent: void 0 }], N = this.extractCommon(O[0], i, o, 0);
-  if (O[0].oldPos + 1 >= S && N + 1 >= I)
-    return w([{ value: this.join(i), count: i.length }]);
-  var P = -1 / 0, z = 1 / 0;
-  function pe() {
-    for (var M = Math.max(P, -E); M <= Math.min(z, E); M += 2) {
-      var ie = void 0, ye = O[M - 1], ue = O[M + 1];
-      ye && (O[M - 1] = void 0);
-      var Ie = false;
-      if (ue) {
-        var Fe = ue.oldPos - M;
-        Ie = ue && 0 <= Fe && Fe < I;
-      }
-      var Qe = ye && ye.oldPos + 1 < S;
-      if (!Ie && !Qe) {
-        O[M] = void 0;
-        continue;
-      }
-      if (!Qe || Ie && ye.oldPos + 1 < ue.oldPos ? ie = d.addToPath(ue, true, void 0, 0) : ie = d.addToPath(ye, void 0, true, 1), N = d.extractCommon(ie, i, o, M), ie.oldPos + 1 >= S && N + 1 >= I)
-        return w(vy(d, ie.lastComponent, i, o, d.useLongestToken));
-      O[M] = ie, ie.oldPos + 1 >= S && (z = Math.min(z, M - 1)), N + 1 >= I && (P = Math.max(P, M + 1));
-    }
-    E++;
-  }
-  if (p)
-    (function M() {
-      setTimeout(function() {
-        if (E > $ || Date.now() > V)
-          return p();
-        pe() || M();
-      }, 0);
-    })();
-  else
-    for (; E <= $ && Date.now() <= V; ) {
-      var J = pe();
-      if (J)
-        return J;
-    }
-}, addToPath: function(o, i, a, l) {
-  var p = o.lastComponent;
-  return p && p.added === i && p.removed === a ? { oldPos: o.oldPos + l, lastComponent: { count: p.count + 1, added: i, removed: a, previousComponent: p.previousComponent } } : { oldPos: o.oldPos + l, lastComponent: { count: 1, added: i, removed: a, previousComponent: p } };
-}, extractCommon: function(o, i, a, l) {
-  for (var p = i.length, d = a.length, w = o.oldPos, I = w - l, S = 0; I + 1 < p && w + 1 < d && this.equals(i[I + 1], a[w + 1]); )
-    I++, w++, S++;
-  return S && (o.lastComponent = { count: S, previousComponent: o.lastComponent }), o.oldPos = w, I;
-}, equals: function(o, i) {
-  return this.options.comparator ? this.options.comparator(o, i) : o === i || this.options.ignoreCase && o.toLowerCase() === i.toLowerCase();
-}, removeEmpty: function(o) {
-  for (var i = [], a = 0; a < o.length; a++)
-    o[a] && i.push(o[a]);
-  return i;
-}, castInput: function(o) {
-  return o;
-}, tokenize: function(o) {
-  return o.split("");
-}, join: function(o) {
-  return o.join("");
-} };
-function vy(r, o, i, a, l) {
-  for (var p = [], d; o; )
-    p.push(o), d = o.previousComponent, delete o.previousComponent, o = d;
-  p.reverse();
-  for (var w = 0, I = p.length, S = 0, E = 0; w < I; w++) {
-    var $ = p[w];
-    if ($.removed) {
-      if ($.value = r.join(a.slice(E, E + $.count)), E += $.count, w && p[w - 1].added) {
-        var V = p[w - 1];
-        p[w - 1] = p[w], p[w] = V;
-      }
-    } else {
-      if (!$.added && l) {
-        var W = i.slice(S, S + $.count);
-        W = W.map(function(N, P) {
-          var z = a[E + P];
-          return z.length > N.length ? z : N;
-        }), $.value = r.join(W);
-      } else
-        $.value = r.join(i.slice(S, S + $.count));
-      S += $.count, $.added || (E += $.count);
-    }
-  }
-  var O = p[I - 1];
-  return I > 1 && typeof O.value == "string" && (O.added || O.removed) && r.equals("", O.value) && (p[I - 2].value += O.value, p.pop()), p;
-}
-var Lc = /^[A-Za-z\xC0-\u02C6\u02C8-\u02D7\u02DE-\u02FF\u1E00-\u1EFF]+$/, Pc = /\S/, Ol = new wn();
-Ol.equals = function(r, o) {
-  return this.options.ignoreCase && (r = r.toLowerCase(), o = o.toLowerCase()), r === o || this.options.ignoreWhitespace && !Pc.test(r) && !Pc.test(o);
-};
-Ol.tokenize = function(r) {
-  for (var o = r.split(/([^\S\r\n]+|[()[\]{}'"\r\n]|\b)/), i = 0; i < o.length - 1; i++)
-    !o[i + 1] && o[i + 2] && Lc.test(o[i]) && Lc.test(o[i + 2]) && (o[i] += o[i + 2], o.splice(i + 1, 2), i--);
-  return o;
-};
-var ea = new wn();
-ea.tokenize = function(r) {
-  this.options.stripTrailingCr && (r = r.replace(/\r\n/g, `
-`));
-  var o = [], i = r.split(/(\n|\r\n)/);
-  i[i.length - 1] || i.pop();
-  for (var a = 0; a < i.length; a++) {
-    var l = i[a];
-    a % 2 && !this.options.newlineIsToken ? o[o.length - 1] += l : (this.options.ignoreWhitespace && (l = l.trim()), o.push(l));
-  }
-  return o;
-};
-function yy(r, o, i) {
-  return ea.diff(r, o, i);
-}
-var my = new wn();
-my.tokenize = function(r) {
-  return r.split(/(\S.+?[.!?])(?=\s+|$)/);
-};
-var wy = new wn();
-wy.tokenize = function(r) {
-  return r.split(/([{}:;,]|\s+)/);
-};
-function Io(r) {
-  "@babel/helpers - typeof";
-  return typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? Io = function(o) {
-    return typeof o;
-  } : Io = function(o) {
-    return o && typeof Symbol == "function" && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-  }, Io(r);
-}
-function Ps(r) {
-  return by(r) || Ay(r) || Ty(r) || xy();
-}
-function by(r) {
-  if (Array.isArray(r))
-    return Ws(r);
-}
-function Ay(r) {
-  if (typeof Symbol < "u" && Symbol.iterator in Object(r))
-    return Array.from(r);
-}
-function Ty(r, o) {
-  if (r) {
-    if (typeof r == "string")
-      return Ws(r, o);
-    var i = Object.prototype.toString.call(r).slice(8, -1);
-    if (i === "Object" && r.constructor && (i = r.constructor.name), i === "Map" || i === "Set")
-      return Array.from(r);
-    if (i === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(i))
-      return Ws(r, o);
-  }
-}
-function Ws(r, o) {
-  (o == null || o > r.length) && (o = r.length);
-  for (var i = 0, a = new Array(o); i < o; i++)
-    a[i] = r[i];
-  return a;
-}
-function xy() {
-  throw new TypeError(`Invalid attempt to spread non-iterable instance.
-In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
-}
-var Ey = Object.prototype.toString, ri = new wn();
-ri.useLongestToken = true;
-ri.tokenize = ea.tokenize;
-ri.castInput = function(r) {
-  var o = this.options, i = o.undefinedReplacement, a = o.stringifyReplacer, l = a === void 0 ? function(p, d) {
-    return typeof d > "u" ? i : d;
-  } : a;
-  return typeof r == "string" ? r : JSON.stringify(Hs(r, null, null, l), l, "  ");
-};
-ri.equals = function(r, o) {
-  return wn.prototype.equals.call(ri, r.replace(/,([\r\n])/g, "$1"), o.replace(/,([\r\n])/g, "$1"));
-};
-function Hs(r, o, i, a, l) {
-  o = o || [], i = i || [], a && (r = a(l, r));
-  var p;
-  for (p = 0; p < o.length; p += 1)
-    if (o[p] === r)
-      return i[p];
-  var d;
-  if (Ey.call(r) === "[object Array]") {
-    for (o.push(r), d = new Array(r.length), i.push(d), p = 0; p < r.length; p += 1)
-      d[p] = Hs(r[p], o, i, a, l);
-    return o.pop(), i.pop(), d;
-  }
-  if (r && r.toJSON && (r = r.toJSON()), Io(r) === "object" && r !== null) {
-    o.push(r), d = {}, i.push(d);
-    var w = [], I;
-    for (I in r)
-      r.hasOwnProperty(I) && w.push(I);
-    for (w.sort(), p = 0; p < w.length; p += 1)
-      I = w[p], d[I] = Hs(r[I], o, i, a, I);
-    o.pop(), i.pop();
-  } else
-    d = r;
-  return d;
-}
-var qs = new wn();
-qs.tokenize = function(r) {
-  return r.slice();
-};
-qs.join = qs.removeEmpty = function(r) {
-  return r;
-};
-function Sy(r, o, i, a, l, p, d) {
-  d || (d = {}), typeof d.context > "u" && (d.context = 4);
-  var w = yy(i, a, d);
-  if (!w)
-    return;
-  w.push({ value: "", lines: [] });
-  function I(z) {
-    return z.map(function(pe) {
-      return " " + pe;
-    });
-  }
-  for (var S = [], E = 0, $ = 0, W = [], V = 1, O = 1, N = function(pe) {
-    var J = w[pe], M = J.lines || J.value.replace(/\n$/, "").split(`
-`);
-    if (J.lines = M, J.added || J.removed) {
-      var ie;
-      if (!E) {
-        var ye = w[pe - 1];
-        E = V, $ = O, ye && (W = d.context > 0 ? I(ye.lines.slice(-d.context)) : [], E -= W.length, $ -= W.length);
-      }
-      (ie = W).push.apply(ie, Ps(M.map(function(Ge) {
-        return (J.added ? "+" : "-") + Ge;
-      }))), J.added ? O += M.length : V += M.length;
-    } else {
-      if (E)
-        if (M.length <= d.context * 2 && pe < w.length - 2) {
-          var ue;
-          (ue = W).push.apply(ue, Ps(I(M)));
-        } else {
-          var Ie, Fe = Math.min(M.length, d.context);
-          (Ie = W).push.apply(Ie, Ps(I(M.slice(0, Fe))));
-          var Qe = { oldStart: E, oldLines: V - E + Fe, newStart: $, newLines: O - $ + Fe, lines: W };
-          if (pe >= w.length - 2 && M.length <= d.context) {
-            var Mt = /\n$/.test(i), It = /\n$/.test(a), st = M.length == 0 && W.length > Qe.oldLines;
-            !Mt && st && i.length > 0 && W.splice(Qe.oldLines, 0, "\\ No newline at end of file"), (!Mt && !st || !It) && W.push("\\ No newline at end of file");
-          }
-          S.push(Qe), E = 0, $ = 0, W = [];
-        }
-      V += M.length, O += M.length;
-    }
-  }, P = 0; P < w.length; P++)
-    N(P);
-  return { oldFileName: r, newFileName: o, oldHeader: l, newHeader: p, hunks: S };
-}
-function Rl(r) {
-  if (Array.isArray(r))
-    return r.map(Rl).join(`
-`);
-  var o = [];
-  r.oldFileName == r.newFileName && o.push("Index: " + r.oldFileName), o.push("==================================================================="), o.push("--- " + r.oldFileName + (typeof r.oldHeader > "u" ? "" : "	" + r.oldHeader)), o.push("+++ " + r.newFileName + (typeof r.newHeader > "u" ? "" : "	" + r.newHeader));
-  for (var i = 0; i < r.hunks.length; i++) {
-    var a = r.hunks[i];
-    a.oldLines === 0 && (a.oldStart -= 1), a.newLines === 0 && (a.newStart -= 1), o.push("@@ -" + a.oldStart + "," + a.oldLines + " +" + a.newStart + "," + a.newLines + " @@"), o.push.apply(o, a.lines);
-  }
-  return o.join(`
-`) + `
-`;
-}
-function Oy(r, o, i, a, l, p, d) {
-  return Rl(Sy(r, o, i, a, l, p, d));
-}
-function hT(r, o, i, a, l, p) {
-  return Oy(r, r, o, i, a, l, p);
-}
 var Fo = { exports: {} };
 Fo.exports;
 (function(r, o) {
@@ -5229,8 +4952,285 @@ Fo.exports;
   }
   r.exports = ge;
 })(Fo, Fo.exports);
-var Ry = Fo.exports;
-const pT = il(Ry);
+var vy = Fo.exports;
+const hT = il(vy);
+function wn() {
+}
+wn.prototype = { diff: function(o, i) {
+  var a, l = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, p = l.callback;
+  typeof l == "function" && (p = l, l = {}), this.options = l;
+  var d = this;
+  function w(M) {
+    return p ? (setTimeout(function() {
+      p(void 0, M);
+    }, 0), true) : M;
+  }
+  o = this.castInput(o), i = this.castInput(i), o = this.removeEmpty(this.tokenize(o)), i = this.removeEmpty(this.tokenize(i));
+  var I = i.length, S = o.length, E = 1, $ = I + S;
+  l.maxEditLength && ($ = Math.min($, l.maxEditLength));
+  var W = (a = l.timeout) !== null && a !== void 0 ? a : 1 / 0, V = Date.now() + W, O = [{ oldPos: -1, lastComponent: void 0 }], N = this.extractCommon(O[0], i, o, 0);
+  if (O[0].oldPos + 1 >= S && N + 1 >= I)
+    return w([{ value: this.join(i), count: i.length }]);
+  var P = -1 / 0, z = 1 / 0;
+  function pe() {
+    for (var M = Math.max(P, -E); M <= Math.min(z, E); M += 2) {
+      var ie = void 0, ye = O[M - 1], ue = O[M + 1];
+      ye && (O[M - 1] = void 0);
+      var Ie = false;
+      if (ue) {
+        var Fe = ue.oldPos - M;
+        Ie = ue && 0 <= Fe && Fe < I;
+      }
+      var Qe = ye && ye.oldPos + 1 < S;
+      if (!Ie && !Qe) {
+        O[M] = void 0;
+        continue;
+      }
+      if (!Qe || Ie && ye.oldPos + 1 < ue.oldPos ? ie = d.addToPath(ue, true, void 0, 0) : ie = d.addToPath(ye, void 0, true, 1), N = d.extractCommon(ie, i, o, M), ie.oldPos + 1 >= S && N + 1 >= I)
+        return w(yy(d, ie.lastComponent, i, o, d.useLongestToken));
+      O[M] = ie, ie.oldPos + 1 >= S && (z = Math.min(z, M - 1)), N + 1 >= I && (P = Math.max(P, M + 1));
+    }
+    E++;
+  }
+  if (p)
+    (function M() {
+      setTimeout(function() {
+        if (E > $ || Date.now() > V)
+          return p();
+        pe() || M();
+      }, 0);
+    })();
+  else
+    for (; E <= $ && Date.now() <= V; ) {
+      var J = pe();
+      if (J)
+        return J;
+    }
+}, addToPath: function(o, i, a, l) {
+  var p = o.lastComponent;
+  return p && p.added === i && p.removed === a ? { oldPos: o.oldPos + l, lastComponent: { count: p.count + 1, added: i, removed: a, previousComponent: p.previousComponent } } : { oldPos: o.oldPos + l, lastComponent: { count: 1, added: i, removed: a, previousComponent: p } };
+}, extractCommon: function(o, i, a, l) {
+  for (var p = i.length, d = a.length, w = o.oldPos, I = w - l, S = 0; I + 1 < p && w + 1 < d && this.equals(i[I + 1], a[w + 1]); )
+    I++, w++, S++;
+  return S && (o.lastComponent = { count: S, previousComponent: o.lastComponent }), o.oldPos = w, I;
+}, equals: function(o, i) {
+  return this.options.comparator ? this.options.comparator(o, i) : o === i || this.options.ignoreCase && o.toLowerCase() === i.toLowerCase();
+}, removeEmpty: function(o) {
+  for (var i = [], a = 0; a < o.length; a++)
+    o[a] && i.push(o[a]);
+  return i;
+}, castInput: function(o) {
+  return o;
+}, tokenize: function(o) {
+  return o.split("");
+}, join: function(o) {
+  return o.join("");
+} };
+function yy(r, o, i, a, l) {
+  for (var p = [], d; o; )
+    p.push(o), d = o.previousComponent, delete o.previousComponent, o = d;
+  p.reverse();
+  for (var w = 0, I = p.length, S = 0, E = 0; w < I; w++) {
+    var $ = p[w];
+    if ($.removed) {
+      if ($.value = r.join(a.slice(E, E + $.count)), E += $.count, w && p[w - 1].added) {
+        var V = p[w - 1];
+        p[w - 1] = p[w], p[w] = V;
+      }
+    } else {
+      if (!$.added && l) {
+        var W = i.slice(S, S + $.count);
+        W = W.map(function(N, P) {
+          var z = a[E + P];
+          return z.length > N.length ? z : N;
+        }), $.value = r.join(W);
+      } else
+        $.value = r.join(i.slice(S, S + $.count));
+      S += $.count, $.added || (E += $.count);
+    }
+  }
+  var O = p[I - 1];
+  return I > 1 && typeof O.value == "string" && (O.added || O.removed) && r.equals("", O.value) && (p[I - 2].value += O.value, p.pop()), p;
+}
+var Lc = /^[A-Za-z\xC0-\u02C6\u02C8-\u02D7\u02DE-\u02FF\u1E00-\u1EFF]+$/, Pc = /\S/, Ol = new wn();
+Ol.equals = function(r, o) {
+  return this.options.ignoreCase && (r = r.toLowerCase(), o = o.toLowerCase()), r === o || this.options.ignoreWhitespace && !Pc.test(r) && !Pc.test(o);
+};
+Ol.tokenize = function(r) {
+  for (var o = r.split(/([^\S\r\n]+|[()[\]{}'"\r\n]|\b)/), i = 0; i < o.length - 1; i++)
+    !o[i + 1] && o[i + 2] && Lc.test(o[i]) && Lc.test(o[i + 2]) && (o[i] += o[i + 2], o.splice(i + 1, 2), i--);
+  return o;
+};
+var ea = new wn();
+ea.tokenize = function(r) {
+  this.options.stripTrailingCr && (r = r.replace(/\r\n/g, `
+`));
+  var o = [], i = r.split(/(\n|\r\n)/);
+  i[i.length - 1] || i.pop();
+  for (var a = 0; a < i.length; a++) {
+    var l = i[a];
+    a % 2 && !this.options.newlineIsToken ? o[o.length - 1] += l : (this.options.ignoreWhitespace && (l = l.trim()), o.push(l));
+  }
+  return o;
+};
+function my(r, o, i) {
+  return ea.diff(r, o, i);
+}
+var wy = new wn();
+wy.tokenize = function(r) {
+  return r.split(/(\S.+?[.!?])(?=\s+|$)/);
+};
+var by = new wn();
+by.tokenize = function(r) {
+  return r.split(/([{}:;,]|\s+)/);
+};
+function Io(r) {
+  "@babel/helpers - typeof";
+  return typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? Io = function(o) {
+    return typeof o;
+  } : Io = function(o) {
+    return o && typeof Symbol == "function" && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+  }, Io(r);
+}
+function Ps(r) {
+  return Ay(r) || Ty(r) || xy(r) || Ey();
+}
+function Ay(r) {
+  if (Array.isArray(r))
+    return Ws(r);
+}
+function Ty(r) {
+  if (typeof Symbol < "u" && Symbol.iterator in Object(r))
+    return Array.from(r);
+}
+function xy(r, o) {
+  if (r) {
+    if (typeof r == "string")
+      return Ws(r, o);
+    var i = Object.prototype.toString.call(r).slice(8, -1);
+    if (i === "Object" && r.constructor && (i = r.constructor.name), i === "Map" || i === "Set")
+      return Array.from(r);
+    if (i === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(i))
+      return Ws(r, o);
+  }
+}
+function Ws(r, o) {
+  (o == null || o > r.length) && (o = r.length);
+  for (var i = 0, a = new Array(o); i < o; i++)
+    a[i] = r[i];
+  return a;
+}
+function Ey() {
+  throw new TypeError(`Invalid attempt to spread non-iterable instance.
+In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
+}
+var Sy = Object.prototype.toString, ri = new wn();
+ri.useLongestToken = true;
+ri.tokenize = ea.tokenize;
+ri.castInput = function(r) {
+  var o = this.options, i = o.undefinedReplacement, a = o.stringifyReplacer, l = a === void 0 ? function(p, d) {
+    return typeof d > "u" ? i : d;
+  } : a;
+  return typeof r == "string" ? r : JSON.stringify(Hs(r, null, null, l), l, "  ");
+};
+ri.equals = function(r, o) {
+  return wn.prototype.equals.call(ri, r.replace(/,([\r\n])/g, "$1"), o.replace(/,([\r\n])/g, "$1"));
+};
+function Hs(r, o, i, a, l) {
+  o = o || [], i = i || [], a && (r = a(l, r));
+  var p;
+  for (p = 0; p < o.length; p += 1)
+    if (o[p] === r)
+      return i[p];
+  var d;
+  if (Sy.call(r) === "[object Array]") {
+    for (o.push(r), d = new Array(r.length), i.push(d), p = 0; p < r.length; p += 1)
+      d[p] = Hs(r[p], o, i, a, l);
+    return o.pop(), i.pop(), d;
+  }
+  if (r && r.toJSON && (r = r.toJSON()), Io(r) === "object" && r !== null) {
+    o.push(r), d = {}, i.push(d);
+    var w = [], I;
+    for (I in r)
+      r.hasOwnProperty(I) && w.push(I);
+    for (w.sort(), p = 0; p < w.length; p += 1)
+      I = w[p], d[I] = Hs(r[I], o, i, a, I);
+    o.pop(), i.pop();
+  } else
+    d = r;
+  return d;
+}
+var qs = new wn();
+qs.tokenize = function(r) {
+  return r.slice();
+};
+qs.join = qs.removeEmpty = function(r) {
+  return r;
+};
+function Oy(r, o, i, a, l, p, d) {
+  d || (d = {}), typeof d.context > "u" && (d.context = 4);
+  var w = my(i, a, d);
+  if (!w)
+    return;
+  w.push({ value: "", lines: [] });
+  function I(z) {
+    return z.map(function(pe) {
+      return " " + pe;
+    });
+  }
+  for (var S = [], E = 0, $ = 0, W = [], V = 1, O = 1, N = function(pe) {
+    var J = w[pe], M = J.lines || J.value.replace(/\n$/, "").split(`
+`);
+    if (J.lines = M, J.added || J.removed) {
+      var ie;
+      if (!E) {
+        var ye = w[pe - 1];
+        E = V, $ = O, ye && (W = d.context > 0 ? I(ye.lines.slice(-d.context)) : [], E -= W.length, $ -= W.length);
+      }
+      (ie = W).push.apply(ie, Ps(M.map(function(Ge) {
+        return (J.added ? "+" : "-") + Ge;
+      }))), J.added ? O += M.length : V += M.length;
+    } else {
+      if (E)
+        if (M.length <= d.context * 2 && pe < w.length - 2) {
+          var ue;
+          (ue = W).push.apply(ue, Ps(I(M)));
+        } else {
+          var Ie, Fe = Math.min(M.length, d.context);
+          (Ie = W).push.apply(Ie, Ps(I(M.slice(0, Fe))));
+          var Qe = { oldStart: E, oldLines: V - E + Fe, newStart: $, newLines: O - $ + Fe, lines: W };
+          if (pe >= w.length - 2 && M.length <= d.context) {
+            var Mt = /\n$/.test(i), It = /\n$/.test(a), st = M.length == 0 && W.length > Qe.oldLines;
+            !Mt && st && i.length > 0 && W.splice(Qe.oldLines, 0, "\\ No newline at end of file"), (!Mt && !st || !It) && W.push("\\ No newline at end of file");
+          }
+          S.push(Qe), E = 0, $ = 0, W = [];
+        }
+      V += M.length, O += M.length;
+    }
+  }, P = 0; P < w.length; P++)
+    N(P);
+  return { oldFileName: r, newFileName: o, oldHeader: l, newHeader: p, hunks: S };
+}
+function Rl(r) {
+  if (Array.isArray(r))
+    return r.map(Rl).join(`
+`);
+  var o = [];
+  r.oldFileName == r.newFileName && o.push("Index: " + r.oldFileName), o.push("==================================================================="), o.push("--- " + r.oldFileName + (typeof r.oldHeader > "u" ? "" : "	" + r.oldHeader)), o.push("+++ " + r.newFileName + (typeof r.newHeader > "u" ? "" : "	" + r.newHeader));
+  for (var i = 0; i < r.hunks.length; i++) {
+    var a = r.hunks[i];
+    a.oldLines === 0 && (a.oldStart -= 1), a.newLines === 0 && (a.newStart -= 1), o.push("@@ -" + a.oldStart + "," + a.oldLines + " +" + a.newStart + "," + a.newLines + " @@"), o.push.apply(o, a.lines);
+  }
+  return o.join(`
+`) + `
+`;
+}
+function Ry(r, o, i, a, l, p, d) {
+  return Rl(Oy(r, o, i, a, l, p, d));
+}
+function pT(r, o, i, a, l, p) {
+  return Ry(r, r, o, i, a, l, p);
+}
 var $s, $c;
 function dT() {
   if ($c)
@@ -5912,13 +5912,13 @@ export {
   lT as _,
   gy as a,
   _T as b,
-  hT as c,
-  yy as d,
+  pT as c,
+  my as d,
   gT as e,
   vT as f,
   rT as i,
   _y as l,
-  pT as m,
+  hT as m,
   dT as r,
   yT as t
 };

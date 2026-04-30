@@ -29,7 +29,17 @@ export function getTools(options: {
   const enablePlanMode = useChatStore.getState().currentSession()?.data?.enablePlanMode || false;
   const planModeState = useChatStore.getState().currentSession()?.data?.planModeState || 'off';
   const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch;
-  const enableGrep = true;
+  let enableGrep = false;
+  if (codeMakerVersion) {
+    if (isVSCode) {
+      enableGrep = versionCompare('2.7.0', codeMakerVersion) >= 0;
+    } else {
+      if (codeMakerVersion.includes('-')) {
+        const [_, pluginVersion] = codeMakerVersion.split('-');
+        enableGrep = !!pluginVersion && versionCompare('2.4.4', pluginVersion) >= 0;
+      }
+    }
+  }
 
   const tools: Tool[] = [
     {
@@ -185,13 +195,8 @@ export function getTools(options: {
               description:
                 '检索知识库片段的输入，来自用户问题，可以进行一些信息补充和润色。',
             },
-            docset_id: {
-              type: 'string',
-              description:
-                '指定要检索的数据集代号。',
-            },
           },
-          required: ['search_query', 'docset_id'],
+          required: ['search_query'],
         },
       },
     })
@@ -262,5 +267,6 @@ export function getTools(options: {
   if (isVSCode && versionCompare('2.9.9', codeMakerVersion || '') >= 0) {
     tools.push(generateCodewikiStructure({ language: 'zh' }));
   }
+
   return tools;
 }

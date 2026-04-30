@@ -16,7 +16,7 @@ export async function initUser() {
   return await codemakerPromptRequest.post('/categories:init_user');
 }
 
-const CODEMAKER_CLASSIFY = 'Y3Maker';
+const CODEMAKER_CLASSIFY = 'CodeMaker';
 
 export enum PromptCategoryType {
   // 该 type 不存在于接口中，当 is_global 为 true 时，表示该通用类
@@ -24,6 +24,7 @@ export enum PromptCategoryType {
   Project = 'project',
   User = 'user',
   Plugin = 'plugin',
+  Agent= 'agent',
   MCP = 'mcp',
   CodeWiki = 'codewiki',
   Skill = 'skills',
@@ -34,6 +35,7 @@ export const promptCategoryNameMap = {
   [PromptCategoryType.Project]: '项目快捷指令',
   [PromptCategoryType.User]: '我的自定义指令',
   [PromptCategoryType.Plugin]: '我订阅的插件指令',
+  [PromptCategoryType.Agent]: 'Agent',
   [PromptCategoryType.MCP]: 'MCP',
   [PromptCategoryType.CodeWiki]: 'CodeWiki',
   [PromptCategoryType.Skill]: 'Skills',
@@ -44,6 +46,7 @@ export const maskTypeNameMap = {
   [PromptCategoryType.Project]: '团队聊天模式',
   [PromptCategoryType.User]: '我的聊天模式',
   [PromptCategoryType.Plugin]: '',
+  [PromptCategoryType.Agent]: '',
   [PromptCategoryType.MCP]: 'MCP',
   [PromptCategoryType.CodeWiki]: '',
   [PromptCategoryType.Skill]: 'Skills',
@@ -100,7 +103,18 @@ export interface PromptAppShortcut {
 }
 
 export async function getPromptCategories(params?: Partial<PromptCategory>) {
-  return params ? [] : [];
+  const { data } = await codemakerPromptRequest.get<{
+    items: PromptCategory[];
+    total: number;
+  }>(`/categories`, {
+    params: {
+      classify: CODEMAKER_CLASSIFY,
+      // TODO: 暂时请求前 100 个 category
+      _num: 100,
+      ...params,
+    },
+  });
+  return data.items;
 }
 
 /**
@@ -133,11 +147,14 @@ export async function getUserCategoryId() {
 }
 
 export async function getUserPrompts() {
-  return [];
+  const username = useAuthStore.getState().username;
+  const code = `@root.${username}.codemaker`;
+  return await getPrompts(code);
 }
 
 export async function getSystemPrompts() {
-  return [];
+  const code = `@root.common.codemaker`;
+  return await getPrompts(code);
 }
 
 export async function getProjectPrompts() {

@@ -52,7 +52,6 @@
     "GET_CODEMAKERIGNORE_STATE": "Y3Maker暂不实现"
   },
   "excluded_upstream_dirs": {
-    "src/modules/": "CodeMaker内部模块系统，Y3不需要",
     "src/telemetry/": "CodeMaker内部遥测，Y3用stub替代",
     "src/patchSetup.ts": "CodeMaker内部Sentry补丁",
     "src/routes/CodeReview/index.tsx": "Y3无代码审查页面组件，依赖store/localReview等不存在的模块",

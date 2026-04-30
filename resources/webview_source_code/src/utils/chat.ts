@@ -1,6 +1,7 @@
 import { isNumber } from 'lodash';
 import { ChatMessage } from '../services';
 import { ChatRole } from '../types/chat';
+import { ChatSession } from '../store/chat';
 
 const MAX_FILE_READ_LENGTH = 150000;
 const DS_MAX_FILE_READ_LENGTH = 100000;
@@ -13,34 +14,11 @@ export function getMaxFileReadLength(model: string): number {
   }
 }
 
-export interface ChatSession {
-  _id?: string;
-  data?: {
-    messages: ChatMessage[];
-    consumedTokens: {
-      input: number;
-      output: number;
-      inputCost: number;
-      outputCost: number;
-      systemTokens: number;
-      systemToolTokens: number;
-      promptTokens: number;
-      completionTokens: number;
-      comporessPromptTokens: number;
-      comporessCompletionTokens: number;
-      readCacheTokens: number;
-      skillTokens: number
-      ruleTokens: number
-      mcpTokens: number
-    };
-  };
-}
-
 export function createNewSession(
   message: ChatMessage,
   currentSession: ChatSession | null,
   chatType: string,
-  current?: boolean
+  current?: boolean,
 ): ChatMessage[] {
   if (!currentSession || !message.id) return [];
 
@@ -70,7 +48,8 @@ export function createNewSession(
       newMessage = messages.slice(0, endIndex);
     } else {
       // 普通聊天：保持原有逻辑，截取到当前消息+对应的回答
-      newMessage = currentSession?.data?.messages.slice(0, currentIndex + 2) || [];
+      newMessage =
+        currentSession?.data?.messages.slice(0, currentIndex + 2) || [];
     }
   }
 
@@ -103,11 +82,12 @@ function cleanupCompressionFlags(messages: ChatMessage[]): ChatMessage[] {
   });
 }
 
-
 /**
  * 创建消耗的tokens
  */
-export function createConsumedTokens(): NonNullable<ChatSession['data']>['consumedTokens'] {
+export function createConsumedTokens(): NonNullable<
+  ChatSession['data']
+>['consumedTokens'] {
   return {
     input: 0,
     output: 0,
@@ -123,5 +103,6 @@ export function createConsumedTokens(): NonNullable<ChatSession['data']>['consum
     skillTokens: 0,
     ruleTokens: 0,
     mcpTokens: 0,
+    subagentTokens: undefined,
   };
 }

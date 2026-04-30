@@ -1,28 +1,13 @@
 import * as React from 'react';
-import {
-  Flex,
-  Box,
-  IconButton,
-  Tooltip,
-} from '@chakra-ui/react';
-import {
-  TbThumbUp,
-  TbThumbDown,
-} from 'react-icons/tb';
-import {
-  useChatStore,
-  useChatStreamStore,
-} from '../../../store/chat';
-import {
-  ChatFeedbackType,
-} from '../../../services';
+import { Flex, Box, IconButton, Tooltip } from '@chakra-ui/react';
+import { TbThumbUp, TbThumbDown } from 'react-icons/tb';
+import { useChatStore, useChatStreamStore } from '../../../store/chat';
+import { useSubagentStore } from '../../../modules/subagent';
+import { ChatFeedbackType } from '../../../services';
 import { useAuthStore } from '../../../store/auth';
 import userReporter from '../../../utils/report';
 import { FeedbackPool } from '../../../services/useChatStream';
-import {
-  FeedbackType,
-  sendBMDocsetFeedback,
-} from '../../../services/docsets';
+import { FeedbackType, sendBMDocsetFeedback } from '../../../services/docsets';
 import Icon from '../../../components/Icon';
 import '../../../assets/github-markdown-dark.css';
 import { UserEvent } from '../../../types/report';
@@ -30,9 +15,9 @@ import { UserEvent } from '../../../types/report';
 export default function FeedbackPanel(props: {
   userScrollLock: boolean;
   onCodeBaseFeedback: (feedbackType: ChatFeedbackType) => void;
-  submitMessageFeedback: any
+  submitMessageFeedback: any;
 }) {
-  const { userScrollLock, onCodeBaseFeedback,submitMessageFeedback } = props;
+  const { userScrollLock, onCodeBaseFeedback, submitMessageFeedback } = props;
   const chatType = useChatStore((state) => state.chatType);
   const currentSession = useChatStore((state) => state.currentSession());
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
@@ -41,7 +26,12 @@ export default function FeedbackPanel(props: {
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
   const isApplying = useChatStreamStore((state) => state.isApplying);
   const lastMessagePrompt = useChatStore((state) => state.lastMessagePrompt);
-  const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
+  const isTerminalProcessing = useChatStreamStore(
+    (state) => state.isTerminalProcessing,
+  );
+  const isSubagentProcessing = useSubagentStore(
+    (state) => state.hasActiveSubagents(),
+  );
   const setShowFeedback = useChatStreamStore((state) => state.setShowFeedback);
   const lastMessageSearchRecordId = useChatStore(
     (state) => state.lastMessageSearchRecordId,
@@ -52,10 +42,26 @@ export default function FeedbackPanel(props: {
   const feedbackRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (isStreaming || isSearching || isProcessing || isMCPProcessing || isApplying || isTerminalProcessing) {
+    if (
+      isStreaming ||
+      isSearching ||
+      isProcessing ||
+      isMCPProcessing ||
+      isApplying ||
+      isTerminalProcessing ||
+      isSubagentProcessing
+    ) {
       setShouldShowFeedback(false);
     }
-    if (prevStreamState.current && !isStreaming && !isProcessing && !isMCPProcessing && !isApplying && !isTerminalProcessing) {
+    if (
+      prevStreamState.current &&
+      !isStreaming &&
+      !isProcessing &&
+      !isMCPProcessing &&
+      !isApplying &&
+      !isTerminalProcessing &&
+      !isSubagentProcessing
+    ) {
       setShouldShowFeedback(true);
       if (!userScrollLock) {
         setTimeout(() => {
@@ -73,10 +79,19 @@ export default function FeedbackPanel(props: {
       }
     }
     prevStreamState.current = isStreaming;
-  }, [isStreaming, isSearching, isProcessing, isMCPProcessing, isApplying, userScrollLock, isTerminalProcessing]);
+  }, [
+    isStreaming,
+    isSearching,
+    isProcessing,
+    isMCPProcessing,
+    isApplying,
+    userScrollLock,
+    isTerminalProcessing,
+    isSubagentProcessing,
+  ]);
 
   React.useEffect(() => {
-    setShowFeedback(shouldShowFeedback)
+    setShowFeedback(shouldShowFeedback);
   }, [setShowFeedback, shouldShowFeedback]);
 
   const resetFeedback = () => {
@@ -87,19 +102,17 @@ export default function FeedbackPanel(props: {
   const latestMessage =
     currentSession?.data?.messages[currentSession?.data.messages.length - 1];
 
-
-
   const handleUpVote = () => {
     if (chatType === 'codebase') {
       onCodeBaseFeedback(ChatFeedbackType.UpVote);
     } else {
-      submitMessageFeedback(latestMessage?.id, ChatFeedbackType.UpVote)
+      submitMessageFeedback(latestMessage?.id, ChatFeedbackType.UpVote);
       userReporter.report({
         event: UserEvent.CODE_CHAT_UP_VOTE,
         extends: {
           session_id: currentSession?._id,
           message_id: latestMessage?.id,
-          chat_type: chatType
+          chat_type: chatType,
         },
       });
       if (lastMessageSearchRecordId && lastMessagePrompt) {
@@ -119,13 +132,13 @@ export default function FeedbackPanel(props: {
     if (chatType === 'codebase') {
       onCodeBaseFeedback(ChatFeedbackType.DownVote);
     } else {
-      submitMessageFeedback(latestMessage?.id, ChatFeedbackType.DownVote)
+      submitMessageFeedback(latestMessage?.id, ChatFeedbackType.DownVote);
       userReporter.report({
         event: UserEvent.CODE_CHAT_DOWN_VOTE,
         extends: {
           session_id: currentSession?._id,
           message_id: latestMessage?.id,
-          chat_type: chatType
+          chat_type: chatType,
         },
       });
       if (lastMessageSearchRecordId && lastMessagePrompt) {
