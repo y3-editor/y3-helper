@@ -1050,7 +1050,8 @@ export const useChatStore = create<ChatStore>()(
 
       async syncHistory() {
         const session = get().currentSession();
-        if (!session) {
+        // fix: 网络异常或资源加载异常时，防止空上下文同步导致会话被清空
+        if (!session?.data?.messages?.length) {
           return;
         }
         const latestData = {

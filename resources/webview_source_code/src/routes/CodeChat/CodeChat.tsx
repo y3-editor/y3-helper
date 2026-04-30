@@ -410,7 +410,7 @@ function CodeChat() {
   // }, [currentSession, sessionIDs, length]);
 
   const { data, isLoading } = useService(requestChatSessions, {
-    revalidateOnFocus: true,
+    revalidateOnFocus: chatType !== 'codebase',
   });
 
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
