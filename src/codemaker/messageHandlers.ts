@@ -458,6 +458,14 @@ export async function handleExtendedMessage(
             return true;
         }
 
+        case 'GET_AGENTS': {
+            const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+            const agentsHandler = AgentsHandler.getInstance();
+            await agentsHandler.initialize();
+            agentsHandler.syncAgents();
+            return true;
+        }
+
         case 'CREATE_NEW_RULE': {
             await handleCreateNewRule(message.data, provider);
             return true;

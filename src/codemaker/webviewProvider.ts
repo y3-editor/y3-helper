@@ -247,6 +247,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 currentFileAutoAttach: false,
                 disableNewApply: false,
                 planModeEnabled: false,
+                subagentEnable: true,
             },
         };
 
@@ -321,7 +322,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
      * 前端会发送 TOOL_CALL，Extension 执行后返回 TOOL_CALL_RESULT
      */
     private async _handleToolCall(data: any) {
-        const { tool_name, tool_params, tool_id } = data || {};
+        const { tool_name, tool_params, tool_id, task_id } = data || {};
         if (!tool_name || !tool_id) {
             return;
         }
@@ -377,6 +378,26 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 case 'access_mcp_resource':
                     result = await this._toolAccessMcpResource(tool_params);
                     break;
+                case 'get_agents': {
+                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+                    const agentsHandler = AgentsHandler.getInstance();
+                    await agentsHandler.initialize();
+                    const agents = agentsHandler.getAgentIndex();
+                    result = { content: JSON.stringify(agents), isError: false };
+                    break;
+                }
+                case 'get_agent': {
+                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+                    const agentsHandler = AgentsHandler.getInstance();
+                    await agentsHandler.initialize();
+                    const agentResult = agentsHandler.getAgent(tool_params.agent_name);
+                    if (agentResult.success && agentResult.agent) {
+                        result = { content: JSON.stringify(agentResult.agent), isError: false };
+                    } else {
+                        result = { content: agentResult.error || 'Agent not found', isError: true };
+                    }
+                    break;
+                }
                 default:
                     result = {
                         content: `Tool "${tool_name}" is not supported in Y3Helper integration.`,
@@ -392,6 +413,8 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     tool_id: tool_id,
                     tool_name: tool_name,
                     extra: result?.extra || {},
+                    // SubAgent 工具调用：透传 task_id 以便 WebView 路由到正确的流
+                    ...(task_id && { task_id }),
                 },
             });
         } catch (err: any) {
@@ -406,6 +429,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     tool_id: tool_id,
                     tool_name: tool_name,
                     extra: {},
+                    ...(task_id && { task_id }),
                 },
             });
         }
