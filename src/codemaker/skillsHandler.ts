@@ -358,7 +358,7 @@ export class SkillsHandler {
           } else {
             loadedCount += await this.loadSkillsFromDirectory(dirPath, source, result, depth + 1);
           }
-        } else if (entry.isFile() && entry.name.endsWith('.md') && depth === 0) {
+        } else if (entry.isFile() && entry.name.endsWith('.md') && depth === 0 && entry.name !== 'README.md') {
           const filePath = path.join(skillsPath, entry.name);
           const skill = await this.loadSkillFromFile(filePath, filePath, source);
           if (skill) {
