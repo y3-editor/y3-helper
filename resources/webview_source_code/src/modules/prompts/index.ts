@@ -49,15 +49,15 @@ export const PromptBuilder = {
   /**
    * 构建主系统 prompt
    */
-  buildMain: (options: MainPromptOptions): string => {
-    return constructMainPrompt(options);
+  buildMain: async (options: MainPromptOptions): Promise<string> => {
+    return await constructMainPrompt(options);
   },
 
   /**
    * 构建子代理 prompt
    */
-  buildSubagent: (options: SubagentPromptOptions): string => {
-    return buildSubagentPrompt(options);
+  buildSubagent: async (options: SubagentPromptOptions): Promise<string> => {
+    return await buildSubagentPrompt(options);
   }
 };
 

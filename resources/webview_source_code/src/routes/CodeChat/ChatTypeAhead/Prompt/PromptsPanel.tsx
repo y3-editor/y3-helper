@@ -1049,7 +1049,7 @@ const PromptsPanel = (
               onClick={() => handleChangePromptType(PromptCategoryType.Skill)}
             />
           </Tooltip>
-          {subagentEnable && (
+          {subagentEnable && chatType === "codebase" && (
             <Tooltip label="Agent" placement="right">
               <IconButton
                 fontSize="xl"

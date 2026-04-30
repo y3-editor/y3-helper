@@ -56,9 +56,7 @@ const uiStateHooks: SubagentLifecycleHooks = {
 
     // 更新对应的工具调用记录的 endTime，并恢复状态为 running
     const updatedToolCalls = toolCalls.map((tc) =>
-      tc.toolCallId === ctx.toolId
-        ? { ...tc, endTime: Date.now() }
-        : tc,
+      tc.toolCallId === ctx.toolId ? { ...tc, endTime: Date.now() } : tc,
     );
 
     store.updateStatus(ctx.toolCallId, {
@@ -106,6 +104,7 @@ const eventEmitHooks: SubagentLifecycleHooks = {
 
   onBeforeStep: (ctx) => {
     emitEvent('status_change', ctx.taskId, {
+      // from: ctx.step === 1 ? 'pending' : 'running',
       from: 'pending',
       to: 'running',
       step: ctx.step,

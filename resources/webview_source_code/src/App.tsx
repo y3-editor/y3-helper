@@ -389,6 +389,7 @@ function App() {
           loginFrom,
           login_from,
           fixedModel,
+          subagentEnable,
         } = event.data.data as any;
         setCodeCoverageApiUrl(CODE_COVERAGE_API_URL);
         authStore.setAccessToken(accessToken);
@@ -457,6 +458,9 @@ function App() {
             通义千问: false,
           };
         });
+
+        // 设置 Subagent 功能开关
+        extensionStore.setSubagentEnable(!!subagentEnable);
 
         // Y3Helper: 当 fixedModel 存在时，自动注入到 chatModels 中，使自定义模型支持图片上传
         extensionStore.setFixedModel(fixedModel || '');

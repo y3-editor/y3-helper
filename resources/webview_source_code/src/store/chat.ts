@@ -96,7 +96,6 @@ import {
   SEQUENCE_PROMPT,
 } from '../utils/prompt';
 import { generateTraceId } from '../utils/trace';
-import { SubagentTokens } from '../modules/subagent/types';
 import { logger as webToolsLogger, hub as webToolsHub } from '@dep305/codemaker-web-tools';
 import { parseMentions } from '../utils/chatMention';
 import {
@@ -141,7 +140,14 @@ import { BAI_CHUAN, ParseImgType } from '../services/chatModel';
 import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
 import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
 
-import { createConsumedTokens } from '../utils/chat';
+import {
+  calculateConsumedTokensUpdate,
+  createInitialConsumedTokens,
+  type ConsumedTokens,
+  type TokenIncrement,
+  type ModelPriceInfo,
+  type TokenCompressionContext
+} from '../utils/consumedTokensCalculator';
 import { estimateSystemPromptTokens, estimateTokens } from '../utils/tokenEstimate';
 import { PromptLinkMgr } from './workspace/pomptLinkMgr';
 
@@ -197,23 +203,8 @@ export interface ChatSession {
   message_count: number | null;
   data?: {
     messages: ChatMessage[];
-    consumedTokens: {
-      input: number
-      output: number
-      inputCost: number
-      outputCost: number
-      systemTokens: number
-      systemToolTokens: number
-      promptTokens: number
-      completionTokens: number
-      comporessPromptTokens: number
-      comporessCompletionTokens: number
-      readCacheTokens: number
-      skillTokens: number
-      ruleTokens: number
-      mcpTokens: number
-      subagentTokens?: SubagentTokens
-    }
+    /** Token 消耗统计，使用统一的 ConsumedTokens 类型 */
+    consumedTokens: ConsumedTokens
     model?: ChatModel;
     attaches?: (Docsets | IMultiAttachment)
     plan?: string;
@@ -634,7 +625,7 @@ export const useChatStore = create<ChatStore>()(
 
         // 安全检查：确保 session 有正确的数据结构
         if (session && (!session.data || !Array.isArray(session.data.messages))) {
-          const safeConsumedTokens = createConsumedTokens();
+          const safeConsumedTokens = createInitialConsumedTokens();
           if (session.data) {
             session.data.messages = Array.isArray(session.data.messages)
               ? session.data.messages
@@ -767,7 +758,7 @@ export const useChatStore = create<ChatStore>()(
           data: {
             ...session.data,
             messages: [],
-            consumedTokens: session.data?.consumedTokens || createConsumedTokens(),
+            consumedTokens: session.data?.consumedTokens || createInitialConsumedTokens(),
           },
         };
         try {
@@ -802,7 +793,7 @@ export const useChatStore = create<ChatStore>()(
           data: {
             ...sessionData,
             consumedTokens: Object.assign(
-              createConsumedTokens(),
+              createInitialConsumedTokens(),
               sessionData?.consumedTokens || {},
             ),
             messages: filteredMessages,
@@ -843,89 +834,54 @@ export const useChatStore = create<ChatStore>()(
         ruleTokens?: number;
         mcpTokens?: number;
       }) => {
-        const {
-          curSession,
-          model,
-          promptTokens = 0,
-          systemTokens = 0,
-          completionTokens = 0,
-          cacheCreationInputTokens = 0,
-          cacheReadInputTokens = 0,
-          comporessPromptTokens = 0,
-          comporessCompletionTokens = 0,
-          skillTokens = 0,
-          ruleTokens = 0,
-          mcpTokens = 0,
-        } = options;
-        if (curSession.data) {
-          if (!curSession.data.consumedTokens) {
-            curSession.data.consumedTokens = createConsumedTokens()
-          }
-          let modelCostInfo
-          if (model) {
-            modelCostInfo = useChatConfig.getState().chatModels?.[model]?.priceInfo;
-          }
-          if (modelCostInfo) {
-            const inputCost = curSession.data?.consumedTokens?.inputCost || 0
-            const outputCost = curSession.data?.consumedTokens?.outputCost || 0
-            curSession.data.consumedTokens.inputCost = (
-              inputCost
-              + promptTokens / 1000 * (modelCostInfo?.promptWeight || 0)
-              + cacheCreationInputTokens / 1000 * (modelCostInfo?.cacheWeightFor5min || 0)
-              + cacheReadInputTokens / 1000 * (modelCostInfo?.hitCacheWeight || 0)
-            );
-            curSession.data.consumedTokens.outputCost = outputCost + completionTokens / 1000 * (modelCostInfo?.completionWeight || 0);
-          }
-          const preSystemTokens = curSession.data.consumedTokens?.systemTokens || 0
-          const preSystemToolTokens = curSession.data.consumedTokens?.systemToolTokens || 0
+        const { curSession, model, ...tokenIncrement } = options;
 
-          curSession.data.consumedTokens.output += completionTokens;
-          if (getModelSupplyChannel(model as ChatModel)?.includes?.('claude')) {
-            // 旧版本输入，新版本细化Token使用
-            curSession.data.consumedTokens.input += promptTokens
-
-            // 系统token 计算
-            // 如果估算的值小于创建 min缓存，区分工具和系统的缓存
-            if (systemTokens <= cacheCreationInputTokens) {
-              curSession.data.consumedTokens.systemTokens = preSystemTokens + systemTokens - skillTokens - ruleTokens - mcpTokens
-              curSession.data.consumedTokens.systemToolTokens = preSystemToolTokens + (cacheCreationInputTokens - systemTokens)
-              curSession.data.consumedTokens.skillTokens += skillTokens
-              curSession.data.consumedTokens.ruleTokens += ruleTokens
-              curSession.data.consumedTokens.mcpTokens += mcpTokens
-            } else {
-              curSession.data.consumedTokens.systemTokens = preSystemTokens + cacheCreationInputTokens
-            }
-
-            // 命中缓存
-            const prereadCacheTokens = curSession.data.consumedTokens?.readCacheTokens || 0
-            curSession.data.consumedTokens.readCacheTokens = prereadCacheTokens + cacheReadInputTokens;
-
-            // 压缩使用的token
-            const preComporessPromptTokens = curSession.data.consumedTokens?.comporessPromptTokens || 0
-            const preComporessCompletionTokens = curSession.data.consumedTokens?.comporessCompletionTokens || 0
-            curSession.data.consumedTokens.comporessPromptTokens = preComporessPromptTokens + comporessPromptTokens;
-            curSession.data.consumedTokens.comporessCompletionTokens = preComporessCompletionTokens + comporessCompletionTokens;
-          } else {
-            curSession.data.consumedTokens.systemTokens = preSystemTokens + systemTokens - skillTokens - ruleTokens - mcpTokens
-            if (promptTokens > systemTokens) {
-              curSession.data.consumedTokens.input += promptTokens - systemTokens // 工具没办法算出来
-            } else {
-              curSession.data.consumedTokens.input += promptTokens
-            }
-            curSession.data.consumedTokens.skillTokens += skillTokens
-            curSession.data.consumedTokens.ruleTokens += ruleTokens
-            curSession.data.consumedTokens.mcpTokens += mcpTokens
-          }
+        if (!curSession.data) {
+          console.warn('[updateConsumedTokens] Session data not found, skipping token update');
+          return;
         }
 
-        if (curSession.data?.compression?.pendingSavedTokens) {
-          const messagesCount = curSession.data.messages.length;
-          const threshold = (curSession.data.compression.messagesCountAtCompression || 0) + 1;
+        if (!curSession.data.consumedTokens) {
+          curSession.data.consumedTokens = createInitialConsumedTokens();
+        }
 
-          if (messagesCount > threshold) {
-            curSession.data.compression.pendingSavedTokens = 0;
-            curSession.data.compression.messagesCountAtCompression = 0;
+        let modelPriceInfo: ModelPriceInfo | undefined;
+        if (model) {
+          const chatConfig = useChatConfig.getState();
+          modelPriceInfo = chatConfig.chatModels?.[model]?.priceInfo;
+        }
+
+        let compressionContext: TokenCompressionContext | undefined;
+        if (curSession.data.compression?.pendingSavedTokens) {
+          compressionContext = {
+            pendingSavedTokens: curSession.data.compression.pendingSavedTokens,
+            messagesCountAtCompression: curSession.data.compression.messagesCountAtCompression || 0,
+            currentMessagesCount: curSession.data.messages.length,
+          };
+        }
+
+        try {
+          const result = calculateConsumedTokensUpdate(
+            curSession.data.consumedTokens,
+            tokenIncrement as TokenIncrement,
+            model,
+            modelPriceInfo,
+            compressionContext
+          );
+
+          curSession.data.consumedTokens = result.consumedTokens;
+
+          if (result.compressionUpdate && curSession.data.compression) {
+            curSession.data.compression.pendingSavedTokens = result.compressionUpdate.pendingSavedTokens;
+            curSession.data.compression.messagesCountAtCompression = result.compressionUpdate.messagesCountAtCompression;
           }
+        } catch (error) {
+          console.error('[updateConsumedTokens] Token update failed:', {
+            sessionId: curSession._id?.substring(0, 8),
+            model,
+            error,
+          });
+          throw error;
         }
       },
 
@@ -2531,7 +2487,7 @@ export const useChatStreamStore = create(
         }
         const { docsets } = attachs as Docsets;
         chatStoreState.updateCurrentSession((session) => {
-          session.data = session.data || { messages: [], consumedTokens: createConsumedTokens(), attaches: { docsets: [], attachType: AttachType.Docset } };
+          session.data = session.data || { messages: [], consumedTokens: createInitialConsumedTokens(), attaches: { docsets: [], attachType: AttachType.Docset } };
           session.data.attaches = session.data.attaches || { docsets: [], attachType: AttachType.Docset };
           session.data.attaches = { attachType: AttachType.Docset, docsets: filterDocsetsFn(docsets) as Docset[] };
           return session;

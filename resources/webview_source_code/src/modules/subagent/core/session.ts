@@ -12,23 +12,18 @@ import {
 } from '../../../services/chat';
 import { ChatModel } from '../../../services/chatModel';
 import { useChatConfig } from '../../../store/chat-config';
-import { createConsumedTokens } from '../../../utils/chat';
+import {
+  calculateConsumedTokensUpdate,
+  createInitialConsumedTokens,
+  type TokenIncrement,
+  type ModelPriceInfo,
+} from '../../../utils/consumedTokensCalculator';
 import type { Agent, TaskParams } from '../types';
 import type { SessionCompressionState } from '../../../types/contextCompression';
 
 // 扩展 LLM 调用用量，包含系统 token 估算
-interface ExtendedLLMCallUsage {
+interface ExtendedLLMCallUsage extends TokenIncrement {
   totalTokens: number;
-  promptTokens: number;
-  completionTokens: number;
-  cacheCreationInputTokens: number;
-  cacheReadInputTokens: number;
-  systemTokens?: number;
-  skillTokens?: number;
-  ruleTokens?: number;
-  mcpTokens?: number;
-  comporessPromptTokens?: number;
-  comporessCompletionTokens?: number;
 }
 
 // ============================================================
@@ -71,37 +66,51 @@ export async function resumeSession(
 
     if (historyMessages && historyMessages.length > 0) {
       // 验证压缩相关字段是否正确恢复
-      const compressionSummaries = historyMessages.filter(msg => msg.isCompressionSummary);
+      const compressionSummaries = historyMessages.filter(
+        (msg) => msg.isCompressionSummary,
+      );
       if (compressionSummaries.length > 0) {
-        console.log(`[Subagent] ${taskId} Resuming session with ${compressionSummaries.length} compression summaries`);
+        console.log(
+          `[Subagent] ${taskId} Resuming session with ${compressionSummaries.length} compression summaries`,
+        );
         compressionSummaries.forEach((summary, index) => {
-          console.log(`[Subagent] ${taskId} Compression summary ${index + 1}:`, {
-            id: summary.id,
-            role: summary.role,
-            hasMetadata: !!summary.compressionMetadata,
-            contentPreview: typeof summary.content === 'string'
-              ? summary.content.substring(0, 100) + '...'
-              : 'non-string content',
-          });
+          console.log(
+            `[Subagent] ${taskId} Compression summary ${index + 1}:`,
+            {
+              id: summary.id,
+              role: summary.role,
+              hasMetadata: !!summary.compressionMetadata,
+              contentPreview:
+                typeof summary.content === 'string'
+                  ? summary.content.substring(0, 100) + '...'
+                  : 'non-string content',
+            },
+          );
         });
       }
 
       if (compressionState?.enabled) {
-        console.log(`[Subagent] ${taskId} Resuming session with compression state:`, {
-          totalCompressionsCount: compressionState.totalCompressionsCount,
-          totalTokensSaved: compressionState.totalTokensSaved,
-          hasHistory: compressionState.compressionHistory?.length > 0,
-        });
+        console.log(
+          `[Subagent] ${taskId} Resuming session with compression state:`,
+          {
+            totalCompressionsCount: compressionState.totalCompressionsCount,
+            totalTokensSaved: compressionState.totalTokensSaved,
+            hasHistory: compressionState.compressionHistory?.length > 0,
+          },
+        );
       }
 
       console.log(`[Subagent] ${taskId} Resumed messages structure:`, {
         totalMessages: historyMessages.length,
-        hasCompressionSummary: historyMessages.some(msg => msg.isCompressionSummary),
-        messageTypes: historyMessages.map(msg => ({
+        hasCompressionSummary: historyMessages.some(
+          (msg) => msg.isCompressionSummary,
+        ),
+        messageTypes: historyMessages.map((msg) => ({
           role: msg.role,
           isCompressionSummary: msg.isCompressionSummary,
           isCompressed: msg.isCompressed,
-          contentLength: typeof msg.content === 'string' ? msg.content.length : 0,
+          contentLength:
+            typeof msg.content === 'string' ? msg.content.length : 0,
         })),
       });
 
@@ -127,54 +136,31 @@ export async function syncSession(
   compressionState?: SessionCompressionState,
 ): Promise<void> {
   try {
-    // 创建基础的 consumedTokens 对象
-    const consumedTokens = createConsumedTokens();
+    // 获取已有的 consumedTokens 对象，如果不存在则创建新的
+    const existingSessionData = await getSessionData(taskId);
+    const existingConsumedTokens = existingSessionData?.data?.consumedTokens;
+    const currentTokens =
+      existingConsumedTokens || createInitialConsumedTokens();
 
-    // 基础 token 计算
-    consumedTokens.input = usage.promptTokens;
-    consumedTokens.output = usage.completionTokens;
-    consumedTokens.promptTokens = usage.promptTokens;
-    consumedTokens.completionTokens = usage.completionTokens;
+    // 获取模型价格信息
+    const modelPriceInfo: ModelPriceInfo | undefined =
+      useChatConfig.getState().chatModels?.[currentModel as ChatModel]
+        ?.priceInfo;
 
-    // 缓存相关字段对齐（重要：与主 agent 保持一致）
-    if (currentModel.includes('claude')) {
-      // Claude 模型的缓存处理逻辑，与主 agent 保持一致
-      const systemTokens = usage.cacheCreationInputTokens || 0;
-      consumedTokens.systemTokens = systemTokens;
-      consumedTokens.systemToolTokens = 0; // Subagent 当前没有工具系统prompt
-      consumedTokens.readCacheTokens = usage.cacheReadInputTokens || 0;
-    } else {
-      // 非 Claude 模型的处理
-      consumedTokens.systemTokens = 0;
-      consumedTokens.systemToolTokens = 0;
-      consumedTokens.readCacheTokens = 0;
-    }
-
-    // 专项 token 字段
-    consumedTokens.skillTokens = usage.skillTokens || 0;
-    consumedTokens.ruleTokens = usage.ruleTokens || 0;
-    consumedTokens.mcpTokens = usage.mcpTokens || 0;
-
-    // 压缩相关字段
-    consumedTokens.comporessPromptTokens = usage.comporessPromptTokens || 0;
-    consumedTokens.comporessCompletionTokens = usage.comporessCompletionTokens || 0;
-
-    // 成本计算（包含缓存成本）
-    const modelCostInfo = useChatConfig.getState().chatModels?.[currentModel as ChatModel]?.priceInfo;
-    if (modelCostInfo) {
-      consumedTokens.inputCost =
-        (usage.promptTokens / 1000) * (modelCostInfo.promptWeight || 0) +
-        (usage.cacheCreationInputTokens / 1000) * (modelCostInfo.cacheWeightFor5min || 0) +
-        (usage.cacheReadInputTokens / 1000) * (modelCostInfo.hitCacheWeight || 0);
-      consumedTokens.outputCost = (usage.completionTokens / 1000) * (modelCostInfo.completionWeight || 0);
-    }
+    // 使用统一的计算逻辑
+    const result = calculateConsumedTokensUpdate(
+      currentTokens,
+      usage, // ExtendedLLMCallUsage 已经继承了 TokenIncrement
+      currentModel,
+      modelPriceInfo,
+    );
 
     await updateSession({
       _id: taskId,
       topic: `[Subagent] ${agentName}: ${description}`,
       data: {
         messages,
-        consumedTokens,
+        consumedTokens: result.consumedTokens,
         model: currentModel as ChatModel,
         compression: compressionState, // 持久化压缩状态
       },

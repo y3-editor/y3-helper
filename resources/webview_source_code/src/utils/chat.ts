@@ -2,6 +2,7 @@ import { isNumber } from 'lodash';
 import { ChatMessage } from '../services';
 import { ChatRole } from '../types/chat';
 import { ChatSession } from '../store/chat';
+import { createInitialConsumedTokens } from './consumedTokensCalculator';
 
 const MAX_FILE_READ_LENGTH = 150000;
 const DS_MAX_FILE_READ_LENGTH = 100000;
@@ -84,25 +85,10 @@ function cleanupCompressionFlags(messages: ChatMessage[]): ChatMessage[] {
 
 /**
  * 创建消耗的tokens
+ * @deprecated 请使用 createInitialConsumedTokens from './consumedTokensCalculator'
  */
 export function createConsumedTokens(): NonNullable<
   ChatSession['data']
 >['consumedTokens'] {
-  return {
-    input: 0,
-    output: 0,
-    inputCost: 0,
-    outputCost: 0,
-    systemTokens: 0,
-    systemToolTokens: 0,
-    promptTokens: 0,
-    completionTokens: 0,
-    comporessPromptTokens: 0,
-    comporessCompletionTokens: 0,
-    readCacheTokens: 0,
-    skillTokens: 0,
-    ruleTokens: 0,
-    mcpTokens: 0,
-    subagentTokens: undefined,
-  };
+  return createInitialConsumedTokens();
 }

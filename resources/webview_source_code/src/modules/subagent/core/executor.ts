@@ -82,10 +82,13 @@ import type { ChatMessage } from '../utils';
 import { createNewSession, resumeSession, syncSession } from './session';
 import { callSubagentLLM, createEmptyUsage, addUsage } from './llm';
 import {
-  createEmptySubagentTokens,
-  mergeSubagentUsageIntoTokens,
-  estimateSubagentSystemTokens,
-} from '../../../utils/subagentTokens';
+  createEmptyChildSessions,
+  updateChildSession,
+  SessionType,
+  calculateChildrenTotalTokens,
+  type TokenIncrement,
+} from '../../../utils/consumedTokensCalculator';
+import { estimateTokens } from '../../../utils/tokenEstimate';
 import { checkAndCompress } from './compression';
 import { useChatConfig } from '../../../store/chat-config';
 import { useAuthStore } from '../../../store/auth';
@@ -111,6 +114,37 @@ import { getAIGWModelWithFallback, getAIGWModel } from './../../../store/chat-co
 import { promptBuilder } from './prompt-builder';
 
 // ============================================================
+// 辅助函数
+// ============================================================
+
+/**
+ * 估算子会话系统 prompt 的 token 数
+ */
+function estimateChildSessionSystemTokens(
+  agentPrompt: string,
+  skillPrompts: string[] = [],
+  rulePrompts: string[] = [],
+  mcpPrompts: string[] = []
+): {
+  systemTokens: number;
+  skillTokens: number;
+  ruleTokens: number;
+  mcpTokens: number;
+} {
+  const systemTokens = estimateTokens(agentPrompt);
+  const skillTokens = skillPrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
+  const ruleTokens = rulePrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
+  const mcpTokens = mcpPrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
+
+  return {
+    systemTokens,
+    skillTokens,
+    ruleTokens,
+    mcpTokens,
+  };
+}
+
+// ============================================================
 // Subagent System Prompt 前置注入
 // ============================================================
 
@@ -123,11 +157,11 @@ import { promptBuilder } from './prompt-builder';
  *
  * 参考 constructRemixPrompt.ts 中的对应实现。
  */
-function buildSubagentSystemPrompt(
+async function buildSubagentSystemPrompt(
   basePrompt: string,
   agentType?: string,
-): string {
-  return promptBuilder.buildSystemPrompt(basePrompt, agentType);
+): Promise<string> {
+  return await promptBuilder.buildSystemPrompt(basePrompt, agentType);
 }
 
 /**
@@ -334,9 +368,10 @@ async function runSubagentInner(
   // 4. 构建 messages 和 tools
   // 对 agent 的 prompt 做前置处理，注入 search_and_reading / making_code_changes /
   // run_terminal_cmd / user_info 等上下文片段
+  const enhancedPrompt = await buildSubagentSystemPrompt(agent.prompt, agent.name);
   const enhancedAgent: Agent = {
     ...agent,
-    prompt: buildSubagentSystemPrompt(agent.prompt, agent.name),
+    prompt: enhancedPrompt,
   };
   let messages: ChatMessage[];
   if (resumedMessages) {
@@ -435,7 +470,7 @@ async function runSubagentInner(
       const preprocessResult = await preprocessSubagentMessages(preprocessOptions);
 
       // 更新缓存状态（可能在预处理过程中被禁用）
-      cacheEnable = preprocessResult.cacheEnable;
+      // cacheEnable = preprocessResult.cacheEnable;
 
       // 构建标准的 ChatPromptBody
       const promptData = buildSubagentChatPromptBody(
@@ -490,6 +525,14 @@ async function runSubagentInner(
       const assistantMessage: ChatMessage = {
         role: ChatRole.Assistant,
         content: llmResult.text,
+        // 添加 usage 信息，确保 truncateMessagesIfNeeded 能正确识别 token 使用情况
+        usage: {
+          prompt_tokens: llmResult.usage.promptTokens,
+          completion_tokens: llmResult.usage.completionTokens,
+          total_tokens: llmResult.usage.totalTokens,
+          cache_creation_input_tokens: llmResult.usage.cacheCreationInputTokens,
+          cache_read_input_tokens: llmResult.usage.cacheReadInputTokens,
+        },
       };
       if (llmResult.toolCalls.length > 0) {
         assistantMessage.tool_calls = llmResult.toolCalls;
@@ -839,7 +882,7 @@ async function runSubagentInner(
         const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
         const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
 
-        const systemTokenEstimation = estimateSubagentSystemTokens(
+        const systemTokenEstimation = estimateChildSessionSystemTokens(
           systemPromptContent,
           skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
           rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
@@ -905,7 +948,7 @@ async function runSubagentInner(
       const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
       const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
 
-      const systemTokenEstimation = estimateSubagentSystemTokens(
+      const systemTokenEstimation = estimateChildSessionSystemTokens(
         systemPromptContent,
         skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
         rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
@@ -991,126 +1034,118 @@ async function runSubagentInner(
     }
 
   } finally {
-    // 最终同步到后端（不传递压缩状态，因为这是最终同步）
-    // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
-    const systemPromptContent = messages
-      .filter(msg => msg.role === ChatRole.System)
-      .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
-      .join('\n');
-
-    // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-    const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-    const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-    const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
-
-    const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
-    const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
-    const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
-
-    const systemTokenEstimation = estimateSubagentSystemTokens(
-      systemPromptContent,
-      skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
-      rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
-      mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
-    );
-
-    const finalEnhancedUsage = {
-      ...totalUsage,
-      systemTokens: systemTokenEstimation.systemTokens,
-      skillTokens: systemTokenEstimation.skillTokens,
-      ruleTokens: systemTokenEstimation.ruleTokens,
-      mcpTokens: systemTokenEstimation.mcpTokens,
-    };
-
-    await syncSession(
-      taskId,
-      agent.name,
-      params.description,
-      messages,
-      llmModel,
-      finalEnhancedUsage,
-    );
-
-    // 将子代理 token 用量写入主会话独立的 subagentTokens 字段
-    // 不混入 main agent 的 systemTokens / skillTokens / ruleTokens 等分类
-    if (totalUsage.promptTokens > 0 || totalUsage.completionTokens > 0) {
-      const chatStoreState = useChatStore.getState();
-      const curSession = chatStoreState.sessions.get(parentSessionId);
-      if (curSession?.data?.consumedTokens) {
-        const ct = curSession.data.consumedTokens;
-        if (!ct.subagentTokens) {
-          ct.subagentTokens = createEmptySubagentTokens();
-        }
-        const modelCostInfo =
-          useChatConfig.getState().chatModels?.[llmModel as ChatModel]
-            ?.priceInfo;
-
-        // 估算系统相关的 token
-        // 从 messages 中提取系统 prompt 内容进行估算
-        const systemMessages = messages.filter(m => m.role === ChatRole.System);
-        const systemPromptContent = systemMessages.map(m =>
-          typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
-        ).join('\n');
-
-        // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-        const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-        const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-        const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
-
-        const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
-        const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
-        const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
-
-        const systemTokenEstimation = estimateSubagentSystemTokens(
-          systemPromptContent,
-          skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
-          rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
-          mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
-        );
-
-        // 构建增强的 usage 对象，包含系统 token 估算
-        const enhancedUsage = {
-          ...totalUsage,
-          systemTokens: systemTokenEstimation.systemTokens,
-          skillTokens: systemTokenEstimation.skillTokens,
-          ruleTokens: systemTokenEstimation.ruleTokens,
-          mcpTokens: systemTokenEstimation.mcpTokens,
-        };
-
-        mergeSubagentUsageIntoTokens(
-          ct.subagentTokens,
-          agent.name,
-          taskId,
-          enhancedUsage,
-          modelCostInfo,
-        );
-        console.log('🤖 %cSubagent Token Merged to Main Agent:', 'color: #8B5CF6; font-weight: bold; font-size: 14px;', {
-          '🏷️ Agent': agent.name,
-          '🆔 Task ID': taskId.substring(0, 8) + '...',
-          '📊 Total Subagent Tokens': ct.subagentTokens.total,
-          '💾 Cache Enabled': cacheEnable,
-          '🏪 Model Has Token Cache': !!chatModels[llmModel]?.hasTokenCache,
-          '📈 This Task Usage': {
-            '📥 Prompt': totalUsage.promptTokens,
-            '✅ Completion': totalUsage.completionTokens,
-            '🎯 System': systemTokenEstimation.systemTokens,
-            '⚡ Skill': systemTokenEstimation.skillTokens,
-            '📏 Rule': systemTokenEstimation.ruleTokens,
-            '🔌 MCP': systemTokenEstimation.mcpTokens,
-            '🆕 Cache Creation': totalUsage.cacheCreationInputTokens,
-            '💾 Cache Read': totalUsage.cacheReadInputTokens,
-            '📊 Total': totalUsage.promptTokens + totalUsage.completionTokens,
-          }
-        });
-      } else {
-        console.warn(
-          `[Subagent] Session not found for token update: ${parentSessionId}`,
-        );
-      }
-    }
-
     // retrying 时跳过最终清理，外层循环会继续下一轮
     if (!retrying) {
+      // 计算最终的 token 统计（只计算一次）
+      const systemPromptContent = messages
+        .filter(msg => msg.role === ChatRole.System)
+        .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
+        .join('\n');
+
+      // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
+      const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
+      const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
+      const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
+
+      const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
+      const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
+      const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
+
+      const systemTokenEstimation = estimateChildSessionSystemTokens(
+        systemPromptContent,
+        skillsContent ? [skillsContent] : [],
+        rulesContent ? [rulesContent] : [],
+        mcpContent ? [mcpContent] : []
+      );
+
+      const finalEnhancedUsage = {
+        ...totalUsage,
+        systemTokens: systemTokenEstimation.systemTokens,
+        skillTokens: systemTokenEstimation.skillTokens,
+        ruleTokens: systemTokenEstimation.ruleTokens,
+        mcpTokens: systemTokenEstimation.mcpTokens,
+      };
+
+      // 最终同步到后端
+      await syncSession(
+        taskId,
+        agent.name,
+        params.description,
+        messages,
+        llmModel,
+        finalEnhancedUsage,
+      );
+
+      // 将子代理 token 用量写入主会话独立的 children 字段
+      // 只有在有实际 token 消耗时才更新
+      if (finalEnhancedUsage.promptTokens > 0 || finalEnhancedUsage.completionTokens > 0) {
+        const chatStoreState = useChatStore.getState();
+        const curSession = chatStoreState.sessions.get(parentSessionId);
+        if (curSession?.data?.consumedTokens) {
+          const ct = curSession.data.consumedTokens;
+          if (!ct.children) {
+            ct.children = createEmptyChildSessions();
+          }
+          const modelCostInfo =
+            useChatConfig.getState().chatModels?.[llmModel as ChatModel]
+              ?.priceInfo;
+
+          // 构建 token 增量对象
+          const tokenIncrement: TokenIncrement = {
+            promptTokens: finalEnhancedUsage.promptTokens,
+            completionTokens: finalEnhancedUsage.completionTokens,
+            cacheCreationInputTokens: finalEnhancedUsage.cacheCreationInputTokens,
+            cacheReadInputTokens: finalEnhancedUsage.cacheReadInputTokens,
+            systemTokens: finalEnhancedUsage.systemTokens,
+            skillTokens: finalEnhancedUsage.skillTokens,
+            ruleTokens: finalEnhancedUsage.ruleTokens,
+            mcpTokens: finalEnhancedUsage.mcpTokens,
+          };
+
+          // 更新子会话统计
+          ct.children = updateChildSession(
+            ct.children,
+            taskId,
+            SessionType.SUBAGENT,
+            agent.name,
+            tokenIncrement,
+            {
+              agentType: agent.name,
+              model: llmModel,
+              steps: step,
+              description: params.description,
+            },
+            llmModel,
+            modelCostInfo,
+          );
+
+          const totalChildrenTokens = calculateChildrenTotalTokens(ct.children);
+
+          console.log('🤖 %cSubagent Token Merged to Main Agent:', 'color: #8B5CF6; font-weight: bold; font-size: 14px;', {
+            '🏷️ Agent': agent.name,
+            '🆔 Task ID': taskId.substring(0, 8) + '...',
+            '📊 Total Children Tokens': totalChildrenTokens,
+            '💾 Cache Enabled': cacheEnable,
+            '🏪 Model Has Token Cache': !!chatModels[llmModel]?.hasTokenCache,
+            '📈 This Task Usage': {
+              '📥 Prompt': finalEnhancedUsage.promptTokens,
+              '✅ Completion': finalEnhancedUsage.completionTokens,
+              '🎯 System': finalEnhancedUsage.systemTokens,
+              '⚡ Skill': finalEnhancedUsage.skillTokens,
+              '📏 Rule': finalEnhancedUsage.ruleTokens,
+              '🔌 MCP': finalEnhancedUsage.mcpTokens,
+              '🆕 Cache Creation': finalEnhancedUsage.cacheCreationInputTokens,
+              '💾 Cache Read': finalEnhancedUsage.cacheReadInputTokens,
+              '📊 Total': finalEnhancedUsage.promptTokens + finalEnhancedUsage.completionTokens,
+            }
+          });
+        } else {
+          console.warn(
+            `[Subagent] Session not found for token update: ${parentSessionId}`,
+          );
+        }
+      }
+
       // 输出总体 Cache 性能统计
       if (cacheEnable) {
         console.log(`[Subagent Cache Summary] ${taskId}:`, {
@@ -1145,8 +1180,6 @@ async function runSubagentInner(
       if (parentAbortSignal) {
         parentAbortSignal.removeEventListener('abort', onParentAbort);
       }
-
-      // 子代理状态应该由 subagent store 管理，不再在这里维护全局计数
     }
   }
   } while (retrying); // end do-while outer retry loop

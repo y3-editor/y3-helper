@@ -10,7 +10,7 @@
 import {
   ChatMessage,
   ChatPromptBody,
-  ChatMessageContent,
+  // ChatMessageContent,
 } from '../../../services';
 import { ChatRole } from '../../../services/useChatStream';
 import { ChatModel } from '../../../services/chatModel';
@@ -21,10 +21,10 @@ import {
 } from '../../../utils/validateBeforeChat';
 import { pruneToolOutputs } from '../../../services/compressionService';
 import { truncateMessagesIfNeeded } from '../../../utils/truncateMessages';
-import { useWorkspaceStore } from '../../../store/workspace';
-import { CACHE_TIER_BREAK } from '../../../store/workspace/constructRemixPrompt';
+// import { useWorkspaceStore } from '../../../store/workspace';
+// import { CACHE_TIER_BREAK } from '../../../store/workspace/constructRemixPrompt';
 import addCacheMarksToMessages from '../../../utils/addCacheMarksToMessages';
-import type { Tool, Rule } from '../../../store/workspace';
+import type { Tool } from '../../../store/workspace';
 import type { Agent } from '../types';
 
 export interface MessagePreprocessOptions {
@@ -44,7 +44,7 @@ export interface PreprocessedMessageResult {
     finalMessageCount: number;
     hasCompression: boolean;
     hasTruncation: boolean;
-    systemPromptLength: number;
+    // systemPromptLength: number;
   };
 }
 
@@ -126,37 +126,37 @@ export async function preprocessSubagentMessages(
   );
 
   // 3. 系统提示词处理（使用简化的规则集）
-  const effectiveRules: Rule[] = []; // subagent可以传入空规则集，或者从agent配置中提取
+  // const effectiveRules: Rule[] = []; // subagent可以传入空规则集，或者从agent配置中提取
 
-  const workspaceStore = useWorkspaceStore.getState();
-  const codebaseChatSystemPrompt = workspaceStore.getCodebaseChatSystemPrompt({
-    effectiveRules,
-  });
+  // const workspaceStore = useWorkspaceStore.getState();
+  // const codebaseChatSystemPrompt = workspaceStore.getCodebaseChatSystemPrompt({
+  //   effectiveRules,
+  // });
 
-  // 替换或增强原有的系统提示词
-  const systemMessageIndex = sendMessages.findIndex(
-    (m) => m.role === ChatRole.System,
-  );
-  const systemMessage: ChatMessage = {
-    role: ChatRole.System,
-    content: cacheEnable
-      ? codebaseChatSystemPrompt
-          .split(CACHE_TIER_BREAK)
-          .map((text) => ({ type: ChatMessageContent.Text, text }))
-      : codebaseChatSystemPrompt.split(CACHE_TIER_BREAK).join('\n'),
-  };
+  // // 替换或增强原有的系统提示词
+  // const systemMessageIndex = sendMessages.findIndex(
+  //   (m) => m.role === ChatRole.System,
+  // );
+  // const systemMessage: ChatMessage = {
+  //   role: ChatRole.System,
+  //   content: cacheEnable
+  //     ? codebaseChatSystemPrompt
+  //         .split(CACHE_TIER_BREAK)
+  //         .map((text) => ({ type: ChatMessageContent.Text, text }))
+  //     : codebaseChatSystemPrompt.split(CACHE_TIER_BREAK).join('\n'),
+  // };
 
-  if (systemMessageIndex >= 0) {
-    // 替换现有的系统提示词
-    sendMessages[systemMessageIndex] = systemMessage;
-  } else {
-    // 添加系统提示词到顶部
-    sendMessages.unshift(systemMessage);
-  }
+  // if (systemMessageIndex >= 0) {
+  //   // 替换现有的系统提示词
+  //   sendMessages[systemMessageIndex] = systemMessage;
+  // } else {
+  //   // 添加系统提示词到顶部
+  //   sendMessages.unshift(systemMessage);
+  // }
 
-  console.log(
-    `[Subagent] ${taskId} System prompt ${systemMessageIndex >= 0 ? 'replaced' : 'added'}: ${codebaseChatSystemPrompt.length} chars`,
-  );
+  // console.log(
+  //   `[Subagent] ${taskId} System prompt ${systemMessageIndex >= 0 ? 'replaced' : 'added'}: ${codebaseChatSystemPrompt.length} chars`,
+  // );
 
   // 4. 消息序列化（关键步骤）
   let filteredMessages = await serializeCodebaseMessages(
@@ -187,7 +187,7 @@ export async function preprocessSubagentMessages(
     finalMessageCount: filteredMessages.length,
     hasCompression: prunedMessages.length !== unCompressedMessages.length,
     hasTruncation: truncationResult.newTruncateStart !== -1,
-    systemPromptLength: codebaseChatSystemPrompt.length,
+    // systemPromptLength: codebaseChatSystemPrompt.length,
   };
 
   console.log(`[Subagent] ${taskId} Preprocessing complete:`, metadata);

@@ -19,7 +19,11 @@ import { usePostMessage } from '../../../PostMessageProvider';
 import MiniButton from '../../../components/MiniButton';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
-import { SubagentTokens } from '../../../modules/subagent/types';
+import {
+  formatTokenCount,
+  calculateChildrenTotalTokens,
+} from '../../../utils/consumedTokensCalculator';
+import type { ChildSession } from '../../../utils/consumedTokensCalculator';
 
 /** 基于 agent 名称 hash 稳定分配颜色 */
 function getAgentColor(agentName: string): string {
@@ -42,13 +46,7 @@ function getAgentColor(agentName: string): string {
 
 /** 格式化 token 数量为可读字符串 */
 function formatTokens(n: number): string {
-  const billion = 1_000_000_000;
-  const million = 1_000_000;
-  const thousand = 1_000;
-  if (n >= billion) return (n / billion).toFixed(1) + 'B';
-  if (n >= million) return (n / million).toFixed(1) + 'M';
-  if (n >= thousand) return (n / thousand).toFixed(1) + 'k';
-  return String(n);
+  return formatTokenCount(n);
 }
 
 /** 单行 token 条目 */
@@ -58,7 +56,7 @@ interface TokenRowProps {
   value: number;
   total: number;
   isDark: boolean;
-  tooltop?: string;
+  tooltip?: string;
 }
 
 function TokenRow({
@@ -67,7 +65,7 @@ function TokenRow({
   value,
   total,
   isDark,
-  tooltop,
+  tooltip,
 }: TokenRowProps) {
   const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
   return (
@@ -81,8 +79,8 @@ function TokenRow({
         gap={1}
       >
         <Text>{label}</Text>
-        <Tooltip label={tooltop}>
-          <Text hidden={!tooltop} mx={1}>
+        <Tooltip label={tooltip}>
+          <Text hidden={!tooltip} mx={1}>
             <Icon
               as={AiOutlineQuestionCircle}
               size="sm"
@@ -103,34 +101,38 @@ function TokenRow({
   );
 }
 
-/** Subagent Token 折叠展示区域 */
-interface SubagentTokenSectionProps {
-  subagentTokens: SubagentTokens;
+/** 子会话 Token 折叠展示区域 */
+interface ChildSessionTokenSectionProps {
+  childrenSummary: ChildSession[];
   pctBase: number;
   isDark: boolean;
 }
 
-function SubagentTokenSection({
-  subagentTokens,
+function ChildSessionTokenSection({
+  childrenSummary,
   pctBase,
   isDark,
-}: SubagentTokenSectionProps) {
+}: ChildSessionTokenSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const sortedAgents = useMemo(
+  const sortedSessions = useMemo(
     () =>
-      Object.entries(subagentTokens.byAgent).sort(
-        ([, a], [, b]) =>
-          b.promptTokens +
-          b.completionTokens -
-          (a.promptTokens + a.completionTokens),
-      ),
-    [subagentTokens.byAgent],
+      childrenSummary
+        .filter((session) => session.consumedTokens) // 过滤掉没有 token 统计的会话
+        .map((session) => [session.name, session] as const)
+        .sort(([, a], [, b]) => {
+          const aTotal =
+            (a.consumedTokens?.input || 0) + (a.consumedTokens?.output || 0);
+          const bTotal =
+            (b.consumedTokens?.input || 0) + (b.consumedTokens?.output || 0);
+          return bTotal - aTotal;
+        }),
+    [childrenSummary],
   );
 
-  const agentTypeCount = sortedAgents.length;
-  const pct =
-    pctBase > 0 ? ((subagentTokens.total / pctBase) * 100).toFixed(1) : '0.0';
+  const sessionCount = sortedSessions.length;
+  const totalTokens = calculateChildrenTotalTokens(childrenSummary);
+  const pct = pctBase > 0 ? ((totalTokens / pctBase) * 100).toFixed(1) : '0.0';
 
   return (
     <Box>
@@ -165,12 +167,10 @@ function SubagentTokenSection({
             fontWeight="medium"
             lineHeight="1.4"
           >
-            {agentTypeCount} agent{agentTypeCount !== 1 ? 's' : ''}
+            {sessionCount} session{sessionCount !== 1 ? 's' : ''}
           </Text>
           <Text>:</Text>
-          <Text fontWeight="semibold">
-            {formatTokens(subagentTokens.total)}
-          </Text>
+          <Text fontWeight="semibold">{formatTokens(totalTokens)}</Text>
           <Text>tokens</Text>
           <Text color={isDark ? '#888' : '#999'}>({pct}%)</Text>
           <Icon
@@ -192,18 +192,20 @@ function SubagentTokenSection({
           borderLeft="1px solid"
           borderColor={isDark ? '#3a3a3a' : '#e5e7eb'}
         >
-          {sortedAgents.map(([agentName, stats]) => {
-            const agentTotal = stats.promptTokens + stats.completionTokens;
-            const agentPct =
-              pctBase > 0 ? ((agentTotal / pctBase) * 100).toFixed(1) : '0.0';
+          {sortedSessions.map(([sessionName, stats]) => {
+            const sessionTotal =
+              (stats.consumedTokens?.input || 0) +
+              (stats.consumedTokens?.output || 0);
+            const sessionPct =
+              pctBase > 0 ? ((sessionTotal / pctBase) * 100).toFixed(1) : '0.0';
             return (
-              <Flex key={agentName} alignItems="center" gap={2} py={0.5}>
+              <Flex key={stats.id} alignItems="center" gap={2} py={0.5}>
                 <Box
                   w="6px"
                   h="6px"
                   borderRadius="50%"
                   flexShrink={0}
-                  bg={getAgentColor(agentName)}
+                  bg={getAgentColor(sessionName)}
                 />
                 <Flex
                   fontSize="xs"
@@ -215,7 +217,7 @@ function SubagentTokenSection({
                   gap={1}
                 >
                   <Tooltip
-                    label={agentName.length > 20 ? agentName : undefined}
+                    label={sessionName.length > 20 ? sessionName : undefined}
                     placement="top"
                   >
                     <Text
@@ -225,25 +227,15 @@ function SubagentTokenSection({
                       overflow="hidden"
                       textOverflow="ellipsis"
                       whiteSpace="nowrap"
-                      cursor={agentName.length > 20 ? 'default' : 'inherit'}
+                      cursor={sessionName.length > 20 ? 'default' : 'inherit'}
                     >
-                      {agentName}
+                      {sessionName}
                     </Text>
                   </Tooltip>
-                  <Text fontWeight="semibold">{formatTokens(agentTotal)}</Text>
-                  <Text color={isDark ? '#888' : '#999'}>({agentPct}%)</Text>
-                  <Tooltip
-                    label={`${stats.callCount} call${stats.callCount !== 1 ? 's' : ''}`}
-                  >
-                    <Text
-                      ml="auto"
-                      fontSize="10px"
-                      color={isDark ? '#555' : '#bbb'}
-                      cursor="default"
-                    >
-                      ×{stats.callCount}
-                    </Text>
-                  </Tooltip>
+                  <Text fontWeight="semibold">
+                    {formatTokens(sessionTotal)}
+                  </Text>
+                  <Text color={isDark ? '#888' : '#999'}>({sessionPct}%)</Text>
                 </Flex>
               </Flex>
             );
@@ -258,12 +250,16 @@ export default function ChatConsumeTokenPanel() {
   const { activeTheme } = useTheme();
   const { postMessage } = usePostMessage();
   const isDark = activeTheme === ThemeStyle.Dark;
+  const chatType = useChatStore((state) => state.chatType);
 
   const currentSession = useChatStore((state) => state.currentSession());
   const ct = currentSession?.data?.consumedTokens;
 
   const promptTokens = useMemo(() => ct?.input || 0, [ct?.input]);
-  const completionTokens = useMemo(() => ct?.output || 0, [ct?.output]);
+  const completionTokens = useMemo(
+    () => ct?.output || 0,
+    [ct?.output],
+  );
   const compressTokens = useMemo(
     () =>
       (ct?.comporessPromptTokens || 0) + (ct?.comporessCompletionTokens || 0),
@@ -274,6 +270,7 @@ export default function ChatConsumeTokenPanel() {
     () => ct?.systemToolTokens || 0,
     [ct?.systemToolTokens],
   );
+
   const readCacheTokens = useMemo(
     () => ct?.readCacheTokens || 0,
     [ct?.readCacheTokens],
@@ -287,74 +284,31 @@ export default function ChatConsumeTokenPanel() {
   const mcpTokens = useMemo(() => ct?.mcpTokens || 0, [ct?.mcpTokens]);
 
   // 直接读取，避免 useMemo dep 写可选链引起的类型告警
-  const subagentTokens = ct?.subagentTokens ?? null;
-  const subagentTotalTokens = subagentTokens?.total ?? 0;
+  const childrenSummary = ct?.children ?? null;
+  const childrenTotalTokens = childrenSummary
+    ? calculateChildrenTotalTokens(childrenSummary)
+    : 0;
 
   // 检查 Subagent 功能是否启用
   const subagentEnable = useExtensionStore((state) => state.subagentEnable);
-  const effectiveSubagentTokens = subagentEnable && subagentTokens ? subagentTokens : null;
-  const effectiveSubagentTotalTokens = subagentEnable ? subagentTotalTokens : 0;
+  const effectiveChildrenSummary =
+    subagentEnable && childrenSummary ? childrenSummary : null;
+  const effectiveChildrenTotalTokens = subagentEnable ? childrenTotalTokens : 0;
 
   const totalTokens = useMemo(() => {
-    const total =
-      messageTokens +
-      compressTokens +
-      systemTokens +
-      systemToolTokens +
-      readCacheTokens +
-      skillTokens +
-      ruleTokens +
-      mcpTokens +
-      effectiveSubagentTotalTokens;
-
-    console.log(
-      '🎯 %cToken Panel Total Calculation:',
-      'color: #059669; font-weight: bold; background: #D1FAE5; padding: 2px 6px; border-radius: 4px;',
-      {
-        '🤖 Subagent Tokens': effectiveSubagentTotalTokens,
-        '🔧 Subagent Enabled': subagentEnable,
-        '💬 Message Tokens': messageTokens,
-        '📦 System Tokens': systemTokens,
-        '🛠️ System Tool Tokens': systemToolTokens,
-        '🗜️ Compress Tokens': compressTokens,
-        '💾 Read Cache Tokens': readCacheTokens,
-        '⚡ Skill Tokens': skillTokens,
-        '📏 Rule Tokens': ruleTokens,
-        '🔌 MCP Tokens': mcpTokens,
-        '📊 Final Total': total,
-      },
-    );
-
-    // 如果有 subagent tokens 且功能启用，展示详细信息
-    if (effectiveSubagentTokens && effectiveSubagentTotalTokens > 0) {
-      console.log(
-        '🤖 %cSubagent Token Details:',
-        'color: #7C2D12; font-weight: bold; background: #FED7AA; padding: 2px 6px; border-radius: 4px;',
-        {
-          '📊 Total': effectiveSubagentTokens.total,
-          '📥 Input': effectiveSubagentTokens.input,
-          '✅ Output': effectiveSubagentTokens.output,
-          '💰 Input Cost': effectiveSubagentTokens.inputCost?.toFixed(6) || '0',
-          '💰 Output Cost': effectiveSubagentTokens.outputCost?.toFixed(6) || '0',
-          '🏷️ By Agent': Object.keys(effectiveSubagentTokens.byAgent).reduce(
-            (acc, agentName) => {
-              const stats = effectiveSubagentTokens.byAgent[agentName];
-              acc[agentName] = {
-                promptTokens: stats.promptTokens,
-                completionTokens: stats.completionTokens,
-                callCount: stats.callCount,
-              };
-              return acc;
-            },
-            {} as Record<string, any>,
-          ),
-          '📝 Recent Tasks Count': effectiveSubagentTokens.recentTasks?.length || 0,
-        },
-      );
+    if (chatType === 'codebase') {
+      // 对于 codebase 类型，计算主Agent所有细分项的总和
+      const mainAgentTokens = messageTokens + compressTokens + systemTokens +
+                             systemToolTokens + readCacheTokens + skillTokens +
+                             ruleTokens + mcpTokens;
+      return mainAgentTokens + effectiveChildrenTotalTokens;
+    } else {
+      // 对于非 codebase 类型，使用简化的 input + output
+      const mainAgentTokens = (ct?.input || 0) + (ct?.output || 0);
+      return mainAgentTokens + effectiveChildrenTotalTokens;
     }
-
-    return total;
   }, [
+    chatType,
     messageTokens,
     compressTokens,
     systemTokens,
@@ -363,9 +317,9 @@ export default function ChatConsumeTokenPanel() {
     skillTokens,
     ruleTokens,
     mcpTokens,
-    effectiveSubagentTotalTokens,
-    effectiveSubagentTokens,
-    subagentEnable,
+    effectiveChildrenTotalTokens,
+    ct?.input,
+    ct?.output,
   ]);
 
   const displayTokens = useMemo(() => formatTokens(totalTokens), [totalTokens]);
@@ -373,7 +327,6 @@ export default function ChatConsumeTokenPanel() {
     () => (totalTokens > 0 ? totalTokens : 1),
     [totalTokens],
   );
-  const chatType = useChatStore((state) => state.chatType);
 
   const tokenRows = useMemo<TokenRowProps[]>(() => {
     if (chatType === 'codebase') {
@@ -391,11 +344,11 @@ export default function ChatConsumeTokenPanel() {
           value: systemToolTokens,
           total: pctBase,
           isDark,
-          tooltop: '当前只有Claude系列模型才支持系统工具定义预览',
+          tooltip: '当前只有Claude系列模型才支持系统工具定义预览',
         },
         {
           color: '#34d399',
-          label: 'Message tools',
+          label: 'Messages',
           value: messageTokens,
           total: pctBase,
           isDark,
@@ -406,7 +359,8 @@ export default function ChatConsumeTokenPanel() {
           value: readCacheTokens,
           total: pctBase,
           isDark,
-          tooltop: '当前只有Claude系列模型才支持缓存',
+          tooltip:
+            '目前仅 Claude 系列模型支持请求缓存功能，可缓存的内容包括：系统提示词（SystemPrompt）、系统工具（SystemTools）、上传的文件等。当请求命中缓存时，能有效减少 token 消耗，降低使用成本',
         },
         {
           color: '#fb7185',
@@ -435,14 +389,14 @@ export default function ChatConsumeTokenPanel() {
         {
           color: '#94a3b8',
           label: 'Input Tokens',
-          value: promptTokens,
+          value: ct?.input || 0,
           total: pctBase,
           isDark,
         },
         {
           color: '#60a5fa',
           label: 'Output Tokens',
-          value: completionTokens,
+          value: ct?.output || 0,
           total: pctBase,
           isDark,
         },
@@ -459,8 +413,8 @@ export default function ChatConsumeTokenPanel() {
     mcpTokens,
     skillTokens,
     ruleTokens,
-    promptTokens,
-    completionTokens,
+    ct?.input,
+    ct?.output,
   ]);
 
   if (!totalTokens) return null;
@@ -506,10 +460,10 @@ export default function ChatConsumeTokenPanel() {
               <TokenRow key={row.label} {...row} />
             ))}
 
-            {/* Subagent 独立折叠区，不混入 tokenRows */}
-            {effectiveSubagentTokens && effectiveSubagentTotalTokens > 0 && (
-              <SubagentTokenSection
-                subagentTokens={effectiveSubagentTokens}
+            {/* 子会话独立折叠区，不混入 tokenRows */}
+            {effectiveChildrenSummary && effectiveChildrenTotalTokens > 0 && (
+              <ChildSessionTokenSection
+                childrenSummary={effectiveChildrenSummary}
                 pctBase={pctBase}
                 isDark={isDark}
               />

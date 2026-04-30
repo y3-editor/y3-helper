@@ -16,9 +16,9 @@ import {
   generateTerminalPrompt,
   generateCallingExternalApisPrompt,
   generateSubagentToolCallingPrompt,
-  createPromptContext,
-  interpolateVariables
+  createPromptContext
 } from './shared';
+import { PromptTemplateLoader } from './template-loader';
 import { SubagentPromptOptions, PromptContext } from './types';
 
 /**
@@ -29,7 +29,7 @@ export class EnhancedPromptBuilder {
   /**
    * 构建增强的子代理 system prompt
    */
-  buildSystemPrompt(basePrompt: string, agentType?: string, contextOptions: Partial<PromptContext> = {}): string {
+  async buildSystemPrompt(basePrompt: string, agentType?: string, contextOptions: Partial<PromptContext> = {}): Promise<string> {
     console.log(agentType);
 
     // 获取当前状态（在非 React 环境中需要手动获取）
@@ -57,15 +57,15 @@ export class EnhancedPromptBuilder {
     const tier1Parts: string[] = [basePrompt];
 
     // 基础系统规则（工具调用等）- 使用子代理专用版本
-    const toolCallingPrompt = generateSubagentToolCallingPrompt(context);
+    const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
 
     // 搜索和阅读指令
-    const searchAndReadingPrompt = generateSearchAndReadingPrompt(context);
+    const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);
 
     // TODO: 后续再支持 外部API调用规则
-    // const callingExternalApisPrompt = generateCallingExternalApisPrompt(context);
+    // const callingExternalApisPrompt = await generateCallingExternalApisPrompt(context);
     // if (callingExternalApisPrompt) tier1Parts.push(callingExternalApisPrompt);
 
     const tier1 = tier1Parts.filter(Boolean).join('\n\n');
@@ -76,15 +76,15 @@ export class EnhancedPromptBuilder {
     const tier2Parts: string[] = [];
 
     // 代码编辑功能（子代理可能需要）
-    const codeEditPrompt = generateCodeEditPrompt(context);
+    const codeEditPrompt = await generateCodeEditPrompt(context);
     if (codeEditPrompt) tier2Parts.push(codeEditPrompt);
 
     // 终端功能（如果启用）
-    const terminalPrompt = generateTerminalPrompt(context);
+    const terminalPrompt = await generateTerminalPrompt(context);
     if (terminalPrompt) tier2Parts.push(terminalPrompt);
 
     // 用户环境信息
-    const userInfoPrompt = generateUserInfoPrompt(context);
+    const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
@@ -94,12 +94,12 @@ export class EnhancedPromptBuilder {
     // ================================================================
     const tier3Parts: string[] = [];
 
-    // Skills 功能支持
-    const skillsPrompt = generateSkillsPrompt(context);
+    // Skills 功能支持（同步）
+    const skillsPrompt = await generateSkillsPrompt(context);
     if (skillsPrompt) tier3Parts.push(skillsPrompt);
 
-    // 用户规则支持
-    const rulesPrompt = generateRulesPrompt(context);
+    // 用户规则支持（同步）
+    const rulesPrompt = await generateRulesPrompt(context);
     if (rulesPrompt) tier3Parts.push(rulesPrompt);
 
     const tier3 = tier3Parts.filter(Boolean).join('\n\n');
@@ -117,7 +117,8 @@ export class EnhancedPromptBuilder {
       ...context.variables
     };
 
-    return interpolateVariables(finalPrompt, variables);
+    // 使用新的模板系统进行变量插值
+    return PromptTemplateLoader.interpolateVariables(finalPrompt, variables);
   }
 
   /**
@@ -156,7 +157,7 @@ export function useSubagentPromptBuilder() {
   );
   const skills = useSkillsStore(state => state.skills);
 
-  const buildSystemPrompt = (basePrompt: string, agentType?: string, options: Partial<PromptContext> = {}): string => {
+  const buildSystemPrompt = async (basePrompt: string, agentType?: string, options: Partial<PromptContext> = {}): Promise<string> => {
     console.log(agentType);
     const context: PromptContext = createPromptContext({
       workspace: workspaceInfo,
@@ -177,15 +178,15 @@ export function useSubagentPromptBuilder() {
     const tier1Parts: string[] = [basePrompt];
 
     // 基础系统规则（工具调用等）- 使用子代理专用版本
-    const toolCallingPrompt = generateSubagentToolCallingPrompt(context);
+    const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
 
     // 搜索和阅读指令
-    const searchAndReadingPrompt = generateSearchAndReadingPrompt(context);
+    const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);
 
     // 外部API调用规则
-    const callingExternalApisPrompt = generateCallingExternalApisPrompt(context);
+    const callingExternalApisPrompt = await generateCallingExternalApisPrompt(context);
     if (callingExternalApisPrompt) tier1Parts.push(callingExternalApisPrompt);
 
     const tier1 = tier1Parts.filter(Boolean).join('\n\n');
@@ -196,15 +197,15 @@ export function useSubagentPromptBuilder() {
     const tier2Parts: string[] = [];
 
     // 代码编辑功能（子代理可能需要）
-    const codeEditPrompt = generateCodeEditPrompt(context);
+    const codeEditPrompt = await generateCodeEditPrompt(context);
     if (codeEditPrompt) tier2Parts.push(codeEditPrompt);
 
     // 终端功能（如果启用）
-    const terminalPrompt = generateTerminalPrompt(context);
+    const terminalPrompt = await generateTerminalPrompt(context);
     if (terminalPrompt) tier2Parts.push(terminalPrompt);
 
     // 用户环境信息
-    const userInfoPrompt = generateUserInfoPrompt(context);
+    const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
@@ -214,12 +215,12 @@ export function useSubagentPromptBuilder() {
     // ================================================================
     const tier3Parts: string[] = [];
 
-    // Skills 功能支持
-    const skillsPrompt = generateSkillsPrompt(context);
+    // Skills 功能支持（同步）
+    const skillsPrompt = await generateSkillsPrompt(context);
     if (skillsPrompt) tier3Parts.push(skillsPrompt);
 
-    // 用户规则支持
-    const rulesPrompt = generateRulesPrompt(context);
+    // 用户规则支持（同步）
+    const rulesPrompt = await generateRulesPrompt(context);
     if (rulesPrompt) tier3Parts.push(rulesPrompt);
 
     const tier3 = tier3Parts.filter(Boolean).join('\n\n');
@@ -237,7 +238,7 @@ export function useSubagentPromptBuilder() {
       ...context.variables
     };
 
-    return interpolateVariables(finalPrompt, variables);
+    return PromptTemplateLoader.interpolateVariables(finalPrompt, variables);
   };
 
   return {
@@ -249,10 +250,10 @@ export function useSubagentPromptBuilder() {
  * 简化的构建函数
  * 直接使用现有数据构建子代理 prompt
  */
-export function buildSubagentPrompt(options: SubagentPromptOptions): string {
+export async function buildSubagentPrompt(options: SubagentPromptOptions): Promise<string> {
   const { basePrompt, agentType, context = {} } = options;
   const builder = new EnhancedPromptBuilder();
-  return builder.buildSystemPrompt(basePrompt, agentType, context);
+  return await builder.buildSystemPrompt(basePrompt, agentType, context);
 }
 
 // 创建单例实例（向后兼容）

@@ -9,6 +9,7 @@ const MOCK_SERVER = process.env.MOCK_SERVER_URL || 'http://localhost:3001';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  assetsInclude: ['**/*.txt'], // 支持 .txt 文件作为资源导入
   resolve: {
     alias: {
       // Stub internal packages with local implementations

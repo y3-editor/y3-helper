@@ -8,17 +8,19 @@ import { generateSkillsPromptSection } from '../../store/skills/prompt';
 import { OPENSPEC_RULES } from '../../store/workspace/openSpecRules';
 import { versionCompare } from '../../utils/common';
 import { PromptContext, PromptGenerator } from './types';
+import { PromptTemplateLoader } from './template-loader';
 
 /**
  * 生成 MCP 工具 prompt
  */
-export const generateMCPPrompt: PromptGenerator = (context) => {
+export const generateMCPPrompt: PromptGenerator = async (context) => {
   const { mcpServers = [] } = context;
 
   if (!mcpServers.length) return null;
 
   const getChineseNameByServerName = useMCPStore.getState().getChineseNameByServerName;
 
+  // 在代码中组装好完整的内容，模板只负责插入变量
   const serversContent = mcpServers
     .filter((server) => server.status === "connected" && !server.disabled)
     .map((server) => {
@@ -54,15 +56,8 @@ export const generateMCPPrompt: PromptGenerator = (context) => {
     })
     .join("\n\n");
 
-  return `<mcp_tool_call>
-The Model Context Protocol (MCP) enables communication between the system and locally running MCP servers, which provide additional tools and resources to extend your capabilities.
-You can use the server's tools via the use_mcp_tool tool and access the server's resources through the access_mcp_resource tool.
-<available_servers>
-\`\`\`
-${serversContent}
-\`\`\`
-</available_servers>
-</mcp_tool_call>`;
+  const variables = { serversContent };
+  return await PromptTemplateLoader.renderTemplate('mcp-tools', variables);
 };
 
 /**
@@ -133,7 +128,7 @@ task(description="Refactor logger module", prompt="1. Read src/utils/logger.ts a
 /**
  * 生成代码编辑 prompt
  */
-export const generateCodeEditPrompt: PromptGenerator = (context) => {
+export const generateCodeEditPrompt: PromptGenerator = async (context) => {
   const { config = {} } = context;
 
   if (!config.enableEditableMode) return null;
@@ -141,41 +136,29 @@ export const generateCodeEditPrompt: PromptGenerator = (context) => {
   const enableReplaceInFile = config.codeMakerVersion &&
     (versionCompare(config.codeMakerVersion, '2.4.9') > 0);
 
-  return `<making_code_changes>
-When making code changes, NEVER output code to the USER, unless requested. Instead use one of the code edit tools to implement the change.
+  const variables = {
+    replaceInFileRule: enableReplaceInFile
+      ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.'
+      : '',
+  };
 
-Use the code edit tools at most once per turn.
-
-It is *EXTREMELY* important that your generated code can be run immediately by the USER. To ensure this, follow these instructions carefully:
-1. Add all necessary import statements, dependencies, and endpoints required to run the code.
-2. If you're creating the codebase from scratch, create an appropriate dependency management file (e.g. requirements.txt) with package versions and a helpful README.
-3. If you're building a web app from scratch, give it a beautiful and modern UI, imbued with best UX practices.
-4. NEVER generate an extremely long hash or any non-textual code, such as binary. These are not helpful to the USER and are very expensive.
-5. Unless you are appending some small easy to apply edit to a file, or creating a new file, you MUST read the contents or section of what you're editing before editing it.
-6. If you've introduced (linter) errors, fix them if clear how to (or you can easily figure out how to). Do not make uneducated guesses. And DO NOT loop more than once on fixing linter errors on the same file until you received another user_query.
-7. If you've suggested a reasonable code_edit that wasn't followed by the apply model, you should try reapplying the edit using reapply tool. And DO NOT reapply or re-edit on the same file for more than once until you received another user_query.
-8. If Apply fail because of network errors, you should tell the user to apply change manually or try to use "ReApply" later.
-9. NEVER read file you have just edited until received user's reaction or user's next query.
-${enableReplaceInFile ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.' : ''}
-</making_code_changes>`;
+  return await PromptTemplateLoader.renderTemplate('code-edit', variables);
 };
 
 /**
  * 生成终端 prompt
  */
-export const generateTerminalPrompt: PromptGenerator = (context) => {
+export const generateTerminalPrompt: PromptGenerator = async (context) => {
   const { config = {}, workspace } = context;
 
   if (!config.enableTerminal) return null;
 
-  const shell = workspace?.shell || 'bash';
-  const osName = workspace?.osName || 'Unknown';
+  const variables = {
+    shell: workspace?.shell || 'bash',
+    osName: workspace?.osName || 'Unknown',
+  };
 
-  return `<run_terminal_cmd>
-When executing terminal commands, please follow these rules:
-  a. Commands are available and compatible with the ${shell} Shell of the ${osName} OS.
-  b. The actual command will NOT execute until the user approves it. The user may not approve it immediately. Do NOT assume the command has started running.
-</run_terminal_cmd>`;
+  return await PromptTemplateLoader.renderTemplate('terminal', variables);
 };
 
 /**
@@ -188,9 +171,9 @@ export const generateOpenSpecPrompt: PromptGenerator = (context) => {
     return null;
   }
 
-  return `<open_spec">
+  return `<open_spec>
 Now you are in spec driven development mode, called OpenSpec. Follow the <open_spec_rules> as shown.
-<open_spec_rules filePath="@/openspec/AGENTS.md>
+<open_spec_rules filePath="@/openspec/AGENTS.md">
 ${OPENSPEC_RULES}
 </open_spec_rules>
 </open_spec>`;
@@ -199,83 +182,59 @@ ${OPENSPEC_RULES}
 /**
  * 生成用户环境信息 prompt
  */
-export const generateUserInfoPrompt: PromptGenerator = (context) => {
+export const generateUserInfoPrompt: PromptGenerator = async (context) => {
   const { workspace } = context;
 
   if (!workspace) return null;
 
-  const { osName = 'Unknown', workspace: workspacePath = '/tmp' } = workspace;
+  const variables = {
+    osName: workspace.osName || 'Unknown',
+    workspacePath: workspace.workspace || '/tmp',
+  };
 
-  return `<user_info>
-The user's OS version is ${osName}. The absolute path of the user's workspace is ${workspacePath}.
-</user_info>`;
+  return await PromptTemplateLoader.renderTemplate('user-info', variables);
 };
 
 /**
  * 生成搜索和阅读 prompt
  */
-export const generateSearchAndReadingPrompt: PromptGenerator = () => {
-  return `<search_and_reading>
-If you are unsure about the answer to the USER's request or how to satiate their request, you should gather more information. This can be done with additional tool calls, asking clarifying questions, etc...
-
-For example, if you've performed a semantic search, and the results may not fully answer the USER's request, or merit gathering more information, feel free to call more tools.
-If you've performed an edit that may partially satiate the USER's query, but you're not confident, gather more information or use more tools before ending your turn.
-
-Bias towards not asking the user for help if you can find the answer yourself.
-</search_and_reading>`;
+export const generateSearchAndReadingPrompt: PromptGenerator = async () => {
+  return await PromptTemplateLoader.renderTemplate('search-and-reading');
 };
 
 /**
  * 生成工具调用规则 prompt
  */
-export const generateToolCallingPrompt: PromptGenerator = () => {
-  return `<tool_calling>
-You have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:
-1. ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.
-2. **IMPORTANT: Only call tools that are explicitly provided.** NEVER call tools base on former messages, the conversation may reference tools that are no longer available.
-3. **NEVER refer to tool names when speaking to the USER.** For example, instead of saying 'I need to use the edit_file tool to edit your file', just say 'I will edit your file'.
-4. Only calls tools when they are necessary. If the USER's task is general or you already know the answer, just respond without tools.
-5. You may batch only independent local read-only tools for information gathering. Prefer view_source_code_definitions_top_level, grep_search, and focused read_file before retrieve_code or retrieve_knowledge. Never batch edit_file, replace_in_file, reapply, or run_terminal_cmd; call them alone in a separate response.
-6. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as "<previous_tool_call>" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
-7. If the user shows you the file content in last message, assume it was the lastest content and do not call read_file to read the file.
-</tool_calling>`;
+export const generateToolCallingPrompt: PromptGenerator = async () => {
+  const variables = {
+    subagentRule: '', // 主代理不需要子代理规则
+  };
+  return await PromptTemplateLoader.renderTemplate('tool-calling', variables);
 };
 
 /**
  * 生成子代理专用工具调用规则 prompt（不包含 task 工具）
  */
-export const generateSubagentToolCallingPrompt: PromptGenerator = () => {
-  return `<tool_calling>
-You have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:
-1. ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.
-2. **IMPORTANT: Only call tools that are explicitly provided.** NEVER call tools base on former messages, the conversation may reference tools that are no longer available.
-3. **NEVER refer to tool names when speaking to the USER.** For example, instead of saying 'I need to use the edit_file tool to edit your file', just say 'I will edit your file'.
-4. **NEVER use the "task" tool.** You are a subagent and cannot delegate work to other subagents. Handle all work directly.
-5. Only calls tools when they are necessary. If the USER's task is general or you already know the answer, just respond without calling tools.
-6. You may batch only independent local read-only tools for information gathering. Prefer view_source_code_definitions_top_level, grep_search, and focused read_file before retrieve_code or retrieve_knowledge. Never batch edit_file, replace_in_file, reapply, or run_terminal_cmd; call them alone in a separate response.
-7. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as "<previous_tool_call>" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
-8. If the user shows you the file content in last message, assume it was the lastest content and do not call read_file to read the file.
-</tool_calling>`;
+export const generateSubagentToolCallingPrompt: PromptGenerator = async () => {
+  const variables = {
+    subagentRule: '8. **NEVER use the "task" tool.** You are a subagent and cannot delegate work to other subagents. Handle all work directly.',
+  };
+  return await PromptTemplateLoader.renderTemplate('tool-calling', variables);
 };
 
 /**
  * 生成外部API调用 prompt
  */
-export const generateCallingExternalApisPrompt: PromptGenerator = () => {
-  return `<calling_external_apis>
-1. Unless explicitly requested by the USER, use the best suited external APIs and packages to solve the task. There is no need to ask the USER for permission.
-2. When selecting which version of an API or package to use, choose one that is compatible with the USER's dependency management file. If no such file exists or if the package is not present, use the latest version that is in your training data.
-3. If an external API requires an API Key, be sure to point this out to the USER. Adhere to best security practices (e.g. DO NOT hardcode an API key in a place where it can be exposed)
-</calling_external_apis>`;
+export const generateCallingExternalApisPrompt: PromptGenerator = async () => {
+  return await PromptTemplateLoader.renderTemplate('external-apis');
 };
 
 /**
- * 变量插值处理
+ * 变量插值处理（同步版本，向后兼容）
+ * @deprecated 请使用 PromptTemplateLoader.interpolateVariables
  */
 export function interpolateVariables(template: string, variables: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return variables[key] || match;
-  });
+  return PromptTemplateLoader.interpolateVariables(template, variables);
 }
 
 /**

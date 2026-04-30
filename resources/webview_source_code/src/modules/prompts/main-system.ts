@@ -22,7 +22,7 @@ import { MainPromptOptions, PromptContext } from './types';
 /**
  * 构建主系统的完整 prompt
  */
-export function constructMainPrompt(options: MainPromptOptions): string {
+export async function constructMainPrompt(options: MainPromptOptions): Promise<string> {
   const { info, MCPServers, enableTerminal, codeMakerVersion, effectiveRules, skills = [], openspecVersion } = options;
   const { workspace, osName, shell } = info;
   const { enableEditableMode, enableSkills, autoApply, autoExecute } = useChatConfig.getState()
@@ -58,21 +58,23 @@ export function constructMainPrompt(options: MainPromptOptions): string {
     }
   });
 
-  // 生成各个部分
-  const mcpPrompt = generateMCPPrompt(context) || '';
-  const skillPrompt = generateSkillsPrompt(context) || '';
-  const rulesPrompt = generateRulesPrompt(context) || '';
-  const taskDelegationPrompt = generateTaskDelegationPrompt(context) || '';
-  const codeEditPrompt = generateCodeEditPrompt(context) || '';
-  const terminalPrompt = generateTerminalPrompt(context) || '';
-  const openSpecPrompt = generateOpenSpecPrompt(context) || '';
-  const userInfoPrompt = generateUserInfoPrompt(context) || '';
+  // 生成各个部分（并行处理）
+  const [mcpPrompt, skillPrompt, rulesPrompt, taskDelegationPrompt, codeEditPrompt, terminalPrompt, openSpecPrompt, userInfoPrompt] = await Promise.all([
+    generateMCPPrompt(context),
+    generateSkillsPrompt(context),
+    generateRulesPrompt(context),
+    generateTaskDelegationPrompt(context),
+    generateCodeEditPrompt(context),
+    generateTerminalPrompt(context),
+    generateOpenSpecPrompt(context),
+    generateUserInfoPrompt(context),
+  ]);
 
   // 更新 PromptLinkMgr（保持向后兼容）
   PromptLinkMgr.ins.init({
-    mcpPrompt,
-    skillPrompt,
-    rulePrompt: rulesPrompt.replace('<user_requirement_rules>', '').replace('</user_requirement_rules>', '').trim(),
+    mcpPrompt: mcpPrompt || '',
+    skillPrompt: skillPrompt || '',
+    rulePrompt: (rulesPrompt || '').replace('<user_requirement_rules>', '').replace('</user_requirement_rules>', '').trim(),
   });
 
   // 组合完整的 prompt
@@ -106,7 +108,7 @@ You have tools at your disposal to solve the coding task. Follow these rules reg
 </tool_calling>
 ${mcpPrompt}
 
-${taskDelegationPrompt}
+${taskDelegationPrompt || ''}
 
 <search_and_reading>
 If you are unsure about the answer to the USER's request or how to satiate their request, you should gather more information. This can be done with additional tool calls, asking clarifying questions, etc...
@@ -117,9 +119,9 @@ If you've performed an edit that may partially satiate the USER's query, but you
 Bias towards not asking the user for help if you can find the answer yourself.
 </search_and_reading>
 
-${codeEditPrompt}
+${codeEditPrompt || ''}
 
-${terminalPrompt}
+${terminalPrompt || ''}
 
 <calling_external_apis>
 1. Unless explicitly requested by the USER, use the best suited external APIs and packages to solve the task. There is no need to ask the USER for permission.
@@ -127,11 +129,11 @@ ${terminalPrompt}
 3. If an external API requires an API Key, be sure to point this out to the USER. Adhere to best security practices (e.g. DO NOT hardcode an API key in a place where it can be exposed)
 </calling_external_apis>
 
-${rulesPrompt}
-${openSpecPrompt}
-${skillPrompt}
+${rulesPrompt || ''}
+${openSpecPrompt || ''}
+${skillPrompt || ''}
 
-${userInfoPrompt}
+${userInfoPrompt || ''}
 
 Answer the user's request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.`;
 }
@@ -140,6 +142,6 @@ Answer the user's request using the relevant tool(s), if they are available. Che
  * 向后兼容的 constructRemixPrompt 函数
  * 保持与原接口完全一致
  */
-export default function constructRemixPrompt(options: MainPromptOptions): string {
+export default function constructRemixPrompt(options: MainPromptOptions): Promise<string> {
   return constructMainPrompt(options);
 }

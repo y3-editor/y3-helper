@@ -63,8 +63,9 @@ export interface SubagentPromptOptions {
 
 /**
  * Prompt 片段生成器函数类型
+ * 支持同步和异步两种模式
  */
-export type PromptGenerator = (context: PromptContext) => string | null;
+export type PromptGenerator = (context: PromptContext) => string | null | Promise<string | null>;
 
 /**
  * 条件判断函数类型
