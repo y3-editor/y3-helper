@@ -70,8 +70,7 @@ ${MCPServers.filter(
     const tools = server.tools
       ?.map((tool) => {
         const schemaStr = tool.inputSchema
-          ? `    Input Schema:
-  ${JSON.stringify(tool.inputSchema, null, 2).split('\n').join('\n    ')}`
+          ? `    Input Schema: ${JSON.stringify(tool.inputSchema)}`
           : '';
 
         return `- ${tool.name}: ${tool.description}\n${schemaStr}`;

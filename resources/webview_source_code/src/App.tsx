@@ -130,8 +130,10 @@ function App() {
   const isVsCodeIDE = ide === IDE.VisualStudioCode;
 
   const filterTabs = React.useMemo(() => {
-    return tabs ? tabs.filter((tab) => tab.selected) : [];
-  }, [tabs]);
+    // 只在 VSCode 和 JetBrains 下才屏蔽 help tab
+    const shouldFilterHelp = ide === IDE.VisualStudioCode || ide === IDE.JetBrains;
+    return tabs ? tabs.filter((tab) => tab.selected && (!shouldFilterHelp || tab.value !== 'help')) : [];
+  }, [tabs, ide]);
 
   const [activeIndex, setActiveIndex] = React.useState(
     findIndexByTabValue(filterTabs, currentTab),
@@ -381,6 +383,8 @@ function App() {
           codeChatApiBaseUrl,
           codebaseDefaultAuthorizationPath,
           codeChatModelsSetting,
+          codebaseChatDisabledModels,
+          normalChatDisabledModels,
           codeBaseCheckCommands,
           currentFileAutoAttach,
           disableNewApply,
@@ -441,6 +445,8 @@ function App() {
           config.codebaseDefaultAuthorizationPath =
             codebaseDefaultAuthorizationPath || [];
           config.codeBaseCheckCommands = codeBaseCheckCommands || [];
+          config.codebaseChatDisabledModels = codebaseChatDisabledModels || [];
+          config.normalChatDisabledModels = normalChatDisabledModels || [];
           // TEMP: 临时设置默认值
           config.codeChatModelsSetting = codeChatModelsSetting || {
             'Claude3.7': true,

@@ -131,13 +131,10 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const hightlightLayerRef = useRef<HTMLDivElement>(null)
   const { postMessage } = usePostMessage();
   const chatType = useChatStore((state) => state.chatType);
-  const currentSession = useChatStore((state) => state.currentSession());
-  const associateSessionToCurrentWorkspace = useChatStore((state) => state.associateSessionToCurrentWorkspace);
   const currentSessionId = useChatStore((state) => state.currentSessionId);
   const selectSession = useChatStore((state) => state.selectSession);
   const updateAttachs = useChatAttach((state) => state.update);
   const workspaceList = useWorkspaceStore((state) => state.workspaceList);
-  const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const maxCostPerMonth = useChatBillStore(state => state.maxCostPerMonth)
   const ide = useExtensionStore((state) => state.IDE);
   const isVscode = ide === IDE.VisualStudioCode;
@@ -152,8 +149,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (
       placeholder?.includes('打开该仓库使用或新建会话') ||
-      placeholder?.includes('打开该仓库后可继续对话') ||
-      placeholder?.includes('关联至当前仓库')
+      placeholder?.includes('打开该仓库后可继续对话')
     );
   }, [isVscode, placeholder]);
 
@@ -585,9 +581,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                   // 匹配"当前会话关联仓库 仓库名称"或"当前旧会话仅关联仓库名"的模式
                   const repoMatch = placeholder.match(/当前(?:会话关联仓库|旧会话仅关联仓库名)\s+([^，,]+)/);
                   const openRepoMatch = placeholder.match(/打开该仓库/);
-                  const associateMatch = placeholder.match(/关联至当前仓库/);
-
-                  if (repoMatch && (openRepoMatch || associateMatch)) {
+                  if (repoMatch && openRepoMatch) {
                     const repoName = repoMatch[1].trim();
                     const parts: JSX.Element[] = [];
                     let lastIndex = 0;
@@ -639,57 +633,6 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                         </Box>
                       );
                       lastIndex = openRepoMatch.index + '打开该仓库'.length;
-                    }
-
-                    // 处理"关联至当前仓库"链接
-                    if (associateMatch && associateMatch.index !== undefined) {
-                      // 添加"关联至当前仓库"之前的文本
-                      if (associateMatch.index > lastIndex) {
-                        parts.push(
-                          <Box key={`text-before-associate-${lastIndex}`} as="span">
-                            {placeholder.substring(lastIndex, associateMatch.index)}
-                          </Box>
-                        );
-                      }
-                      // 添加"关联至当前仓库"可点击链接
-                      parts.push(
-                        <Box
-                          key="associate-repo"
-                          as="span"
-                          color="blue.400"
-                          cursor="pointer"
-                          textDecoration="underline"
-                          _hover={{ color: "blue.500" }}
-                          onClick={async () => {
-                            if (!currentSession?._id) {
-                              toast({
-                                title: '未找到当前会话',
-                                status: 'error',
-                                duration: 2000,
-                              });
-                              return;
-                            }
-                            try {
-                              await associateSessionToCurrentWorkspace(currentSession._id);
-                              toast({
-                                title: `关联成功，已绑定到 ${workspaceInfo.workspace}`,
-                                status: 'success',
-                                duration: 2000,
-                              });
-                            } catch (error) {
-                              console.error('关联失败:', error);
-                              toast({
-                                title: '关联失败',
-                                status: 'error',
-                                duration: 2000,
-                              });
-                            }
-                          }}
-                        >
-                          关联至当前仓库
-                        </Box>
-                      );
-                      lastIndex = associateMatch.index + '关联至当前仓库'.length;
                     }
 
                     // 添加剩余文本

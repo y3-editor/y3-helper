@@ -134,6 +134,8 @@ interface ChatConfig {
     [modelName: string]: boolean | undefined;
   };
   codeBaseCheckCommands: string[];
+  codebaseChatDisabledModels: string[];
+  normalChatDisabledModels: string[];
 }
 
 interface ConfigStore {
@@ -167,6 +169,8 @@ const DEFAULT_CONFIG: ChatConfig = {
   skipPromptMask: false,
   codeChatModelsSetting: {},
   codeBaseCheckCommands: [],
+  codebaseChatDisabledModels: [],
+  normalChatDisabledModels: [],
 };
 
 export const useConfigStore = create<ConfigStore>()(

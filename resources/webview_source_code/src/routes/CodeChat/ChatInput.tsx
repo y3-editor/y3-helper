@@ -49,7 +49,6 @@ import {
   AgentTaskDirective,
   buildAgentTaskDirective,
 } from '../../modules/subagent/utils/messages';
-import { isSameWorkspace } from '../../utils/common';
 // import EventBus, { EBusEvent } from '../../utils/eventbus';
 
 interface ChatInputProp {
@@ -652,23 +651,8 @@ function ChatInput(props: ChatInputProp) {
     if (chatType === 'codebase') {
       if (workspaceInfo.repoName) {
         if (
-          currentSession?.chat_workspace &&
-          !isSameWorkspace(
-            currentSession.chat_workspace,
-            workspaceInfo.workspace,
-          )
-        ) {
-          return `当前会话关联仓库 ${currentSession.chat_workspace}，打开该仓库使用或关联至当前仓库`;
-        } else if (
-          !currentSession?.chat_workspace &&
           currentSession?.chat_repo &&
-          currentSession?.chat_repo === workspaceInfo.repoName
-        ) {
-          return `当前旧会话仅关联仓库名 ${currentSession.chat_repo}，建议新建会话或关联至当前仓库`;
-        } else if (
-          currentSession?.chat_repo &&
-          currentSession?.chat_repo !== workspaceInfo.repoName &&
-          !currentSession?.chat_workspace
+          currentSession?.chat_repo !== workspaceInfo.repoName
         ) {
           return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库使用或新建会话`;
         } else {
@@ -682,10 +666,8 @@ function ChatInput(props: ChatInputProp) {
           return `${config.submitKey} 发送`;
         }
       } else {
-        if (currentSession?.chat_workspace || currentSession?.chat_repo) {
-          const repoInfo =
-            currentSession?.chat_workspace || currentSession?.chat_repo;
-          return `当前会话关联仓库 ${repoInfo}，打开该仓库后可继续对话`;
+        if (currentSession?.chat_repo) {
+          return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库后可继续对话`;
         } else {
           return `未识别到仓库信息，请打开代码仓库后使用本功能`;
         }
@@ -714,7 +696,6 @@ function ChatInput(props: ChatInputProp) {
     isDisabledAttachs,
     workspaceInfo.repoName,
     workspaceInfo.workspace,
-    currentSession?.chat_workspace,
     currentSession?.chat_repo,
     codebaseChatMode,
     isOpenspecInitialized,
@@ -727,23 +708,8 @@ function ChatInput(props: ChatInputProp) {
       if (!workspaceInfo.repoName) {
         inputDisabled = true;
       } else if (
-        // 优先检查 chat_workspace 匹配
-        currentSession?.chat_workspace &&
-        !isSameWorkspace(currentSession.chat_workspace, workspaceInfo.workspace)
-      ) {
-        inputDisabled = true;
-      } else if (
-        // 同仓库名但没有 chat_workspace 的旧会话 - 需要禁用
-        !currentSession?.chat_workspace &&
         currentSession?.chat_repo &&
-        currentSession?.chat_repo === workspaceInfo.repoName
-      ) {
-        inputDisabled = true;
-      } else if (
-        // 不同仓库名且没有 chat_workspace 的旧会话
-        currentSession?.chat_repo &&
-        currentSession?.chat_repo !== workspaceInfo.repoName &&
-        !currentSession?.chat_workspace
+        currentSession?.chat_repo !== workspaceInfo.repoName
       ) {
         inputDisabled = true;
       } else if (
@@ -785,8 +751,6 @@ function ChatInput(props: ChatInputProp) {
   }, [
     chatType,
     workspaceInfo.repoName,
-    workspaceInfo.workspace,
-    currentSession?.chat_workspace,
     currentSession?.chat_repo,
     codebaseChatMode,
     isOpenspecInitialized,

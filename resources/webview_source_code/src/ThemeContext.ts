@@ -10,6 +10,7 @@ export enum ThemeStyle {
 
 export const ThemeProviderContext = React.createContext<{
   activeTheme: ThemeStyle; // 实际应用的主题（只能是 light 或 dark）
+  themePreference: ThemeStyle; // 用户的主题偏好设置（可以是 light/dark/system）
   switchTheme: (theme: ThemeStyle) => void;
   systemTheme: ThemeStyle;
   setSystemTheme: (theme: ThemeStyle) => void;

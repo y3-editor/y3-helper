@@ -26,7 +26,6 @@ import { ChatIcon } from '@chakra-ui/icons';
 import { TbClockHour3, TbCheck } from 'react-icons/tb';
 import { RiFileEditLine, RiDeleteBinLine } from 'react-icons/ri';
 import { IoMdClose } from 'react-icons/io';
-import { HiLink } from 'react-icons/hi';
 import {
   useChatStore,
   useChatStreamStore,
@@ -61,8 +60,6 @@ import CustomCollapse from '../../components/Collapse';
 import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
 import { UserEvent } from '../../types/report';
 import { ChatModel } from '../../services/chatModel';
-import { isSameWorkspace } from '../../utils/common';
-
 interface NewChatSession extends ChatSession {
   disabled?: boolean;
 }
@@ -95,8 +92,6 @@ interface SessionItemProps {
   onSelect: (id: string) => void;
   onUpdateTopic: (id: string, topic: string) => Promise<void>;
   onDelete: (id: string) => void;
-  showAssociateButton?: boolean;
-  onAssociate?: (id: string) => void;
 }
 
 const SessionItemComponent = React.memo(
@@ -109,8 +104,6 @@ const SessionItemComponent = React.memo(
     onSelect,
     onUpdateTopic,
     onDelete,
-    showAssociateButton,
-    onAssociate,
   }: SessionItemProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [editValue, setEditValue] = React.useState(item.topic || '');
@@ -195,22 +188,6 @@ const SessionItemComponent = React.memo(
 
                 {!(item as NewChatSession)?.disabled && (
                   <Box>
-                    {showAssociateButton && onAssociate && (
-                      <Tooltip label="关联至当前仓库">
-                        <IconButton
-                          aria-label="关联至当前仓库"
-                          variant="ghost"
-                          size="xs"
-                          icon={<Icon as={HiLink} size="sm" />}
-                          isDisabled={isStreaming || isSearching}
-                          color="text.default"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAssociate(item._id);
-                          }}
-                        />
-                      </Tooltip>
-                    )}
                     <IconButton
                       aria-label="编辑"
                       variant="ghost"
@@ -333,7 +310,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
     removeSession,
     revalidateChatSessions,
     chatType,
-    associateSessionToCurrentWorkspace,
   ] = useChatStore((state) => [
     state.sessions,
     state.currentSession(),
@@ -342,7 +318,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
     state.removeSession,
     state.revalidateChatSessions,
     state.chatType,
-    state.associateSessionToCurrentWorkspace,
   ]);
 
   const updateModel = useChatConfig((state) => state.update);
@@ -363,16 +338,11 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const [isNext, setIsNext] = React.useState(true);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const [currentRepoOpen, setCurrentRepoOpen] = React.useState(true);
-  const [sameRepoOpen, setSameRepoOpen] = React.useState(true);
   const [otherRepoOpen, setOtherRepoOpen] = React.useState(true);
   const { stopRunningTerminal } = useTerminalMessage();
 
   const toggleCurrentRepo = React.useCallback(() => {
     setCurrentRepoOpen(prev => !prev);
-  }, []);
-
-  const toggleSameRepo = React.useCallback(() => {
-    setSameRepoOpen(prev => !prev);
   }, []);
 
   const toggleOtherRepo = React.useCallback(() => {
@@ -415,34 +385,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
       }
     },
     [removeSession, updateSessions, toast],
-  );
-
-  const handleAssociate = React.useCallback(
-    async (sessionId: string) => {
-      if (!sessionId) {
-        return;
-      }
-      try {
-        await associateSessionToCurrentWorkspace(sessionId);
-        await updateSessions();
-        toast({
-          title: `关联成功，已绑定到 ${workspaceInfo.workspace}`,
-          position: 'top',
-          isClosable: true,
-          duration: 2000,
-          status: 'success',
-        });
-      } catch (error) {
-        console.log(error);
-        toast({
-          title: toastErrorMessage(error as Error),
-          position: 'top',
-          isClosable: true,
-          status: 'error',
-        });
-      }
-    },
-    [associateSessionToCurrentWorkspace, updateSessions, toast],
   );
 
   // 排序
@@ -680,11 +622,9 @@ const ChatHistories = React.forwardRef((_, ref) => {
     const SessionItem = ({
       item,
       index,
-      showAssociateButton,
     }: {
       item: ChatSession;
       index: number;
-      showAssociateButton?: boolean;
     }) => {
       // const updateTime = item.metadata?.update_time;
       // const messageLength = isNumber(item.message_count)
@@ -703,8 +643,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
           onSelect={handleSelectSession}
           onUpdateTopic={updateTopic}
           onDelete={handleDelete}
-          showAssociateButton={showAssociateButton}
-          onAssociate={handleAssociate}
         />
       );
     };
@@ -780,40 +718,26 @@ const ChatHistories = React.forwardRef((_, ref) => {
     // 会话分类函数
     const categorizeRepoSessions = (sessions: ChatSession[]) => {
       const currentRepo: ChatSession[] = [];
-      const sameRepoName: ChatSession[] = [];
       const otherRepo: ChatSession[] = [];
 
       sessions.forEach((session) => {
-        // 优先通过 chat_workspace 匹配
         if (
-          session.chat_workspace &&
-          isSameWorkspace(session.chat_workspace, workspaceInfo.workspace)
+          !session.chat_repo || session.chat_repo === workspaceInfo.repoName
         ) {
           currentRepo.push(session);
-        }
-        // 旧会话降级：只有 chat_repo 匹配但 chat_workspace 不存在
-        else if (
-          !session.chat_workspace &&
-          session.chat_repo === workspaceInfo.repoName
-        ) {
-          sameRepoName.push(session);
-        }
-        // 其他会话
-        else {
+        } else {
           otherRepo.push(session);
         }
       });
 
-      return { currentRepo, sameRepoName, otherRepo };
+      return { currentRepo, otherRepo };
     };
 
     const RepoSessionsList = ({
       currentRepo,
-      sameRepoName,
       otherRepo,
     }: {
       currentRepo: ChatSession[];
-      sameRepoName: ChatSession[];
       otherRepo: ChatSession[];
     }) => (
       <Box>
@@ -826,25 +750,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
             <SessionItem key={item._id} item={item} index={index} />
           ))}
         </CustomCollapse>
-
-        {sameRepoName.length > 0 && (
-          <Box mt="2">
-            <CustomCollapse
-              title='同仓库名会话'
-              isOpen={sameRepoOpen}
-              onToggle={toggleSameRepo}
-            >
-              {sameRepoName.map((item, index) => (
-                <SessionItem 
-                  key={item._id} 
-                  item={item} 
-                  index={index}
-                  showAssociateButton={true}
-                />
-              ))}
-            </CustomCollapse>
-          </Box>
-        )}
 
         <Box mt="2">
           <CustomCollapse
@@ -906,12 +811,11 @@ const ChatHistories = React.forwardRef((_, ref) => {
       // 有会话数据时显示列表
       if (chatType === 'codebase') {
         // 代码库类型的处理逻辑
-        const { currentRepo, sameRepoName, otherRepo } =
+        const { currentRepo, otherRepo } =
           categorizeRepoSessions(renderSessions);
         return (
           <RepoSessionsList
             currentRepo={currentRepo}
-            sameRepoName={sameRepoName}
             otherRepo={otherRepo}
           />
         );
@@ -929,12 +833,11 @@ const ChatHistories = React.forwardRef((_, ref) => {
 
     if (!searchKeyword.trim().length) {
       if (chatType === 'codebase') {
-        const { currentRepo, sameRepoName, otherRepo } =
+        const { currentRepo, otherRepo } =
           categorizeRepoSessions(renderSessions);
         return (
           <RepoSessionsList
             currentRepo={currentRepo}
-            sameRepoName={sameRepoName}
             otherRepo={otherRepo}
           />
         );
@@ -947,12 +850,11 @@ const ChatHistories = React.forwardRef((_, ref) => {
 
     if (searchField.value === SearchField.Topic) {
       if (chatType === 'codebase') {
-        const { currentRepo, sameRepoName, otherRepo } =
+        const { currentRepo, otherRepo } =
           categorizeRepoSessions(filterSessions);
         return (
           <RepoSessionsList
             currentRepo={currentRepo}
-            sameRepoName={sameRepoName}
             otherRepo={otherRepo}
           />
         );
@@ -1005,7 +907,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
     chatType,
     currentRepoOpen,
     otherRepoOpen,
-    sameRepoOpen,
   ]);
 
   const loadMore = React.useCallback(

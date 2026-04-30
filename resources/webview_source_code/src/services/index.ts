@@ -5,6 +5,7 @@ import { DocsetMeta } from './docsets';
 import { SearchData } from '../store/searchResult';
 import { ChatAttachStore, CodebaseChatMode, FileItem } from '../store/chat';
 import { handleError } from './error';
+import { createDebouncedToast } from '../components/CustomToast/debounceToast';
 import { PluginAppRunner } from './plugin';
 import { Prompt, PromptCategoryType } from './prompt';
 import { PrePromptEvent } from '../utils/report';
@@ -378,7 +379,7 @@ originalCodeMakerApi.interceptors.response.use(undefined, handleError);
 
 
 
-export function setDefaultHeaders(
+function applyDefaultHeaders(
   request: InternalAxiosRequestConfig<unknown>,
 ) {
   request.headers['X-Access-Token'] = useAuthStore.getState().accessToken;
@@ -397,4 +398,33 @@ export function setDefaultHeaders(
     useExtensionStore.getState().generateModelCode;
   request.headers['entrance'] = useExtensionStore.getState().entrance;
   return request;
+}
+
+const debouncedToast = createDebouncedToast();
+
+export function setDefaultHeaders(
+  request: InternalAxiosRequestConfig<unknown>,
+) {
+  const { accessToken, username } = useAuthStore.getState();
+  if (!accessToken) {
+    debouncedToast({
+      title: '请求失败，未能获取到登录状态',
+      status: 'error',
+      duration: 3000,
+    });
+    console.error('setDefaultHeaders 未能获取到登录状态: 缺少 accessToken');
+    return Promise.reject(
+      new axios.Cancel('请求失败，未能获取到登录状态'),
+    );
+  }
+  if (!username) {
+    console.warn('setDefaultHeaders 未能获取到登录状态: 缺少 username');
+  }
+  return applyDefaultHeaders(request);
+}
+
+export function setDefaultHeadersWithoutAuth(
+  request: InternalAxiosRequestConfig<unknown>,
+) {
+  return applyDefaultHeaders(request);
 }

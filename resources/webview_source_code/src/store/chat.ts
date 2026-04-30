@@ -266,7 +266,6 @@ interface ChatStore {
   ) => Promise<void>;
   // 历史会话数据同步到数据库
   syncHistory: () => void;
-  associateSessionToCurrentWorkspace: (sessionId: string) => Promise<void>;
   // 更新消费token信息
   updateConsumedTokens: (options: {
     curSession: ChatSession;
@@ -972,39 +971,6 @@ export const useChatStore = create<ChatStore>()(
           }
         } catch (error) {
           console.error('error');
-        }
-      },
-
-      associateSessionToCurrentWorkspace: async (sessionId: string) => {
-        const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
-        const session = get().sessions.get(sessionId);
-        if (!session || !workspaceInfo.workspace) {
-          console.warn('无法关联会话：会话或工作区信息不存在');
-          return;
-        }
-
-        try {
-          await updateSession({
-            _id: sessionId,
-            topic: session.topic,
-            data: session.data,
-            chat_workspace: workspaceInfo.workspace,
-          });
-
-          // 更新本地状态
-          const nextSessions = new Map(get().sessions);
-          nextSessions.set(sessionId, {
-            ...session,
-            chat_workspace: workspaceInfo.workspace,
-          });
-          set({ sessions: nextSessions });
-
-          console.log(
-            `会话 ${sessionId} 已关联到工作区 ${workspaceInfo.workspace}`,
-          );
-        } catch (error) {
-          console.error('关联会话失败:', error);
-          throw error;
         }
       },
 

@@ -35,7 +35,6 @@ import { getUserConfig } from '../../services/user-config';
 import { SmallScreenWidth } from '../../const';
 import TabMenu from '../../components/TabMenu';
 import { useTheme, ThemeStyle } from '../../ThemeContext';
-import { CODEMAKER_THEME_PREFERENCE_KEY } from '../../ThemeProvider';
 import { toastError } from '../../services/error';
 import { createDebouncedToast } from '../../components/CustomToast/debounceToast';
 import { proxyRequest } from '../../services/common';
@@ -62,20 +61,7 @@ export default function Help() {
     label: '',
     value: '',
   });
-  const { activeTheme, switchTheme } = useTheme();
-
-  // 从 localStorage 读取用户的主题偏好设置
-  const [themePreference, setThemePreference] = React.useState<ThemeStyle>(() => {
-    const saved = localStorage.getItem(CODEMAKER_THEME_PREFERENCE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved) as ThemeStyle;
-      } catch {
-        return ThemeStyle.Dark;
-      }
-    }
-    return ThemeStyle.Dark;
-  });
+  const { activeTheme, themePreference, switchTheme } = useTheme();
 
   const { data: modelList, isLoading } = useService(getModelList, {
     revalidateOnFocus: true,
@@ -331,7 +317,6 @@ export default function Help() {
             <RadioGroup
               onChange={(v) => {
                 const newTheme = v as ThemeStyle;
-                setThemePreference(newTheme);
                 switchTheme(newTheme);
               }}
               value={themePreference}

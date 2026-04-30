@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { setDefaultHeaders } from '.';
+import { setDefaultHeadersWithoutAuth } from '.';
 import { handleError } from './error';
 import { ModelMaxTokenType } from '../store/chat-config';
 
@@ -8,7 +8,7 @@ export const codemakerAuthRequest = axios.create({
   headers: {},
 });
 
-codemakerAuthRequest.interceptors.request.use(setDefaultHeaders);
+codemakerAuthRequest.interceptors.request.use(setDefaultHeadersWithoutAuth);
 codemakerAuthRequest.interceptors.response.use(undefined, handleError);
 
 export interface ValidateProps {

@@ -193,7 +193,9 @@ const ThemeProvider = (props: { children: React.ReactNode }) => {
       // 如果选择跟随系统，则使用系统主题；否则使用用户选择的主题
       const newActiveTheme = theme === ThemeStyle.System ? systemThemeRef.current : theme;
 
-      if (activeTheme === newActiveTheme) return;
+      if (activeTheme === newActiveTheme) {
+        return;
+      }
 
       setActiveTheme(newActiveTheme);
       userReporter.report({
@@ -238,11 +240,12 @@ const ThemeProvider = (props: { children: React.ReactNode }) => {
   const context = React.useMemo(() => {
     return {
       activeTheme, // 返回实际应用的主题（只能是 light 或 dark）
+      themePreference, // 返回用户的主题偏好设置（可以是 light/dark/system）
       switchTheme,
       systemTheme: systemThemeRef.current,
       setSystemTheme,
     };
-  }, [activeTheme, switchTheme, setSystemTheme]);
+  }, [activeTheme, themePreference, switchTheme, setSystemTheme]);
 
   return (
     <ThemeProviderContext.Provider value={context}>
