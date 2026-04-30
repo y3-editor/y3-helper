@@ -10,6 +10,11 @@ const MOCK_SERVER = process.env.MOCK_SERVER_URL || 'http://localhost:3001';
 // https://vitejs.dev/config/
 export default defineConfig({
   assetsInclude: ['**/*.txt'], // 支持 .txt 文件作为资源导入
+  define: {
+    // __ABORT_LOC__ 是编译时注入的源码位置标识，用于 abort reason 追踪
+    // 上游用自定义 Vite 插件按文件注入，Y3 简化为静态值
+    __ABORT_LOC__: JSON.stringify('y3-webview'),
+  },
   resolve: {
     alias: {
       // Stub internal packages with local implementations

@@ -379,7 +379,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     result = await this._toolAccessMcpResource(tool_params);
                     break;
                 case 'get_agents': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+                    const { AgentsHandler } = await import('./handlers/agentsHandler');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agents = agentsHandler.getAgentIndex();
@@ -387,7 +387,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'get_agent': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+                    const { AgentsHandler } = await import('./handlers/agentsHandler');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agentResult = agentsHandler.getAgent(tool_params.agent_name);

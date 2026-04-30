@@ -459,7 +459,7 @@ export async function handleExtendedMessage(
         }
 
         case 'GET_AGENTS': {
-            const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
+            const { AgentsHandler } = await import('./handlers/agentsHandler');
             const agentsHandler = AgentsHandler.getInstance();
             await agentsHandler.initialize();
             agentsHandler.syncAgents();

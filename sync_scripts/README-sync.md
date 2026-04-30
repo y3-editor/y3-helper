@@ -200,3 +200,57 @@ A: 用 git 撤销 AI 的改动，然后自己用 git merge 工具处理。
 
 **Q: 遇到复杂冲突怎么办？**
 A: AI 会标记复杂项，你用 VS Code 或其他 git merge 工具手动处理。
+
+## 合并经验记录
+
+> 以下是在实际同步过程中积累的经验，供后续合并参考。
+
+### Conventional Commit 类型判断
+
+| 前缀 | 含义 | 是否合并 |
+|------|------|---------|
+| `feat:` | 新功能 | ⚠️ 需询问用户确认 |
+| `fix:` | Bug 修复 | ✅ 通常需要合并 |
+| `refactor:` | 代码重构 | ✅ 通常需要合并 |
+| `perf:` | 性能优化 | ✅ 通常需要合并 |
+| `chore:` | 构建/发布版本 | ❌ 不需要合并（通常是版本号 bump + CHANGELOG） |
+| `docs:` | 文档变更 | ❌ 一般不合（注意：有些 docs 提交实际包含代码，需要看 diff） |
+| `style:` | 代码格式化 | ❌ 一般不合 |
+| `test:` | 测试用例 | ❌ 一般不合 |
+| `ci:` / `build:` | CI/构建配置 | ❌ 不合 |
+
+### Y3 不需要的上游功能
+
+- **OpenSpec 工作流**：所有 `openspec/`、`specHandler`、`specVersionUtils`（Y3 用 stub 替代）、Spec 聚焦检测相关功能一律跳过
+- **遥测模块**：`telemetry/otel.ts`（Y3 用 stub 替代）
+
+### 大型合并注意事项
+
+1. **先改排除规则再分析**：如果发现某个被排除的目录（如 `src/modules/`）现在需要合并了，要先修改 `exclusions.json` 和 `config.json`，再重新运行 `analyze`
+2. **不要用 PowerShell `Set-Content` 修改含中文的源码文件**：会破坏 UTF-8 编码，导致中文变乱码。用 `replace_in_file` 或 Node.js 脚本替代
+3. **合并完必须更新 baseline.json**：否则下次 analyze 会重复分析已合并的提交。baseline 中的 commit hash 和 date 都要更新
+4. **REVIEW 文件不能直接覆盖**：Y3 有定制逻辑的文件（如 `chat.ts`、`App.tsx`、`webviewProvider.ts`）需要逐个 diff hunk 手工合并
+5. **sync 报告中 `upstream_content` 为空的文件**：需要从上游仓库用 `git show <commit>:<path>` 直接提取
+
+### Stub 文件维护
+
+Y3 对上游独有功能使用 stub 文件替代，目前有：
+
+| Stub 文件 | 替代的上游功能 | 位置 |
+|-----------|--------------|------|
+| `specVersionUtils.ts` | OpenSpec 版本检查 | `src/utils/` |
+| `openspecModeContext.ts` | OpenSpec 模式上下文 | `src/store/workspace/` |
+
+当上游新增对这些模块的引用时，需要在 stub 中补充对应的导出（如 `supportsSubagent`、`OPENSPEC_1X_MODE_CONTEXT`）。
+
+### Y3 适配模式
+
+Extension 端上游代码中的一些通用模式在 Y3 中的替代方案：
+
+| 上游模式 | Y3 替代方案 |
+|---------|------------|
+| `printLog(...)` | `console.log(...)` |
+| `getErrorMessage(err)` | `err?.message \|\| String(err)` |
+| `getWebviewProvider().sendMessageWithRouting(...)` | `require('../codemaker/index').webviewProvider.sendMessage(...)` |
+| `import { EXCLUDED_DIRECTORIES } from '...'` | 内联 `new Set([...])` |
+| `requestCodebaseChatStream(event, data, url, opts)` | `requestCodebaseChatStream(data, url, opts)`（Y3 没有 event 参数） |
