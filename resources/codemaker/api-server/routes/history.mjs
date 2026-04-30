@@ -317,8 +317,8 @@ function queryIndexEntries(params) {
  */
 export function registerHistoryRoutes(routes) {
 
-  // GET /proxy/gpt/u5_chat/chat_histories - 获取会话列表
-  routes.set('GET:/proxy/gpt/u5_chat/chat_histories', (req, res) => {
+  // GET /proxy/gpt/chat/chat_histories - 获取会话列表
+  routes.set('GET:/proxy/gpt/chat/chat_histories', (req, res) => {
     const params = parseQueryParams(req);
     const { items, total } = queryIndexEntries(params);
 
@@ -339,8 +339,8 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, { items: resultItems, total });
   });
 
-  // POST /proxy/gpt/u5_chat/chat_histories - 创建新会话
-  routes.set('POST:/proxy/gpt/u5_chat/chat_histories', (req, res, body) => {
+  // POST /proxy/gpt/chat/chat_histories - 创建新会话
+  routes.set('POST:/proxy/gpt/chat/chat_histories', (req, res, body) => {
     const session = makeSession({
       topic: body.topic || '',
       chat_type: body.chat_type || 'codebase',
@@ -358,8 +358,8 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, session);
   });
 
-  // GET /proxy/gpt/u5_chat/chat_histories/:id - 获取单个会话（含完整消息）
-  routes.set('GET:/proxy/gpt/u5_chat/chat_histories/:id', (req, res) => {
+  // GET /proxy/gpt/chat/chat_histories/:id - 获取单个会话（含完整消息）
+  routes.set('GET:/proxy/gpt/chat/chat_histories/:id', (req, res) => {
     const id = req.params?.id;
     let session = loadSessionFile(id);
 
@@ -375,8 +375,8 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, session);
   });
 
-  // PUT /proxy/gpt/u5_chat/chat_histories/:id - 更新会话
-  routes.set('PUT:/proxy/gpt/u5_chat/chat_histories/:id', (req, res, body) => {
+  // PUT /proxy/gpt/chat/chat_histories/:id - 更新会话
+  routes.set('PUT:/proxy/gpt/chat/chat_histories/:id', (req, res, body) => {
     const id = req.params?.id;
 
     // 读取现有会话（或创建新的）
@@ -407,8 +407,8 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, updated);
   });
 
-  // PATCH /proxy/gpt/u5_chat/chat_histories/:id - 部分更新会话
-  routes.set('PATCH:/proxy/gpt/u5_chat/chat_histories/:id', (req, res, body) => {
+  // PATCH /proxy/gpt/chat/chat_histories/:id - 部分更新会话
+  routes.set('PATCH:/proxy/gpt/chat/chat_histories/:id', (req, res, body) => {
     const id = req.params?.id;
 
     let existing = loadSessionFile(id);
@@ -435,8 +435,8 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, updated);
   });
 
-  // DELETE /proxy/gpt/u5_chat/chat_histories/:id - 删除会话
-  routes.set('DELETE:/proxy/gpt/u5_chat/chat_histories/:id', (req, res) => {
+  // DELETE /proxy/gpt/chat/chat_histories/:id - 删除会话
+  routes.set('DELETE:/proxy/gpt/chat/chat_histories/:id', (req, res) => {
     const id = req.params?.id;
     indexCache.delete(id);
     deleteSessionFile(id);
@@ -450,7 +450,7 @@ export function registerHistoryRoutes(routes) {
   // Hangyan 前缀路由（复用逻辑）
   // ============================================================
 
-  routes.set('GET:/proxy/gpt/hangyan/u5_chat/chat_histories', (req, res) => {
+  routes.set('GET:/proxy/gpt/hangyan/chat/chat_histories', (req, res) => {
     const params = parseQueryParams(req);
     const { items, total } = queryIndexEntries(params);
 
@@ -467,7 +467,7 @@ export function registerHistoryRoutes(routes) {
     sendJson(res, { items: resultItems, total });
   });
 
-  routes.set('POST:/proxy/gpt/hangyan/u5_chat/chat_histories', (req, res, body) => {
+  routes.set('POST:/proxy/gpt/hangyan/chat/chat_histories', (req, res, body) => {
     const session = makeSession({
       topic: body.topic || '',
       chat_type: body.chat_type || 'codebase',

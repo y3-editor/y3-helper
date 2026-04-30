@@ -254,3 +254,17 @@ Extension 端上游代码中的一些通用模式在 Y3 中的替代方案：
 | `getWebviewProvider().sendMessageWithRouting(...)` | `require('../codemaker/index').webviewProvider.sendMessage(...)` |
 | `import { EXCLUDED_DIRECTORIES } from '...'` | 内联 `new Set([...])` |
 | `requestCodebaseChatStream(event, data, url, opts)` | `requestCodebaseChatStream(data, url, opts)`（Y3 没有 event 参数） |
+
+### API 路径映射表（前端 → 后端）
+
+Y3Helper 的前端 webui 通过 axios 请求本地 API Server（`localhost:3001`），路径前缀由各 axios 实例的 `baseURL` 决定。**合并上游时如果上游改了 baseURL，必须同步更新 `api-server/routes/` 中的路由注册路径。**
+
+| axios 实例 | baseURL | 用途 |
+|-----------|---------|------|
+| `codemakerChatHistoryRequest` | `/proxy/gpt/chat` | 会话历史 CRUD、反馈 |
+| `codemakderChatGptRequest` | `/proxy/gpt/gpt/` | GPT 聊天、图片上传、token 计算 |
+| 硬编码路径 | `/proxy/gpt/u5_chat/` | 流式聊天（codebase_chat_stream / codebase_agent_stream） |
+
+> ⚠️ **踩坑记录（2026-04-30）**：上游在 2026-03-20 将 `codemakerChatHistoryRequest` 的 baseURL 从 `/proxy/gpt/u5_chat` 改为 `/proxy/gpt/chat`（同时 `uploadImg` 也从 `u5_chat` 改到了 `codemakderChatGptRequest` 即 `gpt/gpt/`），但 `api-server/routes/history.mjs` 和 `chat.mjs` 中的路由注册路径没有同步更新，导致前端请求全部 fallback 到 SPA 的 `index.html`，`data.items` 为 `undefined`，触发 `revalidateChatSessions` 中 `.filter()` 崩溃。
+>
+> **教训**：`api-server/routes/` 下的文件是 Y3 自建的后端，不在上游仓库中，合并时不会自动冲突。每次合并上游 webui 时，**必须检查 `services/chat.ts` 中的 `baseURL` 和硬编码 URL 是否有变更**，如有变更须手动对齐后端路由。

@@ -118,14 +118,22 @@ export function registerChatRoutes(routes) {
   });
 
   // 图片上传 - 解析 multipart/form-data，保存文件，返回可访问的 URL
+  // 前端 uploadImg() 通过 codemakderChatGptRequest (baseURL: /proxy/gpt/gpt/) 发送
+  routes.set('POST:/proxy/gpt/gpt/upload_img', handleUploadImg);
+  routes.set('POST:/proxy/gpt/hangyan/gpt/upload_img', handleUploadImg);
+  // 兼容旧路径
   routes.set('POST:/proxy/gpt/u5_chat/upload_img', handleUploadImg);
-  routes.set('POST:/proxy/gpt/hangyan/u5_chat/upload_img', handleUploadImg);
 
   // 反馈
-  routes.set('POST:/proxy/gpt/u5_chat/chat_feedback', (req, res) => {
+  // 前端 uploadMessageFeedback() 通过 codemakerChatHistoryRequest (baseURL: /proxy/gpt/chat) 发送
+  routes.set('POST:/proxy/gpt/chat/chat_feedback', (req, res) => {
     sendJson(res, { code: 0, message: 'Feedback received' });
   });
-  routes.set('POST:/proxy/gpt/hangyan/u5_chat/chat_feedback', (req, res) => {
+  routes.set('POST:/proxy/gpt/hangyan/chat/chat_feedback', (req, res) => {
+    sendJson(res, { code: 0, message: 'Feedback received' });
+  });
+  // 兼容旧路径
+  routes.set('POST:/proxy/gpt/u5_chat/chat_feedback', (req, res) => {
     sendJson(res, { code: 0, message: 'Feedback received' });
   });
 }
