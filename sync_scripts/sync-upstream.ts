@@ -564,8 +564,8 @@ function getFeatCommits(repoPath: string, fromCommit: string, toCommit: string):
         return { hash, message: msgParts.join('||') };
     });
 
-    // 筛选 feat 开头的 commit（不区分大小写，支持 feat: feat(...) 等格式）
-    const featCommits = commits.filter(c => /^feat[\s(:]/i.test(c.message));
+    // 筛选需要用户确认的 commit（feat/refactor/fix/perf/chore/style/docs/test/build/ci 等 conventional commit 类型）
+    const featCommits = commits.filter(c => /^(feat|refactor|fix|perf|chore|style|docs|test|build|ci)[\s(:]/i.test(c.message));
 
     if (featCommits.length === 0) return [];
 

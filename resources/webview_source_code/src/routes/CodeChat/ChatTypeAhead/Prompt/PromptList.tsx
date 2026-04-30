@@ -126,7 +126,7 @@ function PromptList(props: PromptListProps) {
         alignItems="center"
         gap={1}
       >
-        Enter 键立即发送，Tab 键补全到聊天窗口
+        Enter 键挂载指令
       </Text>
     </>
   );

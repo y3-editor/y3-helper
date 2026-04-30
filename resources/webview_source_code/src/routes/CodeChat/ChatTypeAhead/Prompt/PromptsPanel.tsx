@@ -67,7 +67,6 @@ import { SKILLS_HUB_API_URL } from '../../../CodeCoverage/const';
 import useCustomToast from '../../../../hooks/useCustomToast';
 import { usePanelContext } from '../../../../context/PanelContext';
 
-const PROMPT_TYPEHEAD_TRIGGER_PREFIX = '/';
 
 const PromptsPanel = (
   props: TypeAheadSubProps & {
@@ -77,7 +76,6 @@ const PromptsPanel = (
   },
 ) => {
   const {
-    inputValue,
     focusIndex,
     userInputRef,
     mentionKeyword,
@@ -145,11 +143,8 @@ const PromptsPanel = (
   const installedOpenSpecVersion = openspecFrameworkInfo?.version;
 
   const isDuringKeywordSearch = React.useMemo(() => {
-    if (inputValue === PROMPT_TYPEHEAD_TRIGGER_PREFIX) {
-      return false;
-    }
-    return true;
-  }, [inputValue]);
+    return mentionKeyword.trim().length > 0;
+  }, [mentionKeyword]);
 
   // 新建会话命令
   const handleNewSessionCommand = React.useCallback(async () => {

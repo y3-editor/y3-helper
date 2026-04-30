@@ -958,6 +958,18 @@ Provide the complete updated code.`;
                 let exitCode = 0;
                 let hasError = false;
 
+                // 交互式提示检测
+                const INTERACTIVE_PROMPT_PATTERNS = [
+                    /\?\s+.{1,200}\(y\/N\)/i,        // inquirer confirm default No
+                    /\?\s+.{1,200}\(Y\/n\)/i,        // inquirer confirm default Yes
+                    /❯\s+.+[\s\S]*?↑↓\s*navigate/,  // inquirer select
+                    /\]\s*\(y\/N\)/i,                // generic [y/N] at end
+                    /\]\s*\(Y\/n\)/i,                // generic [Y/n] at end
+                ];
+                let promptDetectBuffer = '';
+                let promptDetectTimer: NodeJS.Timeout | null = null;
+                let interactivePromptInfo: { prompt: string; output: string } | null = null;
+
                 // 解码 Buffer 为 UTF-8 字符串
                 const decodeBuffer = (data: Buffer): string => {
                     try {
@@ -972,6 +984,30 @@ Provide the complete updated code.`;
                     const output = decodeBuffer(data);
                     lines.push(output);
                     sendTerminalLog(output, ETS.RUNNING, true);
+
+                    // 交互式提示检测
+                    if (!interactivePromptInfo) {
+                        promptDetectBuffer += output;
+                        // 保持滑动窗口 500 字符
+                        if (promptDetectBuffer.length > 500) {
+                            promptDetectBuffer = promptDetectBuffer.slice(-500);
+                        }
+                        // 防抖：等 300ms 没有新输出再检测
+                        if (promptDetectTimer) { clearTimeout(promptDetectTimer); }
+                        promptDetectTimer = setTimeout(() => {
+                            const stripped = promptDetectBuffer.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+                            for (const pattern of INTERACTIVE_PROMPT_PATTERNS) {
+                                const match = stripped.match(pattern);
+                                if (match) {
+                                    interactivePromptInfo = { prompt: match[0].trim(), output: stripped };
+                                    console.log(`[Y3Maker] Interactive prompt detected: "${match[0].trim()}"`);
+                                    // 终止进程
+                                    childProcess.kill();
+                                    break;
+                                }
+                            }
+                        }, 300);
+                    }
                 });
 
                 // 2. stderr 实时推送（stderr 不一定代表错误，很多工具用 stderr 输出进度信息）
@@ -994,6 +1030,9 @@ Provide the complete updated code.`;
                 });
 
                 childProcess.on('close', () => {
+                    // 清理交互式提示检测计时器
+                    if (promptDetectTimer) { clearTimeout(promptDetectTimer); promptDetectTimer = null; }
+
                     // 3. 命令执行完毕，发送完成状态的 log
                     sendTerminalLog('', ETS.SUCCESS, false);
 
@@ -1008,6 +1047,13 @@ Provide the complete updated code.`;
 
                     if (exitCode !== 0 && !outputText.length) {
                         result.content = `Command executed successfully. \n The code of Executed command is ${exitCode}.This output is nothing \n`;
+                    } else if (interactivePromptInfo) {
+                        // 交互式提示被检测到，返回特殊格式让 AI 知道需要向用户询问
+                        result.content = `Command was terminated because it requires interactive input.\n`
+                            + `Interactive prompt detected: "${interactivePromptInfo.prompt}"\n`
+                            + (outputText ? `Output before prompt:\n${outputText}\n\n` : '')
+                            + `Please use ask_user_question to ask the user about this decision, then re-run the command with appropriate CLI flags (e.g., -y, --skip-specs) based on their answer.\n`
+                            + `Do NOT use stdin pipe (e.g., echo "y" | cmd, yes | cmd) — it breaks TTY detection.\n`;
                     } else {
                         result.content = `Command executed successfully.\nOutput: ${outputText}\n`;
                     }
