@@ -96,6 +96,7 @@
     "src/utils/error.ts": "REVIEW: 依赖DEFAULT_ASSISTANT_MESSAGE(需从chat.ts导出)和ChatStreamErrorMgr，覆盖前确认chat.ts已export该常量",
     "src/services/useChatStream.ts__abort": "REVIEW: 上游大量使用createAbortReason替换abort()、HttpStreamError替换Error，以及otel.withSpanContext包装。改动量极大，建议逐步cherry-pick而非直接覆盖",
 
+    "resources/codemaker/api-server/routes/history.mjs": "Y3-ONLY: Y3独有的本地API Server历史记录路由。支持is_favorite收藏字段（extractIndexEntry/makeSession/queryIndexEntries/POST路由）。此文件上游不存在，同步时不会被覆盖，但修改前端services/chat.ts的ChatHistoryGetterParams/ChatHistoryPostBody时需同步检查此文件是否需要适配新字段",
     "_separator_extension_notes": "── 以下为 extension 仓库 ──",
     "src/handlers/skillsHandler/index.ts__uploadLocalSkill": "SKIP: Y3没有uploadLocalSkill功能（本地Skill文件导入），相关改动（Base64解码、smartDecode、encoding.ts、文案'上传→导入'）全部跳过",
     "src/utils/encoding.ts": "SKIP: smartDecode工具函数仅供uploadLocalSkill使用，Y3不需要",

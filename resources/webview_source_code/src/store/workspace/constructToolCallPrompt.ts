@@ -1,4 +1,4 @@
-﻿import { Rule, WorkspaceInfo } from ".";
+import { Rule, WorkspaceInfo } from ".";
 import { getContentByValidateFlag } from "../../utils";
 import { useChatConfig } from "../chat-config";
 import { MCPServer } from "../mcp";
@@ -13,26 +13,27 @@ export default function constructToolCallPrompt(options: {
   enableTerminal?: boolean,
   effectiveRules: Rule[];
   skills?: SkillIndexItem[];
+  promptLink?: PromptLinkMgr
 }) {
-    const { info, withCodeTable, MCPServers, enableTerminal, effectiveRules, skills = [] } = options;
-    const { workspace, osName, shell, openFilePaths } = info;
-    const { enableCodeMapSearch, enableKnowledgeLibSearch, enableEditableMode, enableSkills } = useChatConfig.getState()
+  const { info, withCodeTable, MCPServers, enableTerminal, effectiveRules, skills = [], promptLink } = options;
+  const { workspace, osName, shell, openFilePaths } = info;
+  const { enableCodeMapSearch, enableKnowledgeLibSearch, enableEditableMode, enableSkills } = useChatConfig.getState()
 
-    // 封装成按条件引入的函数
-    let rulesPrompt = '';
-    if (effectiveRules.length) {
-      effectiveRules.forEach((rule, index) => {
-        rulesPrompt += `用户的额外要求：
+  // 封装成按条件引入的函数
+  let rulesPrompt = '';
+  if (effectiveRules.length) {
+    effectiveRules.forEach((rule, index) => {
+      rulesPrompt += `用户的额外要求：
 <rule-${index}>
 ${rule.content}
 </rule-${index}>
 `
-      })
-    }
+    })
+  }
 
-    let mcpToolsPrompt = '';
-    if (MCPServers.length) {
-      mcpToolsPrompt = `====
+  let mcpToolsPrompt = '';
+  if (MCPServers.length) {
+    mcpToolsPrompt = `====
 
         MCP 服务器
 
@@ -43,46 +44,49 @@ ${rule.content}
         当服务器连接后，你可以通过 \`use_mcp_tool\` 工具使用服务器的工具，并通过 \`access_mcp_resource\` 工具访问服务器的资源。
 
         ${MCPServers.filter((server) => server.status === "connected" && !server.disabled)
-          .map((server) => {
-            const tools = server.tools
-              ?.map((tool) => {
-                const schemaStr = tool.inputSchema
-                  ? `    Input Schema:
+        .map((server) => {
+          const tools = server.tools
+            ?.map((tool) => {
+              const schemaStr = tool.inputSchema
+                ? `    Input Schema:
       ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-                  : ""
+                : ""
 
-                return `- ${tool.name}: ${tool.description}\n${schemaStr}`
-              })
-              .join("\n\n")
+              return `- ${tool.name}: ${tool.description}\n${schemaStr}`
+            })
+            .join("\n\n")
 
-            const templates = server.resourceTemplates
-              ?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)
-              .join("\n")
+          const templates = server.resourceTemplates
+            ?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)
+            .join("\n")
 
-            const resources = server.resources
-              ?.map((resource) => `- ${resource.uri} (${resource.name}): ${resource.description}`)
-              .join("\n")
+          const resources = server.resources
+            ?.map((resource) => `- ${resource.uri} (${resource.name}): ${resource.description}`)
+            .join("\n")
 
-            return (
-              `## ${server.name}` +
-              (tools ? `\n\n### Available Tools\n${tools}` : "") +
-              (templates ? `\n\n### Resource Templates\n${templates}` : "") +
-              (resources ? `\n\n### Direct Resources\n${resources}` : "")
-            )
-          })
-          .join("\n\n")}
+          return (
+            `## ${server.name}` +
+            (tools ? `\n\n### Available Tools\n${tools}` : "") +
+            (templates ? `\n\n### Resource Templates\n${templates}` : "") +
+            (resources ? `\n\n### Direct Resources\n${resources}` : "")
+          )
+        })
+        .join("\n\n")}
     `
-    }
-    if (withCodeTable) {
-        const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch
+  }
+  const skillPrompt = enableSkills ? generateSkillsPromptSection(skills) : ''
+  const promptLinkOptions = {
+    mcpPrompt: mcpToolsPrompt,
+    skillPrompt,
+    rulePrompt: rulesPrompt,
+  }
+  PromptLinkMgr.ins.init(promptLinkOptions)
+  promptLink?.init(promptLinkOptions)
 
-    const skillsPromptSection = enableSkills ? generateSkillsPromptSection(skills) : '';
-    PromptLinkMgr.ins.init({
-      mcpPrompt: mcpToolsPrompt,
-      skillPrompt: skillsPromptSection,
-      rulePrompt: rulesPrompt,
-    });
-        return `你叫 Y3Maker，是一个技术精湛的软件开发助手，精通多种编程语言、框架、设计模式和最佳实践。你的任务是和用户进行智能聊天，为他们提供编码技术上的帮助。
+
+  if (withCodeTable) {
+    const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch
+    return `你叫 CodeMaker，是一个技术精湛的软件开发助手，精通多种编程语言、框架、设计模式和最佳实践。你的任务是和用户进行智能聊天，为他们提供编码技术上的帮助。
 
         ====
 
@@ -142,7 +146,7 @@ ${rule.content}
 
         回答规则
 
-        - 每次请求至多使用一个工具。
+        - 你可以在一次请求中调用多个工具。如果多个工具调用之间没有依赖关系（例如同时读取多个文件、同时搜索多个关键词），请并行调用以提高效率。如果存在依赖关系（例如先读取文件再编辑），则分步执行。
         - 你当前的工作目录是：${workspace}
         - 你无法通过 \`cd\` 进入其他目录来完成任务。你只能从 '${workspace}' 进行操作，因此在使用需要路径的工具时，请务必传入正确的 \`path\` 参数。
         - 不要使用 ~ 字符或 $HOME 来引用主目录。
@@ -166,9 +170,8 @@ ${rule.content}
         - 你可以在回复中随意使用 markdown，使用代码块时，如果参考自工作空间下的文件代码，或者代码库检索回来的代码，必须通过如下格式附带文件路径 \`\`\`language filePath=/path/to/foo.py。
         - 如果你的回复中提及工作空间下的文件，请通过 <a href="file:filePath">文件名</a> 的方式引用工作区下的文件。
         ${getContentByValidateFlag(enableEditableMode, `- 凡是涉及文件生成和文件修改的回复，代码块都必须通过 SEARCH/REPLACE 的形式返回。`)}
-        - 由于 read_file 能查看的文件长度有限制，如果你发现你所需的信息再文件截断的范围之外，请主动告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户自行提供完整文件内容。${
-          MCPServers.length ? '\n        - MCP操作应该一次使用一个,类似于其他工具的使用方式。在进行其他操作之前,要等待确认当前操作成功。' : ''
-        }
+        - 由于 read_file 能查看的文件长度有限制，如果你发现你所需的信息再文件截断的范围之外，请主动告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户自行提供完整文件内容。${MCPServers.length ? '\n        - MCP操作应该一次使用一个,类似于其他工具的使用方式。在进行其他操作之前,要等待确认当前操作成功。' : ''
+      }
         - 如果用户提问的是英语，你需要使用英文回答。如果用户提问的是中文，你需要使用中文回答。如果是使用其他国家语言，你一定要使用对应的语言回答。
 
         ====
@@ -181,10 +184,10 @@ ${rule.content}
         ${openFilePaths && openFilePaths.length ? openFilePaths.join('\n') : '(没有打开文件)'}
 
         ${rulesPrompt}
-        ${enableSkills ? generateSkillsPromptSection(skills) : ''}
+        ${skillPrompt}
         `;
-      } else {
-        return `你叫 Y3Maker，是一个技术精湛的软件开发助手，精通多种编程语言、框架、设计模式和最佳实践。你的任务是和用户进行智能聊天，为他们提供编码技术上的帮助。
+  } else {
+    return `你叫 CodeMaker，是一个技术精湛的软件开发助手，精通多种编程语言、框架、设计模式和最佳实践。你的任务是和用户进行智能聊天，为他们提供编码技术上的帮助。
 
           ====
 
@@ -205,9 +208,8 @@ ${rule.content}
             [修改后的新代码]
             >>>>>>> REPLACE
             \`\`\``)}
-            ${
-              MCPServers.length ? '\n        - 你可以访问MCP服务器,这些服务器可能提供额外的工具和资源。每个服务器可能提供不同的功能,你可以使用这些功能来更有效地完成任务。' : ''
-            }
+            ${MCPServers.length ? '\n        - 你可以访问MCP服务器,这些服务器可能提供额外的工具和资源。每个服务器可能提供不同的功能,你可以使用这些功能来更有效地完成任务。' : ''
+      }
 
           ${mcpToolsPrompt}
           ${getContentByValidateFlag(enableEditableMode, `====
@@ -242,7 +244,7 @@ ${rule.content}
 
           回答规则
 
-          - 每次请求至多使用一个工具。
+          - 你可以在一次请求中调用多个工具。如果多个工具调用之间没有依赖关系（例如同时读取多个文件、同时搜索多个关键词），请并行调用以提高效率。如果存在依赖关系（例如先读取文件再编辑），则分步执行。
           - 你当前的工作目录是：${workspace}
           - 你无法通过 \`cd\` 进入其他目录来完成任务。你只能从 '${workspace}' 进行操作，因此在使用需要路径的工具时，请务必传入正确的 \`path\` 参数。
           - 不要使用 ~ 字符或 $HOME 来引用主目录。
@@ -264,9 +266,8 @@ ${rule.content}
           - 你可以在回复中随意使用 markdown，使用代码块时，如果参考自工作空间下的文件代码，必须通过如下格式附带文件路径 \`\`\`language filePath=/path/to/foo.py。
           - 如果你的回复中提及工作空间下的文件，请通过 <a href="file:filePath">文件名</a> 的方式引用工作区下的文件。
           ${getContentByValidateFlag(enableEditableMode, `- 凡是涉及文件生成和文件修改的回复，代码块都必须通过 SEARCH/REPLACE 的形式返回。`)}
-          - 由于 read_file 能查看的文件长度有限制，如果你发现你所需的信息再文件截断的范围之外，请主动告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户自行提供完整文件内容。${
-            MCPServers.length ? '\n        - MCP操作应该一次使用一个,类似于其他工具的使用方式。在进行其他操作之前,要等待确认当前操作成功。' : ''
-          }
+          - 由于 read_file 能查看的文件长度有限制，如果你发现你所需的信息再文件截断的范围之外，请主动告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户自行提供完整文件内容。${MCPServers.length ? '\n        - MCP操作应该一次使用一个,类似于其他工具的使用方式。在进行其他操作之前,要等待确认当前操作成功。' : ''
+      }
           - 如果用户提问的是英语，你需要使用英文回答。如果用户提问的是中文，你需要使用中文回答。如果是使用其他国家语言，你一定要使用对应的语言回答。
 
           ====
@@ -279,7 +280,7 @@ ${rule.content}
           ${openFilePaths && openFilePaths.length ? openFilePaths.join('\n') : '(没有打开文件)'}
 
           ${rulesPrompt}
-          ${enableSkills ? generateSkillsPromptSection(skills) : ''}
+          ${skillPrompt}
           `;
-      }
+  }
 }

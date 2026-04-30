@@ -1,60 +1,77 @@
 import { cloneDeep, findLastIndex, isEqual } from "lodash";
-import { ChatMessage, ChatMessageContent } from "../services";
+import { ChatMessage } from "../services";
 import { Tool } from "../store/workspace";
+
+/**
+ * AIGW：在 tools 数组最后一项上打 cache_control，整份工具声明参与 5min 缓存。
+ */
+export function addCacheMarksToTools(tools: Tool[] | undefined): Tool[] | undefined {
+  if (!tools || tools.length === 0) {
+    return tools;
+  }
+  const lastToolIdx = tools.length - 1;
+  return tools.map((tool, i) =>
+    i === lastToolIdx
+      ? { ...tool, cache_control: { type: "ephemeral" as const } }
+      : tool,
+  );
+}
 
 export default function addCacheMarksToMessages(messages: ChatMessage[]): ChatMessage[] {
   const sendMessages = cloneDeep(messages);
 
-  // Breakpoints 1-3: 标记 system message 的各 content block
+  // Breakpoint 1: system 前 N 个 slot 内的 text block 打标 AIGW / Anthropic
   const systemMessage = sendMessages.find(m => m.role === 'system');
-  if (systemMessage && Array.isArray(systemMessage.content)) {
-    for (const block of systemMessage.content) {
-      if (block.type === 'text') {
-        (block as any).cache_control = { type: "ephemeral" };
+  if (systemMessage && Array.isArray(systemMessage.content) && systemMessage.content.length > 0) {
+    for (let i = 0; i < Math.min(1, systemMessage.content.length); i++) {
+      const block = systemMessage.content[i];
+      if (block.type === "text") {
+        (block as any).cache_control = { type: "ephemeral" as const };
       }
     }
   }
 
-  // Breakpoint 4: 标记最后一条 user/tool 消息
-  const lastIndex = sendMessages.length - 1;
-  const lastMessage = sendMessages[lastIndex];
-  if (lastMessage.role === 'user') {
-    if (typeof lastMessage.content === "string") {
-      lastMessage.content = [
-        {
-          type: ChatMessageContent.Text,
-          text: lastMessage.content,
-          cache_control: {
-            type: "ephemeral",
-          },
-        },
-      ];
-    } else {
-      const len = lastMessage.content.length;
-      lastMessage.content = lastMessage.content.map((content: any, contentIndex: number) =>
-        contentIndex === len - 1
-          ? {
-            ...content,
-            cache_control: {
-              type: "ephemeral",
-            },
-          }
-          : content
-      ) as any;
+  // Breakpoints 3-4: 最后一条 user + 最后一条 non-system（重叠时回退到前一条 non-system）AIGW / Anthropic
+  const conversationIndexes: number[] = [];
+  const lastUserIndex = findLastIndex(sendMessages, (m) => m.role === "user");
+  const lastNonSystemIndex = findLastIndex(sendMessages, (m) => m.role !== "system");
+
+  if (lastUserIndex !== -1) {
+    conversationIndexes.push(lastUserIndex);
+  }
+  if (lastNonSystemIndex !== -1 && !conversationIndexes.includes(lastNonSystemIndex)) {
+    conversationIndexes.push(lastNonSystemIndex);
+  } else if (lastNonSystemIndex !== -1) {
+    const prevNonSystemIndex = findLastIndex(
+      sendMessages,
+      (m) => m.role !== "system",
+      lastNonSystemIndex - 1,
+    );
+    if (prevNonSystemIndex !== -1 && !conversationIndexes.includes(prevNonSystemIndex)) {
+      conversationIndexes.push(prevNonSystemIndex);
     }
-  } else if (lastMessage.role === 'tool') {
-    // 统一处理串行/并行: 向前查找对应的 assistant 消息
-    let i = lastIndex - 1;
-    while (i >= 0 && sendMessages[i].role === 'tool') i--;
-    const assistantMessage = sendMessages[i];
-    if (assistantMessage?.role === 'assistant' && assistantMessage.tool_calls) {
-      // BP4: 标记最后一个 tool_call（AIGW 当前唯一识别的 tool 侧缓存位置）
-      const tcs = assistantMessage.tool_calls;
+  }
+
+  for (const idx of conversationIndexes) {
+    const msg = sendMessages[idx];
+    if (Array.isArray(msg.content) && msg.content.length > 0) {
+      const lastBlock = msg.content[msg.content.length - 1];
+      (lastBlock as any).cache_control = { type: "ephemeral" as const };
+    } else if (typeof msg.content === "string") {
+      msg.content = [
+        {
+          type: "text" as const,
+          text: msg.content,
+          cache_control: { type: "ephemeral" as const },
+        },
+      ] as any;
+    }
+
+    if (msg.role === "assistant" && msg.tool_calls?.length) {
+      const tcs = msg.tool_calls;
       tcs[tcs.length - 1] = {
         ...tcs[tcs.length - 1],
-        cache_control: {
-          type: "ephemeral",
-        },
+        cache_control: { type: "ephemeral" as const },
       } as any;
     }
   }

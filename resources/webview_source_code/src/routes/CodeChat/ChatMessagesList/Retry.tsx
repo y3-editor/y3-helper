@@ -61,7 +61,7 @@ export default function Retry(props: { userScrollLock: boolean }) {
     onUserResubmit();
   };
 
-  if (!currentSession?.data?.messages.length) {
+  if (!currentSession?.data?.messages.length || currentSession?.is_favorite) {
     return null;
   }
 

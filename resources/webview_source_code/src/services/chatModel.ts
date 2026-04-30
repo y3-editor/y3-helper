@@ -1,5 +1,4 @@
 import { originalCodeMakerApi } from '.';
-import { proxyRequest } from './common';
 
 // 解析图片类型
 export enum ParseImgType {
@@ -27,42 +26,53 @@ export enum ModelIconType {
   GLM = 'glm',
 }
 
+export interface TokenInfo {
+  maxTokens: number; 
+  maxTokensInCodebase: number; 
+  maxInputTokens?: number;
+  maxOutputTokens?: number;
+}
+
+export interface PriceInfo {
+  currency: string; 
+  promptWeight: number; 
+  completionWeight: number; 
+  cacheWeightFor5min: number; 
+  hitCacheWeight: number; 
+}
+
+// 权限配置信息
+export interface AuthInfo {
+  allowAll: boolean; 
+  allowedUsers: string[]; 
+  allowedDepartments: string[]; 
+}
+
 // 模型配置接口
 export interface IChatModelConfig {
-  supplyChannel?: string; // 模型渠道
-  code: ChatModel; // 模型标识
-  title: string; // 前端标题
-  enabled: boolean; // 是否启用
-  icon: ModelIconType; // 模型展示图标
-  chatType: ChatModelType; // 模型类型：0: 全部聊天 1: 普通聊天， 2: 仓库聊天
-  parseImgType: ParseImgType; // 解析图片类型
-  isPrivate: boolean; // 是否是私有模型
-  tags: string[]; // 前端显示的标签
-  hasComputableToken: boolean; // 支持实时计算Token
-  hasTokenCache: boolean; // 缓存Token
-  // hasNetwork: boolean; // 支持联网功能
-  hasThinking: boolean; // 是否支持Thking聊天
-  useModel?: string; // 使用的基础模型
-  peerUserContent: boolean; // 发送消息时，消息扁平化
-  displayOrder: number; // 越大前端展示越靠前
-  tokenInfo: {
-    maxTokens: number; // 通用token
-    maxTokensInCodebase: number; // 仓库智聊中使用的Token
-    maxInputTokens?: number;
-    maxOutputTokens?: number;
-  };
-  priceInfo: {
-    currency: 'CNY'; // 汇率类型
-    promptWeight: number; // 输入价格(每1000token费用)
-    completionWeight: number; // 输出token价格
-    cacheWeightFor5min: number; // 5min缓存价格
-    hitCacheWeight: number; // 命中缓存价格
-  };
-  authInfo: {
-    allowAll: boolean; // 是否允许所有人使用
-    allowedUsers: string[]; // 允许使用的用户
-    allowedDepartments: string[]; // 允许使用的部门列表
-  };
+  supplyChannel?: string; 
+  code: ChatModel; 
+  title: string; 
+  enabled: boolean; 
+  icon: string; 
+  chatType: ChatModelType; 
+  parseImgType: ParseImgType; 
+  isPrivate: boolean; 
+  tags: string[];
+  hasComputableToken: boolean; 
+  hasTokenCache: boolean; 
+  hasThinking: boolean; 
+  useModel?: ChatModel; 
+  peerUserContent: boolean; 
+  displayOrder: number; 
+  tokenInfo: TokenInfo;
+  priceInfo: PriceInfo;
+  authInfo: AuthInfo;
+}
+
+// getUserModels 接口响应类型
+export interface IGetUserModelsResponse {
+  model_configs: IChatModelConfig[];
 }
 
 export enum ChatModel {
@@ -753,48 +763,4 @@ export interface ModelPriceInfo {
   currency: string;
   promptWeight: number;
   completionWeight: number;
-}
-
-export async function getModelPrices(
-  models: string[],
-): Promise<Record<string, ModelPriceInfo>> {
-
-  const settledResults = await Promise.allSettled(
-    models.map((modelKey) =>
-      proxyRequest(
-        {
-          requestUrl: `https://modelspace.netease.com/proxy/aigw/llm/${modelKey}`,
-          method: 'get',
-        },
-        10000,
-        true,
-        undefined,
-        { errorToast: false },
-      ).then((data) => ({ modelKey, data })),
-    ),
-  );
-
-  const result: Record<string, ModelPriceInfo> = {};
-  for (const settled of settledResults) {
-    if (settled.status === 'fulfilled') {
-      const { modelKey, data } = settled.value as {
-        modelKey: string;
-        data: any;
-      };
-      let completionWeight = 0;
-      let promptWeight = 0;
-      data?.prices?.forEach((priceInfo: any) => {
-        if (priceInfo.currency === 'CNY') {
-          if (priceInfo.token_type === 'completion') {
-            completionWeight = priceInfo.weight;
-          } else if (priceInfo.token_type === 'prompt') {
-            promptWeight = priceInfo.weight;
-          }
-        }
-      });
-      result[modelKey] = { currency: 'CNY', promptWeight, completionWeight };
-    }
-  }
-
-  return result;
 }

@@ -123,7 +123,7 @@ import { getPlanContextTruncationInstruction } from './workspace/planModePrompts
 // import mockMessages from './mockMessages.json';
 import { Tool as PlanTool, processMakePlanDenied, report as planReport } from '../store/workspace/tools/plan'
 import { Tool as TodoTool } from '../store/workspace/tools/todo'
-import addCacheMarksToMessages from '../utils/addCacheMarksToMessages';
+import addCacheMarksToMessages, { addCacheMarksToTools } from '../utils/addCacheMarksToMessages';
 import EventBus, { EBusEvent } from '../utils/eventbus';
 import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../utils/truncateMessages';
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
@@ -222,6 +222,8 @@ export interface ChatSession {
     /** 关联的 SpecKit activeFeature ID，用于 Spec Coding 模式 */
     activeFeatureId?: string;
   };
+  /** 是否被收藏 */
+  is_favorite?: boolean;
   metadata: {
     creator: string;
     editor: string;
@@ -344,6 +346,8 @@ interface ChatStore {
   }>;
   triggerCompression: (sessionId: string) => Promise<boolean>;
   markMessagesAsCompressed: (sessionId: string, compressedMessages: ChatMessage[]) => void;
+  // 基于收藏会话复制消息到新会话，继续对话
+  forkFavoriteSession: (sourceSessionId: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatStore>()(
@@ -368,7 +372,9 @@ export const useChatStore = create<ChatStore>()(
         const { isStreaming, isProcessing, isTerminalProcessing, isApplying, isSearching } = useChatStreamStore.getState()
         // 流式过程中，不校验会话有效性
         if (isStreaming || isProcessing || isTerminalProcessing || isApplying || isSearching) return
-        const filterData = data.filter((item) => item.chat_type === chatType);
+        const filterData = data.filter(
+          (item) => item.chat_type === chatType && !item.is_favorite,
+        );
         let currentSessionId = get().currentSessionId;
         const currentSessions = get().sessions;
 
@@ -490,6 +496,56 @@ export const useChatStore = create<ChatStore>()(
         if (chatType === 'codebase') {
         }
         // mutateService(requestChatSessions);
+      },
+
+      forkFavoriteSession: async (sourceSessionId: string) => {
+        const sessions = get().sessions;
+        const sourceSession = sessions.get(sourceSessionId);
+        if (!sourceSession) return;
+
+        const chatType = get().chatType;
+        const messages = cloneDeep(sourceSession.data?.messages || []);
+
+        // 创建新的远端会话
+        const newSession = await createSession({
+          topic: sourceSession.topic || DEFAULT_TOPIC,
+          chat_type: chatType,
+          data: {
+            messages,
+            model: sourceSession.data?.model,
+          },
+        });
+
+        // 更新本地 sessions 并切换
+        const nextSessions = new Map(get().sessions);
+        nextSessions.set(newSession._id, {
+          ...newSession,
+          data: {
+            ...newSession.data!,
+            messages,
+            consumedTokens: sourceSession.data?.consumedTokens || {
+              input: 0,
+              output: 0,
+              inputCost: 0,
+              outputCost: 0,
+              systemTokens: 0,
+              systemToolTokens: 0,
+              promptTokens: 0,
+              completionTokens: 0,
+              cacheCreationInputTokens: 0,
+              comporessPromptTokens: 0,
+              comporessCompletionTokens: 0,
+              readCacheTokens: 0,
+              skillTokens: 0,
+              ruleTokens: 0,
+              mcpTokens: 0,
+            },
+          },
+        });
+        set({
+          sessions: nextSessions,
+          currentSessionId: newSession._id,
+        });
       },
 
       loadSessionData: async (
@@ -3344,6 +3400,7 @@ export const useChatStreamStore = create(
 
         if (cacheEnable) {
           data.messages = addCacheMarksToMessages(data.messages);
+          data.tools = addCacheMarksToTools(data.tools);
         }
 
         // 如果由于窗口偏移导致 user 信息丢失，补充进来并告知模型

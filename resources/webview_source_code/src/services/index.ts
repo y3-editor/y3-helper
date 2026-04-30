@@ -286,6 +286,8 @@ export interface ChatMessage {
   compressionMetadata?: CompressionMetadata;
   isOutdatedTokens?: boolean
   isAutoCompressingMessage?: boolean
+  /** updateConsumedTokens 调用后的会话累计 token 快照，用于计算每轮增量 */
+  consumedTokensTotal?: number;
 
   rules?: {
     name: string;

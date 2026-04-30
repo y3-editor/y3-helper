@@ -20,6 +20,10 @@ export interface ChatMessageProps {
   onFeedback?: (feedbackDetail: CodeBaseFeedbackDetail) => void;
   selectedMessageIds?: Set<string>;
   onToggleMessage?: (messageId: string) => void;
+  /** 收藏模式下，记录每轮选中了工具调用的 user message id 集合 */
+  toolCallRoundIds?: Set<string>;
+  /** 收藏模式下，切换某一轮工具调用的选中状态 */
+  onToggleToolCallRound?: (userMsgId: string) => void;
 }
 
 export interface ChatMessageHandle {
@@ -56,6 +60,8 @@ export interface ChatAssistantMessageProps {
   onFeedback: (feedbackType: ChatFeedbackType) => void;
   isShare?: boolean;
   setRecommendFileChanges: (recommendFileChanges: IRecommendFileChangeRecord) => void;
+  /** 收藏模式下隐藏工具调用 UI，工具调用在外部聚合框单独渲染 */
+  hideToolCalls?: boolean;
 }
 
 export interface ChatToolMessageProps {
@@ -74,6 +80,14 @@ export interface GroupAIMessageProps {
   sentAt?: number;
   /** AI 回复完成的时间戳（ms），用于计算耗时 */
   completedAt?: number;
+    /** 收藏模式：该轮对应的 user message id */
+  userMsgId?: string;
+  /** 收藏模式：该轮工具调用是否被选中 */
+  isToolCallSelected?: boolean;
+  /** 收藏模式：切换该轮工具调用的选中状态 */
+  onToggleToolCallRound?: (userMsgId: string) => void;
+  /** 收藏模式：该轮对应的 user message 是否已被选中 */
+  isUserMsgSelected?: boolean;
 }
 
 export interface ChatCodeBlockProps {

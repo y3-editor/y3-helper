@@ -310,10 +310,21 @@ export const parseImageFromReadFileTool = async (
     }
     const fileNeme = path.split(/[/\\]/).pop() || path
     const uint8Array = new Uint8Array((content as any)?.data as any);
-    const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
+    // 根据文件扩展名确定正确的图片 MIME 类型
+    const ext = fileNeme.split('.').pop()?.toLowerCase() || ''
+    const mimeTypeMap: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      bmp: 'image/bmp',
+      webp: 'image/webp',
+    }
+    const mimeType = mimeTypeMap[ext] || 'image/png'
+    const blob = new Blob([uint8Array], { type: mimeType });
     // 转换为 File 对象
     const file = new File([blob], fileNeme, {
-      type: 'application/octet-stream',
+      type: mimeType,
       lastModified: Date.now()
     });
     const smallFile = await compressImage(file);

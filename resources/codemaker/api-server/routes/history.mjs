@@ -36,7 +36,7 @@ let nextId = 1;
  * 从完整会话数据中提取索引条目（去除 data.messages）
  */
 function extractIndexEntry(session) {
-  return {
+  const entry = {
     _id: session._id,
     _schema_version: session._schema_version || 1,
     topic: session.topic || '',
@@ -49,6 +49,10 @@ function extractIndexEntry(session) {
       creator: session.metadata?.creator || 'demo-user',
     },
   };
+  if (session.is_favorite) {
+    entry.is_favorite = true;
+  }
+  return entry;
 }
 
 /**
@@ -218,7 +222,7 @@ if (!loadIndex()) {
 function makeSession(overrides = {}) {
   const id = String(nextId++);
   const now = new Date().toISOString();
-  return {
+  const session = {
     _schema_version: 1,
     _id: id,
     topic: '',
@@ -235,6 +239,11 @@ function makeSession(overrides = {}) {
     },
     ...overrides,
   };
+  // 仅在显式传入 is_favorite 时保留
+  if (overrides.is_favorite) {
+    session.is_favorite = true;
+  }
+  return session;
 }
 
 // ============================================================
@@ -267,6 +276,12 @@ function queryIndexEntries(params) {
   // 按 chat_repo 过滤
   if (params.chat_repo) {
     items = items.filter(item => item.chat_repo === params.chat_repo);
+  }
+
+  // 按 is_favorite 过滤
+  if (params.is_favorite !== undefined) {
+    const wantFavorite = params.is_favorite === 'true' || params.is_favorite === true;
+    items = items.filter(item => !!item.is_favorite === wantFavorite);
   }
 
   // 按 topic_content 模糊搜索
@@ -346,6 +361,7 @@ export function registerHistoryRoutes(routes) {
       chat_type: body.chat_type || 'codebase',
       chat_repo: body.chat_repo || '',
       data: body.data || { messages: [], model: 'gpt-4o' },
+      is_favorite: body.is_favorite || false,
     });
 
     // 保存会话文件
@@ -473,6 +489,7 @@ export function registerHistoryRoutes(routes) {
       chat_type: body.chat_type || 'codebase',
       chat_repo: body.chat_repo || '',
       data: body.data || { messages: [], model: 'gpt-4o' },
+      is_favorite: body.is_favorite || false,
     });
 
     saveSessionFile(session._id, session);

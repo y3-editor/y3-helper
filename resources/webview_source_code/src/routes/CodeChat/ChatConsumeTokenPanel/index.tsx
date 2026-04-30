@@ -69,31 +69,43 @@ function TokenRow({
 }: TokenRowProps) {
   const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
   return (
-    <Flex alignItems="center" gap={2} py={0.5}>
-      <Box w="10px" h="10px" borderRadius="2px" flexShrink={0} bg={color} />
+    <Flex alignItems="center" gap={2} py={0.5} justifyContent="space-between">
+      {/* 左侧：色块 + 标签 */}
+      <Flex alignItems="center" gap={2} flex={1} minW={0}>
+        <Box w="10px" h="10px" borderRadius="2px" flexShrink={0} bg={color} />
+        <Flex
+          fontSize="xs"
+          whiteSpace="nowrap"
+          alignItems="center"
+          gap={1}
+        >
+          <Text fontFamily="monospace">{label}</Text>
+          {tooltip && (
+            <Tooltip label={tooltip}>
+              <Text as="span" mx={0.5} lineHeight={1}>
+                <Icon
+                  as={AiOutlineQuestionCircle}
+                  size="sm"
+                  style={{ zoom: 0.9 }}
+                />
+              </Text>
+            </Tooltip>
+          )}
+        </Flex>
+      </Flex>
+      {/* 右侧：数值 + 百分比 */}
       <Flex
         fontSize="xs"
         fontFamily="mono"
-        color={isDark ? '#C8C8C8' : '#333'}
         whiteSpace="nowrap"
+        alignItems="center"
         gap={1}
+        flexShrink={0}
       >
-        <Text>{label}</Text>
-        <Tooltip label={tooltip}>
-          <Text hidden={!tooltip} mx={1}>
-            <Icon
-              as={AiOutlineQuestionCircle}
-              size="sm"
-              style={{ zoom: 0.9 }}
-            />
-          </Text>
-        </Tooltip>
-        <Text>:</Text>
-        <Text as="span" fontWeight="semibold">
+        <Text fontWeight="semibold" color={isDark ? '#E0E0E0' : '#111'}>
           {formatTokens(value)}
         </Text>
-        <Text>tokens</Text>
-        <Text as="span" color={isDark ? '#888' : '#999'}>
+        <Text w="44px" textAlign="right" color={isDark ? '#888' : '#999'}>
           ({pct}%)
         </Text>
       </Flex>
@@ -145,41 +157,54 @@ function ChildSessionTokenSection({
         onClick={() => setExpanded((v) => !v)}
         _hover={{ opacity: 0.8 }}
         userSelect="none"
+        justifyContent="space-between"
       >
-        <Box w="10px" h="10px" borderRadius="2px" flexShrink={0} bg="#f59e0b" />
+        {/* 左侧：色块 + 标签 + session 徽标 + 展开箭头 */}
+        <Flex alignItems="center" gap={2} flex={1} minW={0}>
+          <Box w="10px" h="10px" borderRadius="2px" flexShrink={0} bg="#f59e0b" />
+          <Flex
+            fontSize="xs"
+            color={isDark ? '#C8C8C8' : '#333'}
+            whiteSpace="nowrap"
+            alignItems="center"
+            gap={1}
+          >
+            <Text>Subagent</Text>
+            <Text
+              fontSize="10px"
+              px="5px"
+              py="1px"
+              borderRadius="3px"
+              bg={isDark ? '#3a3219' : '#fef3c7'}
+              color={isDark ? '#f59e0b' : '#92400e'}
+              fontWeight="medium"
+              lineHeight="1.4"
+            >
+              {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+            </Text>
+            <Icon
+              as={expanded ? MdKeyboardArrowDown : MdKeyboardArrowRight}
+              color={isDark ? '#666' : '#bbb'}
+              boxSize={3.5}
+              flexShrink={0}
+            />
+          </Flex>
+        </Flex>
+        {/* 右侧：数值 + 百分比 */}
         <Flex
           fontSize="xs"
           fontFamily="mono"
-          color={isDark ? '#C8C8C8' : '#333'}
           whiteSpace="nowrap"
-          flex={1}
           alignItems="center"
           gap={1}
+          flexShrink={0}
         >
-          <Text>Subagent</Text>
-          <Text
-            fontSize="10px"
-            px="5px"
-            py="1px"
-            borderRadius="3px"
-            bg={isDark ? '#3a3219' : '#fef3c7'}
-            color={isDark ? '#f59e0b' : '#92400e'}
-            fontWeight="medium"
-            lineHeight="1.4"
-          >
-            {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+          <Text fontWeight="semibold" color={isDark ? '#E0E0E0' : '#111'}>
+            {formatTokens(totalTokens)}
           </Text>
-          <Text>:</Text>
-          <Text fontWeight="semibold">{formatTokens(totalTokens)}</Text>
-          <Text>tokens</Text>
-          <Text color={isDark ? '#888' : '#999'}>({pct}%)</Text>
-          <Icon
-            as={expanded ? MdKeyboardArrowDown : MdKeyboardArrowRight}
-            color={isDark ? '#666' : '#bbb'}
-            boxSize={3.5}
-            ml="auto"
-            flexShrink={0}
-          />
+          <Text w="44px" textAlign="right" color={isDark ? '#888' : '#999'}>
+            ({pct}%)
+          </Text>
         </Flex>
       </Flex>
 
@@ -199,28 +224,23 @@ function ChildSessionTokenSection({
             const sessionPct =
               pctBase > 0 ? ((sessionTotal / pctBase) * 100).toFixed(1) : '0.0';
             return (
-              <Flex key={stats.id} alignItems="center" gap={2} py={0.5}>
-                <Box
-                  w="6px"
-                  h="6px"
-                  borderRadius="50%"
-                  flexShrink={0}
-                  bg={getAgentColor(sessionName)}
-                />
-                <Flex
-                  fontSize="xs"
-                  fontFamily="mono"
-                  color={isDark ? '#C8C8C8' : '#444'}
-                  whiteSpace="nowrap"
-                  flex={1}
-                  alignItems="center"
-                  gap={1}
-                >
+              <Flex key={stats.id} alignItems="center" gap={2} py={0.5} justifyContent="space-between">
+                {/* 左侧：圆点 + 名称 */}
+                <Flex alignItems="center" gap={2} flex={1} minW={0}>
+                  <Box
+                    w="6px"
+                    h="6px"
+                    borderRadius="50%"
+                    flexShrink={0}
+                    bg={getAgentColor(sessionName)}
+                  />
+                  <Text fontSize="xs" color={isDark ? '#AAAAAA' : '#666'}>本次会话消耗 Tokens 分布</Text>
                   <Tooltip
                     label={sessionName.length > 20 ? sessionName : undefined}
                     placement="top"
                   >
                     <Text
+                      fontSize="xs"
                       color={isDark ? '#aaa' : '#666'}
                       flexShrink={0}
                       maxW="140px"
@@ -232,10 +252,22 @@ function ChildSessionTokenSection({
                       {sessionName}
                     </Text>
                   </Tooltip>
-                  <Text fontWeight="semibold">
+                </Flex>
+                {/* 右侧：数值 + 百分比 */}
+                <Flex
+                  fontSize="xs"
+                  fontFamily="mono"
+                  whiteSpace="nowrap"
+                  alignItems="center"
+                  gap={1}
+                  flexShrink={0}
+                >
+                  <Text fontWeight="semibold" color={isDark ? '#E0E0E0' : '#111'}>
                     {formatTokens(sessionTotal)}
                   </Text>
-                  <Text color={isDark ? '#888' : '#999'}>({sessionPct}%)</Text>
+                  <Text w="44px" textAlign="right" color={isDark ? '#888' : '#999'}>
+                    ({sessionPct}%)
+                  </Text>
                 </Flex>
               </Flex>
             );
@@ -299,8 +331,8 @@ export default function ChatConsumeTokenPanel() {
     if (chatType === 'codebase') {
       // 对于 codebase 类型，计算主Agent所有细分项的总和
       const mainAgentTokens = messageTokens + compressTokens + systemTokens +
-                             systemToolTokens + readCacheTokens + skillTokens +
-                             ruleTokens + mcpTokens;
+        systemToolTokens + readCacheTokens + skillTokens +
+        ruleTokens + mcpTokens;
       return mainAgentTokens + effectiveChildrenTotalTokens;
     } else {
       // 对于非 codebase 类型，使用简化的 input + output
@@ -450,7 +482,7 @@ export default function ChatConsumeTokenPanel() {
             <Text
               fontSize="xs"
               color={isDark ? '#AAAAAA' : '#555'}
-              mb={1}
+              mb={2}
               fontWeight="medium"
             >
               本次会话消耗 Tokens 分布：

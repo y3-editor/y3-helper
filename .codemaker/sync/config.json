@@ -96,7 +96,8 @@
     "customized": [
       "src/codemaker/webviewProvider.ts",
       "src/codemaker/messageHandlers.ts",
-      "src/codemaker/skillsHandler.ts"
+      "src/codemaker/skillsHandler.ts",
+      "src/codemaker/mcpHandlers/index.ts"
     ],
     "y3_only": [
       "src/codemaker/index.ts",

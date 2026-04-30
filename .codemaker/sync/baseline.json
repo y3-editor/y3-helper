@@ -1,10 +1,7 @@
 {
-  "webui": {
-    "lastSyncCommit": "9877bca69c49e72e0b393aaeb5b2f7827359ed83",
-    "lastSyncDate": "2026-03-24"
-  },
+  "webui": "8a72b0e53499ca804492f281cd739195c9c70868",
   "extension": {
-    "lastSyncCommit": "7f4ed5c47c03bf4fe70e570e0e624e8a48056e16",
-    "lastSyncDate": "2026-03-24"
+    "lastSyncCommit": "a96bc0e0",
+    "lastSyncDate": "2026-03-26"
   }
 }

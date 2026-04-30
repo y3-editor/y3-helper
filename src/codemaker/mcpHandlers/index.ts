@@ -245,18 +245,12 @@ export class McpHub {
                         console.error(`[McpHub] Transport error for "${name}":`, error);
                         const connection = this.connections.find((conn) => conn.server.name === name);
                         if (connection) {
-                            connection.server.status = "disconnected";
                             this.appendErrorMessage(connection, error.message);
                         }
-                        await this.notifyWebviewOfServerChanges();
                     };
 
                     transport.onclose = async () => {
-                        const connection = this.connections.find((conn) => conn.server.name === name);
-                        if (connection) {
-                            connection.server.status = "disconnected";
-                        }
-                        await this.notifyWebviewOfServerChanges();
+                        console.log(`Transport closed for "${name}"`);
                     };
 
                     if (!parsedConfig.disabled) {
@@ -319,10 +313,8 @@ export class McpHub {
                         console.error(`[McpHub] Transport error for "${name}":`, error);
                         const connection = this.connections.find((conn) => conn.server.name === name);
                         if (connection) {
-                            connection.server.status = "disconnected";
                             this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`);
                         }
-                        await this.notifyWebviewOfServerChanges();
                     };
                     break;
                 }
@@ -343,20 +335,8 @@ export class McpHub {
                         console.error(`[McpHub] Transport error for "${name}":`, error);
                         const connection = this.connections.find((conn) => conn.server.name === name);
                         if (connection) {
-                            connection.server.status = "disconnected";
                             this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`);
                         }
-                        // 自动重连 SSE 断连
-                        if (error instanceof Error && error.message.includes("SSE stream disconnected")) {
-                            try {
-                                await this.deleteConnection(name);
-                                await this.connectToServer(name, config);
-                                console.log(`[McpHub] SSE stream reconnected for "${name}"`);
-                            } catch (err) {
-                                console.error(`[McpHub] Reconnection failed for "${name}":`, getErrorMessage(err));
-                            }
-                        }
-                        await this.notifyWebviewOfServerChanges();
                     };
                     break;
                 }
@@ -397,6 +377,30 @@ export class McpHub {
         connection.server.error = connection.server.error
             ? `${connection.server.error}\n${friendlyError}`
             : friendlyError;
+    }
+
+    /**
+     * 在实际调用（callTool / readResource / getPrompt 等）失败时，
+     * 判断是否属于连接级别的错误，若是则将状态标记为 disconnected 并通知 UI。
+     */
+    private handleTransportError(connection: McpConnection, error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isTransportError =
+            errorMessage.includes('ECONNREFUSED') ||
+            errorMessage.includes('ECONNRESET') ||
+            errorMessage.includes('EPIPE') ||
+            errorMessage.includes('Client has already been closed') ||
+            errorMessage.includes('Not connected') ||
+            errorMessage.includes('Connection closed') ||
+            errorMessage.includes('transport') ||
+            errorMessage.includes('SSE stream disconnected');
+
+        if (isTransportError && connection.server.status === 'connected') {
+            console.log(`[McpHub] MCP server "${connection.server.name}" 调用时发现连接已断开: ${errorMessage}`);
+            connection.server.status = 'disconnected';
+            this.appendErrorMessage(connection, errorMessage);
+            this.notifyWebviewOfServerChanges();
+        }
     }
 
     /**
@@ -727,6 +731,9 @@ export class McpHub {
                     return await operation(connection);
                 }
             }
+            if (connection) {
+                this.handleTransportError(connection, error);
+            }
             throw error;
         }
     }
@@ -751,13 +758,18 @@ export class McpHub {
 
         console.log(`[McpHub] Calling ${serverName}.${toolName} (timeout: ${msToSeconds(timeout)}s)`);
 
-        const result = await connection.client.request(
-            { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
-            CallToolResultSchema,
-            { timeout },
-        );
+        try {
+            const result = await connection.client.request(
+                { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
+                CallToolResultSchema,
+                { timeout },
+            );
 
-        return { ...result, content: result.content ?? [] };
+            return { ...result, content: result.content ?? [] };
+        } catch (error) {
+            this.handleTransportError(connection, error);
+            throw error;
+        }
     }
 
     async readResource(serverName: string, uri: string): Promise<McpResourceResponse> {
@@ -769,10 +781,15 @@ export class McpHub {
             throw new Error(`Server "${serverName}" is disabled`);
         }
 
-        return await connection.client.request(
-            { method: "resources/read", params: { uri } },
-            ReadResourceResultSchema,
-        );
+        try {
+            return await connection.client.request(
+                { method: "resources/read", params: { uri } },
+                ReadResourceResultSchema,
+            );
+        } catch (error) {
+            this.handleTransportError(connection, error);
+            throw error;
+        }
     }
 
     async getPrompt(serverName: string, promptName: string, promptArguments?: Record<string, unknown>): Promise<McpPromptResult> {

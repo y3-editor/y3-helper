@@ -20,7 +20,7 @@ import ToolCall from './ToolCall';
 import Retry from './Retry';
 
 const AssistantMessage: React.FC<ChatAssistantMessageProps> = (props) => {
-  const { message, isLatest, isRecent, attachs, isShare, setRecommendFileChanges } = props;
+  const { message, isLatest, isRecent, attachs, isShare, setRecommendFileChanges, hideToolCalls } = props;
   const { postMessage } = usePostMessage();
   const [expand, setExpand] = React.useState(false);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
@@ -230,7 +230,7 @@ const AssistantMessage: React.FC<ChatAssistantMessageProps> = (props) => {
           </Box>
         ) : null}
       </Box>
-      {message.tool_calls && message.tool_calls.length ? (
+      {message.tool_calls && message.tool_calls.length && !hideToolCalls ? (
         <ToolCall
           message={message}
           isShare={!!isShare}

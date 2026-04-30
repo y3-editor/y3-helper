@@ -1,6 +1,7 @@
 import * as React from 'react';
 import ChatHistories, { ChatHistoriesHandle } from './ChatHistories';
 import ChatDelete from './ChatDelete';
+import ChatFavoriter, { ChatFavoriterHandle } from './ChatFavoriter';
 import {
   IconButton,
   Popover,
@@ -65,6 +66,7 @@ function ChatHeaderToolbar() {
   const [isOpenPopover, setIsOpenPopover] = React.useState(false);
   const [isOpenModal, setIsOpenModal] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
+  const favoriterRef = React.useRef<ChatFavoriterHandle>(null);
   const historyRef = React.useRef<ChatHistoriesHandle>(null);
   const { toast } = useCustomToast();
   const [isOpenPromptSelectionModal, setIsOpenPromptSelectionModal] =
@@ -86,6 +88,10 @@ function ChatHeaderToolbar() {
         popoverRef.current &&
         popoverRef.current.contains(e.target as Node)
       ) {
+        return;
+      }
+      const favoriterIsOpen = favoriterRef.current?.isOpen;
+      if (favoriterIsOpen) {
         return;
       }
       const historyIsOpen = historyRef.current?.isOpen;
@@ -186,6 +192,7 @@ function ChatHeaderToolbar() {
             <PopoverContent w="90px">
               <PopoverBody py="1" pl="0" pr="1">
                 <VStack align="center" overflowY="auto" p="0">
+                  <ChatFavoriter ref={favoriterRef} />
                   <ChatDelete />
                   <Button
                     aria-label="清空会话"

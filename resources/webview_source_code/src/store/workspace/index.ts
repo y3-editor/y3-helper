@@ -16,7 +16,9 @@ import { devcloudOfficeRequest } from '../../services';
 import { IMultiAttachment, useChatStore } from '../chat';
 import { minimatch } from 'minimatch';
 import { AttachType } from '../attaches';
-import { useSkillsStore } from '../skills';
+import { useSkillsStore, SkillIndexItem } from '../skills';
+import { OPSX_BUILTIN_SKILLS } from '../skills/builtinSkills';
+import { PromptLinkMgr } from './pomptLinkMgr';
 
 export enum LocalRepoType {
   GIT = 'git',
@@ -116,6 +118,10 @@ export interface Tool {
       properties: any;
       required: string[];
     };
+  };
+  /** AIGW / Anthropic：打在「最后一个」工具定义上可缓存整段 tools 声明（多断点策略） */
+  cache_control?: {
+    type: 'ephemeral';
   };
 }
 
@@ -302,14 +308,16 @@ export interface CapabilityInfo {
 export interface ChangeInfo {
   /** change 标识 (目录名) */
   id: string;
-  /** proposal.md 文件信息 */
-  proposalFile: SpecFileInfo;
+  /** proposal.md 文件信息 (可选，自定义 schema 可能不含此文件) */
+  proposalFile?: SpecFileInfo;
   /** tasks.md 文件信息 (可选) */
   tasksFile?: SpecFileInfo;
   /** design.md 文件信息 (可选) */
   designFile?: SpecFileInfo;
   /** delta specs 文件列表 */
   specFiles: SpecFileInfo[];
+  /** change 目录下所有 .md 文件（递归，含 specs/ 子目录），不做过滤和排序 */
+  allFiles?: SpecFileInfo[];
 }
 
 /**
@@ -337,6 +345,8 @@ export interface SpecKitFeatureInfo {
   checklistFile?: SpecFileInfo;
   /** contracts/ 目录下的接口契约文件 */
   contractFiles: SpecFileInfo[];
+  /** feature 目录下所有 .md 文件（含自定义文件） */
+  allFiles?: SpecFileInfo[];
 }
 
 /**
@@ -407,7 +417,8 @@ export type WorkspaceStore = {
   requestSpecInfo: () => void;
   getCodebaseChatSystemPrompt: (options?: {
     isReAct?: boolean,
-    effectiveRules: Rule[]
+    effectiveRules: Rule[],
+    promptLink?: PromptLinkMgr
   }) => string;
   getCodebaseChatTools: () => Tool[];
   getCodebaseFunctionPrompt: () => string;
@@ -521,12 +532,41 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       updateSpecInfo(info: SpecInfo) {
         const specInfo = get().specInfo;
 
-        if (isEqual(specInfo, info)) {
+        // 兼容旧版本插件：若 allFiles 缺失，从已有具名字段合并
+        const normalized: SpecInfo = {
+          ...info,
+          frameworks: info.frameworks.map((f) => ({
+            ...f,
+            activeChanges: (f.activeChanges || []).map((c) => {
+              if (c.allFiles) return c;
+              const files: SpecFileInfo[] = [];
+              if (c.proposalFile) files.push(c.proposalFile);
+              if (c.designFile) files.push(c.designFile);
+              (c.specFiles || []).forEach((sf) => files.push(sf));
+              if (c.tasksFile) files.push(c.tasksFile);
+              return { ...c, allFiles: files };
+            }),
+            features: (f.features || []).map((feat) => {
+              if (feat.allFiles) return feat;
+              const files: SpecFileInfo[] = [];
+              if (feat.specFile) files.push(feat.specFile);
+              if (feat.planFile) files.push(feat.planFile);
+              if (feat.researchFile) files.push(feat.researchFile);
+              if (feat.dataModelFile) files.push(feat.dataModelFile);
+              if (feat.quickstartFile) files.push(feat.quickstartFile);
+              if (feat.checklistFile) files.push(feat.checklistFile);
+              if (feat.tasksFile) files.push(feat.tasksFile);
+              return { ...feat, allFiles: files };
+            }),
+          })),
+        };
+
+        if (isEqual(specInfo, normalized)) {
           return;
         }
 
         set({
-          specInfo: info,
+          specInfo: normalized,
         });
       },
       isSpecFrameworkInitialized(framework: SpecFramework) {
@@ -591,12 +631,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
       getCodebaseChatSystemPrompt(options: {
         isReAct?: boolean,
-        effectiveRules: Rule[]
+        effectiveRules: Rule[],
+        promptLink?: PromptLinkMgr
       } = {
           isReAct: false,
-          effectiveRules: []
+          effectiveRules: [],
         }) {
-        const { isReAct, effectiveRules } = options;
+        const { isReAct, effectiveRules, promptLink } = options;
         const { workspace, osName, shell, openFilePaths, repoCodeTable, codebaseCustomPrompt } =
           get().workspaceInfo;
         const { enableNewApply } = useChatApplyStore.getState();
@@ -634,19 +675,26 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           return constructH75Prompt({ workspace, osName, openFilePaths, codebaseCustomPrompt: customPrompt });
         }
 
+        // opsx 1.x 模式下合并内置 skills
         const skillsStore = useSkillsStore.getState();
         const skills = skillsStore.skills.filter(s => skillsStore.isSkillEnabled(s.name));
+        const codebaseChatMode = useChatStore.getState().codebaseChatMode;
+        const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
+        const isOpsxMode = codebaseChatMode === 'openspec' && openspecVersion === '1.x';
+        const effectiveSkills = isOpsxMode
+          ? [...skills, ...OPSX_BUILTIN_SKILLS.filter((s: SkillIndexItem) => !skills.some((fs: SkillIndexItem) => fs.name === s.name))]
+          : skills;
 
         if (enableNewApply) {
-          const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
           return constructRemixPrompt({
             info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
             MCPServers: filteredMCPServers,
             codeMakerVersion,
             enableTerminal: enableTerminal && (isVSCode || isJetbrains),
             effectiveRules,
-            skills,
-            openspecVersion
+            skills: effectiveSkills,
+            openspecVersion,
+            promptLink: promptLink,
           });
         } else {
           return constructToolCallPrompt({
@@ -655,7 +703,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             MCPServers: filteredMCPServers,
             enableTerminal: enableTerminal && (isVSCode || isJetbrains),
             effectiveRules,
-            skills
+            skills: effectiveSkills,
+            promptLink: promptLink,
           });
         }
       },
@@ -678,9 +727,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const attach = recentUserMessage?._originalRequestData?.attachs as IMultiAttachment
           hasCodeTable = attach?.attachType === AttachType.MultiAttachment && attach.dataSource.some(i => i.attachType === AttachType.CodeBase)
         }
-        const skillsStoreForTools = useSkillsStore.getState();
-        const skills = skillsStoreForTools.skills.filter(s => skillsStoreForTools.isSkillEnabled(s.name));
         if (enableNewApply) {
+          // opsx 1.x 模式下合并内置 skills
+          const codebaseChatMode = useChatStore.getState().codebaseChatMode;
+          const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
+          const isOpsxMode = codebaseChatMode === 'openspec' && openspecVersion === '1.x';
+          const skillsStoreForTools = useSkillsStore.getState();
+          const skills = skillsStoreForTools.skills.filter(s => skillsStoreForTools.isSkillEnabled(s.name));
+          const effectiveSkills = isOpsxMode
+            ? [...skills, ...OPSX_BUILTIN_SKILLS.filter((s: SkillIndexItem) => !skills.some((fs: SkillIndexItem) => fs.name === s.name))]
+            : skills;
           return getToolsEN({
             workspace,
             hasCodeTable,
@@ -688,7 +744,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             enableTerminal,
             codeMakerVersion,
             isVSCode,
-            skills
+            skills: effectiveSkills,
           });
         } else {
           return getTools({

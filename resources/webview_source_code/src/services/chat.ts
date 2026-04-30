@@ -30,6 +30,9 @@ export type ChatHistoryGetterParams = Partial<{
   _exclude: string;
   'metadata.creator': string;
   topic_content?: string;
+  topic?: string;
+  chat_type?: ChatType;
+  is_favorite?: boolean;
 }>;
 
 export async function getHistories(
@@ -74,6 +77,8 @@ interface ChatHistoryPostBody {
   /** 关联的主会话 ID（仅 subagent 类型使用） */
   parent_session_id?: string;
   data: ChatHistoryData;
+  /** 是否为收藏会话 */
+  is_favorite?: boolean;
 }
 
 export async function createSession(postData: ChatHistoryPostBody) {

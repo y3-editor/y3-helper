@@ -148,7 +148,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   // 抽取条件判断，避免重复代码
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (
-      placeholder?.includes('打开该仓库使用或新建会话') ||
+      placeholder?.includes('打开该仓库使用或新建会话') || 
       placeholder?.includes('打开该仓库后可继续对话')
     );
   }, [isVscode, placeholder]);
@@ -183,6 +183,61 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
       setInitModalVisible(true);
     }
   }, [initRequiredInfo, setCurrentSpecFramework, setInitModalVisible]);
+
+  // 检测是否需要显示收藏会话提示（提取类型和显示文本）
+  const favoriteRequiredInfo = useCallback(() => {
+    if (!placeholder?.startsWith('__FAVORITE__')) return null;
+    // 格式: __FAVORITE__type__displayText 或 __FAVORITE__mismatch__repoName__displayText
+    const parts = placeholder.split('__');
+    if (parts.length >= 4) {
+      const favType = parts[2]; // default / codebase / mismatch
+      if (favType === 'mismatch' && parts.length >= 5) {
+        return {
+          type: 'mismatch' as const,
+          repoName: parts[3],
+          displayText: parts.slice(4).join('__'),
+        };
+      }
+      return {
+        type: favType as 'default' | 'codebase',
+        repoName: '',
+        displayText: parts.slice(3).join('__'),
+      };
+    }
+    return null;
+  }, [placeholder]);
+
+  // 处理收藏会话"发起新会话"点击
+  const handleFavoriteClick = useCallback(() => {
+    if (currentSessionId) {
+      useChatStore.getState().forkFavoriteSession(currentSessionId);
+    }
+  }, [currentSessionId]);
+
+  // 处理收藏会话"打开仓库"点击（仓库不一致场景）
+  const handleOpenRepo = useCallback((repoName: string) => {
+    const matchedWorkspace = workspaceList.find((workspace: any) => {
+      return workspace.name === repoName ||
+        workspace.repoName === repoName ||
+        workspace.workspace === repoName ||
+        (workspace.path && workspace.path.includes(repoName));
+    });
+
+    if (matchedWorkspace) {
+      postMessage({
+        type: SubscribeActions.OPEN_NEW_WINDOW,
+        data: {
+          path: matchedWorkspace.path || matchedWorkspace.workspace,
+        },
+      }, '*');
+    } else {
+      toast({
+        title: `未找到名称为"${repoName}"的仓库`,
+        status: 'warning',
+        duration: 2000,
+      });
+    }
+  }, [workspaceList, postMessage, toast]);
 
   const handleScroll = useCallback(() => {
     if (!inputRef.current || !hightlightLayerRef.current) return
@@ -311,20 +366,14 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
 
 
   useEffect(() => {
-    const onFetchSessionResult = (success: boolean) => {
-      setLoadSessionSuccess(success)
-      if (!success) {
-        // 加载失败时，重新尝试加载
-        if (currentSessionId) {
-          selectSession(currentSessionId)
-        }
-      }
+    const onFetchSessionResult = (isSuccess: boolean) => {
+      setLoadSessionSuccess(isSuccess)
     }
     EventBus.instance.on(EBusEvent.Fetch_Session_Result, onFetchSessionResult)
     return () => {
-      EventBus.instance.off(EBusEvent.Fetch_Session_Result, onFetchSessionResult)
+      return EventBus.instance.off(EBusEvent.Fetch_Session_Result, onFetchSessionResult)
     }
-  }, [currentSessionId, selectSession])
+  }, [inputRef, updateHighlights])
 
 
   useEffect(() => {
@@ -432,6 +481,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
 
   // 获取初始化信息（只用于决定渲染哪种 UI）
   const initInfo = initRequiredInfo();
+  // 获取收藏会话信息
+  const favoriteInfo = favoriteRequiredInfo();
 
   const renderExceededTip = useCallback(() => {
     return (
@@ -484,6 +535,54 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
       </Box>
     )
   }, [maxCostPerMonth, postMessage])
+
+  const renderSessionLoadError = useCallback(() => {
+    return (
+      <Box position={'relative'} w={'full'} h={'full'} userSelect={'none'}>
+        <Box
+          position="absolute"
+          top="8px"
+          left="0"
+          right="0"
+          paddingLeft="0"
+          fontSize="12px"
+          color="red.400"
+          zIndex={2}
+          pointerEvents="auto"
+        >
+          当前会话数据加载失败，请点击
+          <Button
+            size="sm"
+            variant="link"
+            color="blue.400"
+            ml={1}
+            fontWeight="600"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation();
+              if (!currentSessionId) {
+                toast({
+                  title: '当前未发现您关联会话，请重新选择会话!',
+                  status: 'error',
+                  duration: 2000,
+                });
+                return
+              }
+              selectSession(currentSessionId)
+            }}
+            _hover={{ textDecoration: 'none', opacity: 0.8 }}
+          >
+            重新加载会话
+          </Button>
+          如果刷新无法解决，建议新建会话
+        </Box>
+      </Box>
+    )
+  }, [currentSessionId, selectSession, toast])
+
+  // 会话加载错误状态检查（优先显示）
+  if (!loadSessionSuccess) {
+    return renderSessionLoadError()
+  }
 
   if (billLoading && isExceedCost) {
     return (
@@ -561,6 +660,92 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onChange={debounce(onCustomChange, 300)}
           />
         </React.Fragment>
+      ) : favoriteInfo ? (
+        // 收藏会话提示：显示可交互的提示文案
+        <React.Fragment key="favorite">
+          <Box
+            position="absolute"
+            top="8px"
+            left="0"
+            right="0"
+            paddingLeft="0"
+            fontSize="12px"
+            color="#666"
+            zIndex={2}
+            pointerEvents="auto"
+          >
+            {favoriteInfo.type === 'mismatch' ? (
+              <Box>
+                <Box as="span">{favoriteInfo.displayText}，</Box>
+                {favoriteInfo.repoName && (
+                  <Box
+                    as="span"
+                    color="blue.400"
+                    cursor="pointer"
+                    textDecoration="underline"
+                    _hover={{ color: 'blue.500' }}
+                    onClick={() => handleOpenRepo(favoriteInfo.repoName)}
+                  >
+                    打开该仓库
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Box>
+                <Box as="span">收藏会话不支持继续对话，</Box>
+                <Box
+                  as="span"
+                  color="blue.400"
+                  cursor="pointer"
+                  textDecoration="underline"
+                  _hover={{ color: 'blue.500' }}
+                  onClick={handleFavoriteClick}
+                >
+                  点击发起新会话
+                </Box>
+              </Box>
+            )}
+          </Box>
+          <Box
+            ref={hightlightLayerRef}
+            position={'absolute'}
+            top="8px"
+            right="0"
+            bottom="0"
+            left="0"
+            w={'full'}
+            lineHeight={1.375}
+            pb={'8px'}
+            overflow={'auto'}
+            fontSize={'1rem'}
+            backgroundColor={'transparent'}
+            color={'transparent'}
+          />
+          <Textarea
+            disabled={true}
+            ref={inputRef}
+            value=""
+            h="full"
+            px="0"
+            border="none"
+            resize="none"
+            borderRadius="8px"
+            zIndex={1}
+            fontSize={'1rem'}
+            placeholder=""
+            _focus={{ boxShadow: 'none' }}
+            _placeholder={{ fontSize: '12px', color: 'text.default' }}
+            onKeyUp={handleKeyUp}
+            onSelect={updateCursorPosition}
+            onMouseUp={updateCursorPosition}
+            onBlur={onBlur}
+            onFocus={onCustomFocus}
+            onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
+            onPaste={onCustomPaste}
+            onChange={debounce(onCustomChange, 300)}
+          />
+        </React.Fragment>
       ) : shouldEnableComplexFeatures() ? (
         // VSCode环境且placeholder包含特定文本：显示复杂的点击跳转功能
         <React.Fragment key="complex">
@@ -581,6 +766,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                   // 匹配"当前会话关联仓库 仓库名称"或"当前旧会话仅关联仓库名"的模式
                   const repoMatch = placeholder.match(/当前(?:会话关联仓库|旧会话仅关联仓库名)\s+([^，,]+)/);
                   const openRepoMatch = placeholder.match(/打开该仓库/);
+
                   if (repoMatch && openRepoMatch) {
                     const repoName = repoMatch[1].trim();
                     const parts: JSX.Element[] = [];
@@ -676,7 +862,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
           // pointerEvents={'none'}
           />
           <Textarea
-            disabled={disabled || !loadSessionSuccess}
+            disabled={disabled}
             ref={inputRef}
             h="full"
             px="0"

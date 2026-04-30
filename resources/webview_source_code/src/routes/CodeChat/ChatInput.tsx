@@ -645,6 +645,20 @@ function ChatInput(props: ChatInputProp) {
   );
 
   const placeholder = React.useMemo(() => {
+    if (currentSession?.is_favorite) {
+      // 判断收藏会话类型和仓库匹配情况，生成不同的 __FAVORITE__ 协议字符串
+      if (currentSession.chat_type === 'codebase') {
+        const repoMatch =
+          currentSession.chat_repo &&
+          workspaceInfo.repoName &&
+          currentSession.chat_repo === workspaceInfo.repoName;
+        if (repoMatch) {
+          return `__FAVORITE__codebase__收藏会话不支持继续对话，点击发起新会话`;
+        }
+        return `__FAVORITE__mismatch__${currentSession.chat_repo || ''}__收藏会话不支持继续对话，当前仓库与会话关联仓库不一致`;
+      }
+      return `__FAVORITE__default__收藏会话不支持继续对话，点击发起新会话`;
+    }
     if (pluginApp) {
       return `${pluginApp.app_shortcut?.tip} (${config.submitKey})`;
     }

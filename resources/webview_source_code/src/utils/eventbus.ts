@@ -81,4 +81,6 @@ export enum EBusEvent {
   Update_User_Quota = 'Update_User_Quota', // 更新用户账单
 
   Fetch_Session_Result = 'Fetch_Session_Result', // 获取会话失败
+
+  Open_Favorite_History = 'Open_Favorite_History', // 打开收藏会话历史
 }

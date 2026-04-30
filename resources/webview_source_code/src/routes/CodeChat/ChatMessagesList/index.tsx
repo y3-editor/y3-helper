@@ -15,7 +15,7 @@ const PAGE_SIZE = 30;
 
 const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
   (props: ChatMessageProps, ref) => {
-    const { containerRef, userScrollLock, onFeedback, isShare, selectedMessageIds, onToggleMessage } = props;
+    const { containerRef, userScrollLock, onFeedback, isShare, selectedMessageIds, onToggleMessage, toolCallRoundIds, onToggleToolCallRound } = props;
     const currentSession = useChatStore((state) => state.currentSession());
     const isError = useChatStore((state) => state.isError);
     const prevSessionId = React.useRef<string>();
@@ -444,12 +444,13 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
             }
 
             if (isAssistant && message.messages?.length) {
-              // 向前查找最近一条 User 消息，取其 createdAt 作为发送时间
+      // 向前查找最近一条 User 消息 ID（用于收藏模式）
               const prevUserMsg = renderMessages.slice(0, index).reverse().find(
                 (m) => m.role === ChatRole.User,
               );
               // AI 完成时间取最后一条 assistant 子消息的 createdAt
               const lastSubMsg = message.messages[message.messages.length - 1];
+              const prevUserMsgId = prevUserMsg?.id;
               return (
                 <div key={messageId} id={messageId}>
                   <GroupAIMessage
@@ -472,6 +473,10 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
                       }
                     }}
                     isShare={isShare}
+                    userMsgId={prevUserMsgId}
+                    isToolCallSelected={prevUserMsgId ? toolCallRoundIds?.has(prevUserMsgId) : false}
+                    onToggleToolCallRound={onToggleToolCallRound}
+                    isUserMsgSelected={prevUserMsgId ? selectedMessageIds?.has(prevUserMsgId) ?? false : false}
                   />
                 </div>
               );

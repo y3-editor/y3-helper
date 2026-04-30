@@ -40,6 +40,7 @@ import Icon from '../../components/Icon';
 import { scrollToFocusItem } from './ChatTypeAhead/utils';
 import { toastErrorMessage } from '../../utils';
 import { useChatConfig } from '../../store/chat-config';
+// import { mutateService } from '../../hooks/useService';
 import { getHistories } from '../../services/chat';
 import { debounce, isNumber } from 'lodash';
 import { ABORT_REASON_CLEANUP, createAbortReason } from '../../utils/abort';
@@ -50,28 +51,19 @@ import {
   LargeScreenWidth,
 } from '../../const';
 import { BsDatabase } from 'react-icons/bs';
-import { ChatMessageContent } from '../../services/index';
-import { useCodeChatContext } from './CodeChatProvider';
 import { Select } from 'chakra-react-select';
 import { RiArrowDownSLine } from 'react-icons/ri';
-import { nanoid } from 'nanoid';
 import { useWorkspaceStore } from '../../store/workspace';
-import CustomCollapse from '../../components/Collapse';
 import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
 import { UserEvent } from '../../types/report';
 import { ChatModel } from '../../services/chatModel';
+import EventBus, { EBusEvent } from '../../utils/eventbus';
 interface NewChatSession extends ChatSession {
   disabled?: boolean;
 }
 export interface ChatHistoriesHandle {
   isOpen: boolean;
-}
-interface SearchMessageResult extends ChatSession {
-  content: string;
-  messageId: string;
-  role: string;
-  messages: [];
-  context: string;
+  openFavorite: () => void;
 }
 enum SearchField {
   Topic = 'topic',
@@ -82,6 +74,14 @@ const searchOptions = [
   { label: '内容', value: SearchField.Content },
   { label: '标题', value: SearchField.Topic },
 ];
+
+// 历史会话筛选类型
+enum SessionFilterType {
+  CurrentRepo = 'currentRepo',
+  OtherRepo = 'otherRepo',
+  Default = 'default',
+  Favorite = 'favorite',
+}
 
 interface SessionItemProps {
   item: ChatSession;
@@ -181,7 +181,12 @@ const SessionItemComponent = React.memo(
                 justifyContent="space-between"
                 minH="20px"
               >
-                <Text title={item.topic || DEFAULT_TOPIC} fontSize="sm" isTruncated maxW="160px">
+                <Text
+                  title={item.topic || DEFAULT_TOPIC}
+                  fontSize="sm"
+                  isTruncated
+                  maxW="160px"
+                >
                   <ChatIcon w={8} fontSize="sm" />
                   {item.topic || DEFAULT_TOPIC}
                 </Text>
@@ -271,7 +276,7 @@ const SessionItemComponent = React.memo(
             <Box display="flex" alignItems="center" pl={2} mb={2}>
               <Flex gap={1} alignItems="center" isTruncated>
                 <BsDatabase fontSize={12} />
-                <Text ml={1} fontSize={12} title={item?.chat_workspace || ''}>
+                <Text ml={1} fontSize={12}>
                   {item?.chat_repo || '-'}
                 </Text>
               </Flex>
@@ -298,7 +303,9 @@ const SessionItemComponent = React.memo(
 const ChatHistories = React.forwardRef((_, ref) => {
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
-  const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
+  const isTerminalProcessing = useChatStreamStore(
+    (state) => state.isTerminalProcessing,
+  );
   const isSearching = useChatStreamStore((state) => state.isSearching);
   const [isOpen, setIsOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
@@ -329,25 +336,118 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const [isMediumScreen] = useMediaQuery(MediumScreenWidth);
   const [isLargerThan340] = useMediaQuery(LargeScreenWidth);
-  const [selectedMessageId, setSelectedMessageId] = React.useState('');
-  const { chatMessagesRef } = useCodeChatContext();
   const [loading, setLoading] = React.useState(false);
   const [searchField, setSearchField] = React.useState(searchOptions[0]);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [scrollLoading, setScrollLoading] = React.useState(false);
   const [isNext, setIsNext] = React.useState(true);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
-  const [currentRepoOpen, setCurrentRepoOpen] = React.useState(true);
-  const [otherRepoOpen, setOtherRepoOpen] = React.useState(true);
   const { stopRunningTerminal } = useTerminalMessage();
+  const setChatType = useChatStore((state) => state.setChatType);
 
-  const toggleCurrentRepo = React.useCallback(() => {
-    setCurrentRepoOpen(prev => !prev);
-  }, []);
+  // ===== 收藏筛选状态 =====
+  // 计算默认筛选类型：根据当前 chatType 和是否有仓库决定
+  const getDefaultFilterType = React.useCallback((): SessionFilterType => {
+    if (chatType === 'codebase') {
+      return workspaceInfo.repoName
+        ? SessionFilterType.CurrentRepo
+        : SessionFilterType.OtherRepo;
+    }
+    return SessionFilterType.Default;
+  }, [chatType, workspaceInfo.repoName]);
 
-  const toggleOtherRepo = React.useCallback(() => {
-    setOtherRepoOpen(prev => !prev);
-  }, []);
+  const [sessionFilter, setSessionFilter] =
+    React.useState<SessionFilterType>(getDefaultFilterType);
+
+  // 跨类型会话数据：当筛选类型与当前 chatType 不同时，从接口拉取
+  const [crossTypeSessions, setCrossTypeSessions] = React.useState<
+    ChatSession[]
+  >([]);
+  const [crossTypeLoading, setCrossTypeLoading] = React.useState(false);
+
+  // 判断当前筛选是否需要跨类型查询
+  // 只要筛选类型与当前 chatType 不匹配，或者是收藏/仓库筛选，都从接口拉取
+  const isFilterCrossType = React.useCallback(
+    (filter: SessionFilterType): boolean => {
+      if (filter === SessionFilterType.Favorite) return true;
+      if (filter === SessionFilterType.Default && chatType !== 'default')
+        return true;
+      // 仓库相关筛选：始终从接口拉取，确保能拿到跨仓库的数据
+      if (
+        filter === SessionFilterType.CurrentRepo ||
+        filter === SessionFilterType.OtherRepo
+      ) {
+        return true;
+      }
+      return false;
+    },
+    [chatType],
+  );
+
+  // 切换筛选类型时，若跨类型则从接口拉取数据
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (!isFilterCrossType(sessionFilter)) {
+      setCrossTypeSessions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const fetchCrossType = async () => {
+      setCrossTypeLoading(true);
+      try {
+        let data;
+        if (sessionFilter === SessionFilterType.Favorite) {
+          data = await getHistories(
+            {
+              _num: 200,
+              _page: 1,
+              _sort_by: '-metadata.create_time',
+              _exclude: 'data',
+              is_favorite: true,
+            },
+            controller.signal,
+          );
+        } else {
+          const apiChatType =
+            sessionFilter === SessionFilterType.Default
+              ? 'default'
+              : 'codebase';
+          data = await getHistories(
+            {
+              _num: 200,
+              _page: 1,
+              _sort_by: '-metadata.create_time',
+              _exclude: 'data',
+              chat_type: apiChatType,
+            },
+            controller.signal,
+          );
+        }
+        setCrossTypeSessions(data?.items || []);
+      } catch {
+        setCrossTypeSessions([]);
+      } finally {
+        setCrossTypeLoading(false);
+      }
+    };
+    fetchCrossType();
+    return () => controller.abort();
+  }, [isOpen, sessionFilter, isFilterCrossType]);
+
+  // 打开面板时重置筛选类型
+  React.useEffect(() => {
+    if (isOpen) {
+      if (openFavoriteRef.current) {
+        openFavoriteRef.current = false;
+        return;
+      }
+      if (currentSession?.is_favorite) {
+        setSessionFilter(SessionFilterType.Favorite);
+      } else {
+        setSessionFilter(getDefaultFilterType());
+      }
+    }
+  }, [isOpen, getDefaultFilterType, currentSession?.is_favorite]);
 
   const updateSessions = React.useCallback(async () => {
     const data = await requestChatSessions();
@@ -367,6 +467,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
       try {
         await removeSession(sessionId);
         await updateSessions();
+        setCrossTypeSessions((prev) => prev.filter((s) => s._id !== sessionId));
         toast({
           title: '删除成功',
           position: 'top',
@@ -384,22 +485,68 @@ const ChatHistories = React.forwardRef((_, ref) => {
         });
       }
     },
-    [removeSession, updateSessions, toast],
+    [removeSession, updateSessions, setCrossTypeSessions, toast],
   );
 
-  // 排序
-  const renderSessions = React.useMemo(
-    () =>
-      Array.from(sessions.values())
-        .sort((a, b) =>
-          alphabeticalCompare(b.metadata.create_time, a.metadata.create_time),
-        )
-        .filter((session) => session.chat_type === chatType),
-    [sessions, chatType],
-  );
+  // 排序 & 根据筛选类型过滤
+  const renderSessions = React.useMemo(() => {
+    const source: ChatSession[] = isFilterCrossType(sessionFilter)
+      ? crossTypeSessions
+      : Array.from(sessions.values());
+    const sorted = [...source].sort((a, b) =>
+      alphabeticalCompare(b.metadata.create_time, a.metadata.create_time),
+    );
+    switch (sessionFilter) {
+      case SessionFilterType.CurrentRepo:
+        return sorted.filter(
+          (s) =>
+            !s.is_favorite &&
+            s.chat_type === 'codebase' &&
+            s.chat_repo === workspaceInfo.repoName,
+        );
+      case SessionFilterType.OtherRepo:
+        return sorted.filter(
+          (s) =>
+            !s.is_favorite &&
+            s.chat_type === 'codebase' &&
+            s.chat_repo !== workspaceInfo.repoName,
+        );
+      case SessionFilterType.Default:
+        return sorted.filter(
+          (s) => !s.is_favorite && s.chat_type === 'default',
+        );
+      case SessionFilterType.Favorite:
+        return sorted.filter((s) => s.is_favorite === true);
+      default:
+        return sorted;
+    }
+  }, [
+    sessions,
+    sessionFilter,
+    workspaceInfo.repoName,
+    crossTypeSessions,
+    isFilterCrossType,
+  ]);
+
+  // 收藏会话打开方法
+  const openFavoriteRef = React.useRef(false);
+  const openFavorite = React.useCallback(() => {
+    openFavoriteRef.current = true;
+    setIsOpen(true);
+    setSessionFilter(SessionFilterType.Favorite);
+  }, []);
+
+  // 监听收藏跳转事件
+  React.useEffect(() => {
+    EventBus.instance.on(EBusEvent.Open_Favorite_History, openFavorite);
+    return () => {
+      EventBus.instance.off(EBusEvent.Open_Favorite_History, openFavorite);
+    };
+  }, [openFavorite]);
 
   React.useImperativeHandle(ref, () => ({
     isOpen: isOpen,
+    openFavorite,
   }));
 
   const handleSelectSession = React.useCallback(
@@ -420,7 +567,9 @@ const ChatHistories = React.forwardRef((_, ref) => {
         });
         return;
       }
-      const nextSession = sessions.get(id);
+      // 从本地 sessions 或跨类型数据中查找会话信息
+      const nextSession =
+        sessions.get(id) ?? crossTypeSessions.find((s) => s._id === id);
       const model = nextSession?.data?.model;
       // 如果会话有模型，直接用模型即可
       if (model) {
@@ -430,6 +579,11 @@ const ChatHistories = React.forwardRef((_, ref) => {
         });
       }
       stopRunningTerminal();
+      // 联动外部 chatType：选中会话时根据会话类型同步
+      const sessionChatType = nextSession?.chat_type;
+      if (sessionChatType && sessionChatType !== chatType) {
+        setChatType(sessionChatType);
+      }
       selectSession(id);
     },
     [
@@ -439,65 +593,13 @@ const ChatHistories = React.forwardRef((_, ref) => {
       isSearching,
       currentSession?._id,
       sessions,
+      crossTypeSessions,
       selectSession,
       toast,
       updateModel,
       stopRunningTerminal,
-    ],
-  );
-
-  const handleSelectSessionAndScrollToMessage = React.useCallback(
-    (session: SearchMessageResult) => {
-      if (isStreaming || isProcessing || isTerminalProcessing || isSearching) {
-        toast({
-          title: 'CodeMaker 正在回复，请稍后再切换会话',
-          status: 'warning',
-          position: 'top',
-          isClosable: true,
-        });
-        return;
-      }
-      const nextSession = sessions.get(session._id);
-      if (nextSession?._id !== currentSession?._id) {
-        const model = nextSession?.data?.model;
-        if (model) {
-          updateModel((config) => {
-            config.model = model as ChatModel;
-            return config;
-          });
-        }
-        selectSession(session._id, () => {
-          setTimeout(() => {
-            chatMessagesRef.current?.scrollToMessage(
-              session.role,
-              session.messageId,
-              searchKeyword,
-            );
-          }, 0);
-        });
-      } else {
-        // 如果是在本次会话中，直接定位到改会话即可
-        chatMessagesRef.current?.scrollToMessage(
-          session.role,
-          session.messageId,
-          searchKeyword,
-        );
-      }
-
-      setSelectedMessageId(`${session.role}-${session.messageId}`);
-    },
-    [
-      isStreaming,
-      isProcessing,
-      isTerminalProcessing,
-      isSearching,
-      selectSession,
-      sessions,
-      updateModel,
-      toast,
-      chatMessagesRef,
-      currentSession,
-      searchKeyword,
+      chatType,
+      setChatType,
     ],
   );
 
@@ -525,7 +627,9 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const debouncedGetSessions = React.useCallback(
     debounce(async (keyword: string) => {
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
+        abortControllerRef.current.abort(
+          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
+        );
       }
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -570,35 +674,8 @@ const ChatHistories = React.forwardRef((_, ref) => {
       .map((session) => ({ ...session, disabled: true }));
   }, [searchKeyword, renderSessions, searchSessions, chatType]);
 
-  const searchMessages: SearchMessageResult[] = React.useMemo(() => {
-    if (!searchKeyword.trim()) return [];
-    return filterSessions.flatMap((session) =>
-      (session.data?.messages || []).map((message) => {
-        let content = '';
-        if (message.content instanceof Array) {
-          content =
-            message.content.find((i) => i.type === ChatMessageContent.Text)
-              ?.text || '';
-        } else {
-          content = message.content;
-        }
-        const context = extractContext(content, searchKeyword);
-        return {
-          ...session,
-          messages: [], // 清空原有的messages数组
-          content,
-          messageId: message.id || '',
-          role: message.role,
-          context,
-        };
-      }),
-    );
-  }, [filterSessions, searchKeyword]);
-
   const handleReset = () => {
     setSearchKeyword('');
-    setSelectedMessageId('');
-    chatMessagesRef.current?.removeAllHighlights();
   };
 
   const calcScreenWidth = React.useMemo(() => {
@@ -626,10 +703,6 @@ const ChatHistories = React.forwardRef((_, ref) => {
       item: ChatSession;
       index: number;
     }) => {
-      // const updateTime = item.metadata?.update_time;
-      // const messageLength = isNumber(item.message_count)
-      //   ? item.message_count
-      //   : item.data?.messages.length;
       const key = item._id + (item.topic || '') + (item.user || '') + index;
 
       return (
@@ -647,272 +720,41 @@ const ChatHistories = React.forwardRef((_, ref) => {
       );
     };
 
-    const MessageItem = ({
-      item,
-      index,
-    }: {
-      item: SearchMessageResult;
-      index: number;
-    }) => {
-      const updateTime = item.metadata?.update_time;
-      const messageId = item.messageId ? item.messageId : nanoid();
-      const key = `${item._id}-${item.role}-${messageId}`;
-      const isCurrent =
-        currentSession?._id === item._id && key === selectedMessageId;
-
-      const isDisabled = isStreaming || isProcessing || isTerminalProcessing || isSearching;
-
-      return (
-        <Button
-          data-index={index}
-          h="full"
-          w="full"
-          px={2}
-          my={1}
-          key={key}
-          onClick={() => {
-            if (isDisabled) return;
-            handleSelectSessionAndScrollToMessage(item);
-          }}
-          isDisabled={isDisabled}
-          _hover={isDisabled ? {} : { backgroundColor: 'blue.300' }}
-          bg={isCurrent ? 'blue.300' : undefined}
-        >
-          <Box textAlign="left" w="full" py={2} flex={1}>
-            <Flex justify="space-between" align="center" mb={1}>
-              <Box
-                w="full"
-                display="flex"
-                justifyContent="space-between"
-                minH="20px"
-              >
-                <Text fontSize="sm" isTruncated maxW="160px">
-                  <ChatIcon w={8} fontSize="sm" />
-                  {item.context}
-                </Text>
-              </Box>
-            </Flex>
-            {item?.chat_type === 'codebase' && item?.chat_repo && (
-              <Box display="flex" alignItems="center" pl={2} mb={2}>
-                <Flex gap={1} alignItems="center" isTruncated>
-                  <BsDatabase fontSize={12} />
-                  <Text ml={1} fontSize={12}>
-                    {item?.chat_repo || '-'}
-                  </Text>
-                </Flex>
-              </Box>
-            )}
-
-            <Flex>
-              <Text fontSize="xs" opacity="0.5" pl={2} isTruncated>
-                {updateTime &&
-                  DateFormat(new Date(updateTime), 'YYYY-MM-DD HH:mm:ss')}
-              </Text>
-              <Spacer />
-            </Flex>
-          </Box>
-        </Button>
-      );
-    };
-
-    // 会话分类函数
-    const categorizeRepoSessions = (sessions: ChatSession[]) => {
-      const currentRepo: ChatSession[] = [];
-      const otherRepo: ChatSession[] = [];
-
-      sessions.forEach((session) => {
-        if (
-          !session.chat_repo || session.chat_repo === workspaceInfo.repoName
-        ) {
-          currentRepo.push(session);
-        } else {
-          otherRepo.push(session);
-        }
-      });
-
-      return { currentRepo, otherRepo };
-    };
-
-    const RepoSessionsList = ({
-      currentRepo,
-      otherRepo,
-    }: {
-      currentRepo: ChatSession[];
-      otherRepo: ChatSession[];
-    }) => (
-      <Box>
-        <CustomCollapse
-          title="当前仓库会话"
-          isOpen={currentRepoOpen}
-          onToggle={toggleCurrentRepo}
-        >
-          {currentRepo.map((item, index) => (
-            <SessionItem key={item._id} item={item} index={index} />
-          ))}
-        </CustomCollapse>
-
-        <Box mt="2">
-          <CustomCollapse
-            title="其他仓库会话"
-            isOpen={otherRepoOpen}
-            onToggle={toggleOtherRepo}
-          >
-            {otherRepo.map((item, index) => (
-              <SessionItem key={item._id} item={item} index={index} />
-            ))}
-          </CustomCollapse>
-        </Box>
-      </Box>
-    );
-
-    const RepoMessagesList = ({
-      currentRepo,
-      otherRepo,
-    }: {
-      currentRepo: SearchMessageResult[];
-      otherRepo: SearchMessageResult[];
-    }) => (
-      <Box>
-        <CustomCollapse
-          title="当前仓库会话"
-          isOpen={currentRepoOpen}
-          onToggle={toggleCurrentRepo}
-        >
-          {currentRepo.map((item, index) => (
-            <MessageItem
-              key={`${item._id}-${index}`}
-              item={item}
-              index={index}
-            />
-          ))}
-        </CustomCollapse>
-
-        <Box mt="2">
-          <CustomCollapse
-            title="其他仓库会话"
-            isOpen={otherRepoOpen}
-            onToggle={toggleOtherRepo}
-          >
-            {otherRepo.map((item, index) => (
-              <MessageItem
-                key={`${item._id}-${index}`}
-                item={item}
-                index={index}
-              />
-            ))}
-          </CustomCollapse>
-        </Box>
-      </Box>
-    );
+    // 无搜索关键词：直接展示筛选后的列表
     if (!searchKeyword.trim().length) {
-      // 无会话数据时显示空状态
       if (!renderSessions.length) return <EmptyState />;
-
-      // 有会话数据时显示列表
-      if (chatType === 'codebase') {
-        // 代码库类型的处理逻辑
-        const { currentRepo, otherRepo } =
-          categorizeRepoSessions(renderSessions);
-        return (
-          <RepoSessionsList
-            currentRepo={currentRepo}
-            otherRepo={otherRepo}
-          />
-        );
-      }
-
-      return renderSessions.map((item, index) => (
-        <SessionItem key={item._id} item={item} index={index} />
-      ));
-    }
-    // 有搜索关键词的情况
-    if (searchField.value === SearchField.Topic && !filterSessions.length)
-      return <EmptyState />;
-    if (searchField.value !== SearchField.Topic && !searchMessages.length)
-      return <EmptyState />;
-
-    if (!searchKeyword.trim().length) {
-      if (chatType === 'codebase') {
-        const { currentRepo, otherRepo } =
-          categorizeRepoSessions(renderSessions);
-        return (
-          <RepoSessionsList
-            currentRepo={currentRepo}
-            otherRepo={otherRepo}
-          />
-        );
-      }
-
       return renderSessions.map((item, index) => (
         <SessionItem key={item._id} item={item} index={index} />
       ));
     }
 
-    if (searchField.value === SearchField.Topic) {
-      if (chatType === 'codebase') {
-        const { currentRepo, otherRepo } =
-          categorizeRepoSessions(filterSessions);
-        return (
-          <RepoSessionsList
-            currentRepo={currentRepo}
-            otherRepo={otherRepo}
-          />
-        );
-      }
-
-      return filterSessions.map((item, index) => (
-        <SessionItem key={item._id} item={item} index={index} />
-      ));
-    }
-
-    if (chatType === 'codebase') {
-      const currentRepoList = searchMessages.filter(
-        (i) => i.chat_repo === workspaceInfo.repoName,
-      );
-      const otherRepoList = searchMessages.filter(
-        (i) => i.chat_repo !== workspaceInfo.repoName,
-      );
-      return (
-        <RepoMessagesList
-          currentRepo={currentRepoList}
-          otherRepo={otherRepoList}
-        />
-      );
-    }
-
-    return searchMessages.map((item, index) => (
-      <MessageItem key={`${item._id}-${index}`} item={item} index={index} />
+    // 有搜索关键词
+    if (!filterSessions.length) return <EmptyState />;
+    return filterSessions.map((item, index) => (
+      <SessionItem key={item._id} item={item} index={index} />
     ));
   }, [
     loading,
+    crossTypeLoading,
     searchKeyword,
     renderSessions,
     currentSession?._id,
-    // editValue,
-    // editId,
     handleDelete,
     handleSelectSession,
-    // removeId,
     isStreaming,
     isProcessing,
     isTerminalProcessing,
     isSearching,
     updateTopic,
-    searchMessages,
-    handleSelectSessionAndScrollToMessage,
-    selectedMessageId,
-    searchField,
     filterSessions,
-    workspaceInfo,
-    chatType,
-    currentRepoOpen,
-    otherRepoOpen,
   ]);
 
   const loadMore = React.useCallback(
     async (page: number) => {
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
+        abortControllerRef.current.abort(
+          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
+        );
       }
       const controller = new AbortController();
       try {
@@ -987,8 +829,20 @@ const ChatHistories = React.forwardRef((_, ref) => {
               }}
               zIndex="100"
             >
-              <PopoverHeader fontWeight="bold" border="0">
+              <PopoverHeader
+                fontWeight="bold"
+                border="0"
+                display="flex"
+                alignItems="center"
+                gap={2}
+                pr="32px"
+              >
                 历史会话
+                <SessionFilterSelect
+                  value={sessionFilter}
+                  repoName={workspaceInfo.repoName}
+                  onChange={setSessionFilter}
+                />
               </PopoverHeader>
               <PopoverCloseButton
                 onClick={() => {
@@ -1089,6 +943,145 @@ const ChatHistories = React.forwardRef((_, ref) => {
   );
 });
 
+// 筛选选项配置
+interface SessionFilterOption {
+  label: string;
+  value: SessionFilterType;
+  isDisabled?: boolean;
+  disabledTooltip?: string;
+}
+
+interface SessionFilterSelectProps {
+  value: SessionFilterType;
+  repoName: string | undefined;
+  onChange: (filter: SessionFilterType) => void;
+}
+
+const SessionFilterSelect = ({
+  value,
+  repoName,
+  onChange,
+}: SessionFilterSelectProps) => {
+  const hasRepo = Boolean(repoName);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+
+  const options: SessionFilterOption[] = [
+    {
+      label: '当前仓库',
+      value: SessionFilterType.CurrentRepo,
+      isDisabled: !hasRepo,
+      disabledTooltip: '未识别到仓库，请先打开文件夹',
+    },
+    {
+      label: '其他仓库',
+      value: SessionFilterType.OtherRepo,
+    },
+    {
+      label: '普通聊天',
+      value: SessionFilterType.Default,
+    },
+    {
+      label: '收藏会话',
+      value: SessionFilterType.Favorite,
+    },
+  ];
+
+  const currentOption = options.find((o) => o.value === value);
+
+  const filterRef = React.useRef<HTMLDivElement>(null);
+
+  // 点击外部区域时关闭下拉
+  React.useEffect(() => {
+    if (!isFilterOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFilterOpen]);
+
+  return (
+    <Box position="relative" ref={filterRef}>
+      <Button
+        size="xs"
+        variant="outline"
+        rightIcon={<Icon as={RiArrowDownSLine} size="xs" />}
+        fontWeight="normal"
+        borderRadius="md"
+        px={2}
+        minW="80px"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsFilterOpen((prev) => !prev);
+        }}
+      >
+        {currentOption?.label ?? '筛选'}
+      </Button>
+      {isFilterOpen && (
+        <Box
+          position="absolute"
+          top="100%"
+          left={0}
+          mt={1}
+          minW="120px"
+          w="auto"
+          zIndex="200"
+          bg="panelBgColor"
+          borderRadius="md"
+          boxShadow="lg"
+          border="1px solid"
+          borderColor="inherit"
+          p={1}
+        >
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            const itemBox = (
+              <Box
+                key={option.value}
+                px={3}
+                py={1.5}
+                borderRadius="md"
+                fontSize="sm"
+                cursor={option.isDisabled ? 'not-allowed' : 'pointer'}
+                opacity={option.isDisabled ? 0.4 : 1}
+                bg={isSelected ? 'blue.300' : 'transparent'}
+                _hover={
+                  option.isDisabled
+                    ? {}
+                    : { bg: isSelected ? 'blue.300' : 'blue.200' }
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (option.isDisabled) return;
+                  onChange(option.value);
+                  setIsFilterOpen(false);
+                }}
+              >
+                {option.label}
+              </Box>
+            );
+
+            return option.isDisabled && option.disabledTooltip ? (
+              <Tooltip
+                key={option.value}
+                label={option.disabledTooltip}
+                placement="right"
+                hasArrow
+              >
+                {itemBox}
+              </Tooltip>
+            ) : (
+              itemBox
+            );
+          })}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
 const LoadingState = () => {
   return (
     <Box
@@ -1128,18 +1121,4 @@ const EmptyState = () => {
   );
 };
 
-const extractContext = (text: string, keyword: string): string => {
-  const index = text.toLowerCase().indexOf(keyword.toLowerCase());
-  if (index === -1) return text;
-
-  const start = Math.max(0, index - 3);
-  const end = Math.min(text.length, index + keyword.length + 10);
-
-  let result = text.slice(start, end);
-
-  if (start > 0) result = '...' + result;
-  if (end < text.length) result = result + '...';
-
-  return result;
-};
 export default ChatHistories;

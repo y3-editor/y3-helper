@@ -1,5 +1,6 @@
 import {
   Box,
+  Checkbox,
   Flex,
   Avatar,
   Modal,
@@ -11,9 +12,11 @@ import {
   Button,
   VStack,
   Tooltip,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import CodeMakerLogo from '../../../assets/cmlogo.png';
 import ChatAssistantMessage from './AssistantMessage';
+import ToolCall from './ToolCall';
 import { GroupAIMessageProps } from './types';
 import ChatMessageActionBar from '../ChatMessageActionBar';
 import userReporter from '../../../utils/report';
@@ -30,9 +33,11 @@ import { ChatRole } from '../../../types/chat';
 import { ChatMessage } from '../../../services';
 import Icon from '../../../components/Icon';
 import { FaAngleRight, FaAngleDown } from 'react-icons/fa6';
+import { RxCheckCircled } from 'react-icons/rx';
 import * as React from 'react';
 import { usePrevious } from '../../../hooks/usePrevious';
 import { DateFormat } from '../../../utils';
+import { getToolName } from '../../../utils/toolCall';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (
@@ -63,6 +68,10 @@ function MergedMessagesRenderer({
   onFeedback,
   isShare,
   setRecommendFileChanges,
+  userMsgId,
+  isToolCallSelected,
+  onToggleToolCallRound,
+  isUserMsgSelected,
 }: {
   messages: ChatMessage[];
   isLatest: boolean | undefined;
@@ -71,6 +80,10 @@ function MergedMessagesRenderer({
   onFeedback: any;
   isShare: boolean | undefined;
   setRecommendFileChanges: any;
+  userMsgId?: string;
+  isToolCallSelected?: boolean;
+  onToggleToolCallRound?: (userMsgId: string) => void;
+  isUserMsgSelected?: boolean;
 }) {
   // 不再合并，所有消息都作为单个消息处理
   const mergedMessages = useMemo(() => {
@@ -90,7 +103,159 @@ function MergedMessagesRenderer({
       onFeedback={onFeedback}
       isShare={isShare}
       setRecommendFileChanges={setRecommendFileChanges}
+      userMsgId={userMsgId}
+      isToolCallSelected={isToolCallSelected}
+      onToggleToolCallRound={onToggleToolCallRound}
+      isUserMsgSelected={isUserMsgSelected}
     />
+  );
+}
+
+// 收藏模式下单个工具调用的折叠项
+function ShareToolCallItem({
+  message,
+  isLatest,
+}: {
+  message: ChatMessage;
+  isLatest: boolean | undefined;
+}) {
+  const [isCollapsed, setIsCollapsed] = React.useState(true);
+  const borderColor = useColorModeValue('#e2e8f0', '#3a3a3a');
+
+  // 获取工具中文名称
+  const toolName = React.useMemo(() => {
+    const firstTool = message.tool_calls?.[0];
+    if (!firstTool) return '工具调用';
+    return getToolName(firstTool);
+  }, [message.tool_calls]);
+
+  return (
+    <Box
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="4px"
+      overflow="hidden"
+      mt={2}
+    >
+      {/* 内层标题栏 */}
+      <Flex
+        px={2}
+        py={1.5}
+        alignItems="center"
+        cursor="pointer"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        borderBottom={!isCollapsed ? '1px solid' : 'none'}
+        borderColor={borderColor}
+      >
+        <Icon as={RxCheckCircled} color="green.500" boxSize="14px" />
+        <Box
+          ml={1.5}
+          flex={1}
+          fontSize="12px"
+          fontWeight="400"
+          color="text.primary"
+          noOfLines={1}
+        >
+          {toolName}
+        </Box>
+        <Icon
+          as={isCollapsed ? FaAngleRight : FaAngleDown}
+          size="xs"
+          color="text.secondary"
+        />
+      </Flex>
+      {/* 内层内容区 */}
+      {!isCollapsed && (
+        <Box>
+          <ToolCall message={message} isShare isLatest={isLatest} />
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+// 收藏模式下的工具调用聚合面板
+function ShareToolCallPanel({
+  isToolCallCollapsed,
+  setIsToolCallCollapsed,
+  isToolCallSelected,
+  onToggleToolCallRound,
+  userMsgId,
+  toolCallMessages,
+  isLatest,
+  isUserMsgSelected,
+}: {
+  isToolCallCollapsed: boolean;
+  setIsToolCallCollapsed: (v: boolean) => void;
+  isToolCallSelected?: boolean;
+  onToggleToolCallRound?: (userMsgId: string) => void;
+  userMsgId: string;
+  toolCallMessages: ChatMessage[];
+  isLatest: boolean | undefined;
+  isUserMsgSelected?: boolean;
+}) {
+  const bgColor = useColorModeValue('#f8f9fa', '#1f1f1f');
+  const borderColor = useColorModeValue('#e2e8f0', '#3a3a3a');
+  const isDisabled = !isUserMsgSelected;
+
+  return (
+    <Box mb={2}>
+      <Flex alignItems="flex-start" gap={1}>
+        <Checkbox
+          isChecked={isDisabled ? false : isToolCallSelected}
+          isDisabled={isDisabled}
+          onChange={() => onToggleToolCallRound?.(userMsgId)}
+          size="md"
+          mt={1.5}
+        />
+        {/* 外层容器 - 带背景/边框/圆角 */}
+        <Box
+          flex={1}
+          border="1px solid"
+          borderColor={borderColor}
+          borderRadius="4px"
+          overflow="hidden"
+          bg={bgColor}
+        >
+          {/* 外层标题栏 */}
+          <Flex
+            px={2}
+            py={1.5}
+            alignItems="center"
+            cursor="pointer"
+            onClick={() => setIsToolCallCollapsed(!isToolCallCollapsed)}
+          >
+            <Icon as={RxCheckCircled} color="green.500" boxSize="14px" />
+            <Box
+              ml={1.5}
+              flex={1}
+              fontSize="12px"
+              fontWeight="500"
+              color="text.primary"
+            >
+              工具调用
+            </Box>
+            <Icon
+              as={isToolCallCollapsed ? FaAngleRight : FaAngleDown}
+              size="xs"
+              color="text.secondary"
+            />
+          </Flex>
+          {/* 展开后的内层工具列表 */}
+          {!isToolCallCollapsed && (
+            <Box px={2} pb={2}>
+              {toolCallMessages.map((msg, idx) => (
+                <ShareToolCallItem
+                  key={`${msg.id || ''}-${idx}`}
+                  message={msg}
+                  isLatest={isLatest}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Flex>
+    </Box>
   );
 }
 
@@ -103,6 +268,10 @@ function OuterCollapseWrapper({
   onFeedback,
   isShare,
   setRecommendFileChanges,
+  userMsgId,
+  isToolCallSelected,
+  onToggleToolCallRound,
+  isUserMsgSelected,
 }: {
   mergedMessages: Array<{
     type: 'single';
@@ -115,6 +284,10 @@ function OuterCollapseWrapper({
   onFeedback: any;
   isShare: boolean | undefined;
   setRecommendFileChanges: any;
+  userMsgId?: string;
+  isToolCallSelected?: boolean;
+  onToggleToolCallRound?: (userMsgId: string) => void;
+  isUserMsgSelected?: boolean;
 }) {
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
@@ -183,6 +356,15 @@ function OuterCollapseWrapper({
     needsUserConfirmation,
   ]);
 
+  // 判断一个消息组是否包含工具调用（用于收藏模式的工具调用聚合）
+  const isToolCallGroup = React.useCallback(
+    (group: (typeof mergedMessages)[0]) => {
+      const firstMessage = group.messages[0];
+      return !!(firstMessage.tool_calls?.length);
+    },
+    [],
+  );
+
   // 判断一个消息组是否是文件操作
   const isFileOperation = (group: (typeof mergedMessages)[0]) => {
     const firstMessage = group.messages[0];
@@ -190,6 +372,59 @@ function OuterCollapseWrapper({
     return getToolCategory(toolName) !== null;
   };
 
+  // 收藏模式：检查该轮是否有工具调用
+  const hasToolCalls = React.useMemo(() => {
+    return mergedMessages.some((g) => isToolCallGroup(g));
+  }, [mergedMessages, isToolCallGroup]);
+
+  // 收藏模式：工具调用折叠状态
+  const [isToolCallCollapsed, setIsToolCallCollapsed] = React.useState(true);
+
+  // ===== 收藏模式下的渲染：工具调用 UI 聚合到折叠框，消息保持原始顺序但隐藏工具调用 =====
+  if (isShare && hasToolCalls && userMsgId) {
+    // 收集所有含 tool_calls 的消息，用于在折叠框中渲染 ToolCall 组件
+    const toolCallMessages = mergedMessages
+      .filter((g) => isToolCallGroup(g))
+      .map((g) => g.messages[0]);
+
+    return (
+      <>
+        {/* 工具调用聚合框 */}
+        <ShareToolCallPanel
+          isToolCallCollapsed={isToolCallCollapsed}
+          setIsToolCallCollapsed={setIsToolCallCollapsed}
+          isToolCallSelected={isToolCallSelected}
+          onToggleToolCallRound={onToggleToolCallRound}
+          userMsgId={userMsgId}
+          toolCallMessages={toolCallMessages}
+          isLatest={isLatest}
+          isUserMsgSelected={isUserMsgSelected}
+        />
+        {/* 所有消息保持原始顺序渲染，但隐藏工具调用 UI */}
+        {mergedMessages.map((group) => {
+          const message = group.messages[0];
+          const index = group.indices[0];
+          return (
+            <ChatAssistantMessage
+              key={(message?.id || '') + index}
+              index={index}
+              message={message}
+              isLatest={isLatest}
+              isRecent={index === mergedMessages.length - 1 && isLatest}
+              attachs={attachs}
+              onNewSession={onNewSession}
+              onFeedback={onFeedback}
+              isShare={isShare}
+              setRecommendFileChanges={setRecommendFileChanges}
+              hideToolCalls
+            />
+          );
+        })}
+      </>
+    );
+  }
+
+  // 非收藏模式下的渲染，保持原有逻辑
   const outerGroups: Array<{
     type: 'file_operations' | 'normal';
     groups: typeof mergedMessages;
@@ -341,6 +576,10 @@ export function GroupAIMessage({
   isShare,
   sentAt,
   completedAt,
+  userMsgId,
+  isToolCallSelected,
+  onToggleToolCallRound,
+  isUserMsgSelected,
 }: GroupAIMessageProps) {
   const message = messages[0];
   const [isShowAction, setIsShowAction] = useState(false);
@@ -489,12 +728,56 @@ export function GroupAIMessage({
     return `${seconds}s`;
   }, [sentAt, completedAt]);
 
+  // 从本轮消息中提取 token 消耗（基于 consumedTokensTotal 快照差值）
+  // 使得各轮增量之和 = 底部 Tokens 总量
+  const roundTokensText = useMemo(() => {
+    const fmt = (n: number) =>
+      n >= 1000 ? `${(n / 1000).toFixed(1)}k Tokens` : `${n} Tokens`;
+
+    try {
+      // 1. 从本轮消息中倒序查找 consumedTokensTotal 快照
+      let currentSnapshot = 0;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].consumedTokensTotal) {
+          currentSnapshot = messages[i].consumedTokensTotal!;
+          break;
+        }
+      }
+      if (!currentSnapshot) return null;
+
+      // 2. 从 store 中查找上一轮的 consumedTokensTotal 快照
+      const session = useChatStore.getState().currentSession();
+      const allMessages = session?.data?.messages || [];
+      const firstMsgId = messages[0]?.id;
+
+      let previousSnapshot = 0;
+      if (firstMsgId) {
+        const idx = allMessages.findIndex((m) => m.id === firstMsgId);
+        if (idx > 0) {
+          for (let j = idx - 1; j >= 0; j--) {
+            if (allMessages[j].consumedTokensTotal) {
+              previousSnapshot = allMessages[j].consumedTokensTotal!;
+              break;
+            }
+          }
+        }
+      }
+
+      // 增量 = 本轮快照 - 上轮快照，第一轮时 previousSnapshot = 0
+      const increment = currentSnapshot - previousSnapshot;
+      return increment > 0 ? fmt(increment) : fmt(currentSnapshot);
+    } catch {
+      return null;
+    }
+  }, [messages]);
+
   const timeInfoText = useMemo(() => {
     const parts: string[] = [];
     if (sentAtText) parts.push(sentAtText);
     if (durationText) parts.push(durationText);
+    if (roundTokensText) parts.push(roundTokensText);
     return parts.join(' | ') || null;
-  }, [sentAtText, durationText]);
+  }, [sentAtText, durationText, roundTokensText]);
 
   const data = { message, defaultExpanded: isLatest };
 
@@ -519,7 +802,7 @@ export function GroupAIMessage({
           </Box>
           {isShowAction && timeInfoText && (
             <Tooltip
-              label={`${sentAtText ? `发送时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
+              label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}${roundTokensText ? `，本轮消耗: ${roundTokensText}` : ''}`}
             >
               <Box
                 color="text.muted"
@@ -553,6 +836,10 @@ export function GroupAIMessage({
             onFeedback={onFeedback}
             isShare={isShare}
             setRecommendFileChanges={setRecommendFileChanges}
+            userMsgId={userMsgId}
+            isToolCallSelected={isToolCallSelected}
+            onToggleToolCallRound={onToggleToolCallRound}
+            isUserMsgSelected={isUserMsgSelected}
           />
         </Box>
         {!isShare &&
@@ -563,7 +850,7 @@ export function GroupAIMessage({
             <Flex gap={2} h={8} mx={4} mb={4} alignItems="center">
               {isShowAction && timeInfoText && (
                 <Tooltip
-                  label={`${sentAtText ? `发送时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
+                  label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}${roundTokensText ? `，本轮消耗: ${roundTokensText}` : ''}`}
                 >
                   <Box
                     color="text.muted"
