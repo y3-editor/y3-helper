@@ -523,7 +523,7 @@ class Helper {
             (async () => {
                 try {
                     await env.mapReady();
-                    if (!env.projectUri) {
+                    if (!env.project) {
                         return;
                     }
                     // 先检测是否需要老用户迁移
