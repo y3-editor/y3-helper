@@ -79,4 +79,6 @@ export enum EBusEvent {
   Submit_Init_Prompt = 'Submit_Init_Prompt', // 提交初始化 prompt（用于 Spec 初始化）
 
   Update_User_Quota = 'Update_User_Quota', // 更新用户账单
+
+  Fetch_Session_Result = 'Fetch_Session_Result', // 获取会话失败
 }

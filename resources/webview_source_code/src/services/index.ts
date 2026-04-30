@@ -384,8 +384,8 @@ export function setDefaultHeaders(
   request.headers['X-Access-Token'] = useAuthStore.getState().accessToken;
   request.headers['X-Auth-User'] = useAuthStore.getState().username;
   request.headers['codemaker-version'] =
-    useExtensionStore.getState().codeMakerVersion;
-  request.headers['ide'] = useExtensionStore.getState().IDE;
+    useExtensionStore.getState().codeMakerVersion || '(empty)';
+  request.headers['ide'] = useExtensionStore.getState().IDE || '(empty)';
   try {
     request.headers['department-code'] = encodeURI(
       useAuthStore.getState().authExtends.department_code,

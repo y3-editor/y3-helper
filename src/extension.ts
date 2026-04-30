@@ -527,12 +527,12 @@ class Helper {
                         return;
                     }
                     // 先检测是否需要老用户迁移
-                    const migrated = await migrateOldUser(env.projectUri);
+                    const migrated = await migrateOldUser(env.projectUri!);
                     if (migrated && webviewProvider) {
                         await webviewProvider.reloadCodemakerResources();
                     }
                     // 检测版本更新
-                    await checkForUpdates(env.projectUri);
+                    await checkForUpdates(env.projectUri!);
                     // 刷新主菜单树视图，使更新节点根据状态显示/隐藏
                     mainMenu.refresh();
                 } catch {

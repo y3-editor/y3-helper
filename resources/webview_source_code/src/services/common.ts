@@ -87,14 +87,14 @@ export async function proxyRequest(
   const defaultHeaders = {
     'X-Access-Token': useAuthStore.getState().accessToken,
     'X-Auth-User': useAuthStore.getState().username,
-    'codemaker-version': useExtensionStore.getState().codeMakerVersion,
+    'codemaker-version': useExtensionStore.getState().codeMakerVersion || '(empty)',
     'department-code': encodeURI(
       useAuthStore.getState().authExtends.department_code,
     ),
     'code-generate-model-code':
       useExtensionStore.getState().generateModelCode,
     entrance: useExtensionStore.getState().entrance,
-    ide: useExtensionStore.getState().IDE,
+    ide: useExtensionStore.getState().IDE || '(empty)',
     'ntes-trace-id': traceId, // 虽然 VSCode 会覆盖掉，但是 JetBrains 是直接透传的所以需要带上
   };
 

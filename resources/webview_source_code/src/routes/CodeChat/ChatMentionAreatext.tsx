@@ -125,6 +125,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     onChange,
   } = props;
   const [cursorPosition, setCursorPosition] = useState(0)
+  const [loadSessionSuccess, setLoadSessionSuccess] = useState(true)
   const [justDeletedSpaceAfterMention, setJustDeletedSpaceAfterMention] = useState(false)
   const [, setInputValue] = useState('')
   const hightlightLayerRef = useRef<HTMLDivElement>(null)
@@ -132,6 +133,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const chatType = useChatStore((state) => state.chatType);
   const currentSession = useChatStore((state) => state.currentSession());
   const associateSessionToCurrentWorkspace = useChatStore((state) => state.associateSessionToCurrentWorkspace);
+  const currentSessionId = useChatStore((state) => state.currentSessionId);
+  const selectSession = useChatStore((state) => state.selectSession);
   const updateAttachs = useChatAttach((state) => state.update);
   const workspaceList = useWorkspaceStore((state) => state.workspaceList);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
@@ -148,7 +151,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   // 抽取条件判断，避免重复代码
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (
-      placeholder?.includes('打开该仓库使用或新建会话') || 
+      placeholder?.includes('打开该仓库使用或新建会话') ||
       placeholder?.includes('打开该仓库后可继续对话') ||
       placeholder?.includes('关联至当前仓库')
     );
@@ -309,6 +312,23 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
       return EventBus.instance.off(EBusEvent.Mention_Select_File, onMentionSelectFile)
     }
   }, [inputRef, cursorPosition, updateHighlights, handleMentionKey, getInsertValue])
+
+
+  useEffect(() => {
+    const onFetchSessionResult = (success: boolean) => {
+      setLoadSessionSuccess(success)
+      if (!success) {
+        // 加载失败时，重新尝试加载
+        if (currentSessionId) {
+          selectSession(currentSessionId)
+        }
+      }
+    }
+    EventBus.instance.on(EBusEvent.Fetch_Session_Result, onFetchSessionResult)
+    return () => {
+      EventBus.instance.off(EBusEvent.Fetch_Session_Result, onFetchSessionResult)
+    }
+  }, [currentSessionId, selectSession])
 
 
   useEffect(() => {
@@ -713,7 +733,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
           // pointerEvents={'none'}
           />
           <Textarea
-            disabled={disabled}
+            disabled={disabled || !loadSessionSuccess}
             ref={inputRef}
             h="full"
             px="0"

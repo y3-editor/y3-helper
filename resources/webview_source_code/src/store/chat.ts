@@ -124,6 +124,7 @@ import { getPlanContextTruncationInstruction } from './workspace/planModePrompts
 import { Tool as PlanTool, processMakePlanDenied, report as planReport } from '../store/workspace/tools/plan'
 import { Tool as TodoTool } from '../store/workspace/tools/todo'
 import addCacheMarksToMessages from '../utils/addCacheMarksToMessages';
+import EventBus, { EBusEvent } from '../utils/eventbus';
 import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../utils/truncateMessages';
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
 import {
@@ -562,6 +563,7 @@ export const useChatStore = create<ChatStore>()(
         if (isPending) {
           try {
             const data = await getSessionData(id);
+            EventBus.instance.dispatch(EBusEvent.Fetch_Session_Result, true)
             const nextSessions = new Map(get().sessions);
             nextSessions.set(id, data);
             const attaches = data.data?.attaches
@@ -589,10 +591,12 @@ export const useChatStore = create<ChatStore>()(
           } catch (error: any) {
             // 会话不存在（404）或其他错误，清空当前会话 ID 并创建新会话
             console.warn(`[Debug] loadSessionData failed for session ${id}:`, error?.response?.status || error?.message);
-            set(() => ({ currentSessionId: null }));
-            if (error?.response?.status === 404) {
+            if (error?.response?.status === 404 && isPending) {
               console.log(`[Debug] Session ${id} not found, creating new session`);
               get().onNewSession();
+            } else {
+              // set(() => ({ currentSessionId: null }));
+              EventBus.instance.dispatch(EBusEvent.Fetch_Session_Result, false)
             }
           }
         }
