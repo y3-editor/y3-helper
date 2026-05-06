@@ -94,6 +94,7 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
       'view_source_code_definitions_top_level',
       'search_files',
       'grep_search',
+      'glob_search',
       'retrieve_code',
       'retrieve_knowledge',
       'use_skill', // skill工具是安全的知识获取操作

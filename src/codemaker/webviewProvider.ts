@@ -347,6 +347,9 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 case 'grep_search':
                     result = await this._toolGrepSearch(tool_params);
                     break;
+                case 'glob_search':
+                    result = await this._toolGlobSearch(tool_params);
+                    break;
                 case 'write_to_file':
                     result = await this._toolWriteToFile(tool_params);
                     break;
@@ -379,7 +382,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     result = await this._toolAccessMcpResource(tool_params);
                     break;
                 case 'get_agents': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler');
+                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agents = agentsHandler.getAgentIndex();
@@ -387,7 +390,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'get_agent': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler');
+                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agentResult = agentsHandler.getAgent(tool_params.agent_name);
@@ -588,6 +591,41 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
             return { content: results.join('\n'), isError: false };
         } catch (err: any) {
             return { content: `Error during search: ${err.message}`, isError: true };
+        }
+    }
+
+    private async _toolGlobSearch(params: any): Promise<any> {
+        const pattern = params?.pattern;
+        if (!pattern) {
+            return { content: 'Error: No glob pattern provided.', isError: true };
+        }
+
+        let searchPath = params?.path || '.';
+        const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!path.isAbsolute(searchPath) && workspace) {
+            searchPath = path.join(workspace, searchPath);
+        }
+
+        try {
+            const { glob } = await import('glob');
+            const files = await glob(pattern, {
+                cwd: searchPath,
+                nodir: true,
+                absolute: false,
+                dot: false,
+                ignore: ['node_modules/**', '.git/**'],
+            });
+            const sorted = files.sort();
+            const total = sorted.length;
+            const display = sorted.slice(0, 200);
+            const content = display.join('\n') + (total > 200 ? `\n\n... and ${total - 200} more files` : '');
+            return {
+                content: content || 'No files matched.',
+                isError: false,
+                extra: { total },
+            };
+        } catch (err: any) {
+            return { content: `Error during glob search: ${err.message}`, isError: true };
         }
     }
 

@@ -120,12 +120,12 @@ export default function ToolCall(props: ToolCallProps) {
       showHeader={shouldShowHeader}
       footerContent={
         !toolResponseDisabled &&
-        !isProcessing &&
-        !messageProcessing &&
-        !isMCPProcessing &&
-        !isShare &&
-        !hasAskUserQuestionTool &&
-        !hasTaskTool ? (
+          !isProcessing &&
+          !messageProcessing &&
+          !isMCPProcessing &&
+          !isShare &&
+          !hasAskUserQuestionTool &&
+          !hasTaskTool ? (
           <Flex mt={0} gap={2} alignItems="center">
             <ConfirmPopver
               disabled={!hasDangerousCommand}

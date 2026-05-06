@@ -46,6 +46,7 @@ import {
 import PreviewCodewikiStructure from './PreviewCodewikiStructure';
 import AskUserQuestion from './AskUserQuestion';
 import { getToolParams as getAskUserQuestionToolParams } from '../../../store/workspace/tools/askUserQuestion';
+import { parseGlobSearchParams } from '../../../store/workspace/tools/search/glob';
 
 // 提取文件名的工具函数
 const getFileName = (filePath: string): string => {
@@ -174,6 +175,7 @@ const ToolCallResult = ({
   const isPreviewCodewikiStructure =
     tool.function.name === 'generate_codewiki_structure';
   const isSkillTool = tool.function.name === 'use_skill';
+  const isGlobSearchTool = tool.function.name === 'glob_search';
 
   const isTaskTool = tool.function.name === 'task';
 
@@ -434,6 +436,15 @@ const ToolCallResult = ({
               {sourcePath}
             </Box>
           )}
+        </Flex>
+      );
+    }
+
+    if (isGlobSearchTool) {
+      const globParams = parseGlobSearchParams(tool);
+      return (
+        <Flex flex="1" alignItems="center" gap={1} minHeight="16px">
+          Glob / <Box color={'#999'}>pattern={globParams.pattern}</Box> <Box color={'#888'} style={{ zoom: .8 }}>匹配{result?.extra?.total}个文件</Box>
         </Flex>
       );
     }

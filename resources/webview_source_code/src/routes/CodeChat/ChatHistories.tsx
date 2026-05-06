@@ -33,7 +33,7 @@ import {
   requestChatSessions,
   ChatSession,
 } from '../../store/chat';
-import { DateFormat, alphabeticalCompare } from '../../utils';
+import { DateFormat } from '../../utils';
 import userReporter from '../../utils/report';
 import useCustomToast from '../../hooks/useCustomToast';
 import Icon from '../../components/Icon';
@@ -51,8 +51,6 @@ import {
   LargeScreenWidth,
 } from '../../const';
 import { BsDatabase } from 'react-icons/bs';
-import { Select } from 'chakra-react-select';
-import { RiArrowDownSLine } from 'react-icons/ri';
 import { useWorkspaceStore } from '../../store/workspace';
 import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
 import { UserEvent } from '../../types/report';
@@ -65,16 +63,6 @@ export interface ChatHistoriesHandle {
   isOpen: boolean;
   openFavorite: () => void;
 }
-enum SearchField {
-  Topic = 'topic',
-  Content = 'topic_content',
-}
-
-const searchOptions = [
-  { label: '内容', value: SearchField.Content },
-  { label: '标题', value: SearchField.Topic },
-];
-
 // 历史会话筛选类型
 enum SessionFilterType {
   CurrentRepo = 'currentRepo',
@@ -300,6 +288,8 @@ const SessionItemComponent = React.memo(
     );
   },
 );
+const PAGE_SIZE = 20;
+
 const ChatHistories = React.forwardRef((_, ref) => {
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
@@ -329,24 +319,26 @@ const ChatHistories = React.forwardRef((_, ref) => {
 
   const updateModel = useChatConfig((state) => state.update);
   const [searchKeyword, setSearchKeyword] = React.useState('');
-  const [searchSessions, setSearchSessions] = React.useState<NewChatSession[]>(
-    [],
-  );
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
   const [isMediumScreen] = useMediaQuery(MediumScreenWidth);
   const [isLargerThan340] = useMediaQuery(LargeScreenWidth);
-  const [loading, setLoading] = React.useState(false);
-  const [searchField, setSearchField] = React.useState(searchOptions[0]);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [scrollLoading, setScrollLoading] = React.useState(false);
-  const [isNext, setIsNext] = React.useState(true);
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const { stopRunningTerminal } = useTerminalMessage();
   const setChatType = useChatStore((state) => state.setChatType);
 
-  // ===== 收藏筛选状态 =====
-  // 计算默认筛选类型：根据当前 chatType 和是否有仓库决定
+  // ===== 统一分页状态 =====
+  const [pagedSessions, setPagedSessions] = React.useState<NewChatSession[]>(
+    [],
+  );
+  // 用 ref 同步记录最新页码，避免 handleScroll 闭包读到陈旧的 page state
+  const pageRef = React.useRef(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  // 初始加载（第一页）的 loading 状态
+  const [isFirstLoading, setIsFirstLoading] = React.useState(false);
+
+  // ===== 筛选 Tab 状态 =====
   const getDefaultFilterType = React.useCallback((): SessionFilterType => {
     if (chatType === 'codebase') {
       return workspaceInfo.repoName
@@ -359,80 +351,157 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const [sessionFilter, setSessionFilter] =
     React.useState<SessionFilterType>(getDefaultFilterType);
 
-  // 跨类型会话数据：当筛选类型与当前 chatType 不同时，从接口拉取
-  const [crossTypeSessions, setCrossTypeSessions] = React.useState<
-    ChatSession[]
-  >([]);
-  const [crossTypeLoading, setCrossTypeLoading] = React.useState(false);
-
-  // 判断当前筛选是否需要跨类型查询
-  // 只要筛选类型与当前 chatType 不匹配，或者是收藏/仓库筛选，都从接口拉取
-  const isFilterCrossType = React.useCallback(
-    (filter: SessionFilterType): boolean => {
-      if (filter === SessionFilterType.Favorite) return true;
-      if (filter === SessionFilterType.Default && chatType !== 'default')
-        return true;
-      // 仓库相关筛选：始终从接口拉取，确保能拿到跨仓库的数据
-      if (
-        filter === SessionFilterType.CurrentRepo ||
-        filter === SessionFilterType.OtherRepo
-      ) {
-        return true;
+  // ===== 构建请求参数 =====
+  const buildFetchParams = React.useCallback(
+    (
+      filter: SessionFilterType,
+      keyword: string,
+      targetPage: number,
+    ): Record<string, any> => {
+      const params: Record<string, any> = {
+        _num: PAGE_SIZE,
+        _page: targetPage,
+        _sort_by: '-metadata.create_time',
+        _exclude: 'data',
+      };
+      if (keyword.trim()) {
+        params.topic = keyword.trim();
       }
-      return false;
+      switch (filter) {
+        case SessionFilterType.Favorite:
+          params.is_favorite = true;
+          break;
+        case SessionFilterType.CurrentRepo:
+          params.chat_type = 'codebase';
+          params.is_favorite = false;
+          if (workspaceInfo.repoName) {
+            params.chat_repo = workspaceInfo.repoName;
+          }
+          break;
+        case SessionFilterType.OtherRepo:
+          params.chat_type = 'codebase';
+          params.is_favorite = false;
+          if (workspaceInfo.repoName) {
+            params.exclude_chat_repo = workspaceInfo.repoName;
+          }
+          break;
+        case SessionFilterType.Default:
+        default:
+          params.chat_type = 'default';
+          params.is_favorite = false;
+          break;
+      }
+      return params;
     },
-    [chatType],
+    [workspaceInfo.repoName],
   );
 
-  // 切换筛选类型时，若跨类型则从接口拉取数据
+  // ===== 拉取第一页（重置列表） =====
+  const fetchFirstPage = React.useCallback(
+    async (filter: SessionFilterType, keyword: string) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort(
+          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
+        );
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsFirstLoading(true);
+      setPagedSessions([]);
+      setHasMore(true);
+      pageRef.current = 1; // 立即同步，避免滚动事件读到陈旧页码
+      try {
+        const params = buildFetchParams(filter, keyword, 1);
+        const data = await getHistories(params, controller.signal);
+        const items = data?.items || [];
+        setPagedSessions(items);
+        if (items.length < PAGE_SIZE) {
+          setHasMore(false);
+        }
+      } catch {
+        setPagedSessions([]);
+        setHasMore(false);
+      } finally {
+        setIsFirstLoading(false);
+      }
+    },
+    [buildFetchParams, workspaceInfo.repoName],
+  );
+
+  // ===== 拉取下一页（追加列表） =====
+  const fetchNextPage = React.useCallback(
+    async (filter: SessionFilterType, keyword: string, nextPage: number) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort(
+          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
+        );
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsLoadingMore(true);
+      try {
+        const params = buildFetchParams(filter, keyword, nextPage);
+        const data = await getHistories(params, controller.signal);
+        const items = data?.items || [];
+        if (!items.length) {
+          setHasMore(false);
+        } else {
+          setPagedSessions((prev) => [...prev, ...items]);
+          pageRef.current = nextPage; // 同步 ref，保证 handleScroll 读到最新页码
+          if (items.length < PAGE_SIZE) {
+            setHasMore(false);
+          }
+        }
+      } catch {
+        // 加载更多失败不清空列表，只停止继续请求
+        setHasMore(false);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [buildFetchParams, workspaceInfo.repoName],
+  );
+
+  // ===== 面板打开 / Tab 切换 / 搜索词变化时重新拉取第一页 =====
+  // 用 ref 存最新的 filter & keyword，供防抖回调读取
+  const filterRef = React.useRef(sessionFilter);
+  const keywordRef = React.useRef(searchKeyword);
+  filterRef.current = sessionFilter;
+  keywordRef.current = searchKeyword;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedFetchFirstPage = React.useCallback(
+    debounce(() => {
+      fetchFirstPage(filterRef.current, keywordRef.current);
+    }, 300),
+    [fetchFirstPage],
+  );
+
   React.useEffect(() => {
     if (!isOpen) return;
-    if (!isFilterCrossType(sessionFilter)) {
-      setCrossTypeSessions([]);
-      return;
-    }
-    const controller = new AbortController();
-    const fetchCrossType = async () => {
-      setCrossTypeLoading(true);
-      try {
-        let data;
-        if (sessionFilter === SessionFilterType.Favorite) {
-          data = await getHistories(
-            {
-              _num: 200,
-              _page: 1,
-              _sort_by: '-metadata.create_time',
-              _exclude: 'data',
-              is_favorite: true,
-            },
-            controller.signal,
-          );
-        } else {
-          const apiChatType =
-            sessionFilter === SessionFilterType.Default
-              ? 'default'
-              : 'codebase';
-          data = await getHistories(
-            {
-              _num: 200,
-              _page: 1,
-              _sort_by: '-metadata.create_time',
-              _exclude: 'data',
-              chat_type: apiChatType,
-            },
-            controller.signal,
-          );
-        }
-        setCrossTypeSessions(data?.items || []);
-      } catch {
-        setCrossTypeSessions([]);
-      } finally {
-        setCrossTypeLoading(false);
+    debouncedFetchFirstPage();
+    return () => debouncedFetchFirstPage.cancel();
+  }, [isOpen, sessionFilter, searchKeyword, debouncedFetchFirstPage]);
+
+  // ===== 滚动到底部加载下一页 =====
+  const handleScroll = React.useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (isLoadingMore || !hasMore || isFirstLoading) return;
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      if (scrollHeight - scrollTop <= clientHeight + 20) {
+        fetchNextPage(sessionFilter, searchKeyword, pageRef.current + 1);
       }
-    };
-    fetchCrossType();
-    return () => controller.abort();
-  }, [isOpen, sessionFilter, isFilterCrossType]);
+    },
+    [isLoadingMore, hasMore, isFirstLoading, fetchNextPage, sessionFilter, searchKeyword],
+  );
+
+  // ===== 收藏会话打开方法 =====
+  const openFavoriteRef = React.useRef(false);
+  const openFavorite = React.useCallback(() => {
+    openFavoriteRef.current = true;
+    setIsOpen(true);
+    setSessionFilter(SessionFilterType.Favorite);
+  }, []);
 
   // 打开面板时重置筛选类型
   React.useEffect(() => {
@@ -449,25 +518,62 @@ const ChatHistories = React.forwardRef((_, ref) => {
     }
   }, [isOpen, getDefaultFilterType, currentSession?.is_favorite]);
 
+  // 切换 Tab 时清空搜索关键字
+  React.useEffect(() => {
+    setSearchKeyword('');
+  }, [sessionFilter]);
+
+  // 监听收藏跳转事件
+  React.useEffect(() => {
+    EventBus.instance.on(EBusEvent.Open_Favorite_History, openFavorite);
+    return () => {
+      EventBus.instance.off(EBusEvent.Open_Favorite_History, openFavorite);
+    };
+  }, [openFavorite]);
+
+  React.useImperativeHandle(ref, () => ({
+    isOpen: isOpen,
+    openFavorite,
+  }));
+
+  const { toast } = useCustomToast();
+
   const updateSessions = React.useCallback(async () => {
-    const data = await requestChatSessions();
+    const data = await requestChatSessions(chatType);
     revalidateChatSessions(data.items, chatType);
   }, [revalidateChatSessions, chatType]);
 
-  const { toast } = useCustomToast();
+  const handleUpdateTopic = React.useCallback(
+    async (id: string, topic: string) => {
+      try {
+        await updateTopic(id, topic);
+        // 同步更新分页列表中对应条目的 topic，无需重新请求
+        setPagedSessions((prev) =>
+          prev.map((s) => (s._id === id ? { ...s, topic } : s)),
+        );
+      } catch (error) {
+        toast({
+          title: toastErrorMessage(error as Error),
+          position: 'top',
+          isClosable: true,
+          status: 'error',
+        });
+      }
+    },
+    [updateTopic, toast],
+  );
 
   const handleDelete = React.useCallback(
     async (sessionId: string) => {
       userReporter.report({
         event: UserEvent.CODE_CHAT_REMOVE_SESSION,
       });
-      if (!sessionId) {
-        return;
-      }
+      if (!sessionId) return;
       try {
         await removeSession(sessionId);
         await updateSessions();
-        setCrossTypeSessions((prev) => prev.filter((s) => s._id !== sessionId));
+        // 同步移除分页列表中对应条目，无需重新请求
+        setPagedSessions((prev) => prev.filter((s) => s._id !== sessionId));
         toast({
           title: '删除成功',
           position: 'top',
@@ -485,69 +591,8 @@ const ChatHistories = React.forwardRef((_, ref) => {
         });
       }
     },
-    [removeSession, updateSessions, setCrossTypeSessions, toast],
+    [removeSession, updateSessions, toast],
   );
-
-  // 排序 & 根据筛选类型过滤
-  const renderSessions = React.useMemo(() => {
-    const source: ChatSession[] = isFilterCrossType(sessionFilter)
-      ? crossTypeSessions
-      : Array.from(sessions.values());
-    const sorted = [...source].sort((a, b) =>
-      alphabeticalCompare(b.metadata.create_time, a.metadata.create_time),
-    );
-    switch (sessionFilter) {
-      case SessionFilterType.CurrentRepo:
-        return sorted.filter(
-          (s) =>
-            !s.is_favorite &&
-            s.chat_type === 'codebase' &&
-            s.chat_repo === workspaceInfo.repoName,
-        );
-      case SessionFilterType.OtherRepo:
-        return sorted.filter(
-          (s) =>
-            !s.is_favorite &&
-            s.chat_type === 'codebase' &&
-            s.chat_repo !== workspaceInfo.repoName,
-        );
-      case SessionFilterType.Default:
-        return sorted.filter(
-          (s) => !s.is_favorite && s.chat_type === 'default',
-        );
-      case SessionFilterType.Favorite:
-        return sorted.filter((s) => s.is_favorite === true);
-      default:
-        return sorted;
-    }
-  }, [
-    sessions,
-    sessionFilter,
-    workspaceInfo.repoName,
-    crossTypeSessions,
-    isFilterCrossType,
-  ]);
-
-  // 收藏会话打开方法
-  const openFavoriteRef = React.useRef(false);
-  const openFavorite = React.useCallback(() => {
-    openFavoriteRef.current = true;
-    setIsOpen(true);
-    setSessionFilter(SessionFilterType.Favorite);
-  }, []);
-
-  // 监听收藏跳转事件
-  React.useEffect(() => {
-    EventBus.instance.on(EBusEvent.Open_Favorite_History, openFavorite);
-    return () => {
-      EventBus.instance.off(EBusEvent.Open_Favorite_History, openFavorite);
-    };
-  }, [openFavorite]);
-
-  React.useImperativeHandle(ref, () => ({
-    isOpen: isOpen,
-    openFavorite,
-  }));
 
   const handleSelectSession = React.useCallback(
     (id: string) => {
@@ -567,11 +612,10 @@ const ChatHistories = React.forwardRef((_, ref) => {
         });
         return;
       }
-      // 从本地 sessions 或跨类型数据中查找会话信息
+      // 从分页列表或本地 sessions 中查找会话信息
       const nextSession =
-        sessions.get(id) ?? crossTypeSessions.find((s) => s._id === id);
+        pagedSessions.find((s) => s._id === id) ?? sessions.get(id);
       const model = nextSession?.data?.model;
-      // 如果会话有模型，直接用模型即可
       if (model) {
         updateModel((config) => {
           config.model = model as ChatModel;
@@ -593,7 +637,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
       isSearching,
       currentSession?._id,
       sessions,
-      crossTypeSessions,
+      pagedSessions,
       selectSession,
       toast,
       updateModel,
@@ -610,7 +654,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
     setIsOpen((prev) => !prev);
     setTimeout(() => {
       if (!isOpen && popoverRef.current) {
-        const index = renderSessions.findIndex(
+        const index = pagedSessions.findIndex(
           (item) => item._id === currentSession?._id,
         );
         scrollToFocusItem(popoverRef.current, index);
@@ -618,171 +662,46 @@ const ChatHistories = React.forwardRef((_, ref) => {
     });
   };
 
-  const resetLoadMore = React.useCallback(() => {
-    setIsNext(true);
-    setCurrentPage(1);
-  }, []);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedGetSessions = React.useCallback(
-    debounce(async (keyword: string) => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort(
-          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
-        );
-      }
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      try {
-        setLoading(true);
-        setSearchSessions([]);
-        const params = {
-          _num: 10,
-          _page: 1,
-          _sort_by: '-metadata.create_time',
-          [searchField.value]: keyword.trim(),
-          chat_type: chatType,
-        };
-        if (searchField.value === SearchField.Topic) {
-          params._exclude = 'data';
-        }
-        const data = await getHistories(params, controller.signal);
-        setLoading(false);
-        setSearchSessions(data?.items || []);
-        resetLoadMore();
-      } catch (error) {
-        setSearchSessions([]);
-        setLoading(false);
-        console.error(error);
-      }
-    }, 500),
-    [searchField, chatType],
-  );
-
-  React.useEffect(() => {
-    if (!searchKeyword.trim()) return;
-    debouncedGetSessions(searchKeyword);
-    return () => {
-      debouncedGetSessions.cancel();
-    };
-  }, [searchKeyword, debouncedGetSessions]);
-
-  const filterSessions = React.useMemo(() => {
-    if (!searchKeyword.trim()) return renderSessions;
-    return Array.from(searchSessions.values())
-      .filter((session) => session.chat_type === chatType)
-      .map((session) => ({ ...session, disabled: true }));
-  }, [searchKeyword, renderSessions, searchSessions, chatType]);
-
   const handleReset = () => {
     setSearchKeyword('');
   };
 
   const calcScreenWidth = React.useMemo(() => {
     if (isSmallScreen) {
-      return {
-        width: '140px',
-      };
+      return { width: '140px' };
     }
     if (isMediumScreen) {
-      return {
-        width: '220px',
-      };
+      return { width: '220px' };
     }
     if (isLargerThan340) {
       return {};
     }
   }, [isLargerThan340, isMediumScreen, isSmallScreen]);
 
-  const renderSearchItem = React.useMemo(() => {
-    if (loading) return <LoadingState />;
-    const SessionItem = ({
-      item,
-      index,
-    }: {
-      item: ChatSession;
-      index: number;
-    }) => {
-      const key = item._id + (item.topic || '') + (item.user || '') + index;
-
-      return (
-        <SessionItemComponent
-          key={key}
-          item={item}
-          index={index}
-          isStreaming={isStreaming}
-          isSearching={isProcessing || isTerminalProcessing || isSearching}
-          currentSessionId={currentSession?._id}
-          onSelect={handleSelectSession}
-          onUpdateTopic={updateTopic}
-          onDelete={handleDelete}
-        />
-      );
-    };
-
-    // 无搜索关键词：直接展示筛选后的列表
-    if (!searchKeyword.trim().length) {
-      if (!renderSessions.length) return <EmptyState />;
-      return renderSessions.map((item, index) => (
-        <SessionItem key={item._id} item={item} index={index} />
-      ));
-    }
-
-    // 有搜索关键词
-    if (!filterSessions.length) return <EmptyState />;
-    return filterSessions.map((item, index) => (
-      <SessionItem key={item._id} item={item} index={index} />
-    ));
-  }, [
-    loading,
-    crossTypeLoading,
-    searchKeyword,
-    renderSessions,
-    currentSession?._id,
-    handleDelete,
-    handleSelectSession,
-    isStreaming,
-    isProcessing,
-    isTerminalProcessing,
-    isSearching,
-    updateTopic,
-    filterSessions,
-  ]);
-
-  const loadMore = React.useCallback(
-    async (page: number) => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort(
-          createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__),
-        );
-      }
-      const controller = new AbortController();
-      try {
-        setScrollLoading(true);
-        const params = {
-          _num: 10,
-          _page: page,
-          _sort_by: '-metadata.create_time',
-          [searchField.value]: searchKeyword.trim(),
-          chat_type: chatType,
-        };
-        if (searchField.value === SearchField.Topic) {
-          params._exclude = 'data';
-        }
-        const data = await getHistories(params, controller.signal);
-        if (!data.items.length) {
-          setIsNext(false);
-        } else {
-          setSearchSessions((prev) => [...prev, ...data.items]);
-        }
-        setScrollLoading(false);
-      } catch (error) {
-        setSearchSessions([]);
-        setScrollLoading(false);
-        console.error(error);
-      }
-    },
-    [searchKeyword, searchField.value, chatType],
+  const renderListItem = React.useCallback(
+    (item: ChatSession, index: number) => (
+      <SessionItemComponent
+        key={item._id + (item.topic || '') + index}
+        item={item}
+        index={index}
+        isStreaming={isStreaming}
+        isSearching={isProcessing || isTerminalProcessing || isSearching}
+        currentSessionId={currentSession?._id}
+        onSelect={handleSelectSession}
+        onUpdateTopic={handleUpdateTopic}
+        onDelete={handleDelete}
+      />
+    ),
+    [
+      isStreaming,
+      isProcessing,
+      isTerminalProcessing,
+      isSearching,
+      currentSession?._id,
+      handleSelectSession,
+      handleUpdateTopic,
+      handleDelete,
+    ],
   );
 
   const disabled = React.useMemo(() => {
@@ -829,20 +748,8 @@ const ChatHistories = React.forwardRef((_, ref) => {
               }}
               zIndex="100"
             >
-              <PopoverHeader
-                fontWeight="bold"
-                border="0"
-                display="flex"
-                alignItems="center"
-                gap={2}
-                pr="32px"
-              >
+              <PopoverHeader fontWeight="bold" border="0">
                 历史会话
-                <SessionFilterSelect
-                  value={sessionFilter}
-                  repoName={workspaceInfo.repoName}
-                  onChange={setSessionFilter}
-                />
               </PopoverHeader>
               <PopoverCloseButton
                 onClick={() => {
@@ -850,30 +757,16 @@ const ChatHistories = React.forwardRef((_, ref) => {
                   handleReset();
                 }}
               />
-              <Box p="2" display="flex">
-                <Select
-                  className="w-[120px]"
-                  size="sm"
-                  placeholder="请选择搜索类型"
-                  value={searchField}
-                  options={searchOptions}
-                  onChange={(v) => {
-                    if (!v) return;
-                    setSearchField(v);
-                  }}
-                  components={{
-                    DropdownIndicator: () => (
-                      <div className="mr-1">
-                        <Icon as={RiArrowDownSLine} size="xs" />
-                      </div>
-                    ),
-                    IndicatorSeparator: () => null,
-                  }}
-                ></Select>
+              <SessionFilterTabs
+                value={sessionFilter}
+                repoName={workspaceInfo.repoName}
+                onChange={setSessionFilter}
+              />
+              <Box p="2" pb={0}>
                 <Input
                   value={searchKeyword}
                   size="sm"
-                  placeholder="请输入会话名称或对话关键字"
+                  placeholder="输入标题前缀搜索会话"
                   onInput={(e) => {
                     const keyword = e.currentTarget.value;
                     setSearchKeyword(keyword);
@@ -883,57 +776,36 @@ const ChatHistories = React.forwardRef((_, ref) => {
 
               <PopoverBody
                 m={2}
+                mt={0}
                 p={2}
                 maxH="400px"
                 height="auto"
-                overflowY="scroll"
-                onScroll={(e) => {
-                  const { scrollTop, scrollHeight, clientHeight } =
-                    e.currentTarget;
-                  if (scrollLoading || !isNext) return;
-                  if (
-                    scrollHeight - scrollTop <= clientHeight + 20 &&
-                    searchKeyword.trim()
-                  ) {
-                    const nextPage = currentPage + 1;
-                    loadMore(nextPage);
-                    setCurrentPage(nextPage);
-                  }
-                }}
+                overflowY="auto"
+                onScroll={handleScroll}
               >
-                <Box
-                  maxH="400px"
-                  overflowY="auto"
-                  key="auto"
-                  onScroll={(e) => {
-                    const { scrollTop, scrollHeight, clientHeight } =
-                      e.currentTarget;
-                    if (scrollLoading || !isNext) return;
-                    if (
-                      scrollHeight - scrollTop <= clientHeight + 20 &&
-                      searchKeyword.trim()
-                    ) {
-                      const nextPage = currentPage + 1;
-                      loadMore(nextPage);
-                      setCurrentPage(nextPage);
-                    }
-                  }}
-                >
-                  <VStack align="stretch">
-                    {renderSearchItem}
-                    {searchKeyword.trim().length ? (
-                      <Box
-                        display="flex"
-                        justifyContent="center"
-                        fontSize="12px"
-                        color="text.default"
-                      >
-                        {scrollLoading ? <Spinner size="sm" /> : null}
-                        {!isNext ? <Text>没有更多数据了</Text> : null}
-                      </Box>
+                <VStack align="stretch">
+                  {isFirstLoading ? (
+                    <LoadingState />
+                  ) : pagedSessions.length === 0 ? (
+                    <EmptyState />
+                  ) : (
+                    pagedSessions.map((item, index) =>
+                      renderListItem(item, index),
+                    )
+                  )}
+                  <Box
+                    display="flex"
+                    justifyContent="center"
+                    fontSize="12px"
+                    color="text.default"
+                    minH="20px"
+                  >
+                    {isLoadingMore ? <Spinner size="sm" /> : null}
+                    {!hasMore && pagedSessions.length > 0 ? (
+                      <Text>没有更多数据了</Text>
                     ) : null}
-                  </VStack>
-                </Box>
+                  </Box>
+                </VStack>
               </PopoverBody>
             </PopoverContent>
           </Portal>
@@ -957,13 +829,12 @@ interface SessionFilterSelectProps {
   onChange: (filter: SessionFilterType) => void;
 }
 
-const SessionFilterSelect = ({
+const SessionFilterTabs = ({
   value,
   repoName,
   onChange,
 }: SessionFilterSelectProps) => {
   const hasRepo = Boolean(repoName);
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
   const options: SessionFilterOption[] = [
     {
@@ -986,99 +857,56 @@ const SessionFilterSelect = ({
     },
   ];
 
-  const currentOption = options.find((o) => o.value === value);
-
-  const filterRef = React.useRef<HTMLDivElement>(null);
-
-  // 点击外部区域时关闭下拉
-  React.useEffect(() => {
-    if (!isFilterOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isFilterOpen]);
-
   return (
-    <Box position="relative" ref={filterRef}>
-      <Button
-        size="xs"
-        variant="outline"
-        rightIcon={<Icon as={RiArrowDownSLine} size="xs" />}
-        fontWeight="normal"
-        borderRadius="md"
-        px={2}
-        minW="80px"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsFilterOpen((prev) => !prev);
-        }}
-      >
-        {currentOption?.label ?? '筛选'}
-      </Button>
-      {isFilterOpen && (
-        <Box
-          position="absolute"
-          top="100%"
-          left={0}
-          mt={1}
-          minW="120px"
-          w="auto"
-          zIndex="200"
-          bg="panelBgColor"
-          borderRadius="md"
-          boxShadow="lg"
-          border="1px solid"
-          borderColor="inherit"
-          p={1}
-        >
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            const itemBox = (
-              <Box
-                key={option.value}
-                px={3}
-                py={1.5}
-                borderRadius="md"
-                fontSize="sm"
-                cursor={option.isDisabled ? 'not-allowed' : 'pointer'}
-                opacity={option.isDisabled ? 0.4 : 1}
-                bg={isSelected ? 'blue.300' : 'transparent'}
-                _hover={
-                  option.isDisabled
-                    ? {}
-                    : { bg: isSelected ? 'blue.300' : 'blue.200' }
-                }
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (option.isDisabled) return;
-                  onChange(option.value);
-                  setIsFilterOpen(false);
-                }}
-              >
-                {option.label}
-              </Box>
-            );
+    <Flex px={4} pt={1} pb={0} gap={0}>
+      {options.map((option) => {
+        const isSelected = option.value === value;
+        const tabItem = (
+          <Box
+            key={option.value}
+            as="button"
+            fontSize="xs"
+            fontWeight={isSelected ? 'semibold' : 'normal'}
+            opacity={option.isDisabled ? 0.4 : 1}
+            cursor={option.isDisabled ? 'not-allowed' : 'pointer'}
+            borderBottom="1px solid"
+            borderColor={isSelected ? 'blue.300' : 'transparent'}
+            px={2}
+            pb={1}
+            pt={0.5}
+            bg="transparent"
+            color="inherit"
+            _hover={
+              option.isDisabled
+                ? {}
+                : {
+                    borderColor: isSelected ? 'blue.300' : 'gray.500',
+                  }
+            }
+            onClick={() => {
+              if (option.isDisabled) return;
+              onChange(option.value);
+            }}
+          >
+            {option.label}
+          </Box>
+        );
 
-            return option.isDisabled && option.disabledTooltip ? (
-              <Tooltip
-                key={option.value}
-                label={option.disabledTooltip}
-                placement="right"
-                hasArrow
-              >
-                {itemBox}
-              </Tooltip>
-            ) : (
-              itemBox
-            );
-          })}
-        </Box>
-      )}
-    </Box>
+        if (option.isDisabled && option.disabledTooltip) {
+          return (
+            <Tooltip
+              key={option.value}
+              label={option.disabledTooltip}
+              placement="bottom"
+              hasArrow
+            >
+              {tabItem}
+            </Tooltip>
+          );
+        }
+        return tabItem;
+      })}
+    </Flex>
   );
 };
 

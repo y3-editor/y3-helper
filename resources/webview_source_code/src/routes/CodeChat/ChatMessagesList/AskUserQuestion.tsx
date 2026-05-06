@@ -63,6 +63,8 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
   const [selectedValues, setSelectedValues] = React.useState<string[]>([]);
   const [customInput, setCustomInput] = React.useState('');
   const [isOtherSelected, setIsOtherSelected] = React.useState(false);
+  // 追踪 IME 输入法组合状态，避免中文选词回车误触发提交
+  const isComposingRef = React.useRef(false);
   const toast = useToast();
   const { postMessage } = usePostMessage();
 
@@ -311,7 +313,15 @@ export default function AskUserQuestion(props: AskUserQuestionProps) {
               const target = e.target as HTMLTextAreaElement;
               setCustomInput(target.value);
             }}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
+            }}
             onKeyDown={(e) => {
+              // IME 组合输入中（如中文选词），忽略回车键
+              if (isComposingRef.current) return;
               // 回车提交，Shift+Enter 换行
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

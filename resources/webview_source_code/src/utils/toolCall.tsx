@@ -55,7 +55,9 @@ export function getToolCallQuery(name: string, args: string) {
     case 'generate_codewiki_structure':
       return 'Codewiki目录架构';
     case 'grep_search':
-      return `使用 grep 搜索 ${toolParams.regex}`;
+      return <div>使用 grep 搜索 <code>{toolParams.regex}</code></div>;
+    case 'glob_search':
+      return <div className="truncate"> Glob / pattern={toolParams.pattern || '*'}</div>;
     case 'use_skill':
       return '使用Skill:';
     case 'ask_user_question':
@@ -98,6 +100,8 @@ export function getToolName(tool: ToolCall) {
       return '制定计划';
     case 'generate_codewiki_structure':
       return '生成Codewiki结构';
+    case 'glob_search':
+      return 'Glob搜索';
     case 'ask_user_question':
       return '向用户提问';
     default:

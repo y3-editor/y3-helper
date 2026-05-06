@@ -55,4 +55,5 @@ export interface GetAgentResult {
     metaData: AgentMetaData;
   };
   error?: string;
+
 }

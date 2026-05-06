@@ -20,6 +20,7 @@ import {
   removeSession,
   updateSession,
   updateSessionTopic,
+  patchSession,
   fetchGptResponse,
 } from '../services/chat';
 import { useConfigStore } from './config';
@@ -433,8 +434,27 @@ export const useChatStore = create<ChatStore>()(
             }
           }
           // 判断缓存的 session id 是否还存在数据库
+          // 由于列表只拉取最近 20 条，找不到不代表被删除，需精准查询确认
           if (!currentSessionId || !nextSessions.has(currentSessionId)) {
-            currentSessionId = filterData[0]._id;
+            if (currentSessionId) {
+              try {
+                const sessionDetail = await getSessionData(currentSessionId);
+                if (
+                  sessionDetail?._id &&
+                  sessionDetail.chat_type === chatType
+                ) {
+                  // 会话仍存在于服务端，保持选中，放入本地 sessions
+                  nextSessions.set(currentSessionId, sessionDetail);
+                } else {
+                  currentSessionId = filterData[0]._id;
+                }
+              } catch {
+                // 查询失败（如 404）说明会话已被删除，降级到最新会话
+                currentSessionId = filterData[0]._id;
+              }
+            } else {
+              currentSessionId = filterData[0]._id;
+            }
           }
           get().loadSessionData(currentSessionId);
           set(() => ({
@@ -821,7 +841,7 @@ export const useChatStore = create<ChatStore>()(
           },
         };
         try {
-          await updateSession(newSession);
+          await patchSession(newSession);
           set((state) => ({
             sessions: new Map(state.sessions).set(session._id, newSession),
           }));
@@ -929,6 +949,28 @@ export const useChatStore = create<ChatStore>()(
           );
 
           curSession.data.consumedTokens = result.consumedTokens;
+
+          // 保存 consumedTokens 快照到最后一条消息，用于计算每轮增量
+          const ct = result.consumedTokens;
+          if (ct) {
+            const snapshot =
+              (ct.input || 0) +
+              (ct.output || 0) +
+              (ct.comporessPromptTokens || 0) +
+              (ct.comporessCompletionTokens || 0) +
+              (ct.systemTokens || 0) +
+              (ct.systemToolTokens || 0) +
+              (ct.readCacheTokens || 0) +
+              (ct.skillTokens || 0) +
+              (ct.ruleTokens || 0) +
+              (ct.mcpTokens || 0);
+            const lastMsg =
+              curSession.data.messages[curSession.data.messages.length - 1];
+            if (lastMsg) {
+              lastMsg.consumedTokensTotal = snapshot;
+              lastMsg.consumedTokensSnapshot = { ...ct };
+            }
+          }
 
           if (result.compressionUpdate && curSession.data.compression) {
             curSession.data.compression.pendingSavedTokens = result.compressionUpdate.pendingSavedTokens;
@@ -2430,7 +2472,10 @@ export const useChatStreamStore = create(
         const { name } = chatPromptStoreState.prompt;
         const codeBlock = chatPromptStoreState.codeBlock || '';
         const formatInput = `/${name} \n ${codeBlock} `;
-        userMessage.content = assembleUserPromptContent(formatInput);
+        userMessage.content = reassembleContentWithImages(
+          userMessage.content,
+          formatInput,
+        );
         userMessage.systemPrompt = {
           ...chatPromptStoreState.prompt,
           codeBlock: codeBlock,
@@ -2441,7 +2486,10 @@ export const useChatStreamStore = create(
       if (options?.specPrompt) {
         const { name } = options.specPrompt;
         const formatInput = `/${name} \n ${content} `;
-        userMessage.content = assembleUserPromptContent(formatInput);
+        userMessage.content = reassembleContentWithImages(
+          userMessage.content,
+          formatInput,
+        );
         userMessage.specPrompt = name;
       }
 
@@ -3295,7 +3343,11 @@ export const useChatStreamStore = create(
           ...BUILT_IN_PROMPTS_SPECKIT.map(speckitPrompt => speckitPrompt.name)
         ].includes(chatPromptStoreState.prompt.name)) {
           const currentMessageIndex = filteredMessages.length - 1;
-          filteredMessages[currentMessageIndex].content = content;
+          filteredMessages[currentMessageIndex].content =
+            reassembleContentWithImages(
+              filteredMessages[currentMessageIndex].content,
+              content,
+            );
           chatPromptStoreState.reset();
         }
 
@@ -3987,7 +4039,7 @@ export const useChatStreamStore = create(
 
                 if (toolCalls && toolCalls.length) {
                   // 仅当本轮工具全部属于可批白名单时，保留前两个；否则只保留第一个
-                  toolCalls = toolCalls.slice(0, toolCalls.every(tc => ['view_source_code_definitions_top_level', 'grep_search', 'read_file'].includes(tc.function?.name ?? '')) ? 2 : 1);
+                  toolCalls = toolCalls.slice(0, toolCalls.every(tc => ['view_source_code_definitions_top_level', 'grep_search', 'glob_search', 'read_file'].includes(tc.function?.name ?? '')) ? 2 : 1);
                 }
                 if (chatStoreState.isError) {
                   chatStoreState.setError(false);
@@ -4792,7 +4844,10 @@ export const useChatStreamStore = create(
       // 替换需要发送给模型的 prompt
       if (chatPromptStoreState.prompt) {
         const currentMessageIndex = messages.length - 1;
-        messages[currentMessageIndex].content = content;
+        messages[currentMessageIndex].content = reassembleContentWithImages(
+          messages[currentMessageIndex].content,
+          content,
+        );
         chatPromptStoreState.reset();
       }
       if (chatModels[chatConfig.model]?.peerUserContent) {
@@ -5907,11 +5962,12 @@ function checkCodeBlockIsClose(content: string) {
 // 16-character random string
 export const nanoid = customAlphabet('0123456789abcdef', 16);
 
-export async function requestChatSessions() {
+export async function requestChatSessions(chatType?: ChatType) {
   const params: ChatHistoryGetterParams = {
-    _num: 200,
+    _num: 20,
     _sort_by: '-metadata.create_time',
     _exclude: 'data',
+    ...(chatType ? { chat_type: chatType } : {}),
   };
   return getHistories(params);
 }
@@ -6035,6 +6091,29 @@ export const useUserActionStore = create<ChatUserAction>((set, get) => ({
     }))
   },
 }));
+
+/**
+ * 重新组装消息内容，替换文本部分但保留已有的图片 URL。
+ *
+ * 用于系统级 Prompt / specPrompt 处理时替换 userMessage.content，
+ * 防止之前 MultiAttachment 分支中 push 进 content 的 ImageUrl 被覆盖丢失。
+ */
+function reassembleContentWithImages(
+  existingContent: string | ChatMessageContentUnion[],
+  newTextContent: string,
+): ChatMessageContentUnion[] {
+  // 从现有 content 中提取图片（仅数组格式且存在 ImageUrl 时需要保留）
+  const existingImageUrls = Array.isArray(existingContent)
+    ? existingContent.filter(
+        (item) => item.type === ChatMessageContent.ImageUrl,
+      )
+    : [];
+  const newContent = assembleUserPromptContent(newTextContent);
+  if (existingImageUrls.length) {
+    newContent.push(...existingImageUrls);
+  }
+  return newContent;
+}
 
 function assembleUserPromptContent(content: string) {
   return [

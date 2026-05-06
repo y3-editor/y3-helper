@@ -16,7 +16,7 @@ import {
 } from '../utils/tokenCalculator';
 import { Tool, useWorkspaceStore } from '../store/workspace';
 import { generateCompressionPrompt } from '../utils/compressionPrompt';
-import { fetchGptResponse, GPTResponse } from '../services/chat';
+import { fetchCodebaseGptResponse, GPTResponse } from '../services/chat';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import userReporter from '../utils/report';
@@ -317,7 +317,7 @@ export class CompressionService {
           reasoningContent: _reasoningContent,
           ...rest
         }) => rest);
-        return fetchGptResponse(UserEvent.CODE_CHAT_COMPRESS, {
+        return fetchCodebaseGptResponse(UserEvent.CODE_CHAT_COMPRESS, {
           messages: cleanMessages,
           model: model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
           max_tokens: DEFAULT_COMPRESSION_CONFIG.maxOutputTokens, // Compression output limit

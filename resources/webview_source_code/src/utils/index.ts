@@ -25,32 +25,22 @@ export const LANGUAGE_TO_GRAPH_TYPE: Record<string, 'mermaid' | 'plantuml' | 'gr
 export function getIsolatedStorageKey(baseKey: string): string {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
-  const sessionId = urlParams.get('restoreSessionId');
   const panelId = urlParams.get('panelId');
 
   let storageKey: string;
 
-  // 优先使用 sessionId 进行更精确的隔离
-  if (mode && sessionId) {
-    // 使用新的命名格式：cm_{mode}_codemaker-chat-store
-    storageKey = `cm_${mode}_${baseKey}`;
-
-    // 并行会话需要额外处理 panelId
-    if (mode === 'panel' && panelId) {
-      storageKey = `cm_${mode}_${panelId}_${baseKey}`;
-    }
-  } else if (mode === 'sidebar') {
-    // 向后兼容：主会话模式
-    storageKey = `${baseKey}-sidebar`;
+  // 根据 mode 和 panelId 生成隔离的存储键
+  if (mode === 'sidebar') {
+    // 主会话模式
+    storageKey = `cm_sidebar_${baseKey}`;
   } else if (mode === 'newwindow') {
-    // 向后兼容：CM2 模式
-    storageKey = `${baseKey}-cm2`;
-  } else if (mode === 'panel') {
-    // 向后兼容：并行会话模式
-    const parallelId = panelId || 'default';
-    storageKey = `${baseKey}-panel-${parallelId}`;
+    // CM2 模式
+    storageKey = `cm_newwindow_${baseKey}`;
+  } else if (mode === 'panel' && panelId) {
+    // 并行会话模式：使用 panelId 隔离
+    storageKey = `cm_panel_${panelId}_${baseKey}`;
   } else if (panelId) {
-    // 兼容现有的 panelId 机制
+    // 兼容旧的 panelId 机制
     storageKey = `${baseKey}-panel-${panelId}`;
   } else {
     // 默认存储键名
@@ -90,53 +80,6 @@ export function getSessionData(storageKey: string, sessionId: string): any {
   } catch (error) {
     console.error('[Debug] Failed to load session data:', error);
     return getDefaultSessionData();
-  }
-}
-
-/**
- * 清理 localStorage 中遗留的 panel（并行会话）旧存储数据
- * 使用 sessionStorage 的 flag 保证每次应用实例只执行一次，避免每次刷新重复扫描。
- * 后期可以移除
- */
-export function cleanupLegacyPanelLocalStorage(): void {
-  const FLAG_KEY = '__cm_panel_ls_cleaned__';
-
-  // 同一个会话生命周期内只执行一次
-  if (sessionStorage.getItem(FLAG_KEY)) return;
-
-  try {
-    const keysToRemove: string[] = [];
-    const BASE_KEY = 'codemaker-chat-store';
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key) continue;
-
-      // 匹配所有 panel 相关的聊天 store key：
-      // 1. cm_panel_*_codemaker-chat-store  （新格式）
-      // 2. codemaker-chat-store-panel-*     （兼容格式）
-      const isNewFormat =
-        key.startsWith('cm_panel_') && key.endsWith(BASE_KEY);
-      const isCompatFormat =
-        key.startsWith(`${BASE_KEY}-panel-`);
-
-      if (isNewFormat || isCompatFormat) {
-        keysToRemove.push(key);
-      }
-    }
-
-    if (keysToRemove.length > 0) {
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-      console.log(
-        `[Init] Cleaned ${keysToRemove.length} legacy panel key(s) from localStorage:`,
-        keysToRemove,
-      );
-    }
-
-    // 标记本次会话已执行过清理
-    sessionStorage.setItem(FLAG_KEY, '1');
-  } catch (error) {
-    console.warn('[Init] Failed to clean legacy panel localStorage keys:', error);
   }
 }
 

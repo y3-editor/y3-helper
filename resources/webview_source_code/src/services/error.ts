@@ -106,7 +106,7 @@ export function handleError(error: any,) {
       EventBus.instance.dispatch(EBusEvent.Exceed_Session_Length)
       return
     } else if (error.response?.status === 429) {
-      EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
+      // EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
       toastError(`错误信息：${displayErrorMessage}, ${ERROR_MESSAGE.COMMON}`);
       return
     }

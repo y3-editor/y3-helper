@@ -1,12 +1,5 @@
 import { WarningIcon } from '@chakra-ui/icons';
-import {
-  Flex,
-  Text,
-  Button,
-  Box,
-  Collapse,
-  createStandaloneToast,
-} from '@chakra-ui/react';
+import { Flex, Text, Button, Box, Collapse } from '@chakra-ui/react';
 import React, { Component, ReactNode } from 'react';
 import {
   logger as webToolsLogger,
@@ -14,11 +7,9 @@ import {
 } from '@dep305/codemaker-web-tools';
 import {
   isChunkLoadError,
+  showChunkToast,
   formatErrorDetail,
 } from '../../utils/chunkErrorHandler';
-
-const { toast } = createStandaloneToast();
-const CHUNK_TOAST_ID = 'chunk-error-toast';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -42,23 +33,18 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   };
 
   static getDerivedStateFromError(error: Error) {
-    const isChunkError = isChunkLoadError(error);
-    // chunk 错误：在静态方法中触发 toast，避免在 render 中产生副作用
-    if (isChunkError && !toast.isActive(CHUNK_TOAST_ID)) {
-      toast({
-        id: CHUNK_TOAST_ID,
-        title: '应用已更新',
-        description: '检测到新版本已发布，请刷新页面以获取最新功能。',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
-    }
-    return { hasError: true, isChunkError, error };
+    return {
+      hasError: true,
+      isChunkError: isChunkLoadError(error),
+      error,
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (isChunkLoadError(error)) {
+      showChunkToast();
+      return;
+    }
     console.error('Error caught by ErrorBoundary:', error, errorInfo);
     webToolsHub.withScope((scope) => {
       scope.setExtra('componentStack', errorInfo.componentStack);
@@ -78,115 +64,144 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   private fallbackCopy(text: string) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
     document.execCommand('copy');
-    document.body.removeChild(ta);
+    document.body.removeChild(textarea);
     this.onCopyDone();
   }
 
   private onCopyDone() {
     this.setState({ copied: true });
-    setTimeout(() => this.setState({ copied: false }), 2000);
+    setTimeout(() => this.setState({ copied: false }), 1500);
   }
 
+  private handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      this.setState({ hasError: false, error: null, showDetail: false });
+    }
+  };
+
   render() {
-    if (!this.state.hasError) {
+    if (!this.state.hasError || this.state.isChunkError) {
       return this.props.children;
     }
 
-    const { isChunkError, error, showDetail, copied } = this.state;
+    const { error, showDetail, copied } = this.state;
+    const detailText = error ? formatErrorDetail(error) : '';
 
     return (
-      <Flex
-        align="center"
-        justify="center"
-        direction="column"
-        h="50vh"
-        w="100%"
-        px={6}
-      >
-        <WarningIcon
-          color={isChunkError ? 'warning' : 'error'}
-          boxSize={6}
-          mb={3}
-        />
-        <Text fontSize="md" fontWeight="600" mb={1}>
-          {isChunkError ? '应用已更新' : '未知错误'}
-        </Text>
-        <Text fontSize="sm" color="text.default" textAlign="center" mb={4}>
-          {isChunkError
-            ? '检测到新版本已发布，请刷新页面以获取最新功能。'
-            : '应用遇到了意外错误，请尝试刷新页面或联系我们：7896636'}
-        </Text>
-        <Button
-          size="sm"
-          colorScheme="blue"
-          onClick={() => window.location.reload()}
-          mb={3}
+      <>
+        {this.props.children}
+        <Flex
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="blackAlpha.600"
+          zIndex={9999}
+          align="center"
+          justify="center"
+          onClick={this.handleOverlayClick}
         >
-          刷新页面
-        </Button>
-
-        {error && (
-          <Box w="100%" maxW="480px">
-            <Text
-              fontSize="xs"
-              color="text.muted"
-              cursor="pointer"
-              textAlign="center"
-              userSelect="none"
-              onClick={() => this.setState({ showDetail: !showDetail })}
-              _hover={{ color: 'text.secondary' }}
-            >
-              {showDetail ? '▾ 收起详情' : '▸ 错误详情'}
-            </Text>
-            <Collapse in={showDetail} animateOpacity>
-              <Box
-                mt={2}
-                p={3}
-                bg="panelBlockBgColor"
-                borderRadius="md"
-                border="1px solid"
-                borderColor="customBorder"
-                maxH="200px"
-                overflowY="auto"
-                css={{ scrollbarWidth: 'thin' }}
+          <Box
+            bg="panelBlockBgColor"
+            borderRadius="lg"
+            border="1px solid"
+            borderColor="customBorder"
+            p={6}
+            w="420px"
+            maxW="calc(100vw - 32px)"
+            boxShadow="xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Flex align="center" justify="center" direction="column">
+              <WarningIcon color="error" boxSize={6} mb={3} />
+              <Text fontSize="md" fontWeight="600" mb={1}>
+                未知错误
+              </Text>
+              <Text
+                fontSize="sm"
+                color="text.default"
+                textAlign="center"
+                mb={4}
               >
-                <Text
-                  as="pre"
-                  fontSize="11px"
-                  fontFamily="'SF Mono',Monaco,Menlo,Consolas,monospace"
-                  color="text.default"
-                  whiteSpace="pre-wrap"
-                  wordBreak="break-all"
-                  lineHeight="1.5"
-                  m={0}
-                >
-                  {formatErrorDetail(error)}
-                </Text>
-              </Box>
-              <Flex justify="center" mt={2}>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  color="text.muted"
-                  _hover={{ color: 'text.secondary' }}
-                  onClick={() =>
-                    this.copyToClipboard(formatErrorDetail(error))
-                  }
-                >
-                  {copied ? '✓ 已复制' : '📋 复制详情'}
-                </Button>
-              </Flex>
-            </Collapse>
+                应用遇到了意外错误，请尝试刷新页面或联系我们：7896636
+              </Text>
+              <Button
+                size="sm"
+                colorScheme="blue"
+                onClick={() => window.location.reload()}
+                mb={3}
+              >
+                刷新页面
+              </Button>
+
+              {error && (
+                <Box w="100%" maxW="480px">
+                  <Text
+                    fontSize="xs"
+                    color="text.muted"
+                    cursor="pointer"
+                    textAlign="center"
+                    userSelect="none"
+                    onClick={() => this.setState({ showDetail: !showDetail })}
+                    _hover={{ color: 'text.secondary' }}
+                  >
+                    {showDetail ? '▾ 收起详情' : '▸ 错误详情'}
+                  </Text>
+                  <Collapse in={showDetail} animateOpacity>
+                    <Box
+                      mt={2}
+                      p={3}
+                      bg="panelBlockBgColor"
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="customBorder"
+                      maxH="200px"
+                      overflowY="auto"
+                      css={{ scrollbarWidth: 'thin' }}
+                      position="relative"
+                    >
+                      <Text
+                        fontSize="xs"
+                        color={copied ? 'green.400' : 'text.muted'}
+                        cursor="pointer"
+                        position="absolute"
+                        top={2}
+                        right={2}
+                        userSelect="none"
+                        onClick={() => this.copyToClipboard(detailText)}
+                        _hover={{
+                          color: copied ? 'green.400' : 'text.secondary',
+                        }}
+                      >
+                        {copied ? '✓ 已复制' : '复制'}
+                      </Text>
+                      <Text
+                        as="pre"
+                        fontSize="11px"
+                        fontFamily="'SF Mono',Monaco,Menlo,Consolas,monospace"
+                        color="text.default"
+                        whiteSpace="pre-wrap"
+                        wordBreak="break-all"
+                        lineHeight="1.5"
+                        m={0}
+                      >
+                        {detailText}
+                      </Text>
+                    </Box>
+                  </Collapse>
+                </Box>
+              )}
+            </Flex>
           </Box>
-        )}
-      </Flex>
+        </Flex>
+      </>
     );
   }
 }

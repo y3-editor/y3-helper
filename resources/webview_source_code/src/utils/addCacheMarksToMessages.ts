@@ -31,9 +31,10 @@ export default function addCacheMarksToMessages(messages: ChatMessage[]): ChatMe
     }
   }
 
-  // Breakpoints 3-4: 最后一条 user + 最后一条 non-system（重叠时回退到前一条 non-system）AIGW / Anthropic
+  // Breakpoints 3-4: 最后一条 user + 最后一条 non-system（重叠时回退到前一条 non-system）AIGW
   const conversationIndexes: number[] = [];
   const lastUserIndex = findLastIndex(sendMessages, (m) => m.role === "user");
+  // const lastUserIndex = -1;
   const lastNonSystemIndex = findLastIndex(sendMessages, (m) => m.role !== "system");
 
   if (lastUserIndex !== -1) {

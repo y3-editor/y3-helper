@@ -11,13 +11,14 @@ import {
   AgentSource,
   AgentSourceConfig,
 } from './types';
-// Y3 适配：用 console 替代上游的 printLog / getErrorMessage / getWebviewProvider
-const printLog = (...args: any[]) => console.log(...args);
-const getErrorMessage = (err: any): string => err?.message || String(err);
-
-// Y3 适配：无 EXCLUDED_DIRECTORIES 常量，使用内联默认值
-const EXCLUDED_DIRECTORIES = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt', '__pycache__']);
+const printLog = (...args: any[]) => console.log('[AgentsHandler]', ...args);
+const getErrorMessage = (e: any) => (e instanceof Error ? e.message : String(e));
 import AgentMdcParser from './parser';
+
+const EXCLUDED_DIRECTORIES = new Set([
+  'node_modules', '.git', '.svn', '.hg',
+  'dist', 'build', 'out', '.next', '.nuxt',
+]);
 
 // Agent 来源配置 - 按优先级顺序（后加载覆盖先加载）
 const AGENT_SOURCES: AgentSourceConfig[] = [
@@ -88,8 +89,8 @@ export class AgentsHandler {
 
       await this.loadAgents();
 
-      // 同步到 webview
-      this.syncAgents();
+      // 同步到 webview（Y3: 初始化时不主动推送，等 webview 请求时再同步）
+      // this.syncAgents();
 
       if (this.enableWatcher) {
         await this.initializeFileWatcher();
@@ -444,19 +445,15 @@ export class AgentsHandler {
 
   /**
    * 同步 agents 到 webview
+   * Y3: 通过 webviewProvider 实例的 _sendToWebview 发送
    */
-  public syncAgents(_panelId?: string): void {
-    try {
-      const { webviewProvider } = require('../../../codemaker/index');
-      if (webviewProvider) {
-        const agents = this.getAgentIndex();
-        webviewProvider.sendMessage({
-          type: 'SYNC_AGENTS',
-          data: agents  // 发送索引项 (name + description + source + instructions + usage)
-        });
-      }
-    } catch (error: any) {
-      console.log('[AgentsHandler] syncAgents failed:', error?.message);
+  public syncAgents(webviewProvider?: any, panelId?: string): void {
+    if (webviewProvider && webviewProvider._sendToWebview) {
+      const agents = this.getAgentIndex();
+      webviewProvider._sendToWebview({
+        type: 'SYNC_AGENTS',
+        data: agents,
+      });
     }
   }
 
@@ -495,5 +492,6 @@ export class AgentsHandler {
 export function getAgentsHandler(options?: AgentsHandlerOptions): AgentsHandler {
   return AgentsHandler.getInstance(options);
 }
+
 
 export default AgentsHandler;

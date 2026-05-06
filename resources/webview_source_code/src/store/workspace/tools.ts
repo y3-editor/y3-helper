@@ -7,6 +7,7 @@ import { generateCodewikiStructure } from "./tools/codewiki";
 import { Tool as PlanTool } from "./tools/plan";
 import { getV2ReadFileToolZHTool } from "./tools/read";
 import { Tool as TodoTool } from "./tools/todo";
+import { getGlobTool } from "./tools/search/glob";
 
 export function getTools(options: {
   workspace: string;
@@ -25,7 +26,12 @@ export function getTools(options: {
     isVSCode,
     codeMakerVersion
   } = options;
-  const { enableCodeMapSearch, enableKnowledgeLibSearch } = useChatConfig.getState();
+  const {
+    enableCodeMapSearch,
+    enableKnowledgeLibSearch,
+    enableGlobSearch,
+    enableGrepSearch
+  } = useChatConfig.getState();
   const enablePlanMode = useChatStore.getState().currentSession()?.data?.enablePlanMode || false;
   const planModeState = useChatStore.getState().currentSession()?.data?.planModeState || 'off';
   const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch;
@@ -98,7 +104,7 @@ export function getTools(options: {
     },
     getV2ReadFileToolZHTool({ hasCodeTable }),
   ];
-  if (enableGrep) {
+  if (enableGrep && enableGrepSearch) {
     tools.push({
       type: 'function',
       function: {
@@ -266,6 +272,13 @@ export function getTools(options: {
 
   if (isVSCode && versionCompare('2.9.9', codeMakerVersion || '') >= 0) {
     tools.push(generateCodewikiStructure({ language: 'zh' }));
+  }
+
+  if (
+    enableGlobSearch &&
+    (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0)
+  ) {
+    tools.push(getGlobTool({ enableSubAgent: false }))
   }
 
   return tools;

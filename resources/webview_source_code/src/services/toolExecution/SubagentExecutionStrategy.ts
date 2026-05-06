@@ -101,6 +101,7 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
       'view_source_code_definitions_top_level',
       'search_files',
       'grep_search',
+      'glob_search',
       'retrieve_code',
       'retrieve_knowledge',
     ];
@@ -154,6 +155,7 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
       'view_source_code_definitions_top_level',
       'search_files',
       'grep_search',
+      'glob_search',
       'retrieve_code',
       'retrieve_knowledge',
     ];

@@ -11,6 +11,7 @@ import { getV2ReadFileTool } from './tools/read';
 import { Tool as TodoTool } from './tools/todo';
 import { Tool as AskUserQuestionTool } from './tools/askUserQuestion';
 import { getTaskTool } from './tools/task';
+import { getGlobTool } from './tools/search/glob';
 
 export function getToolsEN(options: {
   workspace: string;
@@ -35,6 +36,8 @@ export function getToolsEN(options: {
     enableEditableMode,
     enableSkills,
     enableUserQuestion,
+    enableGlobSearch,
+    enableGrepSearch,
     autoApply,
     autoExecute,
   } = useChatConfig.getState();
@@ -196,7 +199,7 @@ export function getToolsEN(options: {
       },
     });
   }
-  if (enableGrep) {
+  if (enableGrep && enableGrepSearch) {
     tools.push({
       type: 'function',
       function: {
@@ -483,10 +486,17 @@ Critical rules:
     tools.push(AskUserQuestionTool);
   }
 
+  const enableSubAgent = autoApply && autoExecute && useExtensionStore.getState().subagentEnable;
   // Only inject task tool when autoApply, autoExecute are enabled AND subagent functionality is enabled
-  if (autoApply && autoExecute && useExtensionStore.getState().subagentEnable) {
+  if (enableSubAgent) {
     tools.unshift(getTaskTool());
   }
 
+  if (
+    enableGlobSearch &&
+    (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0)
+  ) {
+    tools.push(getGlobTool({ enableSubAgent }));
+  }
   return tools;
 }

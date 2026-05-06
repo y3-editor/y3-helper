@@ -50,6 +50,7 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isFavoriting, setIsFavoriting] = React.useState(false);
   const currentSession = useChatStore((state) => state.currentSession());
+  const chatType = useChatStore((state) => state.chatType);
 
   const { toast } = useCustomToast();
 
@@ -364,7 +365,7 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
       });
 
       // 刷新会话列表，让收藏会话出现在历史列表中
-      mutateService(requestChatSessions);
+      mutateService(requestChatSessions, [chatType], {});
 
       handleClose();
     } catch (error) {

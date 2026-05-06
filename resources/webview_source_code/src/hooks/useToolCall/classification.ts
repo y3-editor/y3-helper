@@ -83,13 +83,17 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
         tool.function.name === 'ask_user_question'
       ) || false,
 
+      hasGlobSearch: message.tool_calls?.some((tool) =>
+        tool.function.name === 'glob_search'
+      ) || false,
+
       hasTerminalTool,
       hasDangerousCommand,
 
       isFileRelatedTool: message.tool_calls?.some((tool) =>
         ['read_file', 'list_dir', 'list_files_top_level', 'list_files_recursive',
-         'search_files', 'grep_search', 'edit_file', 'reapply', 'replace_in_file', 'write_to_file']
-        .includes(tool.function.name)
+          'search_files', 'grep_search', 'glob_search', 'edit_file', 'reapply', 'replace_in_file', 'write_to_file']
+          .includes(tool.function.name)
       ) || false,
 
       hasTaskTool: hasTaskTools,
@@ -161,6 +165,6 @@ function getToolType(toolName: string): string {
   if (toolName === 'ask_user_question') return 'question';
   if (toolName === 'use_skill') return 'skill';
   if (['read_file', 'list_dir', 'list_files_top_level', 'list_files_recursive',
-       'search_files', 'grep_search', 'write_to_file'].includes(toolName)) return 'file';
+    'search_files', 'grep_search', 'glob_search', 'write_to_file'].includes(toolName)) return 'file';
   return 'other';
 }

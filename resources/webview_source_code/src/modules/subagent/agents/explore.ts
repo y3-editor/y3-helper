@@ -25,6 +25,7 @@ export const EXPLORE_AGENT: Agent = {
     'view_source_code_definitions_top_level',
     'read_file',
     'grep_search',
+    'glob_search',
     'retrieve_code',
     'retrieve_knowledge',
   ],

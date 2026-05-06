@@ -16,7 +16,8 @@ export function useToolCallTitle(
   hasMakePlanTool: boolean,
   hasAskUserQuestionTool: boolean,
   hasListFilesTool: boolean,
-  hasReadFileTool: boolean
+  hasReadFileTool: boolean,
+  hasGlobSearch: boolean,
 ): ToolCallTitleInfo {
   const toolCallTitle = useMemo(() => {
     if (!message.tool_calls || message.tool_calls.length === 0) {
@@ -25,17 +26,18 @@ export function useToolCallTitle(
     // 使用第一个工具调用来生成标题
     const firstTool = message.tool_calls[0];
     return getToolCallQuery(firstTool.function.name, firstTool.function.arguments || '');
-  }, [message.tool_calls]);
+  }, [message.tool_calls]) as string;
 
   const shouldShowHeader = useMemo(() => {
     return !hasEditFileTool &&
-           !hasTerminalTool &&
-           !hasMCPTool &&
-           !hasToolCallError &&
-           !hasMakePlanTool &&
-           !hasAskUserQuestionTool &&
-           !hasListFilesTool &&
-           !hasReadFileTool;
+      !hasTerminalTool &&
+      !hasMCPTool &&
+      !hasToolCallError &&
+      !hasMakePlanTool &&
+      !hasAskUserQuestionTool &&
+      !hasListFilesTool &&
+      !hasGlobSearch &&
+      !hasReadFileTool;
   }, [
     hasEditFileTool,
     hasTerminalTool,
@@ -44,7 +46,8 @@ export function useToolCallTitle(
     hasMakePlanTool,
     hasAskUserQuestionTool,
     hasListFilesTool,
-    hasReadFileTool
+    hasReadFileTool,
+    hasGlobSearch,
   ]);
 
   return {

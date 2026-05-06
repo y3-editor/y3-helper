@@ -1,7 +1,6 @@
 import * as yaml from 'yaml';
 import { AgentMetaData } from './types';
-// Y3 适配
-const getErrorMessage = (err: any): string => err?.message || String(err);
+const getErrorMessage = (e: any) => (e instanceof Error ? e.message : String(e));
 
 /**
  * Agent MDC文件解析结果
@@ -242,5 +241,6 @@ export class AgentMdcParser {
     return result.success ? result.metaData : null;
   }
 }
+
 
 export default AgentMdcParser;

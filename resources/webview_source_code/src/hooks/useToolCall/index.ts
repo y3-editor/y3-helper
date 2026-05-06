@@ -77,6 +77,7 @@ export function useToolCall(
     toolTypeChecks.hasAskUserQuestionTool,
     toolTypeChecks.hasListFilesTool,
     toolTypeChecks.hasReadFileTool,
+    toolTypeChecks.hasGlobSearch,
   );
 
   // 7. 更新函数

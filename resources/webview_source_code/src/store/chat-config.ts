@@ -146,6 +146,10 @@ interface ChatConfigStore {
   setEnableUserQuestion: (enableUserQuestion: boolean) => void;
   enableDevspaceConfig: boolean; // DevSpace 工具
   setEnableDevspaceConfig: (enableDevspaceConfig: boolean) => void;
+  enableGlobSearch: boolean; // Glob 文件检索工具
+  setEnableGlobSearch: (enableGlobSearch: boolean) => void;
+  enableGrepSearch: boolean; // Grep 内容检索工具
+  setEnableGrepSearch: (enableGrepSearch: boolean) => void;
 
   compressConfig: {
     enable: boolean;
@@ -279,6 +283,18 @@ export const useChatConfig = create<ChatConfigStore>()(
           enableDevspaceConfig: enable
         }))
       },
+      enableGlobSearch: true,
+      setEnableGlobSearch: (enable: boolean) => {
+        set(() => ({
+          enableGlobSearch: enable
+        }))
+      },
+      enableGrepSearch: true,
+      setEnableGrepSearch: (enable: boolean) => {
+        set(() => ({
+          enableGrepSearch: enable
+        }))
+      },
     }),
     {
       name: 'codechat-config',
@@ -297,6 +313,8 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableSkills: state.enableSkills,
         enableUserQuestion: state.enableUserQuestion,
         enableDevspaceConfig: state.enableDevspaceConfig,
+        enableGlobSearch: state.enableGlobSearch,
+        enableGrepSearch: state.enableGrepSearch,
       }),
     },
   ),

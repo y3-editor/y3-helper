@@ -33,6 +33,8 @@ export type ChatHistoryGetterParams = Partial<{
   topic?: string;
   chat_type?: ChatType;
   is_favorite?: boolean;
+  chat_repo?: string;
+  exclude_chat_repo?: string;
 }>;
 
 export async function getHistories(
@@ -46,13 +48,6 @@ export async function getHistories(
     params,
     signal,
   });
-  return data;
-}
-
-export async function preloadSessionData(id: string) {
-  const { data } = await axios.get<ChatSession>(
-    '/proxy/gpt/chat/chat_histories/' + id,
-  );
   return data;
 }
 
@@ -94,20 +89,33 @@ export async function removeSession(id: string) {
 }
 
 export async function updateSession(
-  data: Pick<ChatSession, '_id'> & Partial<Pick<ChatSession, 'topic' | 'data' | 'chat_workspace' | 'chat_repo'>>,
+  data: Pick<ChatSession, '_id'> &
+    Partial<
+      Pick<ChatSession, 'topic' | 'data' | 'chat_workspace' | 'chat_repo'>
+    >,
 ) {
   return await codemakerChatHistoryRequest.put(
     `/chat_histories/${data._id}`,
     data,
   );
 }
-export async function updateSessionTopic(
-  id: string, topic: string,
+
+export async function patchSession(
+  data: Pick<ChatSession, '_id'> &
+    Partial<
+      Pick<ChatSession, 'topic' | 'chat_workspace' | 'chat_repo'>
+    >,
 ) {
-  return await codemakerChatHistoryRequest.put(
-    `/chat_histories/${id}`,
-    { topic: topic },
-  );
+   return await codemakerChatHistoryRequest.patch(
+     `/chat_histories/${data._id}`,
+     data,
+   );
+}
+
+export async function updateSessionTopic(id: string, topic: string) {
+  return await codemakerChatHistoryRequest.patch(`/chat_histories/${id}`, {
+    topic: topic,
+  });
 }
 
 export async function countTokens(
@@ -178,6 +186,14 @@ export interface GPTResponse {
 export async function fetchGptResponse(event: string, params: ChatPromptBody) {
   const { data } = await codemakderChatGptRequest.post<GPTResponse>(
     `/text_chat/${event}`,
+    params,
+  );
+  return data;
+}
+
+export async function fetchCodebaseGptResponse(event: string, params: ChatPromptBody) {
+  const { data } = await codemakderChatGptRequest.post<GPTResponse>(
+    `/codebase_text_chat/${event}`,
     params,
   );
   return data;

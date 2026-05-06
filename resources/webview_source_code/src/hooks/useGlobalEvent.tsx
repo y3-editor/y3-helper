@@ -3,6 +3,7 @@ import EventBus, { EBusEvent } from "../utils/eventbus";
 import useCustomToast from "./useCustomToast";
 import { useChatStore } from "../store/chat";
 import { ChatRole } from "../types/chat";
+import { getErrorMessage } from "../utils";
 
 
 export function useGlobalEvent() {
@@ -13,7 +14,7 @@ export function useGlobalEvent() {
   const [loading, setLoading] = useState(false);
 
 
-  const onCreateNewSession = useCallback(async() => {
+  const onCreateNewSession = useCallback(async () => {
     try {
       if (hasClickRef.current) return
       setLoading(true)
@@ -50,10 +51,10 @@ export function useGlobalEvent() {
           position: 'top',
         })
       }
-    } catch(e) {
+    } catch (e) {
       closeAll()
       toast({
-        description: '当前会话历史消息过多，会话保存失败',
+        description: getErrorMessage(e) || '当前会话消息太多，请手动新建会话继续聊天',
         status: 'error',
         duration: 3000,
         isClosable: true,

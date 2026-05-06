@@ -23,6 +23,7 @@ import { createNewSession } from '../../../utils/chat';
 import { useFilteredAttach } from '../ChatTypeAhead/Attach/Hooks/useFilteredAttach';
 import { useChatConfig } from '../../../store/chat-config';
 import { DateFormat } from '../../../utils';
+import CompressionSummary from './CompressionSummary';
 
 export default function ChatUserMessage(
   props: ChatMessageProps & {
@@ -34,7 +35,6 @@ export default function ChatUserMessage(
 ) {
   const { message, isShare, selectedMessageIds, onToggleMessage } = props;
   const username = useAuthStore((state) => state.username);
-  const displayName = useAuthStore((state) => state.displayName);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isSearching = useChatStreamStore((state) => state.isSearching);
 
@@ -267,7 +267,7 @@ export default function ChatUserMessage(
         }
       </Box>
     ) : null;
-  }, [isShowAction, isOpen, isShare, isStreaming, isSearching, message.isCompressed, message.checkPointFiles, message._originalRequestData?.attachs, props, content, chatType, updateAttachs, enableKnowledgeLibSearch, enableCodeMapSearch, filterAttachHook, handleNewSession, postMessage]);
+  }, [isShowAction, isOpen, isShare, isStreaming, isSearching, message.checkPointFiles, message._originalRequestData?.attachs, props, content, chatType, updateAttachs, enableKnowledgeLibSearch, enableCodeMapSearch, filterAttachHook, handleNewSession, postMessage]);
 
   const renderMultiAttach = useCallback((attach: MultipleAttach) => {
     if (attach.type !== ChatMessageAttachType.MultiAttachment) return null
@@ -363,18 +363,7 @@ export default function ChatUserMessage(
   }, [])
 
   if (isCompressionSummary) {
-    return (
-      <Box
-        textAlign="center"
-        fontSize="xs"
-        color="gray.400"
-        opacity={0.5}
-        my={2}
-        userSelect="none"
-      >
-        Memory: 上文信息已总结
-      </Box>
-    );
+    return <CompressionSummary message={message} />;
   }
 
   return (
@@ -415,19 +404,33 @@ export default function ChatUserMessage(
               setIsShowAction(false);
             }}
           >
-            <Flex gap={2} h={8} alignItems="center" justifyContent="space-between">
-              <Box display="flex" alignItems="center">
+            <Flex gap={2} h={8} alignItems="center">
+              <Box display="flex" alignItems="center" flexShrink={0}>
                 <Avatar w="16px" h="16px" src={UserImg} mr="2" />
-                <Box flex={1} color="text.secondary" fontSize="12px">
-                  {displayName || username}
+                <Box color="text.secondary" fontSize="12px" whiteSpace="nowrap">
+                  {username}
                 </Box>
-                {sentAtText && (
-                  <Box color="text.tertiary" fontSize="11px" ml={2} flexShrink={0}>
-                    {sentAtText}
-                  </Box>
-                )}
               </Box>
-              <Box>{renderAction}</Box>
+              {isShowAction && sentAtText && (
+                <Tooltip label={sentAtText}>
+                  <Box
+                    color="text.muted"
+                    fontSize="12px"
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                    minW="0"
+                    dir="rtl"
+                  >
+                    <span style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}>
+                      {sentAtText}
+                    </span>
+                  </Box>
+                </Tooltip>
+              )}
+              <Box flex="0 0 auto" ml="auto">
+                {renderAction}
+              </Box>
             </Flex>
             <Box
               className="mx-0 p-2 px-0"

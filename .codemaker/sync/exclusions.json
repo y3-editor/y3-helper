@@ -74,7 +74,10 @@
     "src/utils/specVersionUtils.ts": "[OpenSpec] 版本检测工具，Y3不需要",
     "src/components/FeatureTour/": "[多会话/引导] 功能引导系统，所有tour都不适用于Y3",
     "src/components/Icon/ParallelSessionIcon.tsx": "[多会话] 并行会话图标，Y3不需要",
-    "src/routes/CodeChat/ChatModelSelector.tsx": "Y3不需要模型选择功能，固定使用VSCode Settings中的模型配置"
+    "src/routes/CodeChat/ChatModelSelector.tsx": "Y3不需要模型选择功能，固定使用VSCode Settings中的模型配置",
+    "src/utils/initInsideServer.ts": "CodeMaker内置服务端初始化，Y3用自己写的api-server，不需要",
+    "src/utils/serverRoutes.ts": "CodeMaker内置服务端路由定义，Y3用自己写的api-server，不需要",
+    "src/utils/swaggerUI.ts": "CodeMaker内置服务端Swagger文档UI，Y3用自己写的api-server，不需要"
   },
   "excluded_upstream_files_notes": {
     "_description": "以下记录同步时需要注意的文件级别排除或特殊处理，防止重复踩坑",
@@ -101,6 +104,20 @@
     "src/handlers/skillsHandler/index.ts__uploadLocalSkill": "SKIP: Y3没有uploadLocalSkill功能（本地Skill文件导入），相关改动（Base64解码、smartDecode、encoding.ts、文案'上传→导入'）全部跳过",
     "src/utils/encoding.ts": "SKIP: smartDecode工具函数仅供uploadLocalSkill使用，Y3不需要",
     "src/routes/CodeChat/ChatModelSelector.tsx": "SKIP: Y3不需要模型选择器UI，模型从VSCode Settings读取。但chatModel.ts中的类型定义和枚举值可以合",
-    "src/provider/webviewProvider/index.ts__getUserModels": "SKIP: getUserModels接口是给模型选择器用的，Y3不需要"
+    "src/provider/webviewProvider/index.ts__getUserModels": "SKIP: getUserModels接口是给模型选择器用的，Y3不需要",
+    "_separator_20260506_lessons": "── 2026-05-06 合并经验 ──",
+    "src/utils/initInsideServer.ts": "SKIP: CodeMaker内置服务端初始化，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
+    "src/utils/serverRoutes.ts": "SKIP: CodeMaker内置服务端路由定义，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
+    "src/utils/swaggerUI.ts": "SKIP: CodeMaker内置服务端Swagger文档UI，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
+    "src/utils/file.ts (extension)": "SKIP: Y3的file.ts是精简版，没有createTempFile函数。上游createTempFile改用系统临时目录的改动对Y3不适用，不要覆盖整个文件",
+    "src/handlers/agentsHandler/": "REVIEW: Y3需要创建此目录（index.ts/types.ts/parser.ts），但需适配：1) printLog→console.log 2) getErrorMessage→内联 3) getWebviewProvider→通过参数传入 4) EXCLUDED_DIRECTORIES→内联定义 5) syncAgents→通过webviewProvider._sendToWebview发送",
+    "src/codemaker/webviewProvider.ts__glob_search": "REVIEW: 新增glob_search工具case和_toolGlobSearch方法。Y3的webviewProvider.ts结构不同，需手动添加而非覆盖",
+    "src/codemaker/utils/file.ts__覆盖风险": "WARNING: 不要用上游完整文件覆盖Y3的file.ts。Y3版本是精简版，import路径不同。只应用具体diff",
+    "src/codemaker/webviewProvider.ts__agentsHandler_import": "FIX: import路径需用'./handlers/agentsHandler/index.js'而非'./handlers/agentsHandler.js'（Y3的moduleResolution要求显式扩展名+完整路径）",
+    "src/codemaker/messageHandlers.ts__agentsHandler_import": "FIX: 同上，import路径需用'./handlers/agentsHandler/index.js'",
+    "_rule_docs_commits": "规则: docs: 开头的commit通常只涉及openspec文档归档，代码改动（如ChatHistories移除搜索字段选择器）需单独判断。本次跳过0c9c7c85",
+    "_rule_feat_commits": "规则: feat: 开头的commit需询问用户确认。fix:/refactor:/style:/chore: 通常直接合并",
+    "_rule_extension_builtin_server": "规则: extension中涉及内置服务端（initInsideServer/serverRoutes/swaggerUI）的文件，Y3用自己api-server，全部SKIP",
+    "_rule_compile_after_each_batch": "规则: 每批合并后必须编译验证（tsc --noEmit），发现错误立即修复，不要积累到verify阶段"
   }
 }

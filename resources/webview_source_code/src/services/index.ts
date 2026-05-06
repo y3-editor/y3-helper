@@ -13,6 +13,7 @@ import { ChatRole } from '../types/chat';
 import { Tool } from '../store/workspace';
 
 import type { CompressionMetadata } from '../types/contextCompression';
+import type { ConsumedTokens } from '../utils/consumedTokensCalculator';
 
 // message 状态
 export enum ChatStatus {
@@ -288,6 +289,8 @@ export interface ChatMessage {
   isAutoCompressingMessage?: boolean
   /** updateConsumedTokens 调用后的会话累计 token 快照，用于计算每轮增量 */
   consumedTokensTotal?: number;
+  /** updateConsumedTokens 调用后的会话累计 consumedTokens 完整快照，用于计算每轮各维度增量 */
+  consumedTokensSnapshot?: ConsumedTokens;
 
   rules?: {
     name: string;

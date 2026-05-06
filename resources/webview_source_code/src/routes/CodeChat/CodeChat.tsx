@@ -409,7 +409,7 @@ function CodeChat() {
   //   );
   // }, [currentSession, sessionIDs, length]);
 
-  const { data, isLoading } = useService(requestChatSessions, {
+  const { data, isLoading } = useService(requestChatSessions, [chatType], {
     revalidateOnFocus: chatType !== 'codebase',
   });
 
@@ -2312,8 +2312,11 @@ function CodeChat() {
         if (messages && Array.isArray(messages) && messages.length > 0) {
           const message = messages[messages.length - 1].content;
           if (sessionId) {
-            await selectSession(sessionId);
-          } else {
+            const currentId = useChatStore.getState().currentSessionId;
+            if (currentId !== sessionId) {
+              await selectSession(sessionId);
+            }
+          } else if (!useChatStore.getState().currentSessionId) {
             await onNewSession(undefined, {
               chat_source: 'remote',
               raw_user: triggerer,

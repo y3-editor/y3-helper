@@ -7,9 +7,20 @@
  *  - vite:preloadError — Vite __vitePreload 包装的 import 失败
  *  - unhandledrejection — 未被 catch 的 import() 失败
  *  - onChunkLoadError() — 业务代码已 catch 但仍需处理的场景
+ *
+ * 注意：vite:preloadError 不调用 preventDefault()，让错误继续传播到
+ * React.lazy → ErrorBoundary，由 ErrorBoundary 统一决定渲染策略。
+ * 这里只负责弹 toast 提示用户。
  */
 
-import { showChunkErrorDialog } from './chunkErrorDialog';
+import { createStandaloneToast } from '@chakra-ui/react';
+
+const { toast } = createStandaloneToast();
+const CHUNK_TOAST_ID = 'chunk-error-toast';
+
+/** 去重时间窗（ms），同一窗口内多源触发只弹一次 toast */
+const DEDUP_WINDOW_MS = 1000;
+let lastToastTime = 0;
 
 // 跨浏览器错误消息匹配
 const CHUNK_ERROR_PATTERNS = [
@@ -23,8 +34,6 @@ const CHUNK_ERROR_PATTERNS = [
   'Loading CSS chunk',                           // Webpack legacy CSS
 ] as const;
 
-let handled = false;
-
 export function isChunkLoadError(error: unknown): boolean {
   const message =
     error instanceof Error
@@ -36,7 +45,7 @@ export function isChunkLoadError(error: unknown): boolean {
 }
 
 /**
- * 格式化错误诊断信息（供弹窗 / ErrorBoundary 共用）
+ * 格式化错误诊断信息（供 ErrorBoundary 共用）
  */
 export function formatErrorDetail(error: unknown): string {
   const lines = [
@@ -56,16 +65,39 @@ export function formatErrorDetail(error: unknown): string {
   return lines.join('\n');
 }
 
+/**
+ * 弹出 chunk 错误 toast（幂等）。
+ * 通过 toast.isActive + 时间窗双重去重，避免多源竞态下重复弹出。
+ * 全局处理器 & ErrorBoundary 共用此函数，保证单实例 toast manager。
+ */
+export function showChunkToast(): void {
+  const now = Date.now();
+  if (now - lastToastTime < DEDUP_WINDOW_MS) return;
+  if (toast.isActive(CHUNK_TOAST_ID)) return;
+
+  lastToastTime = now;
+  toast({
+    id: CHUNK_TOAST_ID,
+    title: '应用已更新',
+    description: '检测到新版本已发布，请刷新页面以获取最新功能。',
+    status: 'warning',
+    duration: 5000,
+    isClosable: true,
+    position: 'top',
+  });
+}
+
+/**
+ * chunk 错误统一处理入口：日志 + toast。
+ */
 function handleChunkError(error: unknown): void {
-  if (handled) return;
-  handled = true;
   console.error('[ChunkError]', error);
-  showChunkErrorDialog(error);
+  showChunkToast();
 }
 
 /**
  * 供业务代码在 catch 块中主动调用。
- * 仅当 error 匹配 chunk 加载失败模式时触发弹窗。
+ * 仅当 error 匹配 chunk 加载失败模式时触发 toast。
  *
  * @example
  * import('tiktoken').catch(onChunkLoadError);
@@ -76,20 +108,27 @@ export function onChunkLoadError(error: unknown): void {
   }
 }
 
+let installed = false;
+
 /**
- * 安装全局 chunk 错误处理器（必须在 ReactDOM.createRoot 之前调用）
+ * 安装全局 chunk 错误处理器（必须在 ReactDOM.createRoot 之前调用，仅安装一次）
+ *
+ * - vite:preloadError：只弹 toast，不 preventDefault()，让错误继续传播到 React ErrorBoundary
+ * - unhandledrejection：对于未被 React 捕获的 chunk error（如非 lazy 的 import），弹 toast 并阻止控制台报错
  */
 export function installChunkErrorHandler(): void {
+  if (installed) return;
+  installed = true;
+
   window.addEventListener('vite:preloadError', (event: Event) => {
-    (event as Event & { preventDefault(): void }).preventDefault();
-    handleChunkError(
-      (event as Event & { payload?: Error }).payload || event,
-    );
+    const error = (event as Event & { payload?: Error }).payload || event;
+    handleChunkError(error);
+    // 不调用 preventDefault()，让错误继续传播到 React.lazy → ErrorBoundary
   });
 
   window.addEventListener('unhandledrejection', (event) => {
     const { reason } = event;
-    if (reason instanceof Error && isChunkLoadError(reason)) {
+    if (isChunkLoadError(reason)) {
       event.preventDefault();
       handleChunkError(reason);
     }

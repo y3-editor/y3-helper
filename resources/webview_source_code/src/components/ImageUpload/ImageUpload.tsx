@@ -22,9 +22,10 @@ const quality = 0.8;
 // eslint-disable-next-line react-refresh/only-export-components
 export const compressImage = (file: File): Promise<File> => {
   return new Promise((resolve) => {
-    if (file.size <= maxFileSize && file.type === 'image/jpeg') {
-      resolve(file);
-    } else if (file.type === 'image/gif') {
+    // if (file.size <= maxFileSize && file.type === 'image/jpeg') {
+    //   resolve(file);
+    // } else
+    if (file.type === 'image/gif') {
       resolve(file);
     } else {
       const imageUrl = URL.createObjectURL(file);
@@ -80,7 +81,7 @@ export const compressImage = (file: File): Promise<File> => {
           resolve(file)
         }
         img.src = imageUrl;
-      } catch(e) {
+      } catch (e) {
         URL.revokeObjectURL(imageUrl)
         resolve(file)
       }

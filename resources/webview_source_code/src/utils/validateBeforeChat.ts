@@ -8,6 +8,7 @@ import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import { PromptCategoryType } from '../services/prompt';
 import { BUILT_IN_PROMPTS } from '../services/builtInPrompts';
+import { CODE_QUALITY_AUTOFIX_PROMPT_APP } from '../routes/CodeChat/ChatTypeAhead/Prompt/useUserPrompt';
 import { parseMentions } from './chatMention';
 import { ChatModelSupplyChannel, getModelSupplyChannel, useChatConfig } from '../store/chat-config';
 import { ChatModel, IChatModelConfig } from '../services/chatModel';
@@ -101,7 +102,7 @@ export const serializeCodebaseMessages = async (
 ) => {
   const filteredMessages: ChatMessage[] = [];
 
-  let toolContents: ChatMessageContentUnion[] = [] // 工具内容
+  let toolContents = [] // 工具内容
 
   for (let i = 0; i < sendMessages.length; i++) {
     const message = cloneDeep(sendMessages[i]);
@@ -154,6 +155,10 @@ export const serializeCodebaseMessages = async (
             prompt.name === message.systemPrompt?.name
           )) {
             message.content[0].text = message.systemPrompt.prompt
+          } else if (message.systemPrompt?._id === CODE_QUALITY_AUTOFIX_PROMPT_APP._id) {
+            // 质量修复：将系统 prompt 与用户上下文（codeBlock）拼接后发送给 AI
+            // 用户在聊天气泡中只看到上下文内容，系统 prompt 不会暴露
+            message.content[0].text = message.systemPrompt.prompt + '\n\n' + (message.systemPrompt.codeBlock || '')
           } else {
             message.content[0].text = `<user_query>${message.content[0].text}</user_query>`
           }
@@ -470,50 +475,50 @@ export const clearContextWithUnrelatedProperties = (
 export const repairToolIdOfMessages = (messages: ChatMessage[], usedModel: string) => {
   if (!usedModel) return messages
 
-  let hasRepairTool = false
-  // Claude系列
-  if (usedModel.toLocaleLowerCase().includes('claude')) {
+  // let hasRepairTool = false
+  // // Claude系列
+  // if (usedModel.toLocaleLowerCase().includes('claude')) {
 
-    const generateValidToolId = (length = 24) => {
-      const prefix = "toolu_bdrk_";
-      const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      let randomPart = "";
-      for (let i = 0; i < length; i++) {
-        randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-      return `${prefix}${randomPart}`;
-    }
-    const toolIdRegex = /^toolu_bdrk_[a-zA-Z0-9]{24}$/;
-    const idMap: Record<string, string> = {};
+  //   const generateValidToolId = (length = 24) => {
+  //     const prefix = "toolu_bdrk_";
+  //     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  //     let randomPart = "";
+  //     for (let i = 0; i < length; i++) {
+  //       randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
+  //     }
+  //     return `${prefix}${randomPart}`;
+  //   }
+  //   const toolIdRegex = /^toolu_bdrk_[a-zA-Z0-9]{24}$/;
+  //   const idMap: Record<string, string> = {};
 
-    for (const message of messages) {
-      if (message.role === ChatRole.Assistant && Array.isArray(message.tool_calls)) {
-        for (const toolCall of message.tool_calls) {
-          const originalId = toolCall.id;
-          if (!originalId || !toolIdRegex.test(originalId)) {
-            const newId = generateValidToolId();
-            hasRepairTool = true
-            if (originalId) {
-              idMap[originalId] = newId;
-            }
-            toolCall.id = newId;
-          }
-        }
-      } else if (message.role === ChatRole.Tool && message?.tool_call_id && idMap[message?.tool_call_id]) {
-        message.tool_call_id = idMap[message.tool_call_id];
-      }
-    }
-  }
+  //   for (const message of messages) {
+  //     if (message.role === ChatRole.Assistant && Array.isArray(message.tool_calls)) {
+  //       for (const toolCall of message.tool_calls) {
+  //         const originalId = toolCall.id;
+  //         if (!originalId || !toolIdRegex.test(originalId)) {
+  //           const newId = generateValidToolId();
+  //           hasRepairTool = true
+  //           if (originalId) {
+  //             idMap[originalId] = newId;
+  //           }
+  //           toolCall.id = newId;
+  //         }
+  //       }
+  //     } else if (message.role === ChatRole.Tool && message?.tool_call_id && idMap[message?.tool_call_id]) {
+  //       message.tool_call_id = idMap[message.tool_call_id];
+  //     }
+  //   }
+  // }
 
-  if (hasRepairTool) {
-    webToolsHub.withScope((scope) => {
-      scope.setExtras({
-        event: UserEvent.FIX_CLAUDE_TOOL_ID,
-        model: usedModel,
-      });
-      webToolsLogger.captureMessage('');
-    });
-  }
+  // if (hasRepairTool) {
+  //   webToolsHub.withScope((scope) => {
+  //     scope.setExtras({
+  //       event: UserEvent.FIX_CLAUDE_TOOL_ID,
+  //       model: usedModel,
+  //     });
+  //     webToolsLogger.captureMessage('');
+  //   });
+  // }
 
   return messages
 }

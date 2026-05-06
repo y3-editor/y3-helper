@@ -74,7 +74,6 @@ function App() {
   const {
     mode,
     panelId,
-    restoreSessionId,
     isPanelMode,
     initialChatType,
   } = usePanelContext();
@@ -539,37 +538,20 @@ function App() {
           // 使用 URL 参数中的 chatType，默认为 codebase
           const targetChatType = initialChatType || (ide === IDE.VisualStudio ? 'default' : 'codebase');
           setChatType(targetChatType);
-          const currentSessionId = useChatStore.getState().currentSession()?._id;
 
-          if (restoreSessionId) {
-            if (currentSessionId === restoreSessionId) {
-              console.log(
-                `[Panel ${panelId}] Already on session ${restoreSessionId}`,
-              );
-              return;
-            }
-
-            console.log(
-              `[Panel ${panelId}] Restoring session ${restoreSessionId}`,
-            );
-            try {
-              await selectSession(restoreSessionId);
-              console.log(
-                `[Panel ${panelId}] Successfully restored session ${restoreSessionId}`,
-              );
-            } catch (error) {
-              console.error(
-                `[Panel ${panelId}] Failed to restore session ${restoreSessionId}:`,
-                error,
-              );
-              // 恢复失败时创建新会话
-              await onNewSession();
-            }
-            return;
-          }
-
-          console.log(`[Panel ${panelId}] No restoreSessionId, creating new session`);
+          console.log(`[Panel ${panelId}] Creating new session via onNewSession`);
           await onNewSession();
+          const newSessionId = useChatStore.getState().currentSessionId;
+          console.log(`[Panel ${panelId}] Session created: ${newSessionId}`);
+
+          // 通知 Extension session 已就绪
+          postMessage({
+            type: 'WEBVIEW_ACK',
+            data: {
+              event: 'session_ready',
+              payload: { sessionId: newSessionId },
+            },
+          });
           return;
         } else if (mode === 'sidebar' || mode === 'newwindow') {
           // 只做初始化保护（防止 pending replay 重复执行），后续走 workspace_session 或自然初始化
@@ -692,7 +674,7 @@ function App() {
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, restoreSessionId, onNewSession, setShowMcpError]);
+  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, onNewSession, setShowMcpError]);
 
   React.useEffect(() => {
     const pendingChatType = pendingChatTypeRef.current;

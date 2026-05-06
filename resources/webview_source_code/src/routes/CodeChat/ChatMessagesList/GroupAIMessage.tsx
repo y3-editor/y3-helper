@@ -12,6 +12,10 @@ import {
   Button,
   VStack,
   Tooltip,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
   useColorModeValue,
 } from '@chakra-ui/react';
 import CodeMakerLogo from '../../../assets/cmlogo.png';
@@ -38,6 +42,12 @@ import * as React from 'react';
 import { usePrevious } from '../../../hooks/usePrevious';
 import { DateFormat } from '../../../utils';
 import { getToolName } from '../../../utils/toolCall';
+import { useTheme, ThemeStyle } from '../../../ThemeContext';
+import TokenBreakdownPanel, {
+  TOKEN_BREAKDOWN_COLORS,
+} from '../../../components/TokenBreakdownPopover';
+import type { TokenBreakdownItem } from '../../../components/TokenBreakdownPopover';
+import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (
@@ -53,7 +63,10 @@ const getToolCategory = (
   if (toolName === 'read_file') {
     return 'read';
   }
-  if (toolName === 'grep_search') {
+  if (
+    toolName === 'grep_search' ||
+    toolName === 'glob_search'
+  ) {
     return 'search';
   }
   return null;
@@ -360,7 +373,7 @@ function OuterCollapseWrapper({
   const isToolCallGroup = React.useCallback(
     (group: (typeof mergedMessages)[0]) => {
       const firstMessage = group.messages[0];
-      return !!(firstMessage.tool_calls?.length);
+      return !!firstMessage.tool_calls?.length;
     },
     [],
   );
@@ -503,7 +516,7 @@ function OuterCollapseWrapper({
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 display="flex"
                 alignItems="center"
-                // mb="1"
+              // mb="1"
               >
                 {!isCollapsed ? (
                   <Icon as={FaAngleDown} size="xs" />
@@ -771,6 +784,125 @@ export function GroupAIMessage({
     }
   }, [messages]);
 
+  // 基于 consumedTokensSnapshot 计算单轮各维度的 token 增量分布
+  const roundTokenBreakdown = useMemo((): TokenBreakdownItem[] => {
+    try {
+      // 1. 从本轮消息中倒序查找 consumedTokensSnapshot
+      let currentSnapshot: ConsumedTokens | undefined;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].consumedTokensSnapshot) {
+          currentSnapshot = messages[i].consumedTokensSnapshot;
+          break;
+        }
+      }
+      if (!currentSnapshot) return [];
+
+      // 2. 从 store 中查找上一轮的 consumedTokensSnapshot
+      const session = useChatStore.getState().currentSession();
+      const allMessages = session?.data?.messages || [];
+      const firstMsgId = messages[0]?.id;
+
+      let previousSnapshot: ConsumedTokens | undefined;
+      if (firstMsgId) {
+        const idx = allMessages.findIndex((m) => m.id === firstMsgId);
+        if (idx > 0) {
+          for (let j = idx - 1; j >= 0; j--) {
+            if (allMessages[j].consumedTokensSnapshot) {
+              previousSnapshot = allMessages[j].consumedTokensSnapshot;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. 计算各维度增量
+      const prev = previousSnapshot || ({} as Partial<ConsumedTokens>);
+      const delta = (field: keyof ConsumedTokens) =>
+        Math.max(
+          0,
+          ((currentSnapshot![field] as number) || 0) -
+          ((prev[field] as number) || 0),
+        );
+
+      const systemPromptDelta = delta('systemTokens');
+      const systemToolsDelta = delta('systemToolTokens');
+      const inputDelta = delta('input');
+      const outputDelta = delta('output');
+      const messagesDelta = inputDelta + outputDelta;
+      const readCacheDelta = delta('readCacheTokens');
+      const mcpTokensDelta = delta('mcpTokens');
+      const skillTokensDelta = delta('skillTokens');
+      const ruleTokensDelta = delta('ruleTokens');
+
+      const totalDelta =
+        systemPromptDelta +
+        systemToolsDelta +
+        messagesDelta +
+        readCacheDelta +
+        mcpTokensDelta +
+        skillTokensDelta +
+        ruleTokensDelta;
+      if (totalDelta <= 0) return [];
+
+      const pct = (n: number) => (n / totalDelta) * 100;
+
+      const items: TokenBreakdownItem[] = [
+        {
+          name: 'System prompt',
+          tokens: systemPromptDelta,
+          percentage: pct(systemPromptDelta),
+          color: TOKEN_BREAKDOWN_COLORS['System prompt'],
+        },
+        {
+          name: 'System tools',
+          tokens: systemToolsDelta,
+          percentage: pct(systemToolsDelta),
+          color: TOKEN_BREAKDOWN_COLORS['System tools'],
+          tooltip: '当前只有Claude系列模型才支持系统工具定义预览',
+        },
+        {
+          name: 'Messages',
+          tokens: messagesDelta,
+          percentage: pct(messagesDelta),
+          color: TOKEN_BREAKDOWN_COLORS['Messages'],
+        },
+        {
+          name: 'Read Cache',
+          tokens: readCacheDelta,
+          percentage: pct(readCacheDelta),
+          color: TOKEN_BREAKDOWN_COLORS['Read Cache'],
+          tooltip:
+            '目前仅 Claude 系列模型支持请求缓存功能，可缓存的内容包括：系统提示词（SystemPrompt）、系统工具（SystemTools）、上传的文件等。当请求命中缓存时，能有效减少 token 消耗，降低使用成本',
+        },
+        {
+          name: 'Mcp tokens',
+          tokens: mcpTokensDelta,
+          percentage: pct(mcpTokensDelta),
+          color: TOKEN_BREAKDOWN_COLORS['Mcp tokens'],
+        },
+        {
+          name: 'Skill tokens',
+          tokens: skillTokensDelta,
+          percentage: pct(skillTokensDelta),
+          color: TOKEN_BREAKDOWN_COLORS['Skill tokens'],
+        },
+        {
+          name: 'Rule tokens',
+          tokens: ruleTokensDelta,
+          percentage: pct(ruleTokensDelta),
+          color: TOKEN_BREAKDOWN_COLORS['Rule tokens'],
+        },
+      ];
+
+      return items.filter((item) => item.tokens > 0);
+    } catch {
+      return [];
+    }
+  }, [messages]);
+
+  const { activeTheme } = useTheme();
+  const isDark = activeTheme === ThemeStyle.Dark;
+
   const timeInfoText = useMemo(() => {
     const parts: string[] = [];
     if (sentAtText) parts.push(sentAtText);
@@ -778,6 +910,14 @@ export function GroupAIMessage({
     if (roundTokensText) parts.push(roundTokensText);
     return parts.join(' | ') || null;
   }, [sentAtText, durationText, roundTokensText]);
+
+  // 不含 Tokens 的时间信息文本（用于 Popover 模式）
+  const timeInfoWithoutTokens = useMemo(() => {
+    const parts: string[] = [];
+    if (sentAtText) parts.push(sentAtText);
+    if (durationText) parts.push(durationText);
+    return parts.join(' | ') || null;
+  }, [sentAtText, durationText]);
 
   const data = { message, defaultExpanded: isLatest };
 
@@ -801,25 +941,90 @@ export function GroupAIMessage({
             </Box>
           </Box>
           {isShowAction && timeInfoText && (
-            <Tooltip
-              label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}${roundTokensText ? `，本轮消耗: ${roundTokensText}` : ''}`}
-            >
-              <Box
-                color="text.muted"
-                fontSize="12px"
-                whiteSpace="nowrap"
-                overflow="hidden"
-                textOverflow="ellipsis"
-                minW="0"
-                dir="rtl"
-              >
-                <span
-                  style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+            <Flex alignItems="center" gap={0} minW="0" overflow="hidden">
+              {/* 时间和耗时部分 - Tooltip */}
+              {timeInfoWithoutTokens && (
+                <Tooltip
+                  label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
                 >
-                  {timeInfoText}
-                </span>
-              </Box>
-            </Tooltip>
+                  <Box
+                    color="text.muted"
+                    fontSize="12px"
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                    minW="0"
+                  >
+                    {timeInfoWithoutTokens}
+                  </Box>
+                </Tooltip>
+              )}
+              {/* Tokens 部分 - 有快照数据用 Popover，否则用 Tooltip */}
+              {roundTokensText && (
+                <>
+                  {timeInfoWithoutTokens && (
+                    <Box
+                      color="text.muted"
+                      fontSize="12px"
+                      mx="1"
+                      flexShrink={0}
+                    >
+                      |
+                    </Box>
+                  )}
+                  {roundTokenBreakdown.length > 0 ? (
+                    <Popover
+                      trigger="hover"
+                      placement="top"
+                      openDelay={0}
+                      closeDelay={200}
+                    >
+                      <PopoverTrigger>
+                        <Box
+                          color="text.muted"
+                          fontSize="12px"
+                          whiteSpace="nowrap"
+                          cursor="pointer"
+                          _hover={{ color: 'blue.300' }}
+                          transition="color 0.2s"
+                        >
+                          {roundTokensText}
+                        </Box>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        bg={isDark ? '#1E1E1E' : '#FFFFFF'}
+                        border="1px solid"
+                        borderColor={isDark ? '#333333' : '#E5E7EB'}
+                        borderRadius="lg"
+                        width="auto"
+                        minW="240px"
+                        maxW="350px"
+                        boxShadow="xl"
+                        _focus={{ boxShadow: 'xl' }}
+                      >
+                        <PopoverBody px={4} py={3} textAlign="left">
+                          <TokenBreakdownPanel
+                            items={roundTokenBreakdown}
+                            isDark={isDark}
+                            title="本轮 Tokens 消耗详情"
+                          />
+                        </PopoverBody>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Tooltip label={`本轮消耗: ${roundTokensText}`}>
+                      <Box
+                        color="text.muted"
+                        fontSize="12px"
+                        whiteSpace="nowrap"
+                      >
+                        {roundTokensText}
+                      </Box>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+            </Flex>
           )}
           {!isShare && (
             <Box flex="0 0 auto" ml="auto">
@@ -849,25 +1054,88 @@ export function GroupAIMessage({
           !isSubagentProcessing && (
             <Flex gap={2} h={8} mx={4} mb={4} alignItems="center">
               {isShowAction && timeInfoText && (
-                <Tooltip
-                  label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}${roundTokensText ? `，本轮消耗: ${roundTokensText}` : ''}`}
-                >
-                  <Box
-                    color="text.muted"
-                    fontSize="12px"
-                    whiteSpace="nowrap"
-                    overflow="hidden"
-                    textOverflow="ellipsis"
-                    minW="0"
-                    dir="rtl"
-                  >
-                    <span
-                      style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+                <Flex alignItems="center" gap={0} minW="0" overflow="hidden">
+                  {timeInfoWithoutTokens && (
+                    <Tooltip
+                      label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
                     >
-                      {timeInfoText}
-                    </span>
-                  </Box>
-                </Tooltip>
+                      <Box
+                        color="text.muted"
+                        fontSize="12px"
+                        whiteSpace="nowrap"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        minW="0"
+                      >
+                        {timeInfoWithoutTokens}
+                      </Box>
+                    </Tooltip>
+                  )}
+                  {roundTokensText && (
+                    <>
+                      {timeInfoWithoutTokens && (
+                        <Box
+                          color="text.muted"
+                          fontSize="12px"
+                          mx="1"
+                          flexShrink={0}
+                        >
+                          |
+                        </Box>
+                      )}
+                      {roundTokenBreakdown.length > 0 ? (
+                        <Popover
+                          trigger="hover"
+                          placement="top"
+                          openDelay={0}
+                          closeDelay={200}
+                        >
+                          <PopoverTrigger>
+                            <Box
+                              color="text.muted"
+                              fontSize="12px"
+                              whiteSpace="nowrap"
+                              cursor="pointer"
+                              _hover={{ color: 'blue.300' }}
+                              transition="color 0.2s"
+                            >
+                              {roundTokensText}
+                            </Box>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            bg={isDark ? '#1E1E1E' : '#FFFFFF'}
+                            border="1px solid"
+                            borderColor={isDark ? '#333333' : '#E5E7EB'}
+                            borderRadius="lg"
+                            width="auto"
+                            minW="240px"
+                            maxW="350px"
+                            boxShadow="xl"
+                            _focus={{ boxShadow: 'xl' }}
+                          >
+                            <PopoverBody px={4} py={3} textAlign="left">
+                              <TokenBreakdownPanel
+                                items={roundTokenBreakdown}
+                                isDark={isDark}
+                                title="本轮 Tokens 消耗详情"
+                              />
+                            </PopoverBody>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <Tooltip label={`本轮消耗: ${roundTokensText}`}>
+                          <Box
+                            color="text.muted"
+                            fontSize="12px"
+                            whiteSpace="nowrap"
+                          >
+                            {roundTokensText}
+                          </Box>
+                        </Tooltip>
+                      )}
+                    </>
+                  )}
+                </Flex>
               )}
               <Box flex="0 0 auto" ml="auto">
                 {renderActionBar}
