@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
 import * as y3 from 'y3-helper';
 import { COLOR } from './terminal';
@@ -209,8 +209,7 @@ export class WebviewTerminal extends vscode.Disposable {
     }
 
     async print(msg: string): Promise<void> {
-        msg = msg.replace(/(?<!
-)\n/g, '\r\n');
+        msg = msg.replace(/(?<!\r)\n/g, '\r\n');
         this._outputBuffer.push(msg);
         if (this._outputBuffer.length > WebviewTerminal._OUTPUT_BUFFER_MAX) {
             this._outputBuffer.shift();
