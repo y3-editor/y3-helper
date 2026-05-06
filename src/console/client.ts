@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as tools from "../tools";
 import { Terminal } from "./terminal";
+import { WebviewTerminal } from "./webviewTerminal";
 import { TreeViewManager } from "./treeView";
 import * as y3 from "y3-helper";
 import * as l10n from '@vscode/l10n';
@@ -75,7 +76,10 @@ export class Client extends vscode.Disposable {
         }
     }
 
-    static terminalHistory: { [name: string]: Terminal} = {};
+    static terminalHistory: { [name: string]: Terminal | WebviewTerminal} = {};
+
+    /** terminalHistory 有增减时触发，用于刷新 mainMenu 的按钮显示状态 */
+    static onDidChangeTerminalHistory = new vscode.EventEmitter<void>();
 
     constructor(private onSend: (obj: Response | Request | Notify) => void) {
         super(() => {
@@ -85,6 +89,7 @@ export class Client extends vscode.Disposable {
                 Client.terminalHistory[this.name] = this.terminal;
                 this.terminal.disableInput();
                 this.terminal.print(l10n.t('\n⛔ 客户端已断开。下次启动游戏会复用此控制台。 ⛔\n'));
+                Client.onDidChangeTerminalHistory.fire();
             }
             this.treeViewManager.dispose();
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
@@ -98,10 +103,18 @@ export class Client extends vscode.Disposable {
 
     public name = '默认客户端';
 
+    static createTerminalByConfig(name: string): Terminal | WebviewTerminal {
+        const type = vscode.workspace
+            .getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0])
+            .get<string>('ConsoleType', 'webview');
+        return type === 'integrated' ? new Terminal(name) : new WebviewTerminal(name);
+    }
+
     private createTerminal(name: string) {
         this.terminal?.dispose();
-        this.terminal = Client.terminalHistory[name] ?? new Terminal(name);
+        this.terminal = Client.terminalHistory[name] ?? Client.createTerminalByConfig(name);
         delete Client.terminalHistory[name];
+        Client.onDidChangeTerminalHistory.fire();
         this.terminal.setApplyHandler(async (data) => {
             // 如果提交的数据只有空格，就忽略掉
             if (data.trim() === '') {
@@ -114,7 +127,7 @@ export class Client extends vscode.Disposable {
         this.applyPrintBuffer();
     }
 
-    private terminal?: Terminal;
+    private terminal?: Terminal | WebviewTerminal;
 
     private printBuffer: string[] | undefined;
     print(msg: string) {
@@ -257,7 +270,7 @@ export class Client extends vscode.Disposable {
 }
 
 vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
-    let terminal = new Terminal(l10n.t('测试客户端'));
+    let terminal = Client.createTerminalByConfig(l10n.t('测试客户端'));
     terminal.setApplyHandler(async (obj) => {
         // await new Promise((resolve) => {
         //    setTimeout(resolve, 2000);
@@ -265,10 +278,15 @@ vscode.commands.registerCommand('y3-helper.testTerminal', async () => {
         terminal.print('发送了：\n' + JSON.stringify(obj));
         terminal.print('发送了：\n' + JSON.stringify(obj));
     });
+    terminal.enableInput();
 });
 
 vscode.commands.registerCommand('y3-helper.reloadLua', async () => {
     for (let client of Client.allClients) {
         client.notify('command', { data: '.rd' });
     }
+});
+
+vscode.commands.registerCommand('y3-helper.reopenConsole', () => {
+    WebviewTerminal.revealAllDisposed();
 });

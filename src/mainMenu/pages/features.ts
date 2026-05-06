@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as y3 from 'y3-helper';
 import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
+import { WebviewTerminal } from "../../console/webviewTerminal";
 import * as globalScript from '../../globalScript';
 import * as l10n from '@vscode/l10n';
 
@@ -288,6 +289,14 @@ export class 功能 extends TreeNode {
                         };
                     },
                 }),
+                new TreeNode(l10n.t('重新打开控制台'), {
+                    iconPath: new vscode.ThemeIcon('terminal'),
+                    command: {
+                        command: 'y3-helper.reopenConsole',
+                        title: l10n.t('重新打开控制台'),
+                    },
+                    show: () => WebviewTerminal.hasDisposedPanel(),
+                }),
                 多开模式(),
                 启用Tracy(),
                 切换自定义视图(),
@@ -317,6 +326,9 @@ export class 功能 extends TreeNode {
         });
 
         TreeViewManager.onDidChange(() => {
+            this.refresh();
+        });
+        WebviewTerminal.onDidChangePanelState.event(() => {
             this.refresh();
         });
     }

@@ -473,6 +473,21 @@
                     ],
                     "default": "chat-completions",
                     "scope": "resource"
+                },
+                "Y3-Helper.ConsoleType": {
+                    "title": "%控制台类型%",
+                    "description": "%控制台类型说明%",
+                    "type": "string",
+                    "enum": [
+                        "webview",
+                        "integrated"
+                    ],
+                    "enumDescriptions": [
+                        "%控制台类型-webview%",
+                        "%控制台类型-integrated%"
+                    ],
+                    "default": "webview",
+                    "scope": "resource"
                 }
             }
         },
@@ -549,10 +564,14 @@
         "@vscode/dts": "^0.4.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.3.6",
+        "@xterm/addon-fit": "^0.11.0",
+        "@xterm/xterm": "^6.0.0",
+        "css-loader": "^7.1.4",
         "dts-bundle-generator": "^9.5.1",
         "eslint": "^8.57.0",
         "glob": "^10.3.10",
         "mocha": "^10.2.0",
+        "style-loader": "^4.0.0",
         "ts-loader": "^9.5.1",
         "tsconfig-paths-webpack-plugin": "^4.1.0",
         "webpack": "^5.93.0",

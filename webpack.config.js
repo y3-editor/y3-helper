@@ -42,4 +42,33 @@ const config = {
     },
 };
 
-module.exports = config;
+/** Webview 浏览器端 bundle（xterm.js 终端界面） */
+/**@type {import('webpack').Configuration}*/
+const consoleWebviewConfig = {
+    target: 'web',
+    entry: './src/console/webviewFrontend.ts',
+    output: {
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'consoleWebview.js',
+        devtoolModuleFilenameTemplate: "../[resource-path]",
+    },
+    devtool: 'source-map',
+    resolve: {
+        extensions: ['.ts', '.js'],
+    },
+    module: {
+        rules: [
+            {
+                test: /\.ts$/,
+                exclude: /node_modules/,
+                use: [{ loader: 'ts-loader', options: { configFile: path.resolve(__dirname, './tsconfig.json') } }],
+            },
+            {
+                test: /\.css$/,
+                use: ['style-loader', 'css-loader'],
+            },
+        ],
+    },
+};
+
+module.exports = [config, consoleWebviewConfig];
