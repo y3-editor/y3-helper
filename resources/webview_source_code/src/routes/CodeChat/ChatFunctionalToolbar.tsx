@@ -42,7 +42,8 @@ import { usePostMessage } from '../../PostMessageProvider';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
 import MiniButton from '../../components/MiniButton';
-import DevspaceCollapse from './DevspaceCollapse';
+// Y3不需要研发知识集
+// import DevspaceCollapse from './DevspaceCollapse';
 
 enum EAutoConfig {
   AutoApprove = 'autoApprove',
@@ -386,6 +387,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 })}
                 {!['openspec', 'speckit'].includes(codebaseChatMode || '') && renderSwitchItem({
                   title: 'Plan Mode',
+                  hidden: true,
                   icon: <LuListTodo size={16} />,
                   value: currentSession?.data?.enablePlanMode || false,
                   lebalTooltips:
@@ -409,6 +411,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 })}
                 {renderSwitchItem({
                   title: '代码地图检索',
+                  hidden: true,
                   icon: <TbBrandNetbeans size={16} />,
                   tooltip:
                     '开启检索代码地图工具后，检索知识库工具将同步启用，因为检索代码地图工具是基于知识库的内容进行拓展分析',
@@ -428,6 +431,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 })}
                 {renderSwitchItem({
                   title: '知识库检索',
+                  hidden: true,
                   icon: <IoMdBook size={16} />,
                   value: enableKnowledgeLibSearch,
                   lebalTooltips:
@@ -496,7 +500,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderSwitchItem({
                   title: 'Glob 文件检索',
                   icon: <FiTarget size={16} />,
-                  hidden: !(isVSCode && versionCompare('26.3.7', pluginVersion || '') >= 0),
+                  hidden: !isVSCode,
                   value: enableGlobSearch,
                   lebalTooltips: '使用 glob 模式匹配文件路径，支持 "**/*.js" 等模式，快速定位文件',
                   onChange: (val) => {
@@ -515,6 +519,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderAutoMemoryItem()}
                 {renderSwitchItem({
                   title: '需求澄清工具',
+                  hidden: true,
                   icon: <RiQuestionnaireLine size={'16'} color="white" />,
                   value: enableUserQuestion,
                   lebalTooltips: '针对不明确的问题，仓库智聊会主动向你提问并提供相关选项，助力澄清需求',
@@ -522,7 +527,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                     setEnableUserQuestion(val);
                   },
                 })}
-                <DevspaceCollapse />
+                {/* Y3不需要研发知识集 */}
+                {/* <DevspaceCollapse /> */}
                 <SkillConfigCollapse setSkillSettingOpen={setSkillSettingOpen} />
                 <MCPConfigCollapse setMcpSettingOpen={setMcpSettingOpen} />
               </VStack>

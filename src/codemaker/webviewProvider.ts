@@ -3,13 +3,16 @@ import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getCodeMakerConfig } from './configProvider';
-import { handleExtendedMessage, loadSkillsFromDir, handleGetRules, handleGetSkills } from './messageHandlers';
+import { handleExtendedMessage } from './messageHandlers';
+import { handleGetRules } from './handlers/rulesHandler/index';
+import { loadSkillsFromDir } from './skillsHandler';
 import { getWorkspaceTracker } from './handlers/workspaceTracker';
 import { getOpenFilesHandler } from './handlers/openFilesHandler';
 import { isDocsetFile, isImageFile, maxDocsetFileSize } from './utils/file';
 import { readFileSync, statSync } from 'fs';
 import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
 import SkillsHandler from './skillsHandler';
+import { AgentsHandler } from './handlers/agentsHandler/index';
 
 /**
  * CodeMaker WebView 视图提供者
@@ -382,7 +385,6 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     result = await this._toolAccessMcpResource(tool_params);
                     break;
                 case 'get_agents': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agents = agentsHandler.getAgentIndex();
@@ -390,7 +392,6 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'get_agent': {
-                    const { AgentsHandler } = await import('./handlers/agentsHandler/index.js');
                     const agentsHandler = AgentsHandler.getInstance();
                     await agentsHandler.initialize();
                     const agentResult = agentsHandler.getAgent(tool_params.agent_name);
@@ -1466,7 +1467,9 @@ Provide the complete updated code.`;
         console.log('[Y3Maker] reloadCodemakerResources: 重新加载 Rules/Skills/MCP');
         // 直接调用 handler 函数重新读取并推送给前端
         await handleGetRules(this);
-        await handleGetSkills(this);
+        const skillsHandler = SkillsHandler.getInstance();
+        await skillsHandler.loadSkills();
+        skillsHandler.syncSkills();
         // 重新初始化 MCP（重新读取 mcp_settings.json 并重启所有连接）
         const hub = getMcpHub();
         if (hub) {

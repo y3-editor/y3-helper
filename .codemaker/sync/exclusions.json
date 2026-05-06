@@ -106,6 +106,7 @@
     "src/routes/CodeChat/ChatModelSelector.tsx": "SKIP: Y3不需要模型选择器UI，模型从VSCode Settings读取。但chatModel.ts中的类型定义和枚举值可以合",
     "src/provider/webviewProvider/index.ts__getUserModels": "SKIP: getUserModels接口是给模型选择器用的，Y3不需要",
     "_separator_20260506_lessons": "── 2026-05-06 合并经验 ──",
+    "src/routes/CodeChat/ChatFunctionalToolbar.tsx": "REVIEW: Y3版本号体系与CodeMaker不同，所有versionCompare版本门控必须移除，改为直接显示或仅保留isVSCode判断。Y3需隐藏：Plan Mode/代码地图检索/知识库检索/需求澄清工具/DevspaceCollapse。例如glob_search的hidden条件从versionCompare('26.3.7', pluginVersion) >= 0改为!isVSCode",
     "src/utils/initInsideServer.ts": "SKIP: CodeMaker内置服务端初始化，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
     "src/utils/serverRoutes.ts": "SKIP: CodeMaker内置服务端路由定义，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
     "src/utils/swaggerUI.ts": "SKIP: CodeMaker内置服务端Swagger文档UI，Y3用自己写的api-server，不需要。已加入excluded_upstream_dirs",
@@ -113,11 +114,19 @@
     "src/handlers/agentsHandler/": "REVIEW: Y3需要创建此目录（index.ts/types.ts/parser.ts），但需适配：1) printLog→console.log 2) getErrorMessage→内联 3) getWebviewProvider→通过参数传入 4) EXCLUDED_DIRECTORIES→内联定义 5) syncAgents→通过webviewProvider._sendToWebview发送",
     "src/codemaker/webviewProvider.ts__glob_search": "REVIEW: 新增glob_search工具case和_toolGlobSearch方法。Y3的webviewProvider.ts结构不同，需手动添加而非覆盖",
     "src/codemaker/utils/file.ts__覆盖风险": "WARNING: 不要用上游完整文件覆盖Y3的file.ts。Y3版本是精简版，import路径不同。只应用具体diff",
-    "src/codemaker/webviewProvider.ts__agentsHandler_import": "FIX: import路径需用'./handlers/agentsHandler/index.js'而非'./handlers/agentsHandler.js'（Y3的moduleResolution要求显式扩展名+完整路径）",
-    "src/codemaker/messageHandlers.ts__agentsHandler_import": "FIX: 同上，import路径需用'./handlers/agentsHandler/index.js'",
+    "src/codemaker/webviewProvider.ts__agentsHandler_import": "FIX: import路径用'./handlers/agentsHandler/index'（不带.js后缀，与项目其他import一致）。动态import()改为顶层静态import避免ts(2835)",
+    "src/codemaker/messageHandlers.ts__agentsHandler_import": "FIX: 同上，import路径用'./handlers/agentsHandler/index'（不带.js后缀）",
     "_rule_docs_commits": "规则: docs: 开头的commit通常只涉及openspec文档归档，代码改动（如ChatHistories移除搜索字段选择器）需单独判断。本次跳过0c9c7c85",
     "_rule_feat_commits": "规则: feat: 开头的commit需询问用户确认。fix:/refactor:/style:/chore: 通常直接合并",
     "_rule_extension_builtin_server": "规则: extension中涉及内置服务端（initInsideServer/serverRoutes/swaggerUI）的文件，Y3用自己api-server，全部SKIP",
-    "_rule_compile_after_each_batch": "规则: 每批合并后必须编译验证（tsc --noEmit），发现错误立即修复，不要积累到verify阶段"
+    "_rule_compile_after_each_batch": "规则: 每批合并后必须编译验证（tsc --noEmit），发现错误立即修复，不要积累到verify阶段",
+    "_separator_20260506_refactor": "── 2026-05-06 架构重构：messageHandlers.ts 拆分 ──",
+    "_refactor_handlers_split": "重构: messageHandlers.ts 从1839行拆分为主switch(394行)+10个独立handler文件，对齐上游handlers/目录结构",
+    "_refactor_handlers_map": "映射: editorHandler(编辑器)/fileHandler(文件)/terminalHandler(终端)/diffHandler(Diff预览应用)/workspaceHandler(工作区)/diagramHandler(可视化)/settingsHandler(设置)/mcpHandler(MCP管理)/logHandler(日志杂项)/rulesHandler(Rules管理)",
+    "_refactor_skillsHandler": "重构: SkillsHandler新增createSkillTemplate方法，原messageHandlers.ts中的handleCreateSkillTemplate逻辑移入",
+    "_refactor_webviewProvider_imports": "重构: webviewProvider.ts的handleGetRules导入改为'./handlers/rulesHandler/index.js'，handleGetSkills改为直接调SkillsHandler.getInstance()",
+    "_rule_handlers_structure": "规则: 后续同步时，上游handlers/目录下的文件直接覆盖Y3对应文件；messageHandlers.ts只保留主switch分发逻辑，具体处理函数在handlers/中",
+    "_rule_version_gate": "规则: 前端代码中所有versionCompare版本门控必须移除。Y3版本号体系与CodeMaker不同，版本门控会导致功能被隐藏。改为直接显示或仅保留isVSCode判断",
+    "_rule_import_no_js_ext": "规则: 相对import不要写.js后缀。项目webpack未配置extensionAlias，带.js后缀的import会导致编译失败。动态import()在函数体内时改为顶层静态import"
   }
 }

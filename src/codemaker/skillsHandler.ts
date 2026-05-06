@@ -825,6 +825,40 @@ export class SkillsHandler {
     }
   }
 
+  // ── createSkillTemplate ──
+
+  public async createSkillTemplate(
+    templateContent?: string
+  ): Promise<{ success: boolean; path?: string; message?: string }> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return { success: false, message: 'No workspace folder found' };
+    }
+
+    const skillsDir = path.join(workspaceFolder.uri.fsPath, '.y3maker', 'skills');
+    await fs.promises.mkdir(skillsDir, { recursive: true });
+
+    const content = templateContent || '---\nname: template-skill\ndescription: Replace with description of the skill and when Codemaker should use it.\n---\n\n# Insert instructions below\n';
+
+    let fileName = 'new-skill.md';
+    let filePath = path.join(skillsDir, fileName);
+    let counter = 1;
+    while (fs.existsSync(filePath)) {
+      fileName = `new-skill-${counter}.md`;
+      filePath = path.join(skillsDir, fileName);
+      counter++;
+    }
+
+    try {
+      await fs.promises.writeFile(filePath, content, 'utf-8');
+      await this.loadSkills();
+      this.syncSkills();
+      return { success: true, path: filePath };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Failed to create skill template' };
+    }
+  }
+
   // ── installBuiltinSkill ──
 
   public async installBuiltinSkill(
