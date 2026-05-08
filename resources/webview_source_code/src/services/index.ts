@@ -200,6 +200,12 @@ export interface ChatMessage {
     skillName: string;
     title?: string;
     source?: string;
+    // 支持多skill：记录所有激活的skills
+    allSkills?: Array<{
+      skillName: string;
+      title?: string;
+      source?: string;
+    }>;
   };
   // TODO: 内置的 Prompt 配置, 先临时和 attachs 一样挂在这里
   systemPrompt?: SystemPrompt;
@@ -342,7 +348,6 @@ export interface ChatPromptBody {
   }
 
   codebase_chat_mode?: CodebaseChatMode;
-  base_url?: string;
 }
 
 export const codemakerChatRequest = axios.create({

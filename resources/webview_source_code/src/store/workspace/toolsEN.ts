@@ -1,8 +1,8 @@
 import { Tool, useWorkspaceStore } from '.';
 import { versionCompare } from '../../utils/common';
-import { useChatStore } from '../chat';
+import { mentionKnowledgeMap, useChatStore } from '../chat';
 import { useChatConfig } from '../chat-config';
-import { useExtensionStore } from '../extension';
+import { IDE, useExtensionStore } from '../extension';
 import { MCPServer } from '../mcp';
 import { useSkillsStore, SkillIndexItem } from '../skills';
 import { generateCodewikiStructure } from './tools/codewiki';
@@ -12,7 +12,8 @@ import { Tool as TodoTool } from './tools/todo';
 import { Tool as AskUserQuestionTool } from './tools/askUserQuestion';
 import { getTaskTool } from './tools/task';
 import { getGlobTool } from './tools/search/glob';
-
+import { ChatApplyType, useChatApplyStore } from '../chatApply';
+import { getEditTool, getWriteTool } from "./tools/write";
 export function getToolsEN(options: {
   workspace: string;
   hasCodeTable: boolean;
@@ -30,6 +31,8 @@ export function getToolsEN(options: {
     codeMakerVersion,
     isVSCode,
   } = options;
+  const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
+  const jetbrainsVersion = isJetbrains ? codeMakerVersion?.split('-')?.[1] || '0.0.0' : '0.0.0';
   const {
     enableCodeMapSearch,
     enableKnowledgeLibSearch,
@@ -67,9 +70,10 @@ export function getToolsEN(options: {
     enablePlanMode = false;
   }
 
-  const selectedKnowledgeBases =
-    useWorkspaceStore.getState().selectedKnowledgeBases;
-  const hasSelectedKnowledgeBases = selectedKnowledgeBases.length > 0;
+  const chatApplyMode = useChatApplyStore.getState().chatApplyMode || ChatApplyType.CodemakerEdit
+  const selectedKnowledgeBases = useWorkspaceStore.getState().selectedKnowledgeBases;
+  const hasMentionKnowledgeBases = !!mentionKnowledgeMap.get(useChatStore.getState().currentSessionId || '');
+  const hasSelectedKnowledgeBases = hasMentionKnowledgeBases || selectedKnowledgeBases.length > 0;
   const tools: Tool[] = [
     {
       type: 'function',
@@ -147,7 +151,7 @@ export function getToolsEN(options: {
     //   }
     // }
   ];
-  if (enableEditableMode) {
+  if (enableEditableMode && chatApplyMode === ChatApplyType.CodemakerEdit) {
     tools.push({
       type: 'function',
       function: {
@@ -253,7 +257,7 @@ Usage:
       },
     });
   }
-  if (enableReplaceInFile && enableEditableMode) {
+  if (enableReplaceInFile && enableEditableMode && chatApplyMode === ChatApplyType.CodemakerEdit) {
     tools.push({
       type: 'function',
       function: {
@@ -465,14 +469,28 @@ Critical rules:
       function: {
         name: 'use_skill',
         description:
-          "Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. Only call this when the user's request clearly matches an available skill.",
+          "Load and activate a skill to get specialized instructions for a specific task. Skills provide detailed guidance, workflows, and best practices for common development tasks. You can activate multiple skills at once by passing an array of skill names. Only call this when the user's request clearly matches an available skill.",
         parameters: {
           type: 'object',
           properties: {
             skill_name: {
-              type: 'string',
-              description: `The name of the skill to activate. Must be one of the available skills: ${skillNames.join(', ')}`,
-              enum: skillNames,
+              oneOf: [
+                {
+                  type: 'string',
+                  enum: skillNames,
+                  description: `A single skill name. Must be one of: ${skillNames.join(', ')}`,
+                },
+                {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: skillNames,
+                  },
+                  minItems: 1,
+                  description: `An array of skill names to activate multiple skills. Each must be one of: ${skillNames.join(', ')}`,
+                },
+              ],
+              description: `The name(s) of the skill(s) to activate. Can be a single skill name or an array of multiple skill names. Available skills: ${skillNames.join(', ')}`,
             },
           },
           required: ['skill_name'],
@@ -494,9 +512,20 @@ Critical rules:
 
   if (
     enableGlobSearch &&
-    (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0)
+    (
+      (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0) ||
+      (isJetbrains && versionCompare('26.4.1', jetbrainsVersion) >= 0)
+    )
   ) {
     tools.push(getGlobTool({ enableSubAgent }));
   }
+
+  if (chatApplyMode === ChatApplyType.ClaudeEdit &&
+    (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0)
+  ) {
+    tools.push(getWriteTool())
+    tools.push(getEditTool())
+  }
+
   return tools;
 }

@@ -4,13 +4,14 @@
 
 import { Flex, Button } from '@chakra-ui/react';
 import { ToolCallProps } from './types';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useChatStreamStore } from '../../../store/chat';
 import ToolCallResults from './ToolCallResults';
 import TaskProgressPanel from '../TaskProgressPanel';
 import ConfirmPopver from '../../../components/ConfirmPopver';
 import { terminalCmdFunction } from './TermialPanel';
 import { useToolCall } from '../../../hooks/useToolCall';
+import { useChatApplyStore } from '../../../store/chatApply';
 
 export default function ToolCall(props: ToolCallProps) {
   const { message, isShare, isLatest } = props;
@@ -52,10 +53,34 @@ export default function ToolCall(props: ToolCallProps) {
     hasAskUserQuestionTool,
     hasTodoTool,
     hasTaskTool,
+    hasClaudeEditTool,
+    hasEditFileTool,
   } = toolTypes;
 
   // 解构环境检查
   const { repoNotMatch } = environment;
+  const chatApplyInfo = useChatApplyStore((state) => state.chatApplyInfo);
+
+  const hasFooterContent = useMemo(() => {
+    if (
+      !toolResponseDisabled &&
+      !isProcessing &&
+      !messageProcessing &&
+      !isMCPProcessing &&
+      !isShare &&
+      !hasAskUserQuestionTool &&
+      !hasTaskTool &&
+      !hasEditFileTool &&
+      !hasClaudeEditTool
+    ) {
+      return true
+    }
+
+    if (hasEditFileTool || hasClaudeEditTool) {
+      if (message.tool_calls?.every(tool => chatApplyInfo[tool.id])) return true
+    }
+    return false
+  }, [chatApplyInfo, hasAskUserQuestionTool, hasClaudeEditTool, hasEditFileTool, hasTaskTool, isMCPProcessing, isProcessing, isShare, message.tool_calls, messageProcessing, toolResponseDisabled])
 
   // 检查是否是启用的命令工具（保持原版本变量名）
   const enableCommandTool = message.tool_calls?.some((tool) => {
@@ -119,13 +144,8 @@ export default function ToolCall(props: ToolCallProps) {
       autoConfigItems={!messageProcessing ? autoConfigItems : []}
       showHeader={shouldShowHeader}
       footerContent={
-        !toolResponseDisabled &&
-          !isProcessing &&
-          !messageProcessing &&
-          !isMCPProcessing &&
-          !isShare &&
-          !hasAskUserQuestionTool &&
-          !hasTaskTool ? (
+        hasFooterContent &&
+        (
           <Flex mt={0} gap={2} alignItems="center">
             <ConfirmPopver
               disabled={!hasDangerousCommand}
@@ -179,7 +199,7 @@ export default function ToolCall(props: ToolCallProps) {
               {getBtnLabel(false)}
             </Button>
           </Flex>
-        ) : undefined
+        )
       }
     >
       <ToolCallResults

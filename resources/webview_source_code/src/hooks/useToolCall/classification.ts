@@ -83,8 +83,12 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
         tool.function.name === 'ask_user_question'
       ) || false,
 
-      hasGlobSearch: message.tool_calls?.some((tool) =>
+      hasGlobSearchTool: message.tool_calls?.some((tool) =>
         tool.function.name === 'glob_search'
+      ) || false,
+
+      hasClaudeEditTool: message.tool_calls?.some((tool) =>
+        ['edit', 'write'].includes(tool.function.name)
       ) || false,
 
       hasTerminalTool,
@@ -158,7 +162,7 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
 function getToolType(toolName: string): string {
   if (toolName === 'task') return 'task';
   if (toolName === 'run_terminal_cmd') return 'terminal';
-  if (['edit_file', 'reapply', 'replace_in_file'].includes(toolName)) return 'edit';
+  if (['edit_file', 'reapply', 'replace_in_file', 'write', 'edit'].includes(toolName)) return 'edit';
   if (['use_mcp_tool', 'access_mcp_resource'].includes(toolName)) return 'mcp';
   if (toolName === 'make_plan') return 'plan';
   if (toolName === 'write_todo') return 'todo';

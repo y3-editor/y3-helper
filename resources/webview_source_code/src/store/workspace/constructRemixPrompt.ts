@@ -9,6 +9,7 @@ import { generateSkillsPromptSection } from '../skills/prompt';
 import { OPENSPEC_RULES } from './openSpecRules';
 import { PromptLinkMgr } from './pomptLinkMgr';
 import { OPENSPEC_1X_MODE_CONTEXT } from './openspecModeContext';
+import { ChatApplyType, useChatApplyStore } from '../chatApply';
 
 /** Cache tier 分隔符，cache 路径下按此标记 split 为多个 content block */
 export const CACHE_TIER_BREAK = '\n\n<!--CACHE_TIER_BREAK-->\n\n';
@@ -40,6 +41,12 @@ export default function constructRemixPrompt(options: {
   const enableReplaceInFile =
     codeMakerVersion && versionCompare('2.4.9', codeMakerVersion) > 0;
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
+  const applyMode = useChatApplyStore.getState().chatApplyMode;
+
+  const chatModels = useChatConfig.getState().chatModels;
+  const selectedModel = useChatConfig.getState().config.model;
+  const chatModel = chatModels[selectedModel];
+  const maxTokens = chatModel?.tokenInfo?.maxOutputTokens || 10240
 
   let rulesPrompt = '';
   if (effectiveRules.length) {
@@ -158,6 +165,7 @@ You have tools at your disposal to solve the coding task. Follow these rules reg
 5. You may batch only independent local read-only tools for information gathering. Prefer view_source_code_definitions_top_level, grep_search, glob_search, and focused read_file before retrieve_code or retrieve_knowledge. Never batch edit_file, replace_in_file, reapply, or run_terminal_cmd; call them alone in a separate response.
 6. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as "<previous_tool_call>" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
 7. If the user shows you the file content in last message, assume it was the lastest content and do not call read_file to read the file. Never pass a directory to read_file.
+8. When a single response exceeds ${Math.floor(maxTokens * 0.95)} limit, it should be split into multiple conversation turns instead of outputting everything at once.
 </tool_calling>
 
 ${autoApply && autoExecute && useExtensionStore.getState().subagentEnable
@@ -194,7 +202,7 @@ If you've performed an edit that may partially satiate the USER's query, but you
 Bias towards not asking the user for help if you can find the answer yourself.
 </search_and_reading>
 
-${enableEditableMode ? `<making_code_changes>
+${enableEditableMode && applyMode === ChatApplyType.CodemakerEdit ? `<making_code_changes>
 When making code changes, NEVER output code to the USER, unless requested. Instead use one of the code edit tools to implement the change.
 
 Use the code edit tools at most once per turn.
@@ -210,6 +218,14 @@ It is *EXTREMELY* important that your generated code can be run immediately by t
 8. If Apply fail because of network errors, you should tell the user to apply change manually or try to use "ReApply" later.
 9. NEVER read file you have just edited until received user's reaction or user's next query.
 ${enableReplaceInFile ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.' : ''}
+</making_code_changes>` : ''}
+
+${applyMode === ChatApplyType.ClaudeEdit ? `<making_code_changes>
+When making changes to files, first understand the file's code conventions. Mimic code style, use existing libraries and utilities, and follow existing patterns.
+- NEVER assume that a given library is available, even if it is well known. Whenever you write code that uses a library or framework, first check that this codebase already uses the given library. For example, you might look at neighboring files, or check the package.json (or cargo.toml, and so on depending on the language).
+- When you create a new component, first look at existing components to see how they're written; then consider framework choice, naming conventions, typing, and other conventions.
+- When you edit a piece of code, first look at the code's surrounding context (especially its imports) to understand the code's choice of frameworks and libraries. Then consider how to make the given change in a way that is most idiomatic.
+- Never introduce code that exposes or logs secrets and keys. Never commit secrets or keys to the repository.
 </making_code_changes>` : ''}
 
 ${enableTerminal ? `<run_terminal_cmd>

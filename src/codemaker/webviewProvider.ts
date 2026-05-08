@@ -13,6 +13,7 @@ import { readFileSync, statSync } from 'fs';
 import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
 import SkillsHandler from './skillsHandler';
 import { AgentsHandler } from './handlers/agentsHandler/index';
+import { checkTerminalCommandAccess } from './utils/commandParser';
 
 /**
  * CodeMaker WebView 视图提供者
@@ -1003,6 +1004,20 @@ Provide the complete updated code.`;
             return result;
         }
 
+        // 检查命令是否访问了被 .y3makerignore 忽略的路径
+        const accessCheck = checkTerminalCommandAccess(command);
+        if (!accessCheck.allowed) {
+            result.content =
+                `Command blocked: the following paths are restricted by ignore rules and cannot be accessed:\n` +
+                accessCheck.blockedPaths
+                    .map((p) => `  - ${p}`)
+                    .join('\n') +
+                `\n\nPlease avoid accessing these paths. They are excluded by .y3makerignore rules.`;
+            result.extra.terminalStatus = ETS.FAILED;
+            result.extra.status = ETS.FAILED;
+            return result;
+        }
+
         try {
             const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
             const { spawn } = require('child_process') as typeof import('child_process');
@@ -1016,6 +1031,7 @@ Provide the complete updated code.`;
                     cwd: workspace || process.cwd(),
                     shell: true,
                     stdio: 'pipe',
+                    detached: true,
                     env: {
                         ...process.env,
                         PYTHONIOENCODING: 'utf-8',
@@ -1076,8 +1092,20 @@ Provide the complete updated code.`;
                                 if (match) {
                                     interactivePromptInfo = { prompt: match[0].trim(), output: stripped };
                                     console.log(`[Y3Maker] Interactive prompt detected: "${match[0].trim()}"`);
-                                    // 终止进程
-                                    childProcess.kill();
+                                    // 终止进程（使用进程组 kill）
+                                    const pid = childProcess.pid;
+                                    if (pid) {
+                                        try {
+                                            process.kill(-pid, 'SIGTERM');
+                                            setTimeout(() => {
+                                                try { process.kill(-pid, 'SIGKILL'); } catch { /* 进程已退出 */ }
+                                            }, 500);
+                                        } catch {
+                                            childProcess.kill('SIGKILL');
+                                        }
+                                    } else {
+                                        childProcess.kill('SIGKILL');
+                                    }
                                     break;
                                 }
                             }
@@ -1141,7 +1169,19 @@ Provide the complete updated code.`;
                 const timeout = 120000; // 2分钟
                 setTimeout(() => {
                     if (!childProcess.killed) {
-                        childProcess.kill();
+                        const pid = childProcess.pid;
+                        if (pid) {
+                            try {
+                                process.kill(-pid, 'SIGTERM');
+                                setTimeout(() => {
+                                    try { process.kill(-pid, 'SIGKILL'); } catch { /* 进程已退出 */ }
+                                }, 500);
+                            } catch {
+                                childProcess.kill('SIGKILL');
+                            }
+                        } else {
+                            childProcess.kill('SIGKILL');
+                        }
                         const outputText = lines.join('').trim();
                         result.content = `Command timed out after ${timeout / 1000}s.\nOutput so far: ${outputText}\n`;
                         result.isError = true;

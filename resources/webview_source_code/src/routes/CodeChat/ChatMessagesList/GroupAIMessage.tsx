@@ -937,7 +937,7 @@ export function GroupAIMessage({
           <Box display="flex" alignItems="center" flexShrink={0}>
             <Avatar w="16px" h="18px" src={CodeMakerLogo} mr="2" />
             <Box color="text.secondary" fontSize="12px" whiteSpace="nowrap">
-              CodeMaker
+              Y3Maker
             </Box>
           </Box>
           {isShowAction && timeInfoText && (

@@ -65,7 +65,7 @@ const SkillConfigCollapse = (props: IProps) => {
             Skills 工具
           </Text>
           <Tooltip
-            label="加载本地 Skills 文件，根据需求自动匹配并激活对应的专业指导，支持 ~/.y3maker/skills、.y3maker/skills、~/.claude/skills、.claude/skills、~/.codemaker/skills、.codemaker/skills、~/.agents/skills、.agents/skills 目录"
+            label="加载本地 Skills 文件，根据需求自动匹配并激活对应的专业指导，支持 ~/.claude/skills、.claude/skills、~/.codemaker/skills、.codemaker/skills、~/.agents/skills、.agents/skills 目录"
             placement="top"
           >
             <Box

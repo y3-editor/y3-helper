@@ -2,6 +2,7 @@
  * 移植自源码版 utils/file.ts
  */
 import * as path from 'path';
+import * as fs from 'fs/promises';
 
 const docsetExtensions = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
 
@@ -24,3 +25,15 @@ export const isImageFile = (filePath: string) => {
 };
 
 export const maxDocsetFileSize = 10 * 1024 * 1024; // 10MB
+
+/**
+ * 检查文件路径是否存在
+ */
+export async function fileExistsAtPath(filePath: string): Promise<boolean> {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}

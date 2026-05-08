@@ -76,7 +76,7 @@ import {
   getErrorMessage,
   specialErrorPatterns,
 } from '../utils';
-import { pathsMatch, truncateSessionTopic } from '../utils/common';
+import { truncateSessionTopic } from '../utils/common';
 import getEnvironmentDetails from '../utils/getEnvironmentDetail';
 import { Prompt, PromptCategoryType } from '../services/prompt';
 import {
@@ -114,7 +114,7 @@ import { useSkillPromptApp } from './skills/skill-prompt';
 import { useChatApplyStore } from './chatApply';
 import { terminalCmdFunction } from '../routes/CodeChat/ChatMessagesList/TermialPanel';
 import { getLocalStorage } from '../utils/storage';
-import { formatResultContent } from '../utils/toolCall';
+import { formatResultContent, getReportEventByToolName } from '../utils/toolCall';
 import type { ExtendedPlanData, PlanStatus } from '../types/plan';
 import type { TodoList } from './workspace/tools/todo';
 import { onMessageToolCallResponse } from '../utils/chatToolCallHandler';
@@ -152,6 +152,14 @@ import {
 } from '../utils/consumedTokensCalculator';
 import { estimateSystemPromptTokens, estimateTokens } from '../utils/tokenEstimate';
 import { PromptLinkMgr } from './workspace/pomptLinkMgr';
+import {
+  ExecutionContext,
+  createMainAgentContext,
+  createSubagentContext,
+  AutoExecutePermissions,
+} from '../types/executionContext';
+import { getExecutionStrategy } from '../services/toolExecution/ToolExecutionStrategy';
+import { useSubagentStore } from './subagent';
 
 const CODE_BACKTICKS = '```';
 export const DEFAULT_TOPIC = '';
@@ -1480,7 +1488,21 @@ type ChatStreamActions = {
   // clearToolCallResults: () => void;
   updateToolCallResults: (result: {
     [propName: string]: { path: string; content: string, isError?: boolean, extra?: Record<string, any> };
-  }, extra?: any) => void;
+  }, extra?: any, executionContext?: ExecutionContext) => void;
+  // 新增的执行上下文相关方法
+  inferExecutionContext: (
+    session: ChatSession,
+    lastMessage: ChatMessage,
+  ) => ExecutionContext;
+  buildAutoExecuteResponse: (
+    lastMessage: ChatMessage,
+  ) => Record<string, boolean>;
+  handleAutoExecute: (
+    lastMessage: ChatMessage,
+    context: ExecutionContext,
+    hasActiveTaskTools: boolean,
+  ) => void;
+  handleMCPTools: (lastMessage: ChatMessage) => void;
 };
 
 export const DEFAULT_ASSISTANT_MESSAGE = {
@@ -1595,28 +1617,21 @@ export const useChatStreamStore = create(
       }))
     },
     prePromptCodeBlock: null,
-    updateToolCallResults(result: {
-      [propName: string]: { path: string; content: string };
-    }, extra?: any) {
-      let codebaseDefaultAuthorizationPath = [
-        ...(useConfigStore.getState().config.codebaseDefaultAuthorizationPath ||
-          []),
-      ];
-      let extraPath: string[] = [];
-
-      const allow_paths = useWorkspaceStore.getState().devSpace.allow_paths;
-      if (allow_paths && allow_paths.length) {
-        extraPath = allow_paths;
-      }
-
-      codebaseDefaultAuthorizationPath = [
-        ...codebaseDefaultAuthorizationPath,
-        ...extraPath
-      ];
+    updateToolCallResults(
+      result: {
+        [propName: string]: { path: string; content: string };
+      },
+      extra?: any,
+      executionContext?: ExecutionContext, // 新增执行上下文参数
+    ) {
       const chatStoreState = useChatStore.getState();
       let isProcessing = true;
+      // 标记是否有正在运行的 task 工具（subagent）
+      let hasActiveTaskTools = false;
 
-      // 监听工具回调的地方
+      // 推断或使用提供的执行上下文
+      let inferredContext: ExecutionContext | null = null;
+
       chatStoreState.updateCurrentSession((session) => {
         if (session && session.data) {
           const messages = session.data.messages || [];
@@ -1627,18 +1642,48 @@ export const useChatStreamStore = create(
             ...result,
           };
           if (extra && extra.finalResult) {
-            lastMessage.finalResult = extra.finalResult
+            lastMessage.finalResult = extra.finalResult;
           }
+
+          // 推断执行上下文（如果没有提供）
+          if (!executionContext) {
+            inferredContext = get()
+              .inferExecutionContext(session, lastMessage);
+          }
+
+          const context = executionContext || inferredContext!;
+          // 检查是否有 task 工具（subagent）存在且尚未全部返回结果
+          const taskToolCalls =
+            lastMessage.tool_calls?.filter(
+              (tc) => tc.function.name === 'task',
+            ) || [];
+          const taskResultCount = taskToolCalls.filter(
+            (tc) => lastMessage.tool_result?.[tc.id],
+          ).length;
+
+          // 改进的 hasActiveTaskTools 判断：
+          // 1. 检查是否有 task 工具调用
+          // 2. 结合 subagent 运行状态判断是否还有活跃的 task
+          const hasTaskTools = taskToolCalls.length > 0;
+          const allTasksHaveResults = taskResultCount === taskToolCalls.length;
+          const subagentStillRunning = useSubagentStore
+            .getState()
+            .hasActiveSubagents();
+
+          // 如果有 task 工具，且要么有些还没返回结果，要么 subagent 仍在运行，则认为有活跃的 task
+          // 修复：优先检查 subagent 运行状态，避免工具结果到齐但 subagent 未完成时的竞态条件
+          hasActiveTaskTools =
+            hasTaskTools && (subagentStillRunning || !allTasksHaveResults);
+
+          // 所有 tool call 结果都已收到时，清除 message 上的 processing 标记，
+          // 确保 ToolCallResults.tsx 中 isTaskTool 等卡片能够正常渲染
           if (
-            !lastMessage.tool_calls?.length ||                      // 没有工具调用
+            !lastMessage.tool_calls?.length ||
             Object.keys(lastMessage.tool_result).length ===
-            lastMessage.tool_calls?.length                            // 或者所有工具结果都收到了
+              lastMessage.tool_calls?.length
           ) {
-            isProcessing = false;                                 // 进入判断：要不要自动继续？
-            const allPathsMatch = pathsMatch(
-              lastMessage.tool_result,
-              codebaseDefaultAuthorizationPath,
-            );
+            isProcessing = false;
+            lastMessage.processing = false;
 
             // 兜底措施: 如果当前会话已循环多次，停止自动继续，暂定一个问题 50 条消息作为上限
             // const lastUserIndex = findLastIndex(messages, (msg => msg.role === ChatRole.User));
@@ -1651,87 +1696,291 @@ export const useChatStreamStore = create(
             //   }
             // }
             // TODO: 先直接判断 edit_file 自动确认 toolcall 操作，后续拆分
-            let auto = false;
-            const userConfig = useChatConfig.getState();
-            // 根据工具类型和用户配置决定是否自动继续
-            if (lastMessage.tool_calls?.length) {
-              if (lastMessage.tool_calls.some(toolCall => ['edit_file', 'replace_in_file', 'reapply'].includes(toolCall.function.name))) {
-                if (userConfig.autoApply) {
-                  useChatApplyStore.getState().acceptEdit(lastMessage.tool_calls[0].id);
-                }
-              } else if (allPathsMatch) {
-                auto = true;              // 路径在授权范围内 → 自动
-              } else if (lastMessage.tool_calls.some(toolCall => ['make_plan'].includes(toolCall.function.name))) {
-                auto = userConfig.autoPlanApprove;
-              } else if (lastMessage.tool_calls.some(toolCall => ["write_todo"].includes(toolCall.function.name))) {
-                auto = userConfig.autoTodo;
-              } else if (lastMessage.tool_calls.some(toolCall => ["ask_user_question"].includes(toolCall.function.name))) {
-                auto = true;
-              } else if (userConfig.autoApprove) {
-                auto = true;                       // 用户开了自动授权 → 自动
-              }
-            }
-            if (auto) {
-               // ⭐ 这就是"循环"！自动提交，触发新一轮 LLM 调用
-              const keysObject = Object.keys(lastMessage.tool_result).reduce(
-                (acc: any, key) => {
-                  (acc as Record<string, boolean>)[key] = true;
-                  acc[key] = true;
-                  return acc;
-                },
-                {},
-              );
-              // 设置自动授权标志
-              useChatStreamStore.getState().setIsAutoApproved(true);
-              useChatStreamStore.getState().onUserSubmit(
-                '',
-                {
-                  event: UserEvent.CODE_CHAT_CODEBASE,
-                },
-                undefined,
-                keysObject,
-              );
-              // lastMessage.autoCompleteAdress = true;
-            } else if (lastMessage.tool_calls?.length) {
-              const isMCPTools = lastMessage.tool_calls.some((tool) => ['use_mcp_tool', 'access_mcp_resource'].includes(tool.function.name));
-              const keysObject = Object.keys(lastMessage.tool_result).reduce(
-                (acc: any, key) => {
-                  (acc as Record<string, boolean>)[key] = true;
-                  acc[key] = true;
-                  return acc;
-                },
-                {},
-              );
-              if (isMCPTools) {
-                let mcpServerUsed = '';
-                try {
-                  const toolParams = JSON.parse(lastMessage.tool_calls[0].function.arguments || '{}');
-                  mcpServerUsed = toolParams.server_name;
-                } catch {
-                  mcpServerUsed = '';
-                }
-                useChatStreamStore.getState().setIsMCPProcessing(false);
-                // 设置自动授权标志
-                useChatStreamStore.getState().setIsAutoApproved(true);
-                useChatStreamStore.getState().onUserSubmit(
-                  '',
-                  {
-                    event: UserEvent.CODE_CHAT_CODEBASE,
-                    isMCPToolResponse: true,
-                    mcpServerUsed
-                  },
-                  undefined,
-                  keysObject,
-                );
-              }
-            }
+            // 使用新的策略模式处理自动执行逻辑
+            get().handleAutoExecute(lastMessage, context, hasActiveTaskTools);
           }
         }
       });
       chatStoreState.syncHistory();
-      set(() => ({
-        isProcessing: isProcessing,
-      }));
+      // 如果有正在运行的 task 工具，不设置 isProcessing（由 subagent store 管理）
+      // 只有在没有活跃的 task 工具时，才根据计算结果设置 isProcessing
+      const currentStoreIsProcessing = get().isProcessing;
+      if (!hasActiveTaskTools) {
+        set(() => ({
+          isProcessing: isProcessing,
+        }));
+      } else {
+        console.log(
+          '[Debug][updateToolCallResults] → skip set isProcessing (task still running), current store isProcessing:',
+          currentStoreIsProcessing,
+        );
+      }
+    },
+    /**
+     * 推断执行上下文
+     * 根据最后一条消息是否包含 task 工具调用来判断是主 agent 还是 subagent
+     */
+    inferExecutionContext(
+      session: ChatSession,
+      lastMessage: ChatMessage,
+    ): ExecutionContext {
+      const hasTaskTools =
+        lastMessage.tool_calls?.some((tc) => tc.function.name === 'task') ||
+        false;
+
+      if (hasTaskTools) {
+        // 包含task工具，说明是subagent执行
+        return createSubagentContext(lastMessage.id || '', session._id);
+      } else {
+        // 主agent执行，需要当前的权限配置
+        const permissions: AutoExecutePermissions = {
+          autoApprove: useChatConfig.getState().autoApprove,
+          autoApply: useChatConfig.getState().autoApply,
+          autoExecute: useChatConfig.getState().autoExecute,
+          autoTodo: useChatConfig.getState().autoTodo,
+        };
+        return createMainAgentContext(
+          lastMessage.id || '',
+          session._id,
+          permissions,
+        );
+      }
+    },
+
+    /**
+     * 处理自动执行逻辑
+     * 使用策略模式根据执行上下文决定是否自动执行
+     */
+    handleAutoExecute(
+      lastMessage: ChatMessage,
+      context: ExecutionContext,
+      hasActiveTaskTools: boolean,
+    ) {
+      console.log('[mcp][auto-execute] handleAutoExecute 开始');
+      console.log('[mcp][auto-execute] 执行上下文:', context);
+      console.log('[mcp][auto-execute] 权限配置:', context.permissions);
+      console.log('[mcp][auto-execute] 工具调用数量:', lastMessage.tool_calls?.length);
+      console.log('[mcp][auto-execute] 工具调用列表:', lastMessage.tool_calls?.map(tc => tc.function.name));
+
+      if (!lastMessage.tool_calls?.length) {
+        console.log('[mcp][auto-execute] 没有工具调用，退出');
+        return;
+      }
+
+      const hasActiveSubagents = useSubagentStore
+        .getState()
+        .hasActiveSubagents();
+      console.log('[mcp][auto-execute] hasActiveSubagents:', hasActiveSubagents, 'hasActiveTaskTools:', hasActiveTaskTools);
+      
+      if (hasActiveSubagents && !hasActiveTaskTools) {
+        console.log('[mcp][auto-execute] 有活跃子代理且无活跃任务工具，退出');
+        return;
+      }
+
+      // 根据执行上下文类型决定是否进行路径权限检查
+      if (context.type === 'main_agent') {
+        // Main agent 需要严格的路径权限校验
+        // const codebaseDefaultAuthorizationPath = [
+        //   ...(useConfigStore.getState().config
+        //     .codebaseDefaultAuthorizationPath || []),
+        // ];
+        // const allow_paths = useWorkspaceStore.getState().devSpace.allow_paths;
+        // const allAuthorizedPaths = [
+        //   ...codebaseDefaultAuthorizationPath,
+        //   ...(allow_paths || []),
+        // ];
+        // const allPathsMatch = pathsMatch(
+        //   lastMessage.tool_result || {},
+        //   allAuthorizedPaths,
+        // );
+        // console.log(
+        //   '[Debug][handleAutoExecute] Main agent path authorization check:',
+        //   'allPathsMatch:',
+        //   allPathsMatch,
+        //   'authorizedPaths:',
+        //   allAuthorizedPaths,
+        // );
+        // if (!allPathsMatch) {
+        //   console.log(
+        //     '[Debug][handleAutoExecute] Main agent skipping auto-execute due to unauthorized paths',
+        //   );
+        //   return;
+        // }
+      } else {
+        // Subagent 跳过路径检查，因为它们已经通过了初始权限验证
+      }
+
+      const strategy = getExecutionStrategy(context);
+      let hasAutoExecution = false;
+      const autoExecuteTools: string[] = [];
+
+      // 检查每个工具是否应该自动执行
+      for (const toolCall of lastMessage.tool_calls) {
+        const shouldAuto = strategy.shouldAutoExecute(toolCall, context);
+
+        if (shouldAuto) {
+          hasAutoExecution = true;
+          autoExecuteTools.push(toolCall.function.name);
+
+          // 特殊处理edit_file工具
+          if (
+            ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(
+              toolCall.function.name,
+            )
+          ) {
+            useChatApplyStore.getState().acceptEdit(toolCall.id);
+          }
+        }
+      }
+
+      // 如果有自动执行且没有活跃的task工具，提交结果
+      if (hasAutoExecution && !hasActiveTaskTools) {
+        console.log('[mcp][auto-execute] 进入标准自动执行流程');
+        console.log('[mcp][auto-execute] hasAutoExecution:', hasAutoExecution);
+        console.log('[mcp][auto-execute] hasActiveTaskTools:', hasActiveTaskTools);
+        console.log('[mcp][auto-execute] autoExecuteTools:', autoExecuteTools);
+
+        const keysObject = get()
+          .buildAutoExecuteResponse(lastMessage);
+
+        // 设置自动授权标志
+        useChatStreamStore.getState().setIsAutoApproved(true);
+        useChatStreamStore.getState().onUserSubmit(
+          '',
+          {
+            event: UserEvent.CODE_CHAT_CODEBASE,
+          },
+          undefined,
+          keysObject,
+        );
+      } else if (lastMessage.tool_calls?.length) {
+        console.log('[mcp][auto-execute] 进入MCP工具处理流程');
+        console.log('[mcp][auto-execute] hasAutoExecution:', hasAutoExecution);
+        console.log('[mcp][auto-execute] hasActiveTaskTools:', hasActiveTaskTools);
+        console.log('[mcp][auto-execute] tool_calls:', lastMessage.tool_calls?.map(tc => tc.function.name));
+
+        // 处理MCP工具的特殊情况
+        get().handleMCPTools(lastMessage);
+      } else {
+        console.log('[Debug][handleAutoExecute] No execution path taken');
+        console.log('[Debug][handleAutoExecute] hasAutoExecution:', hasAutoExecution);
+        console.log('[Debug][handleAutoExecute] hasActiveTaskTools:', hasActiveTaskTools);
+        console.log('[Debug][handleAutoExecute] tool_calls length:', lastMessage.tool_calls?.length);
+      }
+    },
+
+    /**
+     * 构建自动执行的响应对象
+     */
+    buildAutoExecuteResponse(
+      lastMessage: ChatMessage,
+    ): Record<string, boolean> {
+      return Object.keys(lastMessage.tool_result || {}).reduce(
+        (acc: Record<string, boolean>, key) => {
+          acc[key] = true;
+          return acc;
+        },
+        {},
+      );
+    },
+
+    /**
+     * 处理MCP工具的特殊逻辑
+     */
+    handleMCPTools(lastMessage: ChatMessage) {
+      console.log(
+        '[mcp][handle] Called with lastMessage tool_calls:',
+        lastMessage.tool_calls?.map((tc) => tc.function.name),
+      );
+
+      const isMCPTools = lastMessage.tool_calls?.some((tool) =>
+        ['use_mcp_tool', 'access_mcp_resource'].includes(tool.function.name),
+      );
+
+      console.log('[mcp][handle] isMCPTools:', isMCPTools);
+
+      if (isMCPTools) {
+        // 获取 MCP 服务器配置和自动执行检查
+        const MCPServers = useMCPStore.getState().MCPServers;
+        let mcpServerUsed = '';
+        let mcpServerConfig = null;
+
+        try {
+          // Find the first actual MCP tool call (not just tool_calls[0] which may be non-MCP)
+          const mcpToolCall = lastMessage.tool_calls!.find(tc =>
+            tc.function.name === 'use_mcp_tool' || tc.function.name === 'access_mcp_resource'
+          );
+          const toolParams = JSON.parse(
+            mcpToolCall?.function.arguments || '{}',
+          );
+          mcpServerUsed = toolParams.server_name || '';
+          
+          // 查找对应的 MCP 服务器配置
+          if (mcpServerUsed) {
+            const normalizedServerName = mcpServerUsed.replace(/\\/g, '/').split('/').slice(-1)[0];
+            mcpServerConfig = MCPServers.find(server => {
+              const serverName = (server.name || '').replace(/\\/g, '/').split('/').slice(-1)[0];
+              return serverName === normalizedServerName;
+            });
+          }
+          
+          console.log('[mcp][check] MCP服务器名称:', mcpServerUsed);
+          console.log('[mcp][check] 标准化服务器名称:', mcpServerUsed ? mcpServerUsed.replace(/\\/g, '/').split('/').slice(-1)[0] : '');
+          console.log('[mcp][check] 找到的服务器配置:', mcpServerConfig);
+          console.log('[mcp][check] 服务器autoApprove设置:', mcpServerConfig?.config?.autoApprove);
+          console.log('[mcp][check] 服务器disabled状态:', mcpServerConfig?.disabled);
+          console.log('[mcp][check] 服务器状态:', mcpServerConfig?.status);
+        } catch (error) {
+          console.log('[mcp][check] 解析工具参数失败:', error);
+          mcpServerUsed = '';
+        }
+
+        // 检查是否应该自动执行
+        const shouldAutoExecute = mcpServerConfig?.config?.autoApprove === true || mcpServerConfig?.autoApprove === true;
+        console.log('[mcp][check] 应该自动执行:', shouldAutoExecute);
+
+        if (!shouldAutoExecute) {
+          // autoApprove=false 说明是手动确认场景，直接继续对话
+          // （autoApprove 时序问题已由 Gate2 层的订阅处理，TOOL_CALL_RESULT 到达时 store 必然已更新）
+          console.log('[mcp][run] autoApprove 未开启，手动确认场景，直接继续对话');
+          const keysObject = get()
+            .buildAutoExecuteResponse(lastMessage);
+          useChatStreamStore.getState().setIsMCPProcessing(false);
+          useChatStreamStore.getState().onUserSubmit(
+            '',
+            {
+              event: UserEvent.CODE_CHAT_CODEBASE,
+              isMCPToolResponse: true,
+              mcpServerUsed,
+            },
+            undefined,
+            keysObject,
+          );
+          return;
+        }
+
+        console.log(
+          '[mcp][handle] Processing MCP tools, calling onUserSubmit',
+        );
+        const keysObject = get()
+          .buildAutoExecuteResponse(lastMessage);
+
+        console.log('[mcp][handle] keysObject:', keysObject);
+
+        useChatStreamStore.getState().setIsMCPProcessing(false);
+        useChatStreamStore.getState().setIsAutoApproved(true);
+        useChatStreamStore.getState().onUserSubmit(
+          '',
+          {
+            event: UserEvent.CODE_CHAT_CODEBASE,
+            isMCPToolResponse: true,
+            mcpServerUsed,
+          },
+          undefined,
+          keysObject,
+        );
+        console.log('[mcp][handle] onUserSubmit called successfully');
+      }
     },
     clearToolCallResults() {
       set(() => ({
@@ -1874,7 +2123,7 @@ export const useChatStreamStore = create(
       FeedbackPool.clear();
       const model = useChatConfig.getState().config.model;
       const codeChatApiKey = useConfigStore.getState().config.codeChatApiKey;
-      const codeChatApiBaseUrl = useConfigStore.getState().config.codeChatApiBaseUrl;
+      // const codeChatApiBaseUrl = useConfigStore.getState().config.codeChatApiBaseUrl;
 
       get().resetMessage();
 
@@ -2233,7 +2482,7 @@ export const useChatStreamStore = create(
           ) {
             lastMessage.tool_calls.forEach((tool) => {
               rejectResponse[tool.id] = false;
-              if (['edit_file', 'replace_in_file'].includes(tool.function.name)) {
+              if (['edit_file', 'replace_in_file', 'write', 'edit'].includes(tool.function.name)) {
                 useChatApplyStore.getState().rejectEdit(tool.id);
               }
             });
@@ -3391,9 +3640,9 @@ export const useChatStreamStore = create(
         if (codeChatApiKey) {
           data.app_key = codeChatApiKey;
         }
-        if (codeChatApiBaseUrl) {
-          data.base_url = codeChatApiBaseUrl;
-        }
+        // if (codeChatApiBaseUrl) {
+        //   data.base_url = codeChatApiBaseUrl;
+        // }
         const chatRequestUrl = '/proxy/gpt/u5_chat/codebase_agent_stream';
         // Codebase Chat 固定设置 temperature 为 0;
         data.temperature = 0;
@@ -3550,7 +3799,9 @@ export const useChatStreamStore = create(
                   const allResponsed = false;
                   let isProcessing = toolCalls.length && !allResponsed ? true : false;
                   // 遍历 toolCalls，如果非常规 tool，在 mcp tool 中找一下是否有对应的，恢复一下
-                  const MCPServers = useMCPStore.getState().getAvailableMCPServers();
+                  const MCPServers = useMCPStore
+                    .getState()
+                    .MCPServers.filter((server) => !server.disabled);
                   toolCalls.forEach((tool) => {
                     if (!toolCallNames.includes(tool.function.name)) {
                       for (const server of MCPServers) {
@@ -3589,6 +3840,8 @@ export const useChatStreamStore = create(
                     'reapply',
                     'run_terminal_cmd',
                     'replace_in_file',
+                    'edit',
+                    'write',
                     'ask_user_question',
                     'make_plan',
                   ].includes(toolCall.function.name))) {
@@ -3597,7 +3850,7 @@ export const useChatStreamStore = create(
                   set((state) => {
                     state.isStreaming = false;
                     state.isProcessing = isProcessing;
-                    state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file'].includes(toolCall.function.name));
+                    state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(toolCall.function.name));
                   });
                   chatStoreState.updateCurrentSession((session) => {
                     session.data?.messages.push({
@@ -3663,26 +3916,100 @@ export const useChatStreamStore = create(
                             }
                             let autoApprove = false;
                             if (params && params.server_name && params.tool_name) {
-                              const targetServer = MCPServers.find(server => server.name === params.server_name);
+                              // Normalize server name for lookup (handles path-based names)
+                              const normalizedParamsServer = (params.server_name || '')
+                                .replace(/\\/g, '/')
+                                .split('/')
+                                .slice(-1)[0];
+                              const targetServer = MCPServers.find(
+                                (server) => {
+                                  if (server.name === params.server_name) return true;
+                                  const sNorm = (server.name || '').replace(/\\/g, '/').split('/').slice(-1)[0];
+                                  return sNorm === normalizedParamsServer;
+                                },
+                              );
                               if (targetServer && targetServer.tools) {
                                 if (targetServer.autoApprove) {
                                   autoApprove = true;
-                                } else if (targetServer.tools) {
-                                  const targetTool = targetServer.tools.find(tool => tool.name === params.tool_name)
+                                } else {
+                                  const targetTool = targetServer.tools.find(
+                                    (tool) => tool.name === params.tool_name,
+                                  );
                                   if (targetTool && targetTool.autoApprove) {
                                     autoApprove = true;
                                   }
                                 }
+                              } else if (targetServer) {
+                                // Server found but tools not yet loaded — check server-level autoApprove
+                                if (targetServer.autoApprove) {
+                                  autoApprove = true;
+                                }
+                              } else {
+                                // Server not found by name — search all servers by tool name
+                                const toolName =
+                                  params?.tool_name?.toLowerCase?.();
+                                for (const server of MCPServers) {
+                                  const targetTool = server.tools?.find(
+                                    (tool) =>
+                                      tool?.name?.toLowerCase?.() === toolName,
+                                  );
+                                  if (targetTool) {
+                                    // Check both tool-level and server-level autoApprove
+                                    if (targetTool?.autoApprove || server.autoApprove) {
+                                      autoApprove = true;
+                                    }
+                                    params.server_name = server.name;
+                                    break;
+                                  }
+                                }
                               }
                             } else if (params && params.server_name && params.uri) {
-                              const targetServer = MCPServers.find(server => server.name === params.server_name);
+                              // Normalize server name for lookup
+                              const normalizedParamsServerForUri = (params.server_name || '')
+                                .replace(/\\/g, '/')
+                                .split('/')
+                                .slice(-1)[0];
+                              const targetServer = MCPServers.find(
+                                (server) => {
+                                  if (server.name === params.server_name) return true;
+                                  const sNorm = (server.name || '').replace(/\\/g, '/').split('/').slice(-1)[0];
+                                  return sNorm === normalizedParamsServerForUri;
+                                },
+                              );
                               if (targetServer && targetServer.resources) {
                                 if (targetServer.autoApprove) {
                                   autoApprove = true;
-                                } else if (targetServer.resources) {
-                                  const targetResource = targetServer.resources.find(resource => resource.uri === params.uri)
-                                  if (targetResource && targetResource.autoApprove) {
+                                } else {
+                                  const targetResource =
+                                    targetServer.resources.find(
+                                      (resource) => resource.uri === params.uri,
+                                    );
+                                  if (
+                                    targetResource &&
+                                    targetResource.autoApprove
+                                  ) {
                                     autoApprove = true;
+                                  }
+                                }
+                              } else if (targetServer) {
+                                // Server found but resources not yet loaded
+                                if (targetServer.autoApprove) {
+                                  autoApprove = true;
+                                }
+                              } else {
+                                const uri = params?.uri?.toLowerCase?.();
+                                for (const server of MCPServers) {
+                                  const targetResource = server.resources?.find(
+                                    (resource) =>
+                                      resource?.uri?.toLowerCase?.() === uri,
+                                  );
+                                  if (targetResource) {
+                                    // Check both resource-level and server-level autoApprove
+                                    if (targetResource?.autoApprove || server.autoApprove) {
+                                      autoApprove = true;
+                                    }
+                                    params.server_name = server.name;
+                                    break;
                                   }
                                 }
                               }
@@ -3700,6 +4027,76 @@ export const useChatStreamStore = create(
                                 },
                                 '*',
                               );
+                            } else {
+                              // autoApprove 当前为 false，可能是 SYNC_MCP_SERVERS 还未到达
+                              // 订阅 MCPStore 变化，一旦 autoApprove 变为 true 立即补发 TOOL_CALL
+                              const capturedToolId = tool.id;
+                              const capturedToolName = tool.function.name;
+                              const capturedParams = { ...params };
+                              const capturedSessionId = sessionId;
+
+                              let dispatched = false;
+                              let unsubscribeMCPWatch: (() => void) | undefined;
+
+                              const cleanupMCPWatch = () => {
+                                if (unsubscribeMCPWatch) {
+                                  unsubscribeMCPWatch();
+                                  unsubscribeMCPWatch = undefined;
+                                }
+                              };
+
+                              const watchTimeoutId = setTimeout(cleanupMCPWatch, 3000);
+
+                              // 检查函数：按 server_name 归一化名称在 MCPServers 里查找 autoApprove
+                              const checkAndDispatch = (mcpServers: typeof MCPServers) => {
+                                if (dispatched) return;
+                                const targetNorm = (capturedParams.server_name || '')
+                                  .replace(/\\/g, '/')
+                                  .split('/')
+                                  .slice(-1)[0];
+                                const foundServer = mcpServers.find((server) => {
+                                  const sNorm = (server.name || '')
+                                    .replace(/\\/g, '/')
+                                    .split('/')
+                                    .slice(-1)[0];
+                                  return sNorm === targetNorm;
+                                });
+                                const autoApproveNow =
+                                  foundServer?.config?.autoApprove === true ||
+                                  foundServer?.autoApprove === true;
+                                if (autoApproveNow) {
+                                  dispatched = true;
+                                  clearTimeout(watchTimeoutId);
+                                  cleanupMCPWatch();
+                                  console.log('[mcp][gate2] autoApprove 已就绪，派发 TOOL_CALL，服务器:', targetNorm);
+                                  useChatStreamStore.getState().setIsMCPProcessing(true);
+                                  window.parent.postMessage(
+                                    {
+                                      type: BroadcastActions.TOOL_CALL,
+                                      data: {
+                                        tool_name: capturedToolName,
+                                        tool_params: capturedParams,
+                                        tool_id: capturedToolId,
+                                      },
+                                    },
+                                    '*',
+                                  );
+                                }
+                              };
+
+                              // 立即用当前 store 检查一次——应对「autoApprove 已是 true 但 store 不会再变」的场景
+                              checkAndDispatch(useMCPStore.getState().MCPServers);
+
+                              unsubscribeMCPWatch = useMCPStore.subscribe((state) => {
+                                if (dispatched) return;
+                                // 会话已切走则放弃，避免在错误的会话上触发
+                                if (useChatStore.getState().currentSessionId !== capturedSessionId) {
+                                  clearTimeout(watchTimeoutId);
+                                  cleanupMCPWatch();
+                                  return;
+                                }
+                                checkAndDispatch(state.MCPServers);
+                              });
                             }
                           } else if (tool.function.name === 'retrieve_code') {
                             window.parent.postMessage(
@@ -3807,7 +4204,7 @@ export const useChatStreamStore = create(
                             // 用户在界面上交互后，通过 AskUserQuestion 组件提交结果
                             console.log('[Debug] ask_user_question tool intercepted, waiting for user response');
                           } else {
-                            if (['edit_file', 'reapply', 'replace_in_file'].includes(tool.function.name)) {
+                            if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name)) {
                               const filePath = tool_params.target_file;
                               const updateSnippet = tool_params.code_edit;
                               const replaceSnippet = tool_params.diff;
@@ -3817,14 +4214,14 @@ export const useChatStreamStore = create(
                                 originalContent: '',
                                 updateSnippet,
                                 replaceSnippet,
-                                type: tool.function.name === 'replace_in_file' ? 'replace' : 'edit',
+                                type: tool.function.name as 'edit' | 'replace' | 'write',
                                 toolCallId: tool.id,
                                 applying: true,
                                 accepted: false,
                                 isCreateFile
                               })
                               userReporter.report({
-                                event: tool.function.name === 'replace_in_file' ? UserEvent.CODE_CHAT_REPLACE_IN_FILE : UserEvent.CODE_CHAT_EDIT_FILE,
+                                event: getReportEventByToolName({ toolName: tool.function.name, status: 0 }),
                                 extends: {
                                   model,
                                   tool_params: tool_params,
@@ -4082,7 +4479,9 @@ export const useChatStreamStore = create(
                   const allResponsed = false;
                   let isProcessing = toolCalls.length && !allResponsed ? true : false;
                   // 遍历 toolCalls，如果非常规 tool，在 mcp tool 中找一下是否有对应的，恢复一下
-                  const MCPServers = useMCPStore.getState().getAvailableMCPServers();
+                  const MCPServers = useMCPStore
+                    .getState()
+                    .MCPServers.filter((server) => !server.disabled);
                   toolCalls.forEach((tool) => {
                     if (!toolCallNames.includes(tool.function.name)) {
                       for (const server of MCPServers) {
@@ -4124,6 +4523,8 @@ export const useChatStreamStore = create(
                     'reapply',
                     'run_terminal_cmd',
                     'replace_in_file',
+                    'edit',
+                    'write',
                     'ask_user_question',
                     'make_plan',
                   ].includes(toolCall.function.name))) {
@@ -4132,7 +4533,7 @@ export const useChatStreamStore = create(
                   set((state) => {
                     state.isStreaming = false;
                     state.isProcessing = isProcessing;
-                    state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file'].includes(toolCall.function.name));
+                    state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(toolCall.function.name));
                   });
                   const curSessionId = chatStoreState.currentSessionId as string;
                   chatStoreState.updateCurrentSession((session) => {
@@ -4256,22 +4657,39 @@ export const useChatStreamStore = create(
                             }
                             let autoApprove = false;
                             if (params && params.server_name && params.tool_name) {
-                              const targetServer = MCPServers.find(server => server.name === params.server_name);
+                              // Normalize server name for lookup (handles path-based names)
+                              const normalizedParamsServer = (params.server_name || '')
+                                .replace(/\\/g, '/')
+                                .split('/')
+                                .slice(-1)[0];
+                              const targetServer = MCPServers.find(
+                                (server) => {
+                                  if (server.name === params.server_name) return true;
+                                  const sNorm = (server.name || '').replace(/\\/g, '/').split('/').slice(-1)[0];
+                                  return sNorm === normalizedParamsServer;
+                                },
+                              );
                               if (targetServer && targetServer.tools) {
                                 if (targetServer.autoApprove) {
                                   autoApprove = true;
-                                } else if (targetServer.tools) {
+                                } else {
                                   const targetTool = targetServer.tools.find(tool => tool.name === params.tool_name)
                                   if (targetTool && targetTool.autoApprove) {
                                     autoApprove = true;
                                   }
+                                }
+                              } else if (targetServer) {
+                                // Server found but tools not yet loaded — check server-level autoApprove
+                                if (targetServer.autoApprove) {
+                                  autoApprove = true;
                                 }
                               } else {
                                 const toolName = params?.tool_name?.toLowerCase?.()
                                 for (const server of MCPServers) {
                                   const targetTool = (server?.tools || []).find(tool => tool?.name?.toLowerCase?.() === toolName)
                                   if (targetTool) {
-                                    if (targetTool?.autoApprove) {
+                                    // Check both tool-level and server-level autoApprove
+                                    if (targetTool?.autoApprove || server.autoApprove) {
                                       autoApprove = true;
                                     }
                                     params.server_name = server.name
@@ -4281,22 +4699,39 @@ export const useChatStreamStore = create(
                                 }
                               }
                             } else if (params && params.server_name && params.uri) {
-                              const targetServer = MCPServers.find(server => server.name === params.server_name);
+                              // Normalize server name for lookup
+                              const normalizedParamsServerForUri = (params.server_name || '')
+                                .replace(/\\/g, '/')
+                                .split('/')
+                                .slice(-1)[0];
+                              const targetServer = MCPServers.find(
+                                (server) => {
+                                  if (server.name === params.server_name) return true;
+                                  const sNorm = (server.name || '').replace(/\\/g, '/').split('/').slice(-1)[0];
+                                  return sNorm === normalizedParamsServerForUri;
+                                },
+                              );
                               if (targetServer && targetServer.resources) {
                                 if (targetServer.autoApprove) {
                                   autoApprove = true;
-                                } else if (targetServer.resources) {
+                                } else {
                                   const targetResource = targetServer.resources.find(resource => resource.uri === params.uri)
                                   if (targetResource && targetResource.autoApprove) {
                                     autoApprove = true;
                                   }
+                                }
+                              } else if (targetServer) {
+                                // Server found but resources not yet loaded
+                                if (targetServer.autoApprove) {
+                                  autoApprove = true;
                                 }
                               } else {
                                 const uri = params?.uri?.toLowerCase?.()
                                 for (const server of MCPServers) {
                                   const targetResource = (server?.resources || []).find(resource => resource?.uri?.toLowerCase?.() === uri)
                                   if (targetResource) {
-                                    if (targetResource?.autoApprove) {
+                                    // Check both resource-level and server-level autoApprove
+                                    if (targetResource?.autoApprove || server.autoApprove) {
                                       autoApprove = true;
                                     }
                                     params.server_name = server.name
@@ -4319,6 +4754,76 @@ export const useChatStreamStore = create(
                                 },
                                 '*',
                               );
+                            } else {
+                              // autoApprove 当前为 false，可能是 SYNC_MCP_SERVERS 还未到达
+                              // 订阅 MCPStore 变化，一旦 autoApprove 变为 true 立即补发 TOOL_CALL
+                              const capturedToolId = tool.id;
+                              const capturedToolName = tool.function.name;
+                              const capturedParams = { ...params };
+                              const capturedSessionId = sessionId;
+
+                              let dispatched = false;
+                              let unsubscribeMCPWatch: (() => void) | undefined;
+
+                              const cleanupMCPWatch = () => {
+                                if (unsubscribeMCPWatch) {
+                                  unsubscribeMCPWatch();
+                                  unsubscribeMCPWatch = undefined;
+                                }
+                              };
+
+                              const watchTimeoutId = setTimeout(cleanupMCPWatch, 3000);
+
+                              // 检查函数：按 server_name 归一化名称在 MCPServers 里查找 autoApprove
+                              const checkAndDispatch = (mcpServers: typeof MCPServers) => {
+                                if (dispatched) return;
+                                const targetNorm = (capturedParams.server_name || '')
+                                  .replace(/\\/g, '/')
+                                  .split('/')
+                                  .slice(-1)[0];
+                                const foundServer = mcpServers.find((server) => {
+                                  const sNorm = (server.name || '')
+                                    .replace(/\\/g, '/')
+                                    .split('/')
+                                    .slice(-1)[0];
+                                  return sNorm === targetNorm;
+                                });
+                                const autoApproveNow =
+                                  foundServer?.config?.autoApprove === true ||
+                                  foundServer?.autoApprove === true;
+                                if (autoApproveNow) {
+                                  dispatched = true;
+                                  clearTimeout(watchTimeoutId);
+                                  cleanupMCPWatch();
+                                  console.log('[mcp][gate2] autoApprove 已就绪，派发 TOOL_CALL，服务器:', targetNorm);
+                                  useChatStreamStore.getState().setIsMCPProcessing(true);
+                                  window.parent.postMessage(
+                                    {
+                                      type: BroadcastActions.TOOL_CALL,
+                                      data: {
+                                        tool_name: capturedToolName,
+                                        tool_params: capturedParams,
+                                        tool_id: capturedToolId,
+                                      },
+                                    },
+                                    '*',
+                                  );
+                                }
+                              };
+
+                              // 立即用当前 store 检查一次——应对「autoApprove 已是 true 但 store 不会再变」的场景
+                              checkAndDispatch(useMCPStore.getState().MCPServers);
+
+                              unsubscribeMCPWatch = useMCPStore.subscribe((state) => {
+                                if (dispatched) return;
+                                // 会话已切走则放弃，避免在错误的会话上触发
+                                if (useChatStore.getState().currentSessionId !== capturedSessionId) {
+                                  clearTimeout(watchTimeoutId);
+                                  cleanupMCPWatch();
+                                  return;
+                                }
+                                checkAndDispatch(state.MCPServers);
+                              });
                             }
                           } else if (tool.function.name === 'retrieve_code') {
                             window.parent.postMessage(
@@ -4398,7 +4903,7 @@ export const useChatStreamStore = create(
                             // 用户在界面上交互后，通过 AskUserQuestion 组件提交结果
                             console.log('[Debug] ask_user_question tool intercepted (codebase), waiting for user response');
                           } else {
-                            if (['edit_file', 'reapply', 'replace_in_file'].includes(tool.function.name)) {
+                            if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name)) {
                               const filePath = tool_params.target_file;
                               const updateSnippet = tool_params.code_edit;
                               const replaceSnippet = tool_params.diff;
@@ -4408,14 +4913,14 @@ export const useChatStreamStore = create(
                                 originalContent: '',
                                 updateSnippet,
                                 replaceSnippet,
-                                type: tool.function.name === 'replace_in_file' ? 'replace' : 'edit',
+                                type: tool.function.name as 'edit' | 'replace' | 'write',
                                 toolCallId: tool.id,
                                 applying: true,
                                 accepted: false,
                                 isCreateFile
                               })
                               userReporter.report({
-                                event: tool.function.name === 'replace_in_file' ? UserEvent.CODE_CHAT_REPLACE_IN_FILE : UserEvent.CODE_CHAT_EDIT_FILE,
+                                event: getReportEventByToolName({ toolName: tool.function.name, status: 0 }),
                                 extends: {
                                   model,
                                   tool_params: tool_params,
@@ -5075,9 +5580,9 @@ export const useChatStreamStore = create(
       if (codeChatApiKey) {
         data.app_key = codeChatApiKey;
       }
-      if (codeChatApiBaseUrl) {
-        data.base_url = codeChatApiBaseUrl;
-      }
+      // if (codeChatApiBaseUrl) {
+      //   data.base_url = codeChatApiBaseUrl;
+      // }
 
       // 临时补丁，避免content为空导致异常
       for (const message of messages) {

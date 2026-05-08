@@ -468,9 +468,6 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
                           submitMessageFeedback(message.id, feedbackType);
                         }
                       }
-                      if (message.id) {
-                        submitMessageFeedback(message.id, feedbackType);
-                      }
                     }}
                     isShare={isShare}
                     userMsgId={prevUserMsgId}

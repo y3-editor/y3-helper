@@ -34,13 +34,14 @@ import {
 import { SettingsIcon, DownloadIcon, DeleteIcon, ExternalLinkIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import { MCPServer, useMCPStore, BuiltInServer } from '../../store/mcp';
 import { BroadcastActions, usePostMessage } from '../../PostMessageProvider';
+import { useChatConfig } from '../../store/chat-config';
 import mcpIcon from '../../assets/mcp.png';
 import { TbFileCode } from 'react-icons/tb';
 import MCPServerModal from './MCPServerModal';
 import { ThemeStyle, useTheme } from '../../ThemeContext';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
-
+import { mcpApiRequest } from '../../services/mcp';
 
 interface MCPSettingModelProps {
   isOpen: boolean;
@@ -135,6 +136,9 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
   const getChineseNameByServerName = useMCPStore((state) => state.getChineseNameByServerName);
   const disabledSwitches = useMCPStore((state) => state.disabledSwitches);
   const { activeTheme } = useTheme();
+  const currentModel = useChatConfig((state) => state.config.model);
+  const chatModels = useChatConfig((state) => state.chatModels);
+  const isPrivateModel = chatModels[currentModel]?.isPrivate || false;
 
   const [localServers, setLocalServers] = useState<MCPServer[]>([]);
   const [showParamConfig, setShowParamConfig] = useState(false);
@@ -334,10 +338,10 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
     }
 
     // 新增服务器时默认设置为启用状态且上报安装事件
-    // if (action === 'add') {
-    //   mcpApiRequest.post(`servers/${server.id}/install`);
-    //   serverData.disabled = false;
-    // }
+    if (action === 'add') {
+      mcpApiRequest.post(`servers/${server.id}/install`);
+      serverData.disabled = false;
+    }
 
     // 在发送给插件之前，过滤掉 X-Access-Token 和 X-Auth-User
     if (serverData && serverData.headers) {
@@ -504,10 +508,10 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
         </ModalHeader>
         <ModalCloseButton />
         <ModalBody overflowY="auto">
-          <Tabs colorScheme="blue">
+          <Tabs>
             <TabList>
-              <Tab>已安装</Tab>
-              <Tab>更多 MCP</Tab>
+              <Tab _selected={{ bg: 'transparent', borderColor: 'blue.500', color: '#786fff' }}>已安装</Tab>
+              <Tab _selected={{ bg: 'transparent', borderColor: 'blue.500', color: '#786fff' }}>更多 MCP</Tab>
             </TabList>
 
             <TabPanels>
@@ -575,6 +579,20 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
                         <Text fontWeight="medium" color={activeTheme === ThemeStyle.Light ? '#222' : undefined}>
                           {server.chinese_name || server.name}
                         </Text>
+                        {server.name === 'POPO MCP' && !isPrivateModel && (
+                          <Tooltip
+                            label="当前使用商业模型，通过POPO MCP 获取的文档数据受模型服务商数据安全协议保护，不会被二次利用。如涉及敏感信息，可切换至私有模型。"
+                            placement="top"
+                          >
+                            <InfoOutlineIcon
+                              ml={2}
+                              color="orange.400"
+                              w={4}
+                              h={4}
+                              cursor="pointer"
+                            />
+                          </Tooltip>
+                        )}
                         {disabledSwitches.has(server.name) && (
                           <Tooltip
                             label={`根据服务提供方要求，${server.chinese_name || server.name}只能在私有模型下使用`}
@@ -675,6 +693,20 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
                         <Text fontWeight="medium" color={activeTheme === ThemeStyle.Light ? '#222' : undefined}>
                           {server?.config?.chinese_name || getChineseNameByServerName(server.name) || server.name || `服务器 ${index + 1}`}
                         </Text>
+                        {server.name === 'POPO MCP' && !isPrivateModel && (
+                          <Tooltip
+                            label="当前使用商业模型，通过POPO MCP 获取的文档数据受模型服务商数据安全协议保护，不会被二次利用。如涉及敏感信息，可切换至私有模型。"
+                            placement="top"
+                          >
+                            <InfoOutlineIcon
+                              ml={2}
+                              color="orange.400"
+                              w={4}
+                              h={4}
+                              cursor="pointer"
+                            />
+                          </Tooltip>
+                        )}
                       </Flex>
                       <Flex gap={3} alignItems="center">
                         <Tooltip
@@ -745,7 +777,7 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
                       onClick={() => {
                         postMessage({
                           type: BroadcastActions.OPEN_IN_BROWSER,
-                          data: { url: 'http://localhost:3001' }
+                          data: { url: 'https://modelspace.netease.com/mcphub' }
                         });
                       }}
                       display="flex"
@@ -782,6 +814,20 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
                         <Text fontWeight="medium" color={activeTheme === ThemeStyle.Light ? '#222' : undefined}>
                           {server.chinese_name || server.name}
                         </Text>
+                        {server.name === 'POPO MCP' && !isPrivateModel && (
+                          <Tooltip
+                            label="当前使用商业模型，通过POPO MCP 获取的文档数据受模型服务商数据安全协议保护，不会被二次利用。如涉及敏感信息，可切换至私有模型。"
+                            placement="top"
+                          >
+                            <InfoOutlineIcon
+                              ml={2}
+                              color="orange.400"
+                              w={4}
+                              h={4}
+                              cursor="pointer"
+                            />
+                          </Tooltip>
+                        )}
                         {disabledSwitches.has(server.name) && (
                           <Tooltip
                             label={`根据服务提供方要求，${server.chinese_name || server.name}只能在私有模型下使用`}

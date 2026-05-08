@@ -143,7 +143,7 @@ const MCPStatus = () => {
               MCPServers.length
               ? MCPServers.map((server, index) => {
                 let serverName = server.name || '';
-                serverName = serverName.replace('\\', '/');
+                serverName = serverName.replace(/\\/g, '/');
                 serverName = serverName.split('/').slice(-1)[0];
 
                 // 查找中文名称的优先级：

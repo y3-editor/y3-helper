@@ -9,6 +9,7 @@ import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspa
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
 import { isImageFileByPath } from ".";
 import { onChunkLoadError } from "./chunkErrorHandler";
+import { UserEvent } from "../types/report";
 
 
 export function getToolCallQuery(name: string, args: string) {
@@ -58,12 +59,22 @@ export function getToolCallQuery(name: string, args: string) {
       return <div>使用 grep 搜索 <code>{toolParams.regex}</code></div>;
     case 'glob_search':
       return <div className="truncate"> Glob / pattern={toolParams.pattern || '*'}</div>;
-    case 'use_skill':
-      return '使用Skill:';
+    case 'use_skill': {
+      const skillNames = Array.isArray(toolParams.skill_name)
+        ? toolParams.skill_name
+        : [toolParams.skill_name];
+      return `使用Skill: ${skillNames.join(', ')}`;
+    }
     case 'ask_user_question':
       return '向用户提问';
     case 'task': {
       return `运行 Subagent`
+    }
+    case 'write': {
+      return '写入文件';
+    }
+    case 'edit': {
+      return '编辑文件';
     }
     default:
       return '获取如下信息';
@@ -357,4 +368,51 @@ function fileEditWithoutUserChanges(
     `Here is the full, updated content of the file that was saved:\n\n` +
     `<final_file_content path="${filePath}">\n${finalResult}\n</final_file_content>\n\n` +
     `IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file. Always base your edit_file or replace_in_file operations on this final version to ensure accuracy.\n\n`
+}
+
+/**
+ * 获取工具上报事件
+ */
+export const getReportEventByToolName = ({
+  toolName,
+  status = 0,
+}: {
+  toolName: string,
+  status?: number
+}) => {
+  switch (toolName) {
+    case 'replace_in_file': {
+      if (status === 2) {
+        return UserEvent.CODE_CHAT_REPLACE_IN_FILE_FAILED
+      } else if (status === 1) {
+        return UserEvent.CODE_CHAT_REPLACE_IN_FILE_SUCCESS
+      }
+      return UserEvent.CODE_CHAT_REPLACE_IN_FILE
+    }
+    case 'edit_file': {
+      if (status === 2) {
+        return UserEvent.CODE_CHAT_EDIT_FILE_FAILED
+      } else if (status === 1) {
+        return UserEvent.CODE_CHAT_EDIT_FILE_SUCCESS
+      }
+      return UserEvent.CODE_CHAT_EDIT_FILE
+    }
+    case 'write': {
+      if (status === 2) {
+        return UserEvent.CODE_CHAT_CLAUDE_WRITE_FILE_FAILED
+      } else if (status === 1) {
+        return UserEvent.CODE_CHAT_CLAUDE_WRITE_FILE_SUCCESS
+      }
+      return UserEvent.CODE_CHAT_CLAUDE_WRITE_FILE
+    }
+    case 'edit': {
+      if (status === 2) {
+        return UserEvent.CODE_CHAT_CLAUDE_EDIT_FILE_FAILED
+      } else if (status === 1) {
+        return UserEvent.CODE_CHAT_CLAUDE_EDIT_FILE_SUCCESS
+      }
+      return UserEvent.CODE_CHAT_CLAUDE_EDIT_FILE
+    }
+    default: return ''
+  }
 }

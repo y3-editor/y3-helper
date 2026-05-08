@@ -80,7 +80,7 @@ export function EditFile(props: {
       state.isStreaming,
       state.setIsApplying,
       state.onUserSubmit
-  ]);
+    ]);
 
   const {
     finalResult = '',
@@ -686,6 +686,7 @@ export function EditFile(props: {
             value={diffInfo.content || ''}
             addedLines={diffInfo.added || []}
             removedLines={diffInfo.removed || []}
+            lineNumbers={diffInfo.lineNumbers}
             collapsable={true}
             metaData={metaData}
             codeWhiteSpace={codeWhiteSpace}

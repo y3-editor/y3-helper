@@ -31,6 +31,8 @@ export function useToolCallNotification(
   const currentSession = useChatStore((state) => state.currentSession());
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
+  const isApplying = useChatStreamStore((state) => state.isApplying);
+  const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
   const panelContext = usePanelContextOptional();
   const hasNotifiedRef = useRef<boolean>(false);
 
@@ -41,6 +43,8 @@ export function useToolCallNotification(
       !toolResponseDisabled &&
       !isProcessing &&
       !isMCPProcessing &&
+      !isApplying &&
+      !isTerminalProcessing &&
       !isShare &&
       !hasAskUserQuestionTool &&
       !hasTaskTool && // Task 工具（subagent）不需要通知
@@ -89,6 +93,8 @@ export function useToolCallNotification(
     toolResponseDisabled,
     isProcessing,
     isMCPProcessing,
+    isApplying,
+    isTerminalProcessing,
     isShare,
     hasAskUserQuestionTool,
     hasTaskTool,

@@ -725,16 +725,36 @@ const PromptsPanel = (
               }
             } else if (prompt.meta.type === PromptCategoryType.Skill) {
               const skillName = prompt.meta.name || '';
+              // const { useSkillPromptApp } = await import('../../../../store/skills/skill-prompt');
+              
+              // 检查skill是否已经激活
+              if (useSkillPromptApp.getState().hasSkill(skillName)) {
+                console.log('[use_skill] Skill already active, showing toast');
+                toast({
+                  title: `Skill "${skillName}" 已激活`,
+                  status: 'info',
+                  duration: 2000,
+                  isClosable: true,
+                  position: 'top',
+                });
+                return;
+              }
+              
+              useSkillPromptApp.getState().addSkill(skillName);
               setSkillLoading(true);
+              const toolId = createSkillToolId();
+              
               postMessage({
                 type: BroadcastActions.TOOL_CALL,
                 data: {
                   tool_name: 'use_skill',
                   tool_params: { skill_name: skillName },
-                  tool_id: createSkillToolId(),
+                  tool_id: toolId,
                 },
               });
               // 不清空输入框，保留用户已输入的文字内容
+              // 是否关闭面板，允许继续选择其他skills
+              // return;
             } else if (prompt.meta.type === PromptCategoryType.CodeWiki || prompt.meta._id === CODE_QUALITY_AUTOFIX_PROMPT_APP._id) {
               updatePromptAppRunner(prompt);
             } else {

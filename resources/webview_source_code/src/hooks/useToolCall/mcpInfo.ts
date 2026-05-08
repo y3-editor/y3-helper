@@ -25,7 +25,7 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
     try {
       const params = JSON.parse(mcpTool.function.arguments || '{}');
       let name = params.server_name || '';
-      name = name.replace('\\', '/');
+      name = name.replace(/\\/g, '/');
       name = name.split('/').slice(-1)[0];
       return name;
     } catch {
@@ -38,7 +38,7 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
     if (!mcpServerName) return null;
     return MCPServers.find(s => {
       let serverName = s.name || '';
-      serverName = serverName.replace('\\', '/');
+      serverName = serverName.replace(/\\/g, '/');
       serverName = serverName.split('/').slice(-1)[0];
       return serverName === mcpServerName;
     });
@@ -63,15 +63,21 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
 
   // MCP switch 的 onChange 处理函数
   const handleMcpSwitchChange = useCallback((checked: boolean) => {
+    console.log('[mcp][switch] 用户切换MCP自动调用开关');
+    console.log('[mcp][switch] 服务器名称:', mcpServerName);
+    console.log('[mcp][switch] 新的autoApprove值:', checked);
+    console.log('[mcp][switch] 当前服务器配置:', mcpServer?.config);
+
+    const updateData = {
+      name: mcpServer?.name || mcpServerName,
+      ...mcpServer?.config,
+      autoApprove: checked,
+    };
     postMessage({
       type: BroadcastActions.UPDATE_MCP_SERVERS,
-      data: {
-        name: mcpServerName,
-        ...mcpServer?.config,
-        autoApprove: checked,
-      },
+      data: updateData,
     });
-  }, [mcpServerName, mcpServer?.config, postMessage]);
+  }, [mcpServerName, mcpServer?.config, mcpServer?.name, postMessage]);
 
   // MCP 自动调用提示
   const mcpAutoApproveTip = useMemo(() => {

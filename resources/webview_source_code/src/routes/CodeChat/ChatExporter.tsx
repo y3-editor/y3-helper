@@ -8,9 +8,7 @@ import {
   ModalHeader,
   ModalCloseButton,
   ModalBody,
-  ModalFooter,
   Checkbox,
-  Box,
 } from '@chakra-ui/react';
 import { TbShare3 } from 'react-icons/tb';
 import { useChatStore, useChatStreamStore } from '../../store/chat';
@@ -29,6 +27,7 @@ import { ChatMessageHandle } from './ChatMessagesList/types';
 import * as ChatNavUtils from './chatNavigationUtils';
 import { cloneDeep, unionBy } from 'lodash';
 import type { ChatMessage } from '../../services';
+import SessionModalFooter from './SessionModalFooter';
 
 // 判断一轮消息中是否包含工具调用
 function roundHasToolCalls(messages: ChatMessage[], userIdx: number): boolean {
@@ -177,7 +176,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
       .map((message) => {
         let prefixLabel = '## 对话消息';
         if (message.role === ChatRole.Assistant) {
-          prefixLabel = '## 来自 CodeMaker 的消息';
+          prefixLabel = '## 来自 Y3Maker 的消息';
         } else if (message.role === ChatRole.Tool) {
           prefixLabel = '## 工具调用结果';
         } else {
@@ -609,24 +608,28 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
               />
             </div>
           </ModalBody>
-          <ModalFooter gap={2}>
-            <Checkbox
-              isChecked={isAllSelected}
-              isIndeterminate={isIndeterminate}
-              onChange={handleToggleAll}
-            >
-              全选
-            </Checkbox>
-            {allToolCallUserMsgIds.length > 0 && (
-              <Checkbox
-                isChecked={isAllToolCallSelected}
-                isIndeterminate={isToolCallIndeterminate}
-                onChange={handleToggleAllToolCalls}
-              >
-                工具调用
-              </Checkbox>
-            )}
-            <Box mr="auto">
+          <SessionModalFooter
+            checkboxes={
+              <>
+                <Checkbox
+                  isChecked={isAllSelected}
+                  isIndeterminate={isIndeterminate}
+                  onChange={handleToggleAll}
+                >
+                  全选
+                </Checkbox>
+                {allToolCallUserMsgIds.length > 0 && (
+                  <Checkbox
+                    isChecked={isAllToolCallSelected}
+                    isIndeterminate={isToolCallIndeterminate}
+                    onChange={handleToggleAllToolCalls}
+                  >
+                    工具调用
+                  </Checkbox>
+                )}
+              </>
+            }
+            navigationButtons={
               <ChatNavigationButtons
                 userMsgIndexes={userMsgIndexes}
                 isStreaming={false}
@@ -636,29 +639,37 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
                 canGoPrev={canGoPrev}
                 canGoNext={canGoNext}
               />
-            </Box>
-            <Button
-              colorScheme="blue"
-              color="white"
-              size="sm"
-              onClick={shareLink}
-              isDisabled={selectedMessageIds.size === 0}
-            >
-              复制链接
-            </Button>
-            <Button
-              colorScheme="blue"
-              color="white"
-              size="sm"
-              onClick={handleDownload}
-              isDisabled={selectedMessageIds.size === 0}
-            >
-              下载文件
-            </Button>
-            <Button size="sm" onClick={handleCopy} isDisabled={selectedMessageIds.size === 0}>
-              全部复制
-            </Button>
-          </ModalFooter>
+            }
+            actionButtons={
+              <>
+                <Button
+                  colorScheme="blue"
+                  color="white"
+                  size="sm"
+                  onClick={shareLink}
+                  isDisabled={selectedMessageIds.size === 0}
+                >
+                  复制链接
+                </Button>
+                <Button
+                  colorScheme="blue"
+                  color="white"
+                  size="sm"
+                  onClick={handleDownload}
+                  isDisabled={selectedMessageIds.size === 0}
+                >
+                  下载文件
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleCopy}
+                  isDisabled={selectedMessageIds.size === 0}
+                >
+                  全部复制
+                </Button>
+              </>
+            }
+          />
         </ModalContent>
       </Modal>
     </>

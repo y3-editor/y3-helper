@@ -151,6 +151,14 @@ export enum UserEvent {
   CODE_CHAT_REPLACE_IN_FILE_FAILED = 'CodeChat.replace_in_file_failed',
   CODE_CHAT_REVERT_FILE_SUCCESS = 'CodeChat.revert_file_success',
 
+  // ClaudeEdit编辑
+  CODE_CHAT_CLAUDE_EDIT_FILE = 'CodeChat.claude_edit_file',
+  CODE_CHAT_CLAUDE_EDIT_FILE_SUCCESS = 'CodeChat.claude_edit_file_success',
+  CODE_CHAT_CLAUDE_EDIT_FILE_FAILED = 'CodeChat.claude_edit_file_failed',
+  CODE_CHAT_CLAUDE_WRITE_FILE = 'CodeChat.claude_write_file',
+  CODE_CHAT_CLAUDE_WRITE_FILE_SUCCESS = 'CodeChat.claude_write_file_success',
+  CODE_CHAT_CLAUDE_WRITE_FILE_FAILED = 'CodeChat.claude_write_file_failed',
+
   MAX_AUTO_APPROVED_REACHED = 'CodeChat.max_auto_approved_reached',
 
   //mcp相关埋点

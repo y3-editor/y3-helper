@@ -32,7 +32,11 @@
       "resources/webview_source_code/src/routes/CodeChat/CodeChatInputActionBar.tsx",
       "resources/webview_source_code/src/utils/specVersionUtils.ts",
       "resources/webview_source_code/src/routes/CodeChat/CodeChat.tsx",
-      "resources/webview_source_code/src/store/skills/index.ts"
+      "resources/webview_source_code/src/routes/CodeChat/ChatMessagesList/UserMessage.tsx",
+      "resources/webview_source_code/src/routes/CodeChat/SkillSettingModal.tsx",
+      "resources/webview_source_code/src/store/skills/index.ts",
+      "resources/webview_source_code/src/store/workspace/tools.ts",
+      "resources/webview_source_code/src/store/workspace/toolsEN.ts"
     ],
     "y3_only": [
       "resources/webview_source_code/src/stubs/"

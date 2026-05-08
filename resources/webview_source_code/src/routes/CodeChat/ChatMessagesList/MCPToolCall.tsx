@@ -45,7 +45,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
 
   const serverName = useMemo(() => {
     let name = toolCallParams.server_name || '';
-    name = name.replace('\\', '/');
+    name = name.replace(/\\/g, '/');
     name = name.split('/').slice(-1)[0];
     return name;
   }, [toolCallParams]);
@@ -55,7 +55,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
     if (!serverName) return null;
     return MCPServers.find(s => {
       let serverName_ = s.name || '';
-      serverName_ = serverName_.replace('\\', '/');
+      serverName_ = serverName_.replace(/\\/g, '/');
       serverName_ = serverName_.split('/').slice(-1)[0];
       return serverName_ === serverName;
     });

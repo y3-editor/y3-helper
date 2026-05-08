@@ -6,9 +6,11 @@ import {
   Collapse,
   Spinner
 } from '@chakra-ui/react';
+import { InfoOutlineIcon } from '@chakra-ui/icons';
 import SelectWithTooltip, { SelectOption } from '../../components/SelectWithTooltip';
 import { MCPServer, useMCPStore } from '../../store/mcp';
 import { BroadcastActions, usePostMessage } from '../../PostMessageProvider';
+import { useChatConfig } from '../../store/chat-config';
 
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
@@ -67,6 +69,9 @@ const MCPConfigCollapse = (props: IProps) => {
   const getChineseNameByServerName = useMCPStore((state) => state.getChineseNameByServerName);
   const { postMessage } = usePostMessage();
   const mcpReferenceMapRef = useRef<Map<string, MCPServer>>(new Map());
+  const currentModel = useChatConfig((state) => state.config.model);
+  const chatModels = useChatConfig((state) => state.chatModels);
+  const isPrivateModel = chatModels[currentModel]?.isPrivate || false;
 
   useEffect(() => {
     // 更新策略, 只有mcpReferenceRef中没有的server或者MCPServer已有的服务才会被更新到cacheMCpServers中
@@ -196,9 +201,8 @@ const MCPConfigCollapse = (props: IProps) => {
           cacheMCpServers.length
             ? (showAllServers ? cacheMCpServers : cacheMCpServers.slice(0, 3)).map((server, index) => {
               let serverName = server.name || '';
-              serverName = serverName.replace('\\', '/');
+              serverName = serverName.replace(/\\/g, '/');
               serverName = serverName.split('/').slice(-1)[0];
-
               // 查找中文名称的优先级：
               // 1. server.config.chinese_name (本地配置)
               // 2. nameMappings (API 返回的权限数据)
@@ -264,6 +268,16 @@ const MCPConfigCollapse = (props: IProps) => {
                             >
                               {displayName}
                             </Text>
+                            {displayName === 'POPO MCP' && !isPrivateModel && (
+                              <Tooltip
+                                label="当前使用商业模型，通过POPO MCP 获取的文档数据受模型服务商数据安全协议保护，不会被二次利用。如涉及敏感信息，可切换至私有模型。"
+                                placement="top"
+                              >
+                                <Box display="inline-flex" alignItems="center" cursor="pointer">
+                                  <Icon as={InfoOutlineIcon} w="12px" h="12px" color="orange.400" />
+                                </Box>
+                              </Tooltip>
+                            )}
                           </Flex>
                         </Tooltip>
                       </Flex>
@@ -311,14 +325,19 @@ const MCPConfigCollapse = (props: IProps) => {
                             const isDisabled = value === 'off';
                             const isAuto = value === 'auto';
 
+                            const params = {
+                              name: serverName,
+                              ...server.config,
+                              disabled: isDisabled,
+                            }
+
+                            if (value !== 'off') {
+                              params.autoApprove = isAuto
+                            }
+
                             postMessage({
                               type: BroadcastActions.UPDATE_MCP_SERVERS,
-                              data: {
-                                name: serverName,
-                                ...server.config,
-                                disabled: isDisabled,
-                                autoApprove: isAuto
-                              }
+                              data: params
                             });
 
                             setMcpServerLoadings((prev) => ({

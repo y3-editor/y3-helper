@@ -14,7 +14,6 @@ export function getTools(options: {
   hasCodeTable: boolean;
   MCPServers: MCPServer[];
   isVSCode?: boolean;
-  isJetbrains?: boolean;
   enableTerminal?: boolean;
   codeMakerVersion?: string;
 }) {
@@ -37,14 +36,7 @@ export function getTools(options: {
   const enableCloudSearch = enableCodeMapSearch && enableKnowledgeLibSearch;
   let enableGrep = false;
   if (codeMakerVersion) {
-    if (isVSCode) {
-      enableGrep = versionCompare('2.7.0', codeMakerVersion) >= 0;
-    } else {
-      if (codeMakerVersion.includes('-')) {
-        const [_, pluginVersion] = codeMakerVersion.split('-');
-        enableGrep = !!pluginVersion && versionCompare('2.4.4', pluginVersion) >= 0;
-      }
-    }
+    enableGrep = versionCompare('2.7.0', codeMakerVersion) >= 0;
   }
 
   const tools: Tool[] = [
@@ -276,7 +268,7 @@ export function getTools(options: {
 
   if (
     enableGlobSearch &&
-    (isVSCode && versionCompare('26.3.7', codeMakerVersion || '') >= 0)
+    versionCompare('26.3.7', codeMakerVersion || '') >= 0
   ) {
     tools.push(getGlobTool({ enableSubAgent: false }))
   }

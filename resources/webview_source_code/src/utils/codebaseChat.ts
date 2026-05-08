@@ -7,11 +7,7 @@ import { useWorkspaceStore } from "../store/workspace";
  * @name 解析@指令中提及的知识库内容用于functioncall调用
  */
 export const parseAtMentionedKnowledgeBaseByAttach = (appendDocsets?: string[]) => {
-  let docsets: string[] = appendDocsets || [];
-  const knowledge_bases = useWorkspaceStore.getState().devSpace.knowledge_bases;
-  if (knowledge_bases && knowledge_bases.length) {
-    docsets = (knowledge_bases.map(base => base.knowledge_base_id));
-  }
+  const docsets: string[] = appendDocsets || [];
   const userMessage = useChatStore.getState().getRecentUserMessageFromCurrentSession()
   const originalAttachs = userMessage?._originalRequestData?.attachs as IMultiAttachment
 
@@ -26,6 +22,10 @@ export const parseAtMentionedKnowledgeBaseByAttach = (appendDocsets?: string[]) 
       }
     }
   }
+  // const knowledge_bases = useWorkspaceStore.getState().devSpace.knowledge_bases;
+  // if (knowledge_bases && knowledge_bases.length) {
+  //   docsets.push(...knowledge_bases.map(base => base.knowledge_base_id));
+  // }
   return docsets.length ? JSON.stringify(docsets) : undefined;
 }
 

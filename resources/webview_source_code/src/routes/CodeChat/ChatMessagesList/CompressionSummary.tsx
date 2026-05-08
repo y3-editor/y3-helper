@@ -97,7 +97,7 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
   };
 
   return (
-    <Box my={4}>
+    <Box mb={4}>
       <Flex
         alignItems="center"
         gap={3}

@@ -42,6 +42,7 @@ import { useChatTerminalStore } from './store/chatTerminal';
 import { usePanelContext } from './context/PanelContext';
 import { useSkillsStore, SkillIndexItem } from './store/skills';
 import { useLoadWorkspace } from './hooks/useLoadWorkspace';
+import { useSubagentStore } from './modules/subagent';
 
 const debouncedToast = createDebouncedToast();
 
@@ -101,6 +102,7 @@ function App() {
   const setDisableNewApply = useChatApplyStore(
     (state) => state.setDisableNewApply,
   );
+  const setChatApplyMode = useChatApplyStore((state) => state.setChatApplyMode);
   const setPlanModeButtonEnabled = useChatConfig(
     (state) => state.setPlanModeButtonEnabled,
   );
@@ -112,6 +114,7 @@ function App() {
   const setRules = useWorkspaceStore((state) => state.setRules);
   const setTerminalTimeout = useChatTerminalStore(state => state.setTerminalTimeout);
   const setSkills = useSkillsStore((state) => state.setSkills);
+  const setAgents = useSubagentStore((state) => state.setAgents);
   const requestSpecInfo = useWorkspaceStore((state) => state.requestSpecInfo);
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const setUsername = useAuthStore((state) => state.setUsername);
@@ -186,6 +189,9 @@ function App() {
     });
     postMessage({
       type: BroadcastActions.GET_SKILLS
+    });
+    postMessage({
+      type: BroadcastActions.GET_AGENTS
     });
     requestSpecInfo();
   }, [chatType, postMessage, requestSpecInfo])
@@ -393,6 +399,7 @@ function App() {
           login_from,
           fixedModel,
           subagentEnable,
+          chatApplyMode,
         } = event.data.data as any;
         setCodeCoverageApiUrl(CODE_COVERAGE_API_URL);
         authStore.setAccessToken(accessToken);
@@ -414,6 +421,7 @@ function App() {
 
         setCurrentFileAutoAttach(!!currentFileAutoAttach);
         setDisableNewApply(!!disableNewApply);
+        setChatApplyMode(chatApplyMode);
         setPlanModeButtonEnabled(IDE === 'vscode' || IDE === 'JetBrains');
         setTerminalTimeout(codeChatTerminalTimeout)
         // 设置系统主题
@@ -659,6 +667,11 @@ function App() {
         if (Array.isArray(skillsData)) {
           setSkills(skillsData);
         }
+      } else if (event.data.type === SubscribeActions.SYNC_AGENTS) {
+        const agentsData = event.data?.data as unknown;
+        if (Array.isArray(agentsData)) {
+          setAgents(agentsData);
+        }
       } else if (event.data.type === SubscribeActions.THEME_CHANGED) {
         // 系统主题改变
         const { themeStyle } = event.data?.data as any;
@@ -674,7 +687,7 @@ function App() {
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, onNewSession, setShowMcpError]);
+  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, setAgents, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, onNewSession, setShowMcpError]);
 
   React.useEffect(() => {
     const pendingChatType = pendingChatTypeRef.current;

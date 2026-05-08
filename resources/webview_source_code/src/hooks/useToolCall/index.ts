@@ -59,7 +59,7 @@ export function useToolCall(
     state.toolResponse,
     state.unselectedResults,
     state.setToolResponse,
-    toolTypeChecks.hasEditFileTool,
+    toolTypeChecks.hasEditFileTool || toolTypeChecks.hasClaudeEditTool,
     toolTypeChecks.hasTerminalTool,
     toolTypeChecks.hasMCPTool,
     toolTypeChecks.hasMakePlanTool,
@@ -77,7 +77,8 @@ export function useToolCall(
     toolTypeChecks.hasAskUserQuestionTool,
     toolTypeChecks.hasListFilesTool,
     toolTypeChecks.hasReadFileTool,
-    toolTypeChecks.hasGlobSearch,
+    toolTypeChecks.hasGlobSearchTool,
+    toolTypeChecks.hasClaudeEditTool,
   );
 
   // 7. 更新函数
@@ -167,7 +168,7 @@ export function useToolCall(
     }
 
     // 代码自动应用 - 有编辑文件工具时显示
-    if (toolTypeChecks.hasEditFileTool) {
+    if (toolTypeChecks.hasEditFileTool || toolTypeChecks.hasClaudeEditTool) {
       items.push({
         label: '代码自动应用',
         checked: permissions.autoApply,

@@ -8,9 +8,7 @@ import {
   ModalHeader,
   ModalCloseButton,
   ModalBody,
-  ModalFooter,
   Checkbox,
-  Box,
 } from '@chakra-ui/react';
 import { AiOutlineStar } from 'react-icons/ai';
 import { useChatStore, useChatStreamStore } from '../../store/chat';
@@ -25,6 +23,7 @@ import { ChatMessageHandle } from './ChatMessagesList/types';
 import * as ChatNavUtils from './chatNavigationUtils';
 import { cloneDeep } from 'lodash';
 import type { ChatMessage } from '../../services';
+import SessionModalFooter from './SessionModalFooter';
 import { mutateService } from '../../hooks/useService';
 import { requestChatSessions } from '../../store/chat';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
@@ -511,24 +510,28 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
               />
             </div>
           </ModalBody>
-          <ModalFooter gap={2}>
-            <Checkbox
-              isChecked={isAllSelected}
-              isIndeterminate={isIndeterminate}
-              onChange={handleToggleAll}
-            >
-              全选
-            </Checkbox>
-            {allToolCallUserMsgIds.length > 0 && (
-              <Checkbox
-                isChecked={isAllToolCallSelected}
-                isIndeterminate={isToolCallIndeterminate}
-                onChange={handleToggleAllToolCalls}
-              >
-                工具调用
-              </Checkbox>
-            )}
-            <Box mr="auto">
+          <SessionModalFooter
+            checkboxes={
+              <>
+                <Checkbox
+                  isChecked={isAllSelected}
+                  isIndeterminate={isIndeterminate}
+                  onChange={handleToggleAll}
+                >
+                  全选
+                </Checkbox>
+                {allToolCallUserMsgIds.length > 0 && (
+                  <Checkbox
+                    isChecked={isAllToolCallSelected}
+                    isIndeterminate={isToolCallIndeterminate}
+                    onChange={handleToggleAllToolCalls}
+                  >
+                    工具调用
+                  </Checkbox>
+                )}
+              </>
+            }
+            navigationButtons={
               <ChatNavigationButtons
                 userMsgIndexes={userMsgIndexes}
                 isStreaming={false}
@@ -538,19 +541,21 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
                 canGoPrev={canGoPrev}
                 canGoNext={canGoNext}
               />
-            </Box>
-            <Button
-              colorScheme="blue"
-              color="white"
-              size="sm"
-              onClick={handleFavorite}
-              isDisabled={selectedMessageIds.size === 0}
-              isLoading={isFavoriting}
-              loadingText="收藏中..."
-            >
-              收藏对话
-            </Button>
-          </ModalFooter>
+            }
+            actionButtons={
+              <Button
+                colorScheme="blue"
+                color="white"
+                size="sm"
+                onClick={handleFavorite}
+                isDisabled={selectedMessageIds.size === 0}
+                isLoading={isFavoriting}
+                loadingText="收藏中..."
+              >
+                收藏对话
+              </Button>
+            }
+          />
         </ModalContent>
       </Modal>
     </>

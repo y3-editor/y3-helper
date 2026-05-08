@@ -113,7 +113,7 @@ export function useToolCallHandlers(
       // 处理编辑文件工具
       if (hasEditFileTool && message.tool_calls) {
         const editTool = message.tool_calls.find((tool) =>
-          ['edit_file', 'reapply', 'replace_in_file'].includes(
+          ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(
             tool.function.name,
           ),
         );

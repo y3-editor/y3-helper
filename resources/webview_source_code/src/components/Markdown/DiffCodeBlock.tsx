@@ -28,6 +28,7 @@ export interface CodeBlockProps {
   };
   addedLines: number[];
   removedLines: number[];
+  lineNumbers?: string[];
 }
 
 const MAX_COLLAPSE_HEIGHT = 320;
@@ -45,7 +46,8 @@ function DiffCodeBlock(props: CodeBlockProps) {
     maxHeight,
     startLineNumber = 1,
     addedLines = [],
-    removedLines = []
+    removedLines = [],
+    lineNumbers
   } = props;
 
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
@@ -58,14 +60,29 @@ function DiffCodeBlock(props: CodeBlockProps) {
   const lineNumberRender = React.useMemo(() => {
     const content = [];
     for (let i = 0; i < lineLength; i++) {
-      content.push(
-        <div key={i} style={{ height: '19.5px' }}>
-          {startLineNumber + i}
-        </div>,
-      );
+      if (lineNumbers && lineNumbers[i]) {
+        const isRemoved = lineNumbers[i] === '-';
+        content.push(
+          <div
+            key={i}
+            style={{
+              height: '19.5px',
+              color: isRemoved ? 'rgba(255, 80, 80, 0.8)' : undefined,
+            }}
+          >
+            {isRemoved ? '-' : lineNumbers[i]}
+          </div>,
+        );
+      } else {
+        content.push(
+          <div key={i} style={{ height: '19.5px' }}>
+            {startLineNumber + i}
+          </div>,
+        );
+      }
     }
     return content;
-  }, [lineLength, startLineNumber]);
+  }, [lineLength, startLineNumber, lineNumbers]);
 
   const getStyle = () => {
     let style = {};

@@ -21,7 +21,8 @@ ${skillsList}
 
 To use a skill:
 1. Match the user's request to a skill based on its description
-2. Call use_skill with the skill_name parameter set to the exact skill name
-3. Follow the instructions returned by the tool
+2. Call use_skill with the skill_name parameter set to one or more exact skill names
+3. You can activate multiple skills at once by passing an array of skill names (e.g., ["skill1", "skill2"])
+4. Follow the instructions returned by the tool
 </skills>`;
 }

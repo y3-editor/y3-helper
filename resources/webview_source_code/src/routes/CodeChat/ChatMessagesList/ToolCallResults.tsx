@@ -14,6 +14,7 @@ import {
 import RetrieveResultBlock, { RetrieveResult } from '../RetrieveResultBlock';
 import { ToolCallResultsProps } from './types';
 import { EditFile } from './EditFile';
+import { ClaudeEditFile } from './ClaudeEditFile';
 import { useCallback, useMemo, useState } from 'react';
 import { RxCheckCircled, RxCircleBackslash } from 'react-icons/rx';
 import { getToolName } from '../../../utils/toolCall';
@@ -162,6 +163,7 @@ const ToolCallResult = ({
   const isEditFileTool = ['edit_file', 'replace_in_file', 'reapply'].includes(
     tool.function.name,
   );
+  const isClaudeEditFileTool = ['write', 'edit'].includes(tool.function.name);
   const isMCPTool =
     tool.function.name === 'use_mcp_tool' ||
     tool.function.name === 'access_mcp_resource';
@@ -362,6 +364,22 @@ const ToolCallResult = ({
     );
   }
 
+  // 渲染 Claude write/edit 工具结果
+  if (isClaudeEditFileTool) {
+    return (
+      <VStack gap={1} align="stretch">
+        <ClaudeEditFile
+          toolName={tool.function.name as 'write' | 'edit'}
+          messageId={message.id}
+          toolCallId={tool.id}
+          filePath={result.path || toolParams.file_path || ''}
+          isLatest={isLatest}
+        />
+        {result.isError && renderError()}
+      </VStack>
+    );
+  }
+
   // 渲染编辑文件工具结果
   if (isEditFileTool) {
     return (
@@ -444,7 +462,7 @@ const ToolCallResult = ({
       const globParams = parseGlobSearchParams(tool);
       return (
         <Flex flex="1" alignItems="center" gap={1} minHeight="16px">
-          Glob / <Box color={'#999'}>pattern={globParams.pattern}</Box> <Box color={'#888'} style={{ zoom: .8 }}>匹配{result?.extra?.total}个文件</Box>
+          Glob / <Box color={'#999'}>pattern={globParams.pattern}</Box> <Box color={'#888'} style={{ zoom: .8 }}>匹配 {result?.extra?.total || 0} 个文件</Box>
         </Flex>
       );
     }

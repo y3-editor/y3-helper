@@ -24,6 +24,7 @@ import {
   applyGeneralTruncation,
   processImageBufferSync,
 } from './utils';
+import { getReportEventByToolName } from '../../utils/toolCall';
 
 /** read_file 工具处理器 */
 export async function handleReadFile(
@@ -96,9 +97,7 @@ export function handleEditFile(
   // 用户事件上报
   if (!input.tool_result.isError) {
     userReporter.report({
-      event: input.tool_name === 'replace_in_file'
-        ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_SUCCESS
-        : UserEvent.CODE_CHAT_EDIT_FILE_SUCCESS,
+      event: getReportEventByToolName({ toolName: input.tool_name, status: 1 }),
       extends: {
         filePath: input.tool_result.path,
         finalResult: input.extra?.finalResult || '',
@@ -114,9 +113,7 @@ export function handleEditFile(
     });
   } else {
     userReporter.report({
-      event: input.tool_name === 'replace_in_file'
-        ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_FAILED
-        : UserEvent.CODE_CHAT_EDIT_FILE_FAILED,
+      event: getReportEventByToolName({ toolName: input.tool_name, status: 2 }),
       extends: {
         filePath: input.tool_result.path,
         beforeEdit: input.extra?.beforeEdit,

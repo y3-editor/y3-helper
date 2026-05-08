@@ -109,9 +109,9 @@ import {
   type MessagePreprocessOptions,
 } from './message-preprocessor';
 import userReporter from '../../../utils/report';
-import { UserEvent } from '../../../types/report';
 import { getAIGWModelWithFallback, getAIGWModel } from './../../../store/chat-config';
 import { promptBuilder } from './prompt-builder';
+import { getReportEventByToolName } from '../../../utils/toolCall';
 
 // ============================================================
 // 辅助函数
@@ -436,437 +436,494 @@ async function runSubagentInner(
   // 正常执行时只跑一轮；用户点击 Retry 后重置状态，重新进入内层循环。
   let retrying = false;
   do {
-  retrying = false;
-  try {
-    // 5. 主循环
-    while (step < maxSteps) {
-      // 检查是否已中止
-      if (abortController.signal.aborted) {
-        error = 'Subagent was aborted';
-        success = false;
-        break;
-      }
-
-      step++;
-
-      // 触发 onBeforeStep 钩子
-      const stepCtx: StepHookContext = {
-        ...hookCtx,
-        step,
-        maxSteps,
-      };
-      await lifecycleManager.trigger('onBeforeStep', stepCtx);
-
-      // 使用统一的消息预处理逻辑
-      const preprocessOptions: MessagePreprocessOptions = {
-        messages,
-        agent,
-        model: llmModel,
-        tools: subagentTools,
-        cacheEnable,
-        taskId,
-      };
-
-      const preprocessResult = await preprocessSubagentMessages(preprocessOptions);
-
-      // 更新缓存状态（可能在预处理过程中被禁用）
-      // cacheEnable = preprocessResult.cacheEnable;
-
-      // 构建标准的 ChatPromptBody
-      const promptData = buildSubagentChatPromptBody(
-        preprocessResult,
-        llmModel,
-        subagentTools,
-        {
-          stream: true,
-          tool_choice: 'auto',
-          temperature: 1,
-        }
-      );
-
-      // 验证预处理结果
-      console.log(`[Subagent] ${taskId} Sending messages to LLM:`, {
-        totalMessages: promptData.messages.length,
-        systemMessages: promptData.messages.filter(m => m.role === ChatRole.System).length,
-        userMessages: promptData.messages.filter(m => m.role === ChatRole.User).length,
-        assistantMessages: promptData.messages.filter(m => m.role === ChatRole.Assistant).length,
-        toolMessages: promptData.messages.filter(m => m.role === ChatRole.Tool).length,
-      });
-
-      // 调用 LLM
-      const llmResult = await callSubagentLLM(promptData, abortController);
-
-      if (abortController.signal.aborted) {
-        error = 'Subagent was aborted during LLM call';
-        success = false;
-        break;
-      }
-
-      // 累计本轮 token 用量
-      addUsage(totalUsage, llmResult.usage);
-
-      // Cache 性能日志
-      if (cacheEnable) {
-        const { cacheCreationInputTokens, cacheReadInputTokens } = llmResult.usage;
-        if (cacheCreationInputTokens > 0 || cacheReadInputTokens > 0) {
-          console.log(`[Subagent Cache] ${taskId} Step ${step}:`, {
-            cacheCreation: cacheCreationInputTokens,
-            cacheRead: cacheReadInputTokens,
-            promptTokens: llmResult.usage.promptTokens,
-            completionTokens: llmResult.usage.completionTokens,
-            cacheHitRate: cacheReadInputTokens > 0
-              ? `${((cacheReadInputTokens / (cacheReadInputTokens + llmResult.usage.promptTokens)) * 100).toFixed(1)}%`
-              : '0%',
-          });
-        }
-      }
-
-      // 将 assistant 消息追加到 messages
-      const assistantMessage: ChatMessage = {
-        role: ChatRole.Assistant,
-        content: llmResult.text,
-        // 添加 usage 信息，确保 truncateMessagesIfNeeded 能正确识别 token 使用情况
-        usage: {
-          prompt_tokens: llmResult.usage.promptTokens,
-          completion_tokens: llmResult.usage.completionTokens,
-          total_tokens: llmResult.usage.totalTokens,
-          cache_creation_input_tokens: llmResult.usage.cacheCreationInputTokens,
-          cache_read_input_tokens: llmResult.usage.cacheReadInputTokens,
-        },
-      };
-      if (llmResult.toolCalls.length > 0) {
-        assistantMessage.tool_calls = llmResult.toolCalls;
-      }
-      messages.push(assistantMessage);
-
-      // 如果没有 tool_calls，子代理完成
-      if (llmResult.toolCalls.length === 0) {
-        break;
-      }
-
-      // 6. 处理工具调用
-      for (const toolCall of llmResult.toolCalls) {
+    retrying = false;
+    try {
+      // 5. 主循环
+      while (step < maxSteps) {
+        // 检查是否已中止
         if (abortController.signal.aborted) {
-          error = 'Subagent was aborted during tool execution';
+          error = 'Subagent was aborted';
           success = false;
           break;
         }
 
-        let toolParams: Record<string, any>;
-        try {
-          toolParams = JSON.parse(toolCall.function.arguments || '{}');
-        } catch {
-          toolParams = {};
-        }
+        step++;
 
-        console.log(`[Subagent] ${taskId} Processing tool call:`, {
-          toolId: toolCall.id,
-          toolName: toolCall.function.name,
-        });
-
-        // 构建工具调用钩子上下文
-        const toolCallCtx: ToolCallHookContext = {
+        // 触发 onBeforeStep 钩子
+        const stepCtx: StepHookContext = {
           ...hookCtx,
-          toolId: toolCall.id,
-          toolName: toolCall.function.name,
-          toolArguments: toolCall.function.arguments || '',
+          step,
+          maxSteps,
+        };
+        await lifecycleManager.trigger('onBeforeStep', stepCtx);
+
+        // 使用统一的消息预处理逻辑
+        const preprocessOptions: MessagePreprocessOptions = {
+          messages,
+          agent,
+          model: llmModel,
+          tools: subagentTools,
+          cacheEnable,
+          taskId,
         };
 
-        // 触发 onBeforeToolCall 钩子
-        const toolStartTime = Date.now();
-        await lifecycleManager.trigger('onBeforeToolCall', toolCallCtx);
+        const preprocessResult = await preprocessSubagentMessages(preprocessOptions);
 
-        // 对文件编辑类工具，在发送 TOOL_CALL 前预注册 ChatApplyItem（applying: true）
-        const isFileEditTool = [
-          'edit_file',
-          'replace_in_file',
-          'reapply',
-        ].includes(toolCall.function.name);
-        if (isFileEditTool) {
-          const filePath: string =
-            toolParams.target_file || toolParams.path || '';
-          const updateSnippet: string =
-            toolParams.code_edit || toolParams.diff || '';
-          const replaceSnippet: string = toolParams.diff || '';
-          const isCreateFile: boolean = toolParams.is_create_file === true;
-          useChatApplyStore.getState().setChatApplyItem(toolCall.id, {
-            filePath,
-            originalContent: '',
-            updateSnippet,
-            replaceSnippet,
-            type:
-              toolCall.function.name === 'replace_in_file' ? 'replace' : 'edit',
-            toolCallId: toolCall.id,
-            applying: true,
-            accepted: false,
-            isCreateFile,
-          });
+        // 更新缓存状态（可能在预处理过程中被禁用）
+        // cacheEnable = preprocessResult.cacheEnable;
+
+        // 构建标准的 ChatPromptBody
+        const promptData = buildSubagentChatPromptBody(
+          preprocessResult,
+          llmModel,
+          subagentTools,
+          {
+            stream: true,
+            tool_choice: 'auto',
+            temperature: 1,
+          }
+        );
+
+        // 验证预处理结果
+        console.log(`[Subagent] ${taskId} Sending messages to LLM:`, {
+          totalMessages: promptData.messages.length,
+          systemMessages: promptData.messages.filter(m => m.role === ChatRole.System).length,
+          userMessages: promptData.messages.filter(m => m.role === ChatRole.User).length,
+          assistantMessages: promptData.messages.filter(m => m.role === ChatRole.Assistant).length,
+          toolMessages: promptData.messages.filter(m => m.role === ChatRole.Tool).length,
+        });
+
+        // 调用 LLM
+        const llmResult = await callSubagentLLM(promptData, abortController);
+
+        if (abortController.signal.aborted) {
+          error = 'Subagent was aborted during LLM call';
+          success = false;
+          break;
         }
 
-        // terminal 命令需要注入 messageId（用 toolCall.id），IDE 凭此追踪终端状态
-        const isTerminalTool = toolCall.function.name === 'run_terminal_cmd';
-        const extraToolParams = isTerminalTool
-          ? { ...toolParams, messageId: toolCall.id }
-          : toolParams;
+        // 累计本轮 token 用量
+        addUsage(totalUsage, llmResult.usage);
 
-        // 通过 PostMessage 发送工具调用到 IDE
-        // 注意：必须先注册 waitForTool，再发送 TOOL_CALL，
-        // 否则 IDE 可能在同一个事件循环内返回 TOOL_CALL_RESULT，
-        // 导致 pendingToolResults 中找不到对应的 toolId
-        const toolResultPromise = runnerManager.waitForTool(
-          taskId,
-          toolCall.id,
-          abortController.signal,
-          toolCall.function.name,
-          toolCall.function.arguments || '',
-        );
-
-        window.parent.postMessage(
-          {
-            type: 'TOOL_CALL',
-            data: {
-              tool_name: toolCall.function.name,
-              tool_params: {
-                ...extraToolParams,
-                is_approve: true, // 子代理的工具调用默认通过，不需要用户二次确认
-              },
-              tool_id: toolCall.id,
-              task_id: taskId,
-            },
-          },
-          '*',
-        );
-
-        // 等待工具结果返回
-        const toolResult = await toolResultPromise;
-
-        // 对文件编辑类工具，在收到工具结果后更新 ChatApplyItem 状态（applying: false）
-        // 完整对应 CodeChat.tsx 中 TOOL_CALL_RESULT 对 edit_file/replace_in_file/reapply 的处理逻辑
-        if (isFileEditTool) {
-          const toolResultData = toolResult?.tool_result;
-          const extra = toolResult?.extra;
-          if (!toolResultData?.isError) {
-            useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-              filePath: toolResultData?.path,
-              finalResult: extra?.finalResult || '',
-              beforeEdit: extra?.beforeEdit,
-              diffPatch: extra?.diffPatch || '',
-              taskId: extra?.taskId,
-              applying: false,
-              autoApply: useChatConfig.getState().autoApply,
-            });
-            // Subagent 是自动执行流程，工具成功后需要主动触发 acceptEdit，
-            // 将文件变更真正写入磁盘（等价于 CodeChat.tsx 中 autoApply 时的 ACCEPT_EDIT 广播）
-            // 注意：必须先注册 waitForAcceptEdit，再发送 acceptEdit，
-            // 否则 IDE 可能在同一个事件循环内返回 ACCEPT_EDIT_RESULT，
-            // 导致 pendingAcceptResults 中找不到对应的 toolCallId
-            const acceptPromise = runnerManager.waitForAcceptEdit(
-              toolCall.id,
-              abortController.signal,
-            );
-            useChatApplyStore.getState().acceptEdit(toolCall.id);
-
-            // 等待 IDE 返回 ACCEPT_EDIT_RESULT，确认文件是否真正写入成功
-            try {
-              const acceptResult = await acceptPromise;
-
-              if (!acceptResult?.success) {
-                console.error(
-                  '[Subagent] Accept edit failed:',
-                  acceptResult?.message,
-                );
-                // 文件编辑失败，更新状态并上报
-                useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                  applying: false,
-                });
-                userReporter.report({
-                  event:
-                    toolCall.function.name === 'replace_in_file'
-                      ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_FAILED
-                      : UserEvent.CODE_CHAT_EDIT_FILE_FAILED,
-                  extends: {
-                    filePath: toolResultData?.path,
-                    beforeEdit: extra?.beforeEdit,
-                    editSnippet: extra?.editSnippet,
-                    replaceSnippet: extra?.replaceSnippet,
-                    taskId: extra?.taskId,
-                    tool_id: toolCall.id,
-                    tool_name: toolCall.function.name,
-                    source: 'subagent',
-                    agent_name: agent.name,
-                    error: acceptResult?.message,
-                  },
-                });
-                // 继续执行，让 LLM 知道编辑失败
-              } else {
-                console.log('[Subagent] Accept edit success for:', toolCall.id);
-                // 调用 handleAcceptEditSuccess 设置 accepted: true，
-                // 触发 chatFileInfo 填充，使 ChatApplyPanel 显示修改
-                const applyItem = useChatApplyStore
-                  .getState()
-                  .getChatApplyItem(toolCall.id);
-                if (applyItem) {
-                  useChatApplyStore
-                    .getState()
-                    .handleAcceptEditSuccess(applyItem);
-                }
-              }
-            } catch (acceptError) {
-              // 超时或被 abort
-              console.error('[Subagent] Accept edit error:', acceptError);
-              useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                applying: false,
-              });
-              // 如果是 abort，抛出错误终止执行
-              if (abortController.signal.aborted) {
-                throw acceptError;
-              }
-              // 超时情况，继续执行让 LLM 知道有问题
-            }
-
-            // 5.3 文件编辑成功上报
-            userReporter.report({
-              event:
-                toolCall.function.name === 'replace_in_file'
-                  ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_SUCCESS
-                  : UserEvent.CODE_CHAT_EDIT_FILE_SUCCESS,
-              extends: {
-                filePath: toolResultData?.path,
-                finalResult: extra?.finalResult || '',
-                beforeEdit: extra?.beforeEdit,
-                editSnippet: extra?.editSnippet,
-                replaceSnippet: extra?.replaceSnippet,
-                taskId: extra?.taskId,
-                tool_id: toolCall.id,
-                tool_name: toolCall.function.name,
-                source: 'subagent',
-                agent_name: agent.name,
-              },
-            });
-          } else {
-            useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-              applying: false,
-            });
-
-            // 5.3 文件编辑失败上报
-            userReporter.report({
-              event:
-                toolCall.function.name === 'replace_in_file'
-                  ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_FAILED
-                  : UserEvent.CODE_CHAT_EDIT_FILE_FAILED,
-              extends: {
-                filePath: toolResult?.tool_result?.path,
-                beforeEdit: toolResult?.extra?.beforeEdit,
-                editSnippet: toolResult?.extra?.editSnippet,
-                replaceSnippet: toolResult?.extra?.replaceSnippet,
-                taskId: toolResult?.extra?.taskId,
-                tool_id: toolCall.id,
-                tool_name: toolCall.function.name,
-                source: 'subagent',
-                agent_name: agent.name,
-              },
+        // Cache 性能日志
+        if (cacheEnable) {
+          const { cacheCreationInputTokens, cacheReadInputTokens } = llmResult.usage;
+          if (cacheCreationInputTokens > 0 || cacheReadInputTokens > 0) {
+            console.log(`[Subagent Cache] ${taskId} Step ${step}:`, {
+              cacheCreation: cacheCreationInputTokens,
+              cacheRead: cacheReadInputTokens,
+              promptTokens: llmResult.usage.promptTokens,
+              completionTokens: llmResult.usage.completionTokens,
+              cacheHitRate: cacheReadInputTokens > 0
+                ? `${((cacheReadInputTokens / (cacheReadInputTokens + llmResult.usage.promptTokens)) * 100).toFixed(1)}%`
+                : '0%',
             });
           }
         }
 
-        // 触发 onAfterToolCall 钩子
-        const toolResultCtx: ToolResultHookContext = {
-          ...toolCallCtx,
-          duration: Date.now() - toolStartTime,
+        // 将 assistant 消息追加到 messages
+        const assistantMessage: ChatMessage = {
+          role: ChatRole.Assistant,
+          content: llmResult.text,
+          // 添加 usage 信息，确保 truncateMessagesIfNeeded 能正确识别 token 使用情况
+          usage: {
+            prompt_tokens: llmResult.usage.promptTokens,
+            completion_tokens: llmResult.usage.completionTokens,
+            total_tokens: llmResult.usage.totalTokens,
+            cache_creation_input_tokens: llmResult.usage.cacheCreationInputTokens,
+            cache_read_input_tokens: llmResult.usage.cacheReadInputTokens,
+          },
         };
-        await lifecycleManager.trigger('onAfterToolCall', toolResultCtx);
+        if (llmResult.toolCalls.length > 0) {
+          assistantMessage.tool_calls = llmResult.toolCalls;
+        }
+        messages.push(assistantMessage);
 
-        // 5.2 通过增强的工具结果处理器处理工具结果
-        let processedContent: string;
-
-        try {
-          const toolResultInput: ToolResultInput = {
-            tool_id: toolCall.id,
-            tool_name: toolCall.function.name,
-            tool_result: {
-              content: toolResult?.tool_result?.content,
-              path: toolResult?.tool_result?.path,
-              isError: toolResult?.tool_result?.isError,
-            },
-            extra: toolResult?.extra,
-            task_id: taskId,
-          };
-
-          const processContext: ToolResultProcessContext = {
-            session: {
-              _id: taskId,
-              data: {
-                enablePlanMode: false,
-                messages,
-              },
-            } as any,
-            model: llmModel,
-            source: 'subagent',
-            cUnrestrict: subagentAuthExtends?.c_unrestrict || false,
-            isPrivateModel,
-            allowPublicModelAccess:
-              useWorkspaceStore.getState().devSpace.allow_public_model_access,
-            authExtends: subagentAuthExtends,
-          };
-
-          const processed = await enhancedProcessor.process(toolResultInput, processContext);
-          processedContent = processed?.content || '';
-        } catch (processingError) {
-          console.error('[Subagent] Tool result processing error:', processingError);
-
-          // 兜底处理：使用原始内容
-          const fallbackContent =
-            toolResult?.tool_result?.content ?? JSON.stringify(toolResult);
-          processedContent =
-            typeof fallbackContent === 'string'
-              ? fallbackContent
-              : JSON.stringify(fallbackContent);
+        // 如果没有 tool_calls，子代理完成
+        if (llmResult.toolCalls.length === 0) {
+          break;
         }
 
-        // 将工具结果作为 tool 消息追加到 messages
-        const toolMessage: ChatMessage = {
-          role: ChatRole.Tool,
-          content: processedContent,
-          tool_call_id: toolCall.id,
-        };
-        messages.push(toolMessage);
-      }
+        // 6. 处理工具调用
+        for (const toolCall of llmResult.toolCalls) {
+          if (abortController.signal.aborted) {
+            error = 'Subagent was aborted during tool execution';
+            success = false;
+            break;
+          }
 
-      if (!success) break;
+          let toolParams: Record<string, any>;
+          try {
+            toolParams = JSON.parse(toolCall.function.arguments || '{}');
+          } catch {
+            toolParams = {};
+          }
 
-      // 上下文压缩检测
-      const maxTokens = useChatConfig.getState().config.max_tokens || 60000;
-      const compressionResult = await checkAndCompress(
-        messages,
-        llmModel,
-        taskId,
-        maxTokens,
-        subagentTools,
-      );
+          console.log(`[Subagent] ${taskId} Processing tool call:`, {
+            toolId: toolCall.id,
+            toolName: toolCall.function.name,
+          });
 
-      if (compressionResult.compressed) {
-        // 替换 messages 内容
-        messages.length = 0;
-        messages.push(...compressionResult.messages);
+          // 构建工具调用钩子上下文
+          const toolCallCtx: ToolCallHookContext = {
+            ...hookCtx,
+            toolId: toolCall.id,
+            toolName: toolCall.function.name,
+            toolArguments: toolCall.function.arguments || '',
+          };
 
-        // 构建压缩状态（参考主agent逻辑）
-        const compressionState: SessionCompressionState = {
-          enabled: true,
-          compressionHistory: [{
-            timestamp: Date.now(),
-            originalMessageCount: compressionResult.tokensBefore || 0,
-            tokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-            compressionRatio: compressionResult.tokensBefore && compressionResult.tokensAfter
-              ? compressionResult.tokensBefore / compressionResult.tokensAfter
-              : 1,
-          }],
-          totalTokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-          totalCompressionsCount: 1,
-          pendingSavedTokens: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-          messagesCountAtCompression: messages.length,
-        };
+          // 触发 onBeforeToolCall 钩子
+          const toolStartTime = Date.now();
+          await lifecycleManager.trigger('onBeforeToolCall', toolCallCtx);
 
-        // 立即同步压缩状态到后端
+          // 对文件编辑类工具，在发送 TOOL_CALL 前预注册 ChatApplyItem（applying: true）
+          const isFileEditTool = [
+            'edit_file',
+            'replace_in_file',
+            'reapply',
+          ].includes(toolCall.function.name);
+          if (isFileEditTool) {
+            const filePath: string =
+              toolParams.target_file || toolParams.path || '';
+            const updateSnippet: string =
+              toolParams.code_edit || toolParams.diff || '';
+            const replaceSnippet: string = toolParams.diff || '';
+            const isCreateFile: boolean = toolParams.is_create_file === true;
+            useChatApplyStore.getState().setChatApplyItem(toolCall.id, {
+              filePath,
+              originalContent: '',
+              updateSnippet,
+              replaceSnippet,
+              type:
+                toolCall.function.name === 'replace_in_file' ? 'replace' : 'edit',
+              toolCallId: toolCall.id,
+              applying: true,
+              accepted: false,
+              isCreateFile,
+            });
+          }
+
+          // terminal 命令需要注入 messageId（用 toolCall.id），IDE 凭此追踪终端状态
+          const isTerminalTool = toolCall.function.name === 'run_terminal_cmd';
+          const extraToolParams = isTerminalTool
+            ? { ...toolParams, messageId: toolCall.id }
+            : toolParams;
+
+          // 通过 PostMessage 发送工具调用到 IDE
+          // 注意：必须先注册 waitForTool，再发送 TOOL_CALL，
+          // 否则 IDE 可能在同一个事件循环内返回 TOOL_CALL_RESULT，
+          // 导致 pendingToolResults 中找不到对应的 toolId
+          const toolResultPromise = runnerManager.waitForTool(
+            taskId,
+            toolCall.id,
+            abortController.signal,
+            toolCall.function.name,
+            toolCall.function.arguments || '',
+          );
+
+          window.parent.postMessage(
+            {
+              type: 'TOOL_CALL',
+              data: {
+                tool_name: toolCall.function.name,
+                tool_params: {
+                  ...extraToolParams,
+                  is_approve: true, // 子代理的工具调用默认通过，不需要用户二次确认
+                },
+                tool_id: toolCall.id,
+                task_id: taskId,
+              },
+            },
+            '*',
+          );
+
+          // 等待工具结果返回
+          const toolResult = await toolResultPromise;
+
+          // 对文件编辑类工具，在收到工具结果后更新 ChatApplyItem 状态（applying: false）
+          // 完整对应 CodeChat.tsx 中 TOOL_CALL_RESULT 对 edit_file/replace_in_file/reapply 的处理逻辑
+          if (isFileEditTool) {
+            const toolResultData = toolResult?.tool_result;
+            const extra = toolResult?.extra;
+            if (!toolResultData?.isError) {
+              useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
+                filePath: toolResultData?.path,
+                finalResult: extra?.finalResult || '',
+                beforeEdit: extra?.beforeEdit,
+                diffPatch: extra?.diffPatch || '',
+                taskId: extra?.taskId,
+                applying: false,
+                autoApply: useChatConfig.getState().autoApply,
+              });
+              // Subagent 是自动执行流程，工具成功后需要主动触发 acceptEdit，
+              // 将文件变更真正写入磁盘（等价于 CodeChat.tsx 中 autoApply 时的 ACCEPT_EDIT 广播）
+              // 注意：必须先注册 waitForAcceptEdit，再发送 acceptEdit，
+              // 否则 IDE 可能在同一个事件循环内返回 ACCEPT_EDIT_RESULT，
+              // 导致 pendingAcceptResults 中找不到对应的 toolCallId
+              const acceptPromise = runnerManager.waitForAcceptEdit(
+                toolCall.id,
+                abortController.signal,
+              );
+              useChatApplyStore.getState().acceptEdit(toolCall.id);
+
+              // 等待 IDE 返回 ACCEPT_EDIT_RESULT，确认文件是否真正写入成功
+              try {
+                const acceptResult = await acceptPromise;
+
+                if (!acceptResult?.success) {
+                  console.error(
+                    '[Subagent] Accept edit failed:',
+                    acceptResult?.message,
+                  );
+                  // 文件编辑失败，更新状态并上报
+                  useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
+                    applying: false,
+                  });
+                  userReporter.report({
+                    event: getReportEventByToolName({ toolName: toolCall.function.name, status: 2 }),
+                    extends: {
+                      filePath: toolResultData?.path,
+                      beforeEdit: extra?.beforeEdit,
+                      editSnippet: extra?.editSnippet,
+                      replaceSnippet: extra?.replaceSnippet,
+                      taskId: extra?.taskId,
+                      tool_id: toolCall.id,
+                      tool_name: toolCall.function.name,
+                      source: 'subagent',
+                      agent_name: agent.name,
+                      error: acceptResult?.message,
+                    },
+                  });
+                  // 继续执行，让 LLM 知道编辑失败
+                } else {
+                  console.log('[Subagent] Accept edit success for:', toolCall.id);
+                  // 调用 handleAcceptEditSuccess 设置 accepted: true，
+                  // 触发 chatFileInfo 填充，使 ChatApplyPanel 显示修改
+                  const applyItem = useChatApplyStore
+                    .getState()
+                    .getChatApplyItem(toolCall.id);
+                  if (applyItem) {
+                    useChatApplyStore
+                      .getState()
+                      .handleAcceptEditSuccess(applyItem);
+                  }
+                }
+              } catch (acceptError) {
+                // 超时或被 abort
+                console.error('[Subagent] Accept edit error:', acceptError);
+                useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
+                  applying: false,
+                });
+                // 如果是 abort，抛出错误终止执行
+                if (abortController.signal.aborted) {
+                  throw acceptError;
+                }
+                // 超时情况，继续执行让 LLM 知道有问题
+              }
+
+              // 5.3 文件编辑成功上报
+              userReporter.report({
+                event: getReportEventByToolName({ toolName: toolCall.function.name, status: 1 }),
+                extends: {
+                  filePath: toolResultData?.path,
+                  finalResult: extra?.finalResult || '',
+                  beforeEdit: extra?.beforeEdit,
+                  editSnippet: extra?.editSnippet,
+                  replaceSnippet: extra?.replaceSnippet,
+                  taskId: extra?.taskId,
+                  tool_id: toolCall.id,
+                  tool_name: toolCall.function.name,
+                  source: 'subagent',
+                  agent_name: agent.name,
+                },
+              });
+            } else {
+              useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
+                applying: false,
+              });
+
+              // 5.3 文件编辑失败上报
+              userReporter.report({
+                event: getReportEventByToolName({ toolName: toolCall.function.name, status: 2 }),
+                extends: {
+                  filePath: toolResult?.tool_result?.path,
+                  beforeEdit: toolResult?.extra?.beforeEdit,
+                  editSnippet: toolResult?.extra?.editSnippet,
+                  replaceSnippet: toolResult?.extra?.replaceSnippet,
+                  taskId: toolResult?.extra?.taskId,
+                  tool_id: toolCall.id,
+                  tool_name: toolCall.function.name,
+                  source: 'subagent',
+                  agent_name: agent.name,
+                },
+              });
+            }
+          }
+
+          // 触发 onAfterToolCall 钩子
+          const toolResultCtx: ToolResultHookContext = {
+            ...toolCallCtx,
+            duration: Date.now() - toolStartTime,
+          };
+          await lifecycleManager.trigger('onAfterToolCall', toolResultCtx);
+
+          // 5.2 通过增强的工具结果处理器处理工具结果
+          let processedContent: string;
+
+          try {
+            const toolResultInput: ToolResultInput = {
+              tool_id: toolCall.id,
+              tool_name: toolCall.function.name,
+              tool_result: {
+                content: toolResult?.tool_result?.content,
+                path: toolResult?.tool_result?.path,
+                isError: toolResult?.tool_result?.isError,
+              },
+              extra: toolResult?.extra,
+              task_id: taskId,
+            };
+
+            const processContext: ToolResultProcessContext = {
+              session: {
+                _id: taskId,
+                data: {
+                  enablePlanMode: false,
+                  messages,
+                },
+              } as any,
+              model: llmModel,
+              source: 'subagent',
+              cUnrestrict: subagentAuthExtends?.c_unrestrict || false,
+              isPrivateModel,
+              allowPublicModelAccess:
+                useWorkspaceStore.getState().devSpace.allow_public_model_access,
+              authExtends: subagentAuthExtends,
+            };
+
+            const processed = await enhancedProcessor.process(toolResultInput, processContext);
+            processedContent = processed?.content || '';
+          } catch (processingError) {
+            console.error('[Subagent] Tool result processing error:', processingError);
+
+            // 兜底处理：使用原始内容
+            const fallbackContent =
+              toolResult?.tool_result?.content ?? JSON.stringify(toolResult);
+            processedContent =
+              typeof fallbackContent === 'string'
+                ? fallbackContent
+                : JSON.stringify(fallbackContent);
+          }
+
+          // 将工具结果作为 tool 消息追加到 messages
+          const toolMessage: ChatMessage = {
+            role: ChatRole.Tool,
+            content: processedContent,
+            tool_call_id: toolCall.id,
+          };
+          messages.push(toolMessage);
+        }
+
+        if (!success) break;
+
+        // 上下文压缩检测
+        const maxTokens = useChatConfig.getState().config.max_tokens || 60000;
+        const compressionResult = await checkAndCompress(
+          messages,
+          llmModel,
+          taskId,
+          maxTokens,
+          subagentTools,
+        );
+
+        if (compressionResult.compressed) {
+          // 替换 messages 内容
+          messages.length = 0;
+          messages.push(...compressionResult.messages);
+
+          // 构建压缩状态（参考主agent逻辑）
+          const compressionState: SessionCompressionState = {
+            enabled: true,
+            compressionHistory: [{
+              timestamp: Date.now(),
+              originalMessageCount: compressionResult.tokensBefore || 0,
+              tokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
+              compressionRatio: compressionResult.tokensBefore && compressionResult.tokensAfter
+                ? compressionResult.tokensBefore / compressionResult.tokensAfter
+                : 1,
+            }],
+            totalTokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
+            totalCompressionsCount: 1,
+            pendingSavedTokens: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
+            messagesCountAtCompression: messages.length,
+          };
+
+          // 立即同步压缩状态到后端
+          // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
+          const systemPromptContent = messages
+            .filter(msg => msg.role === ChatRole.System)
+            .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
+            .join('\n');
+
+          // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
+          const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
+          const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
+          const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
+
+          const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
+          const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
+          const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
+
+          const systemTokenEstimation = estimateChildSessionSystemTokens(
+            systemPromptContent,
+            skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
+            rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
+            mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
+          );
+
+          const compressionEnhancedUsage = {
+            ...totalUsage,
+            systemTokens: systemTokenEstimation.systemTokens,
+            skillTokens: systemTokenEstimation.skillTokens,
+            ruleTokens: systemTokenEstimation.ruleTokens,
+            mcpTokens: systemTokenEstimation.mcpTokens,
+          };
+
+          await syncSession(
+            taskId,
+            agent.name,
+            params.description,
+            messages,
+            llmModel,
+            compressionEnhancedUsage,
+            compressionState,
+          );
+
+          console.log(`[Subagent] ${taskId} Compression completed:`, {
+            tokensBefore: compressionResult.tokensBefore,
+            tokensAfter: compressionResult.tokensAfter,
+            tokensSaved: compressionState.totalTokensSaved,
+            messagesAfterCompression: messages.length,
+          });
+
+          // 压缩后，禁用后续的 cache，因为消息结构已变化
+          if (cacheEnable) {
+            console.log(`[Subagent] ${taskId} disabling cache due to compression`);
+            cacheEnable = false;
+          }
+
+          // 触发 onCompression 钩子
+          await lifecycleManager.trigger(
+            'onCompression',
+            hookCtx,
+            compressionResult.tokensBefore || 0,
+            compressionResult.tokensAfter || 0,
+          );
+        }
+
+        // 触发 onAfterStep 钩子
+        await lifecycleManager.trigger('onAfterStep', stepCtx, totalUsage);
+
+        // 每轮结束后同步 messages 到后端（不传递压缩状态，因为没有新的压缩）
         // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
         const systemPromptContent = messages
           .filter(msg => msg.role === ChatRole.System)
@@ -889,7 +946,7 @@ async function runSubagentInner(
           mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
         );
 
-        const compressionEnhancedUsage = {
+        const enhancedUsage = {
           ...totalUsage,
           systemTokens: systemTokenEstimation.systemTokens,
           skillTokens: systemTokenEstimation.skillTokens,
@@ -903,285 +960,219 @@ async function runSubagentInner(
           params.description,
           messages,
           llmModel,
-          compressionEnhancedUsage,
-          compressionState,
-        );
-
-        console.log(`[Subagent] ${taskId} Compression completed:`, {
-          tokensBefore: compressionResult.tokensBefore,
-          tokensAfter: compressionResult.tokensAfter,
-          tokensSaved: compressionState.totalTokensSaved,
-          messagesAfterCompression: messages.length,
-        });
-
-        // 压缩后，禁用后续的 cache，因为消息结构已变化
-        if (cacheEnable) {
-          console.log(`[Subagent] ${taskId} disabling cache due to compression`);
-          cacheEnable = false;
-        }
-
-        // 触发 onCompression 钩子
-        await lifecycleManager.trigger(
-          'onCompression',
-          hookCtx,
-          compressionResult.tokensBefore || 0,
-          compressionResult.tokensAfter || 0,
+          enhancedUsage,
         );
       }
 
-      // 触发 onAfterStep 钩子
-      await lifecycleManager.trigger('onAfterStep', stepCtx, totalUsage);
+      // 步数达到上限
+      if (step >= maxSteps && success) {
+        console.log(`[Subagent] ${taskId} reached maxSteps (${maxSteps})`);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Subagent] ${taskId} error:`, err);
+      error = errorMsg;
+      success = false;
 
-      // 每轮结束后同步 messages 到后端（不传递压缩状态，因为没有新的压缩）
-      // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
-      const systemPromptContent = messages
-        .filter(msg => msg.role === ChatRole.System)
-        .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
-        .join('\n');
+      // 如果是 abort 导致的错误
+      if (abortController.signal.aborted) {
+        error = 'Subagent was aborted';
+      }
 
-      // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-      const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-      const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-      const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
-
-      const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
-      const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
-      const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
-
-      const systemTokenEstimation = estimateChildSessionSystemTokens(
-        systemPromptContent,
-        skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
-        rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
-        mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
+      // 触发 onError 钩子（将状态更新为 failed，并携带错误信息）
+      await lifecycleManager.trigger(
+        'onError',
+        hookCtx,
+        err instanceof Error ? err : new Error(String(err)),
       );
 
-      const enhancedUsage = {
-        ...totalUsage,
-        systemTokens: systemTokenEstimation.systemTokens,
-        skillTokens: systemTokenEstimation.skillTokens,
-        ruleTokens: systemTokenEstimation.ruleTokens,
-        mcpTokens: systemTokenEstimation.mcpTokens,
-      };
-
-      await syncSession(
-        taskId,
-        agent.name,
-        params.description,
-        messages,
-        llmModel,
-        enhancedUsage,
-      );
-    }
-
-    // 步数达到上限
-    if (step >= maxSteps && success) {
-      console.log(`[Subagent] ${taskId} reached maxSteps (${maxSteps})`);
-    }
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[Subagent] ${taskId} error:`, err);
-    error = errorMsg;
-    success = false;
-
-    // 如果是 abort 导致的错误
-    if (abortController.signal.aborted) {
-      error = 'Subagent was aborted';
-    }
-
-    // 触发 onError 钩子（将状态更新为 failed，并携带错误信息）
-    await lifecycleManager.trigger(
-      'onError',
-      hookCtx,
-      err instanceof Error ? err : new Error(String(err)),
-    );
-
-    // ── 非 abort 错误：等待用户 Retry 或 Stop ───────────────
-    if (!abortController.signal.aborted) {
-      const doRetry = await new Promise<boolean>((resolve) => {
-        pendingUserActions.set(toolCallId, { resolve });
-      });
-
-      if (doRetry) {
-        // 用户选择 Retry：重置执行状态，基于现有 taskId 继续
-        // 更新 store 状态：failed → running（store 已允许此转换）
-        useSubagentStore.getState().updateStatus(toolCallId, {
-          status: 'running' as SubagentStatus,
-          errorMessage: undefined,
+      // ── 非 abort 错误：等待用户 Retry 或 Stop ───────────────
+      if (!abortController.signal.aborted) {
+        const doRetry = await new Promise<boolean>((resolve) => {
+          pendingUserActions.set(toolCallId, { resolve });
         });
-        // 重置循环控制变量，外层 while(true) 会重新进入内层循环
-        success = true;
-        error = undefined;
-        // 重新创建 AbortController（旧的 controller 可能已有状态）
-        const newAbortController = new AbortController();
-        abortController = newAbortController;
-        runnerState.abortController = newAbortController;
-        // 重新注册 runner state（manager 内部通过 taskId 索引）
-        runnerManager.register(taskId, {
-          ...runnerState,
-          abortController: newAbortController,
-        });
-        // 重新监听父 abort 信号
+
+        if (doRetry) {
+          // 用户选择 Retry：重置执行状态，基于现有 taskId 继续
+          // 更新 store 状态：failed → running（store 已允许此转换）
+          useSubagentStore.getState().updateStatus(toolCallId, {
+            status: 'running' as SubagentStatus,
+            errorMessage: undefined,
+          });
+          // 重置循环控制变量，外层 while(true) 会重新进入内层循环
+          success = true;
+          error = undefined;
+          // 重新创建 AbortController（旧的 controller 可能已有状态）
+          const newAbortController = new AbortController();
+          abortController = newAbortController;
+          runnerState.abortController = newAbortController;
+          // 重新注册 runner state（manager 内部通过 taskId 索引）
+          runnerManager.register(taskId, {
+            ...runnerState,
+            abortController: newAbortController,
+          });
+          // 重新监听父 abort 信号
+          if (parentAbortSignal) {
+            parentAbortSignal.removeEventListener('abort', onParentAbort);
+            parentAbortSignal.addEventListener('abort', () => newAbortController.abort(), { once: true });
+          }
+          // 标记 retrying，让 finally 跳过清理，外层 while(true) 继续下一轮
+          retrying = true;
+        } else {
+          // 用户选择 Stop：abortController 中止，走正常 finally 清理流程
+          abortController.abort();
+        }
+      }
+
+    } finally {
+      // retrying 时跳过最终清理，外层循环会继续下一轮
+      if (!retrying) {
+        // 计算最终的 token 统计（只计算一次）
+        const systemPromptContent = messages
+          .filter(msg => msg.role === ChatRole.System)
+          .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
+          .join('\n');
+
+        // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
+        const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
+        const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
+        const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
+
+        const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
+        const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
+        const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
+
+        const systemTokenEstimation = estimateChildSessionSystemTokens(
+          systemPromptContent,
+          skillsContent ? [skillsContent] : [],
+          rulesContent ? [rulesContent] : [],
+          mcpContent ? [mcpContent] : []
+        );
+
+        const finalEnhancedUsage = {
+          ...totalUsage,
+          systemTokens: systemTokenEstimation.systemTokens,
+          skillTokens: systemTokenEstimation.skillTokens,
+          ruleTokens: systemTokenEstimation.ruleTokens,
+          mcpTokens: systemTokenEstimation.mcpTokens,
+        };
+
+        // 最终同步到后端
+        await syncSession(
+          taskId,
+          agent.name,
+          params.description,
+          messages,
+          llmModel,
+          finalEnhancedUsage,
+        );
+
+        // 将子代理 token 用量写入主会话独立的 children 字段
+        // 只有在有实际 token 消耗时才更新
+        if (finalEnhancedUsage.promptTokens > 0 || finalEnhancedUsage.completionTokens > 0) {
+          const chatStoreState = useChatStore.getState();
+          const curSession = chatStoreState.sessions.get(parentSessionId);
+          if (curSession?.data?.consumedTokens) {
+            const ct = curSession.data.consumedTokens;
+            if (!ct.children) {
+              ct.children = createEmptyChildSessions();
+            }
+            const modelCostInfo =
+              useChatConfig.getState().chatModels?.[llmModel as ChatModel]
+                ?.priceInfo;
+
+            // 构建 token 增量对象
+            const tokenIncrement: TokenIncrement = {
+              promptTokens: finalEnhancedUsage.promptTokens,
+              completionTokens: finalEnhancedUsage.completionTokens,
+              cacheCreationInputTokens: finalEnhancedUsage.cacheCreationInputTokens,
+              cacheReadInputTokens: finalEnhancedUsage.cacheReadInputTokens,
+              systemTokens: finalEnhancedUsage.systemTokens,
+              skillTokens: finalEnhancedUsage.skillTokens,
+              ruleTokens: finalEnhancedUsage.ruleTokens,
+              mcpTokens: finalEnhancedUsage.mcpTokens,
+            };
+
+            // 更新子会话统计
+            ct.children = updateChildSession(
+              ct.children,
+              taskId,
+              SessionType.SUBAGENT,
+              agent.name,
+              tokenIncrement,
+              {
+                agentType: agent.name,
+                model: llmModel,
+                steps: step,
+                description: params.description,
+              },
+              llmModel,
+              modelCostInfo,
+            );
+
+            const totalChildrenTokens = calculateChildrenTotalTokens(ct.children);
+
+            console.log('🤖 %cSubagent Token Merged to Main Agent:', 'color: #8B5CF6; font-weight: bold; font-size: 14px;', {
+              '🏷️ Agent': agent.name,
+              '🆔 Task ID': taskId.substring(0, 8) + '...',
+              '📊 Total Children Tokens': totalChildrenTokens,
+              '💾 Cache Enabled': cacheEnable,
+              '🏪 Model Has Token Cache': !!chatModels[llmModel]?.hasTokenCache,
+              '📈 This Task Usage': {
+                '📥 Prompt': finalEnhancedUsage.promptTokens,
+                '✅ Completion': finalEnhancedUsage.completionTokens,
+                '🎯 System': finalEnhancedUsage.systemTokens,
+                '⚡ Skill': finalEnhancedUsage.skillTokens,
+                '📏 Rule': finalEnhancedUsage.ruleTokens,
+                '🔌 MCP': finalEnhancedUsage.mcpTokens,
+                '🆕 Cache Creation': finalEnhancedUsage.cacheCreationInputTokens,
+                '💾 Cache Read': finalEnhancedUsage.cacheReadInputTokens,
+                '📊 Total': finalEnhancedUsage.promptTokens + finalEnhancedUsage.completionTokens,
+              }
+            });
+          } else {
+            console.warn(
+              `[Subagent] Session not found for token update: ${parentSessionId}`,
+            );
+          }
+        }
+
+        // 输出总体 Cache 性能统计
+        if (cacheEnable) {
+          console.log(`[Subagent Cache Summary] ${taskId}:`, {
+            totalSteps: step,
+            totalCacheCreation: totalUsage.cacheCreationInputTokens,
+            totalCacheRead: totalUsage.cacheReadInputTokens,
+            totalPromptTokens: totalUsage.promptTokens,
+            totalCompletionTokens: totalUsage.completionTokens,
+            overallCacheHitRate: totalUsage.cacheReadInputTokens > 0
+              ? `${((totalUsage.cacheReadInputTokens / (totalUsage.cacheReadInputTokens + totalUsage.promptTokens)) * 100).toFixed(1)}%`
+              : '0%',
+            estimatedSavings: totalUsage.cacheReadInputTokens > 0
+              ? `${totalUsage.cacheReadInputTokens} tokens (90% discount)`
+              : '0 tokens',
+          });
+        }
+
+        // 触发 onComplete 钩子（先更新状态）
+        const completeCtx: CompleteHookContext = {
+          ...hookCtx,
+          success,
+          step,
+          error,
+          isAborted: abortController.signal.aborted,
+        };
+        await lifecycleManager.trigger('onComplete', completeCtx);
+
+        // 清理运行时状态（状态更新完成后再清理）
+        runnerManager.remove(taskId);
+
+        // 移除 parentAbort 监听
         if (parentAbortSignal) {
           parentAbortSignal.removeEventListener('abort', onParentAbort);
-          parentAbortSignal.addEventListener('abort', () => newAbortController.abort(), { once: true });
-        }
-        // 标记 retrying，让 finally 跳过清理，外层 while(true) 继续下一轮
-        retrying = true;
-      } else {
-        // 用户选择 Stop：abortController 中止，走正常 finally 清理流程
-        abortController.abort();
-      }
-    }
-
-  } finally {
-    // retrying 时跳过最终清理，外层循环会继续下一轮
-    if (!retrying) {
-      // 计算最终的 token 统计（只计算一次）
-      const systemPromptContent = messages
-        .filter(msg => msg.role === ChatRole.System)
-        .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
-        .join('\n');
-
-      // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-      const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-      const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-      const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
-
-      const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
-      const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
-      const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
-
-      const systemTokenEstimation = estimateChildSessionSystemTokens(
-        systemPromptContent,
-        skillsContent ? [skillsContent] : [],
-        rulesContent ? [rulesContent] : [],
-        mcpContent ? [mcpContent] : []
-      );
-
-      const finalEnhancedUsage = {
-        ...totalUsage,
-        systemTokens: systemTokenEstimation.systemTokens,
-        skillTokens: systemTokenEstimation.skillTokens,
-        ruleTokens: systemTokenEstimation.ruleTokens,
-        mcpTokens: systemTokenEstimation.mcpTokens,
-      };
-
-      // 最终同步到后端
-      await syncSession(
-        taskId,
-        agent.name,
-        params.description,
-        messages,
-        llmModel,
-        finalEnhancedUsage,
-      );
-
-      // 将子代理 token 用量写入主会话独立的 children 字段
-      // 只有在有实际 token 消耗时才更新
-      if (finalEnhancedUsage.promptTokens > 0 || finalEnhancedUsage.completionTokens > 0) {
-        const chatStoreState = useChatStore.getState();
-        const curSession = chatStoreState.sessions.get(parentSessionId);
-        if (curSession?.data?.consumedTokens) {
-          const ct = curSession.data.consumedTokens;
-          if (!ct.children) {
-            ct.children = createEmptyChildSessions();
-          }
-          const modelCostInfo =
-            useChatConfig.getState().chatModels?.[llmModel as ChatModel]
-              ?.priceInfo;
-
-          // 构建 token 增量对象
-          const tokenIncrement: TokenIncrement = {
-            promptTokens: finalEnhancedUsage.promptTokens,
-            completionTokens: finalEnhancedUsage.completionTokens,
-            cacheCreationInputTokens: finalEnhancedUsage.cacheCreationInputTokens,
-            cacheReadInputTokens: finalEnhancedUsage.cacheReadInputTokens,
-            systemTokens: finalEnhancedUsage.systemTokens,
-            skillTokens: finalEnhancedUsage.skillTokens,
-            ruleTokens: finalEnhancedUsage.ruleTokens,
-            mcpTokens: finalEnhancedUsage.mcpTokens,
-          };
-
-          // 更新子会话统计
-          ct.children = updateChildSession(
-            ct.children,
-            taskId,
-            SessionType.SUBAGENT,
-            agent.name,
-            tokenIncrement,
-            {
-              agentType: agent.name,
-              model: llmModel,
-              steps: step,
-              description: params.description,
-            },
-            llmModel,
-            modelCostInfo,
-          );
-
-          const totalChildrenTokens = calculateChildrenTotalTokens(ct.children);
-
-          console.log('🤖 %cSubagent Token Merged to Main Agent:', 'color: #8B5CF6; font-weight: bold; font-size: 14px;', {
-            '🏷️ Agent': agent.name,
-            '🆔 Task ID': taskId.substring(0, 8) + '...',
-            '📊 Total Children Tokens': totalChildrenTokens,
-            '💾 Cache Enabled': cacheEnable,
-            '🏪 Model Has Token Cache': !!chatModels[llmModel]?.hasTokenCache,
-            '📈 This Task Usage': {
-              '📥 Prompt': finalEnhancedUsage.promptTokens,
-              '✅ Completion': finalEnhancedUsage.completionTokens,
-              '🎯 System': finalEnhancedUsage.systemTokens,
-              '⚡ Skill': finalEnhancedUsage.skillTokens,
-              '📏 Rule': finalEnhancedUsage.ruleTokens,
-              '🔌 MCP': finalEnhancedUsage.mcpTokens,
-              '🆕 Cache Creation': finalEnhancedUsage.cacheCreationInputTokens,
-              '💾 Cache Read': finalEnhancedUsage.cacheReadInputTokens,
-              '📊 Total': finalEnhancedUsage.promptTokens + finalEnhancedUsage.completionTokens,
-            }
-          });
-        } else {
-          console.warn(
-            `[Subagent] Session not found for token update: ${parentSessionId}`,
-          );
         }
       }
-
-      // 输出总体 Cache 性能统计
-      if (cacheEnable) {
-        console.log(`[Subagent Cache Summary] ${taskId}:`, {
-          totalSteps: step,
-          totalCacheCreation: totalUsage.cacheCreationInputTokens,
-          totalCacheRead: totalUsage.cacheReadInputTokens,
-          totalPromptTokens: totalUsage.promptTokens,
-          totalCompletionTokens: totalUsage.completionTokens,
-          overallCacheHitRate: totalUsage.cacheReadInputTokens > 0
-            ? `${((totalUsage.cacheReadInputTokens / (totalUsage.cacheReadInputTokens + totalUsage.promptTokens)) * 100).toFixed(1)}%`
-            : '0%',
-          estimatedSavings: totalUsage.cacheReadInputTokens > 0
-            ? `${totalUsage.cacheReadInputTokens} tokens (90% discount)`
-            : '0 tokens',
-        });
-      }
-
-      // 触发 onComplete 钩子（先更新状态）
-      const completeCtx: CompleteHookContext = {
-        ...hookCtx,
-        success,
-        step,
-        error,
-        isAborted: abortController.signal.aborted,
-      };
-      await lifecycleManager.trigger('onComplete', completeCtx);
-
-      // 清理运行时状态（状态更新完成后再清理）
-      runnerManager.remove(taskId);
-
-      // 移除 parentAbort 监听
-      if (parentAbortSignal) {
-        parentAbortSignal.removeEventListener('abort', onParentAbort);
-      }
     }
-  }
   } while (retrying); // end do-while outer retry loop
 
   // 格式化返回
@@ -1205,11 +1196,11 @@ async function runSubagentInner(
     taskId,
     abortController.signal.aborted
       ? [
-          {
-            role: ChatRole.Assistant,
-            content: '[Request interrupted by user for tool use]',
-          },
-        ]
+        {
+          role: ChatRole.Assistant,
+          content: '[Request interrupted by user for tool use]',
+        },
+      ]
       : messagesForFormatting,
   );
 

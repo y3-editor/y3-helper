@@ -491,23 +491,27 @@ export default function ChatUserMessage(
                 </Flex>
               )}
               {message.skillPrompt && (
-                <Flex gap={2} alignItems="center">
-                  <Tag
-                    size="sm"
-                    colorScheme="purple"
-                    variant="subtle"
-                    borderRadius="full"
-                  >
-                    <TagLeftIcon as={TbSparkles} />
-                    <TagLabel>
-                      {message.skillPrompt.title || `/${message.skillPrompt.skillName}`}
-                    </TagLabel>
-                  </Tag>
-                  {message.skillPrompt.source && (
-                    <Box as="span" fontSize="11px" color="text.muted">
-                      {message.skillPrompt.source}
-                    </Box>
-                  )}
+                <Flex gap={2} alignItems="center" flexWrap="wrap">
+                  {(message.skillPrompt.allSkills || [message.skillPrompt]).map((skill, index) => (
+                    <Flex key={skill.skillName || index} gap={2} alignItems="center">
+                      <Tag
+                        size="sm"
+                        colorScheme="purple"
+                        variant="subtle"
+                        borderRadius="full"
+                      >
+                        <TagLeftIcon as={TbSparkles} />
+                        <TagLabel>
+                          {skill.title || `/${skill.skillName}`}
+                        </TagLabel>
+                      </Tag>
+                      {skill.source && (
+                        <Box as="span" fontSize="11px" color="text.muted">
+                          {skill.source}
+                        </Box>
+                      )}
+                    </Flex>
+                  ))}
                 </Flex>
               )}
               {hasShortPrombt && (

@@ -26,6 +26,7 @@ export interface ChatApplyItem {
     content: string;
     added: number[];
     removed: number[];
+    lineNumbers: string[];  // 每行的显示行号（删除行为空，其他为真实行号）
   }
   autoApply?: boolean;      // 是否自动应用
 
@@ -34,7 +35,7 @@ export interface ChatApplyItem {
   accepted?: boolean;        // apply 已应用
   rejected?: boolean;        // apply 已拒绝
   reverted?: boolean;        // apply 已回退
-  type: 'edit' | 'replace';   // 编辑类型
+  type: 'edit' | 'replace' | 'write';   // 编辑类型
 }
 
 export interface ChatFileItem {
@@ -50,13 +51,20 @@ export interface ChatFileItem {
   };
   // 用于关联到具体的某次 toolCall
   applyItems: {
-    type: 'edit' | 'replace';
+    type: 'edit' | 'replace' | 'write' | 'edit';
     toolCallId: string;
     taskId: string;
   }[];
 }
 
+export enum ChatApplyType {
+  ClaudeEdit = 'claudeedit',
+  CodemakerEdit = 'codemakeredit',
+}
+
 export type ChatApplyStore = {
+  chatApplyMode: ChatApplyType,
+  setChatApplyMode: (chatApplyMode: ChatApplyType) => void;
   enableNewApply: boolean;
   disableNewApply: boolean;
   setEnableNewApply: (enableNewApply: boolean) => void;
@@ -106,16 +114,22 @@ export type ChatApplyStore = {
 export const useChatApplyStore = create<ChatApplyStore>()(
   persist(
     (set, get) => ({
-      enableNewApply: true,
+      chatApplyMode: ChatApplyType.CodemakerEdit,
+      setChatApplyMode: (chatApplyMode: ChatApplyType) => {
+        set(() => ({
+          chatApplyMode
+        }))
+      },
+      enableNewApply: false,
       setEnableNewApply(enableNewApply) {
         set(() => ({
-          enableNewApply: enableNewApply ? true : true
+          enableNewApply
         }))
       },
       disableNewApply: false,
       setDisableNewApply(disableNewApply) {
         set(() => ({
-          disableNewApply: disableNewApply ? false : false
+          disableNewApply
         }))
       },
       chatApplyInfo: {},
@@ -417,7 +431,8 @@ export const useChatApplyStore = create<ChatApplyStore>()(
               filePath,
               beforeEdit,
               finalResult,
-              isCreateFile: isCreateFile
+              isCreateFile: isCreateFile,
+              type: type,
             },
             force
           },
@@ -499,19 +514,17 @@ export const useChatApplyStore = create<ChatApplyStore>()(
  */
 function parseDiffToCodeAndLines(diffStr: string) {
   const lines = diffStr.split('\n');
-  const code = [];
-  const added = [];
-  const removed = [];
-  let currentLine = 1;
+  const code: string[] = [];
+  const added: number[] = [];
+  const removed: number[] = [];
+  const lineNumbers: string[] = [];
+  // displayLine: content 中的行索引（从 1 递增，每行都算），用于 DiffCodeBlock 上色
+  let displayLine = 1;
+  // realLine: 修改后文件的真实行号（只对 added 和未变更行递增，deleted 行不占）
+  let realLine = 1;
 
   // 跳过头部元信息
   let startIndex = 0;
-  // while (startIndex < lines.length &&
-  //        !lines[startIndex].startsWith('+') &&
-  //        !lines[startIndex].startsWith('-') &&
-  //        !lines[startIndex].startsWith(' ')) {
-  //   startIndex++;
-  // }
   while (startIndex < lines.length && (
     lines[startIndex].startsWith('+++') ||
     lines[startIndex].startsWith('---') ||
@@ -524,23 +537,30 @@ function parseDiffToCodeAndLines(diffStr: string) {
   for (let i = startIndex; i < lines.length; i++) {
     const line = lines[i];
 
-    if (line.startsWith('+')) {
-      // 添加的行
+    if (line.startsWith('@@')) {
+      // hunk header，跳过不加入 content
+      continue;
+    } else if (line.startsWith('+')) {
+      // 添加的行：占用真实行号
       code.push(line.substring(1));
-      added.push(currentLine);
-      currentLine++;
+      added.push(displayLine);
+      lineNumbers.push(String(realLine));
+      displayLine++;
+      realLine++;
     } else if (line.startsWith('-')) {
-      // 删除的行 (在最终代码中不显示)
+      // 删除的行：不占用真实行号，显示为 '-'
       code.push(line.substring(1));
-      removed.push(currentLine);
-      currentLine++;
-      // 注意：删除的行不增加当前行号计数
-    } else if (line.startsWith(' ') || line.startsWith('@@')) {
-      // 未变更的行
+      removed.push(displayLine);
+      lineNumbers.push('-');
+      displayLine++;
+    } else if (line.startsWith(' ')) {
+      // 未变更的行：占用真实行号
       code.push(line.substring(1));
-      currentLine++;
+      lineNumbers.push(String(realLine));
+      displayLine++;
+      realLine++;
     } else {
-      // 其他元信息，例如 @@ -1,7 +1,6 @@ 这样的行信息标记
+      // 其他元信息，跳过
       continue;
     }
   }
@@ -548,7 +568,8 @@ function parseDiffToCodeAndLines(diffStr: string) {
   return {
     content: code.join('\n'),
     added,
-    removed
+    removed,
+    lineNumbers
   };
 }
 

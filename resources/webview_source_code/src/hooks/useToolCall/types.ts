@@ -17,7 +17,8 @@ export interface ToolTypeChecks {
   hasDangerousCommand: boolean;
   isFileRelatedTool: boolean;
   hasTaskTool: boolean;
-  hasGlobSearch: boolean
+  hasGlobSearchTool: boolean
+  hasClaudeEditTool: boolean;
 }
 
 export interface EnvironmentChecks {

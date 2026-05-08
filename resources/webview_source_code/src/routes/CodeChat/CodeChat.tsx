@@ -118,6 +118,7 @@ import ChatBottomTabs, {
 // import { LuListTodo } from 'react-icons/lu';
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
+import { getReportEventByToolName } from '../../utils/toolCall';
 import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
@@ -314,7 +315,8 @@ function CodeChat() {
   const batchUploadRes = useUploadRes();
   const pluginApp = usePluginApp((state) => state.runner);
   const mcpRunner = useMcpPromptApp((state) => state.runner);
-  const skillRunner = useSkillPromptApp((state) => state.runner);
+  const activeSkills = useSkillPromptApp((state) => state.activeSkills);
+  const skillRunner = activeSkills.size > 0 ? Array.from(activeSkills.values())[0] : undefined;
   const [chatType, setChatType] = useChatStore(
     (state) => [state.chatType, state.setChatType],
     shallow,
@@ -1315,7 +1317,10 @@ function CodeChat() {
           skillName?: string;
           installPath?: string;
           error?: string;
+          isUpdate?: boolean;
         };
+        if (result.isUpdate) return;
+        
         if (result.success && result.skillName) {
           // 上报安装事件
           import('../../services/skillUsage').then(({ reportSkillInstall }) => {
@@ -1387,22 +1392,45 @@ function CodeChat() {
           const { useSkillPromptApp } = await import(
             '../../store/skills/skill-prompt'
           );
-          const skillData = parseSkillToolResult(tool_result?.content || '');
-          if (tool_result?.isError || !skillData) {
+          
+          // 解析skill结果(支持单个对象或数组)
+          let skillsDataArray: unknown[] = [];
+          const content = tool_result?.content?.trim();
+          if (content) {
+            try {
+              const parsed: unknown = JSON.parse(content);
+              skillsDataArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+              console.error('[use_skill] Failed to parse skill result:', e, tool_result?.content);
+              skillsDataArray = [];
+            }
+          } else {
+            console.warn('[use_skill] Empty or invalid skill result content');
+            skillsDataArray = [];
+          }
+          
+          if (tool_result?.isError || skillsDataArray.length === 0) {
             useSkillPromptApp.getState().setLoading(false);
             otel.stopToolCallSpan(toolSpan, {
               content: tool_result?.content,
               isError: tool_result?.isError,
             });
           } else {
-            useSkillPromptApp.getState().setRunner(
-              {
-                skillName: skillData.name,
-                title: `/${skillData.name}`,
-                source: getSkillSourceLabel(skillData.source),
-              },
-              skillData,
-            );
+            skillsDataArray.forEach((skillDataRaw) => {
+              const skillData = parseSkillToolResult(JSON.stringify(skillDataRaw));
+              if (skillData) {
+                // 如果skill不存在则添加(处理AI直接调用use_skill的情况)
+                if (!useSkillPromptApp.getState().hasSkill(skillData.name)) {
+                  useSkillPromptApp.getState().addSkill(skillData.name, {
+                    title: `/${skillData.name}`,
+                    source: getSkillSourceLabel(skillData.source),
+                  });
+                }
+                useSkillPromptApp.getState().setSkillData(skillData.name, skillData);
+              } else {
+                console.warn('[use_skill] Failed to parse skill data:', skillDataRaw);
+              }
+            });
             otel.stopToolCallSpan(toolSpan, {
               content: tool_result?.content,
               isError: false,
@@ -1438,6 +1466,8 @@ function CodeChat() {
               'reapply',
               'replace_in_file',
               'ask_user_question',
+              'edit',
+              'write',
             ].includes(tool_name)
           ) {
             // 部分工具不做判断，避免阻塞
@@ -1461,7 +1491,7 @@ function CodeChat() {
             }
           }
         }
-        if (['edit_file', 'reapply', 'replace_in_file'].includes(tool_name)) {
+        if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool_name)) {
           useChatStreamStore.getState().setIsApplying(false);
           if (!tool_result.isError) {
             updateChatApplyItem(tool_id, {
@@ -1470,14 +1500,13 @@ function CodeChat() {
               beforeEdit: extra?.beforeEdit,
               diffPatch: extra?.diffPatch || '',
               taskId: extra?.taskId,
+              isCreateFile: extra?.isCreateFile || false,
               applying: false,
               autoApply: useChatConfig.getState().autoApply,
+              type: tool_name,
             });
             userReporter.report({
-              event:
-                tool_name === 'replace_in_file'
-                  ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_SUCCESS
-                  : UserEvent.CODE_CHAT_EDIT_FILE_SUCCESS,
+              event: getReportEventByToolName({ toolName: tool_name, status: 1 }),
               extends: {
                 filePath: tool_result.path,
                 finalResult: extra?.finalResult || '',
@@ -1492,10 +1521,7 @@ function CodeChat() {
             });
           } else {
             userReporter.report({
-              event:
-                tool_name === 'replace_in_file'
-                  ? UserEvent.CODE_CHAT_REPLACE_IN_FILE_FAILED
-                  : UserEvent.CODE_CHAT_EDIT_FILE_FAILED,
+              event: getReportEventByToolName({ toolName: tool_name, status: 2 }),
               extends: {
                 filePath: tool_result.path,
                 beforeEdit: extra?.beforeEdit,
@@ -1612,7 +1638,7 @@ function CodeChat() {
                       }
                     }
                   } else if (
-                    ['edit_file', 'reapply', 'replace_in_file'].includes(
+                    ['edit_file', 'reapply', 'replace_in_file', 'write', 'edit'].includes(
                       tool_name,
                     )
                   ) {
@@ -1622,15 +1648,21 @@ function CodeChat() {
                     if (tool_result?.isError) {
                       finalResult = tool_result?.content || '';
                     } else {
-                      finalResult = extra?.finalResult || '';
-                      isLargeFile =
-                        (finalResult?.split('\n')?.length || 0) >
-                        maxTruncatedLine;
-                      if (isLargeFile) {
-                        finalResult = getDiffPatchOfContent(
-                          beforeEdit,
-                          finalResult,
-                        );
+                      if (['write', 'edit'].includes(tool_name)) {
+                        // 新版本Apply内容
+                        finalResult = tool_result?.content || '';
+                      } else {
+                        // 原有Edit工具的逻辑
+                        finalResult = extra?.finalResult || '';
+                        isLargeFile =
+                          (finalResult?.split('\n')?.length || 0) >
+                          maxTruncatedLine;
+                        if (isLargeFile) {
+                          finalResult = getDiffPatchOfContent(
+                            beforeEdit,
+                            finalResult,
+                          );
+                        }
                       }
                     }
                     updateToolCallResults(

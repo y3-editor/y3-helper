@@ -16,43 +16,59 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
   shouldAutoExecute(toolCall: ToolCall, context: ExecutionContext): boolean {
     const permissions = context.permissions;
     if (!permissions) {
+      console.log('[mcp][strategy] 没有权限配置，不自动执行');
       return false; // 没有权限配置，不自动执行
     }
 
     const toolName = toolCall.function.name;
+    console.log('[mcp][strategy] 检查工具:', toolName);
 
     // 按工具类型检查对应的auto选项
     if (this.isEditFileTool(toolName)) {
+      console.log('[mcp][strategy] 编辑文件工具, autoApply:', permissions.autoApply);
       return permissions.autoApply;
     }
 
     if (this.isTerminalTool(toolName)) {
-      return permissions.autoExecute && this.isSafeCommand(toolCall);
+      const isSafe = this.isSafeCommand(toolCall);
+      console.log('[mcp][strategy] 终端工具, autoExecute:', permissions.autoExecute, 'isSafe:', isSafe);
+      return permissions.autoExecute && isSafe;
     }
 
     if (this.isTodoTool(toolName)) {
+      console.log('[mcp][strategy] Todo工具, autoTodo:', permissions.autoTodo);
       return permissions.autoTodo;
     }
 
     if (this.isPlanTool(toolName)) {
+      console.log('[mcp][strategy] Plan工具, 不自动执行');
       // Plan工具需要特殊处理，通常不自动执行
       return false;
     }
 
     if (this.isUserQuestionTool(toolName)) {
+      console.log('[mcp][strategy] 用户问答工具, 总是自动处理');
       // ask_user_question 总是自动处理
       return true;
     }
 
+    if (this.isMCPTool(toolName)) {
+      console.log('[mcp][strategy] MCP工具, 由handleMCPTools单独处理，此处返回false');
+      // MCP工具由 handleMCPTools 单独处理，这里返回false，避免在标准流程中处理
+      return false;
+    }
+
     // 其他工具使用总的 autoApprove 开关
-    return permissions.autoApprove && this.isGenerallySafeTool(toolName);
+    const isGenerallySafe = this.isGenerallySafeTool(toolName);
+    console.log('[mcp][strategy] 其他工具, autoApprove:', permissions.autoApprove, 'isGenerallySafe:', isGenerallySafe);
+    return permissions.autoApprove && isGenerallySafe;
   }
 
   /**
    * 是否是文件编辑工具
    */
   private isEditFileTool(toolName: string): boolean {
-    return ['edit_file', 'reapply', 'replace_in_file'].includes(toolName);
+    return ['edit_file', 'reapply', 'replace_in_file', 'write', 'edit'].includes(toolName);
   }
 
   /**
@@ -81,6 +97,13 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
    */
   private isUserQuestionTool(toolName: string): boolean {
     return ['ask_user_question'].includes(toolName);
+  }
+
+  /**
+   * 是否是MCP工具
+   */
+  private isMCPTool(toolName: string): boolean {
+    return ['use_mcp_tool', 'access_mcp_resource'].includes(toolName);
   }
 
   /**

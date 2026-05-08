@@ -21,7 +21,7 @@ import {
   MultipleChatBMPromptBody,
 } from './docsets';
 import { PluginAppRunnerParams } from './plugin';
-import { REQUEST_TIMEOUT_NAME } from '../store/chat';
+import { REQUEST_TIMEOUT_NAME } from '../utils/abort';
 // abort 工具已导入备用，后续 cherry-pick abort 改造时启用
 // import { ABORT_REASON_FINISHED, ABORT_REASON_USER_CANCELLED, createAbortReason } from '../utils/abort';
 import { OFFICE_BM_API_URL } from '../routes/CodeCoverage/const';

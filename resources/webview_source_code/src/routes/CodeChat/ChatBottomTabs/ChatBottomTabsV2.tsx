@@ -388,7 +388,7 @@ function ChatBottomTabsV2Component<TApi = unknown>(
       const currentY = e.clientY;
       // 向上拖动 (currentY < lastY) 增加高度，向下拖动减少高度
       const diff = lastY - currentY;
-      
+
       setContentHeight((prev) => {
         const nextHeight = prev + diff;
         return Math.min(Math.max(nextHeight, MIN_CONTENT_HEIGHT), MAX_CONTENT_HEIGHT);

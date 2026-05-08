@@ -17,7 +17,8 @@ export function useToolCallTitle(
   hasAskUserQuestionTool: boolean,
   hasListFilesTool: boolean,
   hasReadFileTool: boolean,
-  hasGlobSearch: boolean,
+  hasGlobSearchTool: boolean,
+  hasClaudeEditTool: boolean,
 ): ToolCallTitleInfo {
   const toolCallTitle = useMemo(() => {
     if (!message.tool_calls || message.tool_calls.length === 0) {
@@ -36,8 +37,9 @@ export function useToolCallTitle(
       !hasMakePlanTool &&
       !hasAskUserQuestionTool &&
       !hasListFilesTool &&
-      !hasGlobSearch &&
-      !hasReadFileTool;
+      !hasGlobSearchTool &&
+      !hasReadFileTool &&
+      !hasClaudeEditTool
   }, [
     hasEditFileTool,
     hasTerminalTool,
@@ -47,7 +49,8 @@ export function useToolCallTitle(
     hasAskUserQuestionTool,
     hasListFilesTool,
     hasReadFileTool,
-    hasGlobSearch,
+    hasGlobSearchTool,
+    hasClaudeEditTool,
   ]);
 
   return {
