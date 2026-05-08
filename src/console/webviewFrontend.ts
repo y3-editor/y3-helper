@@ -98,7 +98,26 @@ function submitInput(): void {
 }
 
 // ---- 按键处理 ----
+// Ctrl+C 复制选区：必须在 keydown 阶段捕获，因为 xterm.js 处理按键后会清除选区
+term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key === 'c' && e.type === 'keydown') {
+        const sel = term.getSelection();
+        if (sel) {
+            navigator.clipboard?.writeText(sel).catch(() => {});
+            return false; // 阻止 xterm.js 继续处理（不触发 onData）
+        }
+    }
+    return true;
+});
+
 term.onData((data) => {
+    if (data === '\x03') { // Ctrl+C（无选区时到达此处）
+        if (inputEnabled && inputLine) {
+            navigator.clipboard?.writeText(inputLine).catch(() => {});
+        }
+        return;
+    }
+
     if (!inputEnabled) {
         return;
     }
@@ -112,8 +131,6 @@ term.onData((data) => {
         }
     } else if (data === '\x1b') { // ESC
         refreshLine('', 0);
-    } else if (data === '\x03') { // Ctrl+C
-        navigator.clipboard?.writeText(inputLine).catch(() => {});
     } else if (data === '\x16') { // Ctrl+V
         navigator.clipboard?.readText().then((text) => {
             const cleaned = text.replace(/[\r\n]+/g, ' ');
