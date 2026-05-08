@@ -229,9 +229,7 @@ window.addEventListener('message', (event) => {
                 // 有提示符时：先擦除输入行，打印消息，再恢复提示符+输入
                 term.write('\r\x1b[K');
                 term.write(text);
-                if (!text.endsWith('\r\n')) {
-                    term.write('\r\n');
-                }
+                term.write('\r\n');
                 writePrompt();
                 if (inputLine) {
                     term.write(inputLine);
@@ -243,9 +241,7 @@ window.addEventListener('message', (event) => {
             } else {
                 // 无提示符时：直接追加
                 term.write(text);
-                if (!text.endsWith('\r\n')) {
-                    term.write('\r\n');
-                }
+                term.write('\r\n');
             }
             break;
         }
@@ -254,6 +250,10 @@ window.addEventListener('message', (event) => {
                 inputEnabled = true;
                 writePrompt();
             } else if (!msg.enabled) {
+                if (inputEnabled) {
+                    // 清除当前提示符行，避免 > 残留在原本应该是空行的位置
+                    term.write('\r\x1b[K');
+                }
                 inputEnabled = false;
             }
             break;
