@@ -1266,19 +1266,32 @@ Provide the complete updated code.`;
             }
             console.log(`[Y3Maker] use_mcp_tool: server=${serverName}, tool=${toolName}, args=`, JSON.stringify(toolArguments));
             const response = await hub.callTool(serverName, toolName, toolArguments);
-            // 将 MCP 响应格式化为文本
-            const textParts: string[] = [];
-            for (const item of (response?.content || [])) {
+            // 对齐上游 extension 格式：把 MCP 返回的 content 数组映射为
+            // OpenAI-style 的 [{type:'text'|'image_url', ...}] 再 JSON.stringify。
+            // 前端 formatMcpToolResult 会 JSON.parse 回数组并做图片压缩 / text 截断，
+            // 最终作为 list 类型 content 发给 LLM。
+            // 不要返回普通拼接字符串：若其恰为合法 JSON 会被前端误 parse 成对象，
+            // 触发 LLM API 400 "content should be a string or a list"。
+            const parsedResult = (response?.content || []).map((item: any) => {
                 if (item.type === 'text') {
-                    textParts.push(item.text);
+                    return { type: 'text', text: item.text };
                 } else if (item.type === 'image') {
-                    textParts.push(`[Image: ${item.mimeType}]`);
+                    return {
+                        type: 'image_url',
+                        image_url: {
+                            url: `data:${item.mimeType};base64,${item.data}`,
+                        },
+                    };
                 } else if (item.type === 'resource') {
-                    textParts.push(item.resource?.text || `[Resource: ${item.resource?.uri}]`);
+                    return {
+                        type: 'text',
+                        text: item.resource?.text || `[Resource: ${item.resource?.uri}]`,
+                    };
                 }
-            }
+                return { type: 'text', text: '' };
+            });
             return {
-                content: textParts.join('\n') || '(empty response)',
+                content: JSON.stringify(parsedResult),
                 isError: response?.isError || false,
             };
         } catch (err: any) {
