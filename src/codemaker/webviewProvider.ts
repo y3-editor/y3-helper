@@ -798,7 +798,7 @@ Provide the complete updated code.`;
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt },
             ],
-            model: 'fast_apply_7b',
+            model: getCodeMakerConfig().model,
             temperature: 0,
             original_content: normalizedBefore,
             code_edit: normalizedSnippet,
