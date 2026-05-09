@@ -3,9 +3,9 @@ import ChatTypeAhead from './ChatTypeAhead';
 import { ChatTypeAheadHandle } from './ChatTypeAhead/ChatTypeAhead';
 import {
   allowedTypes,
-  compressImage,
   HandleImageUpload,
 } from '../../components/ImageUpload/ImageUpload';
+import { compressImage } from '../../components/ImageUpload/ImageResize';
 import { Prompt } from '../../services/prompt';
 import {
   useChatAttach,

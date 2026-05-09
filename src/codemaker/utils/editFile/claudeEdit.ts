@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { existsSync } from 'fs';
-import { getWorkspaceRootPath } from './getWorkspaceInfo';
+import { getWorkspaceRootPath } from '../getWorkspaceInfo';
 
 interface ClaudeEditResult {
   content: string;
@@ -102,25 +102,43 @@ export function normalizeEscapeChars(str: string): string {
  * 增强版字符串查找函数，支持多种兼容性处理
  * 处理模型返回的转义字符与文件内容的不匹配问题
  * @param fileContent 文件内容
- * @param searchString 要查找的字符串 (可能包含转义字符)
+ * @param searchString 要查找的字符串（已经过 normalizeEscapeChars 处理）
+ * @param rawSearchString 原始 old_string（未经 normalizeEscapeChars 处理）
  * @returns 在文件中找到的实际字符串，如果找不到则返回null
  */
 export function findCompatibleString(
   fileContent: string,
   searchString: string,
+  rawSearchString?: string,
 ): string | null {
   // 1. 精确匹配
   if (fileContent.includes(searchString)) {
     return searchString;
   }
 
-  // 2. 处理引号兼容性
+  // 2. 处理引号兼容性：规范化引号后匹配
   const normalizedSearch = normalizeQuotes(searchString);
   const normalizedFile = normalizeQuotes(fileContent);
 
-  const quoteIndex = normalizedFile.indexOf(normalizedSearch);
-  if (quoteIndex !== -1) {
-    return fileContent.substring(quoteIndex, quoteIndex + normalizedSearch.length);
+  if (normalizedFile.includes(normalizedSearch)) {
+    const idx = normalizedFile.indexOf(normalizedSearch);
+    return fileContent.substring(idx, idx + normalizedSearch.length);
+  }
+
+  // 3. 使用原始 old_string（未经 normalizeEscapeChars）直接匹配
+  //    场景：文件里存储的是字面量 \n（Python/C 代码），AI 传来的 old_string
+  //    经 JSON 解析后也是字面量 \n，但 normalizeEscapeChars 错误地把它转成了真实换行
+  if (rawSearchString !== undefined && rawSearchString !== searchString) {
+    if (fileContent.includes(rawSearchString)) {
+      return rawSearchString;
+    }
+
+    // 3a. 原始字符串 + 引号规范化
+    const normalizedRaw = normalizeQuotes(rawSearchString);
+    if (normalizedFile.includes(normalizedRaw)) {
+      const idx = normalizedFile.indexOf(normalizedRaw);
+      return fileContent.substring(idx, idx + normalizedRaw.length);
+    }
   }
 
   return null;
@@ -394,10 +412,12 @@ async function executeSingleEdit({
     const isCreateFile = !fileExist;
 
     let originalContent = '';
+    let beforeEdit = '';
     let lineEndingType = 'LF'; // CRLF 或 LF
     if (fileExist) {
       const currentDocument = await vscode.workspace.openTextDocument(absolutePath);
       originalContent = currentDocument.getText()
+      beforeEdit = originalContent
       if (originalContent.includes('\r\n')) {
         lineEndingType = 'CRLF';
         originalContent = originalContent.replace(/\r\n/g, '\n');
@@ -413,7 +433,7 @@ async function executeSingleEdit({
       updatedContent = normalizedNewString;
     } else {
       const normalizedOldString = normalizeEscapeChars(oldString);
-      const actualOldString = findCompatibleString(originalContent, normalizedOldString) || normalizedOldString
+      const actualOldString = findCompatibleString(originalContent, normalizedOldString, oldString) || normalizedOldString
 
       // Preserve curly quotes in new_string when the file uses them
       const actualNewString = preserveQuoteStyle(
@@ -444,7 +464,7 @@ async function executeSingleEdit({
     return {
       content: successMessage,
       extra: {
-        beforeEdit: originalContent,
+        beforeEdit: beforeEdit,
         finalResult: updatedContent,
         taskId: '',
         editSnippet: newString,

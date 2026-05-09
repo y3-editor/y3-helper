@@ -35,3 +35,17 @@ export function getWorkspaceRootPath(): string {
   }
   return '';
 }
+
+/**
+ * 将相对路径解析为工作区绝对路径；绝对路径原样返回
+ */
+export function resolveWorkspacePath(filePath: string): string {
+  if (path.isAbsolute(filePath)) {
+    return filePath;
+  }
+  const workspace = getWorkspaceRootPath();
+  if (workspace) {
+    return path.join(workspace, filePath);
+  }
+  return filePath;
+}

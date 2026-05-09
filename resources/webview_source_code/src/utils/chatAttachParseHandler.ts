@@ -7,10 +7,10 @@ import { ChatMessageAttachType, ChatMessageContent, MultipleAttach } from "../se
 import { getErrorMessage, truncateContent } from ".";
 import EventBus, { EBusEvent } from "./eventbus";
 import { uploadImg } from "../services/chat";
-import { compressImage } from "../components/ImageUpload/ImageUpload";
 import { useChatConfig } from "../store/chat-config";
 import { ParseImgType } from "../services/chatModel";
 import { getDocsetPrompt } from "../store/workspace/tools/read";
+import { compressImage } from "../components/ImageUpload/ImageResize";
 
 
 

@@ -6,8 +6,8 @@ import { isImageFileByPath, truncateContent, getErrorMessage } from '../../utils
 import { EParsedDocsStatus } from '../../utils/chatAttachParseHandler';
 import { getFilePrompt, maxTruncatedLine, getDiffPatchOfContent } from '../../store/workspace/tools/read';
 import { ChatMessageContent } from '../../services';
-import { compressImage } from '../../components/ImageUpload/ImageUpload';
 import type { ToolResultInput, ToolResultOutput } from './types';
+import { compressImage } from '../../components/ImageUpload/ImageResize';
 
 /** 检查是否为图片文件且需要异步处理 */
 export function requiresImageProcessing(input: ToolResultInput): boolean {
@@ -21,7 +21,7 @@ export function requiresImageProcessing(input: ToolResultInput): boolean {
 /** 检查是否为文档且需要异步处理 */
 export function requiresDocProcessing(input: ToolResultInput): boolean {
   return input.tool_name === 'read_file' &&
-         input.extra?.parseDocStatus === EParsedDocsStatus.NotParsed;
+    input.extra?.parseDocStatus === EParsedDocsStatus.NotParsed;
 }
 
 /** 检查是否为终端命令工具 */

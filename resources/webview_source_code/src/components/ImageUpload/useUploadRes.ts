@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import { compressImage } from "./ImageUpload";
 import { uploadImg } from "../../services/chat";
 import useCustomToast from "../../hooks/useCustomToast";
 import { useSelectImageAttach } from "../../routes/CodeChat/ChatTypeAhead/Attach/Hooks/useSelectImageAttach";
+import { compressImage } from "./ImageResize";
 
 export const useUploadRes = () => {
   const { toast, closeAll } = useCustomToast()

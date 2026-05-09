@@ -247,6 +247,11 @@ export const serializeCodebaseMessages = async (
     if (hasThinking && isClaudeModel && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
       curMessage.reasoning_content = '';
     }
+    if (!nextMessage && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length) {
+      // 最后一条消息是 assistant 且有 tool_calls 但没有对应的 tool 结果，清空 tool_calls 避免 API 报错
+      curMessage.tool_calls = []
+      errorMessages.push('最后一条消息有工具调用信息，但没有tool消息')
+    }
     if (nextMessage) {
       if (nextMessage.role === ChatRole.User && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length) {
         curMessage.tool_calls = []
@@ -287,7 +292,30 @@ export const serializeCodebaseMessages = async (
         continue
       } else if (nextMessage.role === ChatRole.Assistant && curMessage.role === ChatRole.Assistant) {
         // 以旧的Assistant为主，跟上文格式一致
+        // FIX: 若被删除的 assistant 含有 tool_calls，需同时删除其对应的孤儿 tool 消息，
+        // 否则这些 tool_result 孤儿会导致后续 API 报 "unexpected tool_use_id" 错误
+        const removedToolCallIds = new Set<string>(
+          (curMessage.tool_calls || []).map((tc: any) => tc.id).filter(Boolean)
+        )
         filteredMessages.splice(startIndex, 1)
+        if (removedToolCallIds.size > 0) {
+          // splice 后 startIndex 指向原 nextMessage（第二个 assistant），
+          // 孤儿 tool 消息在其后面，需要跳过中间的 assistant 去寻找并删除
+          let j = startIndex + 1
+          while (j < filteredMessages.length) {
+            const msg = filteredMessages[j]
+            if (msg.role === ChatRole.Tool && removedToolCallIds.has(msg.tool_call_id as string)) {
+              errorMessages.push(`删除孤儿 tool 消息: ${msg.tool_call_id}`)
+              filteredMessages.splice(j, 1)
+              // 不递增 j，继续检查同位置
+            } else if (msg.role !== ChatRole.Tool && msg.role !== ChatRole.Assistant) {
+              // 遇到非 tool/assistant 消息，停止向后搜索
+              break
+            } else {
+              j++
+            }
+          }
+        }
         errorMessages.push('错误的消息格式: Assistant -- Assistant')
         continue
       } else if (nextMessage.role === ChatRole.Tool && curMessage.role === ChatRole.User) {

@@ -75,7 +75,9 @@
       "src/handlers/mcpHandlers/mcp.ts": "src/codemaker/mcpHandlers/mcp.ts",
       "src/handlers/mcpHandlers/schema.ts": "src/codemaker/mcpHandlers/schema.ts",
       "src/handlers/skillsHandler/index.ts": "src/codemaker/skillsHandler.ts",
-      "src/utils/file.ts": "src/codemaker/utils/file.ts"
+      "src/utils/file.ts": "src/codemaker/utils/file.ts",
+      "src/utils/editFile/claudeEdit.ts": "src/codemaker/utils/editFile/claudeEdit.ts",
+      "src/utils/executeFunction.ts": "src/codemaker/utils/executeFunction.ts"
     },
     "upstream_watch": [
       "src/provider/webviewProvider/index.ts",
@@ -101,7 +103,9 @@
       "src/codemaker/webviewProvider.ts",
       "src/codemaker/messageHandlers.ts",
       "src/codemaker/skillsHandler.ts",
-      "src/codemaker/mcpHandlers/index.ts"
+      "src/codemaker/mcpHandlers/index.ts",
+      "src/codemaker/utils/editFile/claudeEdit.ts",
+      "src/codemaker/utils/executeFunction.ts"
     ],
     "y3_only": [
       "src/codemaker/index.ts",

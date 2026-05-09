@@ -72,6 +72,66 @@ function delay(ms: number): Promise<void> {
 
 const USER_AGENT = `Y3Helper/1.0 VSCode ${os.type()}`;
 
+/**
+ * 解析子进程的完整 shell 环境变量
+ * 对齐上游 TerminalProcess.resolveShellEnv（commit 28d6e037）
+ *
+ * 用 -l -i shell 执行 `env -0` 获取登录+交互式环境，确保 nvm/pyenv 等工具
+ * 在 ~/.bashrc / ~/.zshrc 中注入的 PATH 能被 MCP 子进程继承。
+ * Windows 直接返回 process.env。结果缓存。
+ */
+let _resolvedShellEnv: NodeJS.ProcessEnv | undefined;
+let _resolvingShellEnv: Promise<NodeJS.ProcessEnv> | undefined;
+async function resolveShellEnv(): Promise<NodeJS.ProcessEnv> {
+    if (_resolvedShellEnv) { return _resolvedShellEnv; }
+    if (_resolvingShellEnv) { return _resolvingShellEnv; }
+
+    _resolvingShellEnv = new Promise<NodeJS.ProcessEnv>((resolve) => {
+        if (process.platform === 'win32') {
+            _resolvedShellEnv = { ...process.env };
+            resolve(_resolvedShellEnv);
+            return;
+        }
+        const { spawn } = require('child_process') as typeof import('child_process');
+        const shell = process.env.SHELL || '/bin/bash';
+        const child = spawn(shell, ['-l', '-i', '-c', 'env -0'], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: process.env,
+        });
+
+        let stdout = '';
+        child.stdout?.on('data', (data: Buffer) => { stdout += data.toString(); });
+        child.stderr?.on('data', () => { /* ignore noisy interactive shell warnings */ });
+
+        const timeout = setTimeout(() => { child.kill('SIGKILL'); }, 10000);
+
+        child.on('close', () => {
+            clearTimeout(timeout);
+            const env: NodeJS.ProcessEnv = { ...process.env };
+            if (stdout) {
+                for (const entry of stdout.split('\0')) {
+                    const eqIndex = entry.indexOf('=');
+                    if (eqIndex > 0) {
+                        env[entry.substring(0, eqIndex)] = entry.substring(eqIndex + 1);
+                    }
+                }
+            }
+            _resolvedShellEnv = env;
+            resolve(env);
+        });
+
+        child.on('error', () => {
+            clearTimeout(timeout);
+            _resolvedShellEnv = { ...process.env };
+            resolve(_resolvedShellEnv);
+        });
+
+        child.stdin?.end();
+    });
+
+    return _resolvingShellEnv;
+}
+
 function normalizeHeaders(headers: Record<string, string> | undefined): Record<string, string> {
     if (!headers) { return {}; }
     const normalized: Record<string, string> = {};
@@ -230,10 +290,12 @@ export class McpHub {
                     const resolveWorkspaceVars = (value: string): string =>
                         value.replace(/\$\{WORKSPACE\}/g, workspace);
 
+                    const shellEnv = await resolveShellEnv();
                     transport = new StdioClientTransport({
                         command: resolveWorkspaceVars(config.command || ""),
                         args: config.args?.map(resolveWorkspaceVars),
                         env: {
+                            ...shellEnv,
                             ...(config.env || {}),
                             WORKSPACE: encodeURIComponent(workspace),
                             ...(process.env.PATH ? { PATH: process.env.PATH } : {}),

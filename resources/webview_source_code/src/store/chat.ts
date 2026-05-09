@@ -399,6 +399,34 @@ export const useChatStore = create<ChatStore>()(
           if (currentSessionId && pendingSyncSessionIds.has(currentSessionId)) {
             return;
           }
+
+          // 有 currentSessionId 时，先尝试精准查询验证
+          // 列表只返回最近 20 条，空列表不代表该会话已被删除
+          if (currentSessionId) {
+            try {
+              const sessionDetail = await getSessionData(currentSessionId);
+              const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
+              if (
+                sessionDetail?._id &&
+                sessionDetail.chat_type === chatType &&
+                (!sessionDetail.chat_repo ||
+                  sessionDetail.chat_repo === workspaceInfo.repoName)
+              ) {
+                // 会话仍存在于服务端且匹配当前工作区，使用这个会话
+                const nextSessions = new Map(get().sessions);
+                nextSessions.set(currentSessionId, sessionDetail);
+                await get().loadSessionData(currentSessionId);
+                set(() => ({
+                  sessions: nextSessions,
+                  currentSessionId: currentSessionId,
+                }));
+                return;
+              }
+            } catch (error) {
+              console.warn(`[revalidateChatSessions] Failed to get session ${currentSessionId}:`, error);
+            }
+          }
+
           get().onNewSession();
         } else {
           const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
@@ -415,6 +443,26 @@ export const useChatStore = create<ChatStore>()(
                 targetSession = localSession;
               }
             }
+
+            // 如果在过滤后的列表中找不到，但 currentSessionId 存在
+            // 先尝试精准查询验证，避免因列表只返回最近 20 条而误判
+            if (!targetSession && currentSessionId) {
+              try {
+                const sessionDetail = await getSessionData(currentSessionId);
+                if (
+                  sessionDetail?._id &&
+                  sessionDetail.chat_type === chatType &&
+                  (!sessionDetail.chat_repo ||
+                    sessionDetail.chat_repo === workspaceInfo.repoName)
+                ) {
+                  // 会话仍存在且匹配当前仓库，使用这个会话
+                  targetSession = sessionDetail;
+                }
+              } catch (error) {
+                console.warn(`[revalidateChatSessions] Failed to get session ${currentSessionId}:`, error);
+              }
+            }
+
             if (!targetSession) {
               // 如果有当前 session，那么就启用 attach 的缓存
               targetSession = filterData.find(

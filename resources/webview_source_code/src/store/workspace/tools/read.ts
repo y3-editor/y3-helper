@@ -125,7 +125,7 @@ export const getFilePrompt = (path: string, content: string, lineNoDisbled?: boo
   } else {
     for (let i = 0; i < linesToShow; i++) {
       const lineNumber = (i + 1).toString().padStart(6, ' ');
-      formattedContent += `${lineNumber} ${formatTruncatedLine(lines[i] || '')}\n`;
+      formattedContent += `${lineNumber}\t${formatTruncatedLine(lines[i] || '')}\n`;
     }
   }
 

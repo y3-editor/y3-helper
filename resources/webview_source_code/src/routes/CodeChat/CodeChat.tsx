@@ -1494,17 +1494,23 @@ function CodeChat() {
         if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool_name)) {
           useChatStreamStore.getState().setIsApplying(false);
           if (!tool_result.isError) {
-            updateChatApplyItem(tool_id, {
+            const updateFileConfig = {
               filePath: tool_result.path,
               finalResult: extra?.finalResult || '',
               beforeEdit: extra?.beforeEdit,
               diffPatch: extra?.diffPatch || '',
               taskId: extra?.taskId,
-              isCreateFile: extra?.isCreateFile || false,
               applying: false,
               autoApply: useChatConfig.getState().autoApply,
               type: tool_name,
-            });
+            }
+            // 只有edit和write的创建标识需要从toolresult获取
+            if (['edit', 'write'].includes(tool_name)) {
+              Object.assign(updateFileConfig, {
+                isCreateFile: extra?.isCreateFile || false,
+              })
+            }
+            updateChatApplyItem(tool_id, updateFileConfig);
             userReporter.report({
               event: getReportEventByToolName({ toolName: tool_name, status: 1 }),
               extends: {

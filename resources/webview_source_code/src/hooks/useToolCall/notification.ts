@@ -5,6 +5,7 @@
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '../../services';
 import { useChatStore, useChatStreamStore } from '../../store/chat';
+import { useChatApplyStore } from '../../store/chatApply';
 import { usePanelContextOptional } from '../../context/PanelContext';
 import {
   notifyChatReplyDone,
@@ -33,8 +34,12 @@ export function useToolCallNotification(
   const isMCPProcessing = useChatStreamStore((state) => state.isMCPProcessing);
   const isApplying = useChatStreamStore((state) => state.isApplying);
   const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
+  const chatApplyInfo = useChatApplyStore((state) => state.chatApplyInfo);
   const panelContext = usePanelContextOptional();
   const hasNotifiedRef = useRef<boolean>(false);
+
+  // 检查新版应用是否有正在处理中的项
+  const hasApplyingItem = Object.values(chatApplyInfo).some(item => item.applying);
 
   // 当需要用户操作时发起通知
   useEffect(() => {
@@ -45,6 +50,7 @@ export function useToolCallNotification(
       !isMCPProcessing &&
       !isApplying &&
       !isTerminalProcessing &&
+      !hasApplyingItem && // 新版应用处理中不发送通知
       !isShare &&
       !hasAskUserQuestionTool &&
       !hasTaskTool && // Task 工具（subagent）不需要通知
@@ -95,6 +101,7 @@ export function useToolCallNotification(
     isMCPProcessing,
     isApplying,
     isTerminalProcessing,
+    hasApplyingItem,
     isShare,
     hasAskUserQuestionTool,
     hasTaskTool,

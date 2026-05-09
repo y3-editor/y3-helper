@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Icon,
   IconButton,
   Tag,
@@ -10,9 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePostMessage } from '../../../PostMessageProvider';
 import { RxCheckCircled, RxCircleBackslash, RxCrossCircled } from 'react-icons/rx';
 import { MdExpandLess, MdExpandMore } from 'react-icons/md';
-import { TbRefresh } from 'react-icons/tb';
 import { useChatApplyStore } from '../../../store/chatApply';
-import { useChatStreamStore } from '../../../store/chat';
 import MemoCodeBlock from '../../../components/Markdown/CodeBlock';
 import MemoDiffCodeBlock from '../../../components/Markdown/DiffCodeBlock';
 import { useConfigStore } from '../../../store/config';
@@ -32,13 +29,12 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
     // messageId is reserved for future reporting use
     toolCallId,
     filePath,
-    isLatest = false,
   } = props;
 
   const { postMessage } = usePostMessage();
   const chatApplyInfo = useChatApplyStore((state) => state.chatApplyInfo);
   const codeWhiteSpace = useConfigStore((state) => state.config.codeWhiteSpace);
-  const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
+  // const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
 
   const targetApplyItem = chatApplyInfo[toolCallId];
   const [isExpanded, setIsExpanded] = useState(!!targetApplyItem);
@@ -187,29 +183,6 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
             codeWhiteSpace={codeWhiteSpace}
           />
         )}
-        {
-          isExpanded && !diffInfo && !displayedCode && (
-            isLatest ? (
-              <Box py={2} px={4} display="flex" alignItems="center" gap={2}>
-                <Box fontSize={10}>无法找到修改信息</Box>
-                <Tooltip label="重新生成该应用">
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    colorScheme="blue"
-                    onClick={() => onUserResubmit()}
-                    leftIcon={<Icon as={TbRefresh} />}
-                    fontSize={10}
-                    h={6}
-                  >
-                    重新生成应用
-                  </Button>
-                </Tooltip>
-              </Box>
-            ) :
-              <Box py={2} px={4} fontSize={10}>修改记录暂时找不到，请查看原文件</Box>
-          )
-        }
       </pre>
     </div>
   );
