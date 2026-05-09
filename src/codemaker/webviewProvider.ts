@@ -250,7 +250,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 currentFileAutoAttach: false,
                 disableNewApply: false,
                 planModeEnabled: false,
-                subagentEnable: true,
+                subagentEnable: false,
             },
         };
 
