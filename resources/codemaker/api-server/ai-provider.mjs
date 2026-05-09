@@ -829,9 +829,10 @@ function sendErrorSSE(res, message) {
 
   const id = 'error-' + Date.now();
   
-  // 发送错误内容
+  // 发送错误内容（is_error 标记供 apply/edit 等非聊天端点识别并拒绝）
   const data = JSON.stringify({
     id,
+    is_error: true,
     choices: [{
       delta: { content: message, tool_calls: null },
       finish_reason: null,

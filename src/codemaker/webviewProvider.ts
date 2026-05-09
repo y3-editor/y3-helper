@@ -729,21 +729,27 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 currentContent = doc.getText();
             }
 
-            let updatedContent: string;
             if (currentContent === '' || !fileExist) {
                 // 新文件或空文件：直接使用 codeEdit
-                updatedContent = codeEdit;
-            } else {
-                // 已有内容的文件：调用 apply API 做智能合并
-                try {
-                    updatedContent = await this._applyEditViaApi(currentContent, codeEdit, absolutePath);
-                    console.log(`[Y3Maker] edit_file: apply API 合并成功, result.length=${updatedContent.length}`);
-                } catch (applyErr: any) {
-                    console.warn(`[Y3Maker] edit_file: apply API 失败 (${applyErr.message}), 回退为直接覆写`);
-                    // 回退：直接使用 codeEdit
-                    updatedContent = codeEdit;
-                }
+                return {
+                    content: codeEdit,
+                    path: targetFile,
+                    extra: {
+                        editSnippet: codeEdit,
+                        beforeEdit: currentContent,
+                        finalResult: codeEdit,
+                        isCreateFile: !fileExist,
+                        filePath: targetFile,
+                        taskId: '',
+                    },
+                    isError: false,
+                };
             }
+
+            // 已有内容的文件：调用 apply API 做智能合并
+            // 对齐上游：API 失败时直接标记 isError，不回退覆写，避免错误消息/不完整内容覆盖原文件
+            const updatedContent = await this._applyEditViaApi(currentContent, codeEdit, absolutePath);
+            console.log(`[Y3Maker] edit_file: apply API 合并成功, result.length=${updatedContent.length}`);
 
             // 不在这里写磁盘！前端会通过 ACCEPT_EDIT 来执行真正的写入
             return {
@@ -830,6 +836,12 @@ Provide the complete updated code.`;
                         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
                             try {
                                 const json = JSON.parse(line.slice(6));
+                                // 识别 sendErrorSSE 发来的错误响应，避免错误消息被当作文件内容
+                                if (json?.is_error) {
+                                    const errMsg = json?.choices?.[0]?.delta?.content || 'apply API 返回错误';
+                                    reject(new Error(errMsg));
+                                    return;
+                                }
                                 const delta = json?.choices?.[0]?.delta?.content;
                                 if (delta) { content += delta; }
                             } catch { /* 跳过非 JSON 行 */ }
