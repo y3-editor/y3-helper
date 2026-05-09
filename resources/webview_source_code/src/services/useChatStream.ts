@@ -1476,6 +1476,7 @@ export async function requestChatStream(
             const preResposneMessage: ChatMessage = {
               role: ChatRole.Assistant,
               content: responseText || '-',
+              reasoning_content: reasoningResponse.reasoning_content || '',
             };
 
             const nextData = {
@@ -1645,7 +1646,7 @@ export async function requestDeepseekReasonerChatStream(
             const preResposneMessage: ChatMessage = {
               role: ChatRole.Assistant,
               content: responseText || '-',
-              reasoningContent: responseReasoningText,
+              reasoning_content: responseReasoningText,
             };
 
             const nextData = {
@@ -2583,6 +2584,7 @@ export async function requestCodebaseChatStream(
                 const preResponseMessage: ChatMessage = {
                   role: ChatRole.Assistant,
                   content: responseText || '-',
+                  reasoning_content: claude37Response.reasoning_content || '',
                 };
                 const nextData = {
                   ...promptData,
@@ -2610,6 +2612,7 @@ export async function requestCodebaseChatStream(
                 const preResponseMessage: ChatMessage = {
                   role: ChatRole.Assistant,
                   content: responseText || '-',
+                  reasoning_content: claude37Response.reasoning_content || '',
                 };
                 const nextData = {
                   ...promptData,

@@ -4735,7 +4735,11 @@ export const useChatStreamStore = create(
           message.content = [{ type: ChatMessageContent.Text, text: '-' }];
         }
 
-        const isCludeThinking = chatModels[model]?.hasThinking && getAIGWModel(model)?.toLocaleLowerCase?.()?.includes?.('claude')
+        const modelConfig = chatModels[model];
+        const supplyChannel = modelConfig?.supplyChannel?.toLocaleLowerCase?.() || '';
+        const isCludeThinking = modelConfig?.hasThinking && getAIGWModel(model)?.toLocaleLowerCase?.()?.includes?.('claude');
+        const isDeepSeek = supplyChannel === ChatModelSupplyChannel.DEEPSEEK
+          || model?.toLocaleLowerCase?.()?.includes?.('deepseek');
         // 处理 claude37Sonnet的字段兼容问题
         if (isCludeThinking && message.role === ChatRole.Assistant) {
           message.redacted_thinking = message.redacted_thinking || '';
@@ -4747,6 +4751,12 @@ export const useChatStreamStore = create(
             delete message.thinking_signature;
             delete message.reasoning_content;
           }
+        } else if (isDeepSeek && message.role === ChatRole.Assistant) {
+          // DeepSeek V4 Pro 等模型要求 reasoning_content 必须回传，否则返回 400
+          // 保留 reasoning_content，清除 Claude 特有字段
+          delete message.redacted_thinking;
+          delete message.thinking_signature;
+          message.reasoning_content = message.reasoning_content || '';
         } else {
           delete message.redacted_thinking;
           delete message.thinking_signature;

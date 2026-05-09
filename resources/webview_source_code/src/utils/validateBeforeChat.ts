@@ -243,8 +243,8 @@ export const serializeCodebaseMessages = async (
       delete curMessage.reasoning_content;
       delete curMessage.reasoningContent;
     }
-    // 修复有推理内容没有签名的情况
-    if (hasThinking && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
+    // 修复有推理内容没有签名的情况（仅 Claude 模型需要 thinking_signature）
+    if (hasThinking && isClaudeModel && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
       curMessage.reasoning_content = '';
     }
     if (nextMessage) {

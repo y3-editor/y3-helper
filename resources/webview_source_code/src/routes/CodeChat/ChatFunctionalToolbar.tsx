@@ -28,7 +28,6 @@ import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
 import SkillSettingModal from './SkillSettingModal';
 import { IDE, useExtensionStore } from '../../store/extension';
-import { versionCompare } from '../../utils/common';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { useChatAttach, useChatStore } from '../../store/chat';
@@ -59,9 +58,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const popoverContentRef = useRef<HTMLDivElement>(null);
-  const ide = useExtensionStore((state) => state.IDE);
-  const pluginVersion =
-    useExtensionStore((state) => state.codeMakerVersion) || '';
   const attachs = useChatAttach((state) => state.attachs);
   const filterAttachHook = useFilteredAttach();
   const syncHistory = useChatStore((state) => state.syncHistory);
@@ -70,19 +66,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
   const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
 
   const supportNewApply = useMemo(() => {
-    let newApplyVersion = false;
-    if (ide === IDE.VisualStudioCode) {
-      newApplyVersion = versionCompare('2.5.8', pluginVersion) >= 0;
-    } else if (ide === IDE.JetBrains && pluginVersion) {
-      try {
-        const jbVersion = pluginVersion.split('-')[1];
-        newApplyVersion = versionCompare('2.3.9', jbVersion) >= 0;
-      } catch {
-        newApplyVersion = false;
-      }
-    }
-    return newApplyVersion;
-  }, [ide, pluginVersion]);
+    return true;
+  }, []);
 
   const currentSession = useCurrentSession();
 
