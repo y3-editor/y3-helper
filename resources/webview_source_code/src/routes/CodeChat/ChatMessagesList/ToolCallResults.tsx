@@ -26,7 +26,7 @@ import MemoCodeBlock from '../../../components/Markdown/CodeBlock';
 import { usePostMessage } from '../../../PostMessageProvider';
 import MCPToolCall from './MCPToolCall';
 import { ToolCall } from '../../../services';
-import { useChatTerminal } from './TermialPanel';
+import TerminalPanel, { terminalCmdFunction } from './TermialPanel';
 import Markdown from '../../../components/Markdown';
 import {
   getStringContent,
@@ -181,13 +181,16 @@ const ToolCallResult = ({
 
   const isTaskTool = tool.function.name === 'task';
 
-  const { postMessage } = usePostMessage();
+  // 检查当前 tool 是否为 terminal 工具(而不是检查整个 message)
+  const isTerminalTool = tool.function.name === terminalCmdFunction;
 
-  const { hasTerminalTool, ChatTerminalPanel } = useChatTerminal(message);
+  const { postMessage } = usePostMessage();
 
   // MCP 工具和 Terminal 工具在等待时展开，其他工具都收起
   const initialIndex =
-    !toolResponseDisabled && (isMCPTool || hasTerminalTool || isPlan) ? 0 : undefined;
+    !toolResponseDisabled && (isMCPTool || isTerminalTool || isPlan)
+      ? 0
+      : undefined;
   const [accordionIndex, setAccordionIndex] = useState<number | undefined>(
     initialIndex,
   );
@@ -257,7 +260,6 @@ const ToolCallResult = ({
     if (isPlan) {
       try {
         const toolParams = getPlanToolParams(tool);
-
         const hasStructuredData = toolParams.title || toolParams.tasks;
         if (hasStructuredData) {
           const planText = generatePlanText(toolParams);
@@ -412,10 +414,40 @@ const ToolCallResult = ({
     );
   }
 
-  if (hasTerminalTool) {
+  // 渲染 Terminal 工具(只渲染当前 tool 对应的 Terminal)
+  if (isTerminalTool) {
+    // 从 result 中获取 terminal 相关数据
+    const terminalLog = result.content || '';
+    const terminalStatus = result.extra?.terminalStatus || '';
+    const hasShellIntegration = result.extra?.hasShellIntegration || false;
+
+    // 解析 terminal 配置
+    let terminalConfig = {
+      command: '',
+      is_background: false,
+      require_user_approval: false,
+    };
+    try {
+      const data = JSON.parse(tool.function.arguments || '{}');
+      terminalConfig = {
+        command: data.command || '',
+        is_background: data.is_background || false,
+        require_user_approval: data.require_user_approval || false,
+      };
+    } catch (error) {
+      console.error('Failed to parse terminal config:', error);
+    }
+
     return (
       <VStack gap={1} align="stretch">
-        {ChatTerminalPanel}
+        <TerminalPanel
+          messageId={message.id}
+          terminalId={tool.id}
+          config={terminalConfig}
+          log={terminalLog}
+          status={terminalStatus}
+          hasShellIntegration={hasShellIntegration}
+        />
       </VStack>
     );
   }
@@ -485,9 +517,7 @@ const ToolCallResult = ({
             minHeight="16px"
           >
             <Text as="span" color="text.secondary" mr={1} flexShrink={0}>
-              {isImageFileByPath(result.path)
-                ? '读取此图片'
-                : '读取此文件内容'}
+              {isImageFileByPath(result.path) ? '读取此图片' : '读取此文件内容'}
             </Text>
             <Box
               color="blue.300"
@@ -674,8 +704,8 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
 
   const toolCallResults = message.tool_result || {};
 
-  // 如果没有工具调用或者消息正在处理中，返回null
-  if (!message.tool_calls?.length || message.processing) {
+  // 如果没有工具调用,返回null
+  if (!message.tool_calls?.length) {
     return null;
   }
 
@@ -683,6 +713,24 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
     <>
       {message.tool_calls.map((tool, index) => {
         const result = toolCallResults[tool.id] || {};
+        const isTaskTool = tool.function.name === 'task';
+        const isMakePlanTool = tool.function.name === 'make_plan';
+        const isAskUserQuestionTool =
+          tool.function.name === 'ask_user_question';
+        const isRunTerminalTool = tool.function.name === terminalCmdFunction;
+
+        // task, ask_user_question, run_terminal_cmd, make_plan 工具总是显示(用于展示实时执行状态和等待用户交互)
+        // 其他工具只有在有结果时才显示(避免空白卡片)
+        if (
+          !isTaskTool &&
+          !isAskUserQuestionTool &&
+          !isRunTerminalTool &&
+          !isMakePlanTool &&
+          !toolCallResults[tool.id]
+        ) {
+          return null;
+        }
+
         return (
           <ToolCallResult
             key={`${tool.id}-${index}`}

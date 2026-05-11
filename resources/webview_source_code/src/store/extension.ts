@@ -32,7 +32,10 @@ interface ExtensionStore {
   // Subagent 功能开关
   subagentEnable: boolean;
   setSubagentEnable: (enable: boolean) => void;
-  // Y3Helper: 固定模型（从 VSCode Settings 读取）
+  // Subagent 手动触发模式：true 时仅允许通过 SLASH 命令触发
+  subagentManualTriggerOnly: boolean;
+  setSubagentManualTriggerOnly: (enable: boolean) => void;
+  // Y3Helper 定制：固定模型名，用于让自定义模型支持图片上传
   fixedModel: string;
   setFixedModel: (model: string) => void;
 }
@@ -79,7 +82,12 @@ export const useExtensionStore = create<ExtensionStore>()((set) => ({
   setSubagentEnable: (enable: boolean) => {
     set(() => ({ subagentEnable: enable }));
   },
-  // Y3Helper: 固定模型
+  // 默认允许自动触发，由 INIT_DATA 控制
+  subagentManualTriggerOnly: false,
+  setSubagentManualTriggerOnly: (enable: boolean) => {
+    set(() => ({ subagentManualTriggerOnly: enable }));
+  },
+  // Y3Helper 定制：固定模型名，用于让自定义模型支持图片上传
   fixedModel: '',
   setFixedModel: (model: string) => {
     set(() => ({ fixedModel: model }));

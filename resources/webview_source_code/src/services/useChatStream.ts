@@ -31,6 +31,7 @@ import { UserEvent } from '../types/report';
 import { getValidToolName } from '../utils';
 import { ChatModel } from './chatModel';
 import { httpErrorType } from '../utils/error';
+import { filterToolCalls } from '../utils/toolCallFilter';
 
 /**
  * @name 执行函数时，忽略异常
@@ -1559,8 +1560,13 @@ export async function requestDeepseekReasonerChatStream(
     onController?: (controller: AbortController) => void;
     ntesTraceId?: string;
     setError: (type: boolean) => void;
+    // Subagent 集成（Y3 当前无 otel 实现，作为类型桩接受）
+    customAssociation?: unknown;
+    parentContext?: unknown;
   },
 ) {
+  // Y3: X-Aigw-Meta 通过 event 参数传入（subagent 追踪用）
+  void event;
   const abortController = new AbortController();
   options?.onController?.(abortController);
   // 还在 stream 中的内容，因为 max token 问题导致内容会被中断，需要继续 prompt 并且将回答拼接起来。
@@ -2418,10 +2424,13 @@ export async function requestNetworkChatStream(
 }
 
 export async function requestCodebaseChatStream(
+  _event: string,
   data: ChatPromptBody,
   chatRequestUrl = '/proxy/gpt/u5_chat/codebase_chat_stream',
   options?: {
     isDeepSeek?: boolean;
+    customAssociation?: any;
+    parentContext?: unknown;
     onMessage: (
       message: string,
       done: boolean,
@@ -2469,7 +2478,7 @@ export async function requestCodebaseChatStream(
     options?.onMessage(
       responseText,
       true,
-      toolCalls.filter(toolCall => !!toolCall),
+      filterToolCalls(toolCalls.filter(toolCall => !!toolCall)),
       completionTokens + promptTokens + cacheCreationInputTokens + cacheReadInputTokens,
       completionTokens,
       promptTokens,
@@ -2597,7 +2606,7 @@ export async function requestCodebaseChatStream(
                 options?.onMessage(
                   responseText,
                   false,
-                  toolCalls.filter(toolCall => !!toolCall),
+                  filterToolCalls(toolCalls.filter(toolCall => !!toolCall)),
                   completionTokens + promptTokens + cacheCreationInputTokens + cacheReadInputTokens,
                   completionTokens,
                   promptTokens,
@@ -2625,7 +2634,7 @@ export async function requestCodebaseChatStream(
                 options?.onMessage(
                   responseText,
                   false,
-                  toolCalls.filter(toolCall => !!toolCall),
+                  filterToolCalls(toolCalls.filter(toolCall => !!toolCall)),
                   completionTokens + promptTokens + cacheCreationInputTokens + cacheReadInputTokens,
                   completionTokens,
                   promptTokens,
@@ -2708,7 +2717,7 @@ export async function requestCodebaseChatStream(
             options?.onMessage(
               responseText,
               false,
-              toolCalls.filter(toolCall => !!toolCall),
+              filterToolCalls(toolCalls.filter(toolCall => !!toolCall)),
               completionTokens + promptTokens + cacheCreationInputTokens + cacheReadInputTokens,
               completionTokens,
               promptTokens,

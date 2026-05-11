@@ -1,16 +1,3 @@
-/**
- * Subagent Executor —— 子代理主执行循环
- *
- * 负责：
- * - 查找 Agent 定义
- * - 创建/恢复后端子会话
- * - 注册运行时状态
- * - 构建 messages 和 tools
- * - 循环调用 LLM，处理 tool_calls
- * - 通过 LifecycleManager 触发生命周期钩子
- * - 格式化返回 <task_result>
- */
-
 import type {
   TaskParams,
   TaskResult,
@@ -20,44 +7,7 @@ import type {
   Agent,
   SubagentStatus,
 } from '../types';
-import type { SessionCompressionState } from '../../../types/contextCompression';
-
-// ============================================================
-// 用户操作等待池（Retry / Stop）
-// ============================================================
-
-/**
- * 等待用户对 failed subagent 的操作（retry 或 stop）。
- * key = toolCallId
- */
-const pendingUserActions = new Map<
-  string,
-  { resolve: (doRetry: boolean) => void }
->();
-
-/**
- * 触发指定 subagent 重试（基于现有 task_id 恢复会话继续执行）。
- * 由 UI Retry 按钮调用。
- */
-export function retrySubagent(toolCallId: string): void {
-  const pending = pendingUserActions.get(toolCallId);
-  if (pending) {
-    pending.resolve(true);
-    pendingUserActions.delete(toolCallId);
-  }
-}
-
-/**
- * 触发指定 subagent 停止（标记为 aborted，主 agent 继续）。
- * 由 UI Stop 按钮调用。
- */
-export function stopFailedSubagent(toolCallId: string): void {
-  const pending = pendingUserActions.get(toolCallId);
-  if (pending) {
-    pending.resolve(false);
-    pendingUserActions.delete(toolCallId);
-  }
-}
+import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
 import { DEFAULT_MAX_STEPS } from '../constants';
 import { useSubagentStore } from '../state/store';
 import { runnerManager } from '../lifecycle/manager';
@@ -75,56 +25,101 @@ import {
   buildInitialMessages,
   formatTaskResult,
   getToolsForAgent,
-  validateToolResults,
-  ChatRole,
+  TaskStatus,
 } from '../utils';
 import type { ChatMessage } from '../utils';
-import { createNewSession, resumeSession, syncSession } from './session';
-import { callSubagentLLM, createEmptyUsage, addUsage } from './llm';
+import { createNewSession, syncSession } from './session';
+import { checkAndCompress } from './compression';
+import type { SessionCompressionState } from '../../../types/contextCompression';
+import { debugLog } from '../../../utils/debugLog';
+import { ABORT_REASON_FINISHED } from '../../../utils/abort';
+
+const MODULE = 'Subagent/Executor';
+import { streamChat, createEmptyUsage, mergeUsage } from './llm';
+import { nanoid } from 'nanoid';
 import {
   createEmptyChildSessions,
   updateChildSession,
   SessionType,
-  calculateChildrenTotalTokens,
   type TokenIncrement,
+  createInitialConsumedTokens,
 } from '../../../utils/consumedTokensCalculator';
 import { estimateTokens } from '../../../utils/tokenEstimate';
-import { checkAndCompress } from './compression';
 import { useChatConfig } from '../../../store/chat-config';
 import { useAuthStore } from '../../../store/auth';
-import { useWorkspaceStore } from '../../../store/workspace';
-import { useChatStore } from '../../../store/chat';
+import { useWorkspaceStore, SpecFramework } from '../../../store/workspace';
+import { useChatStore, useChatStreamStore } from '../../../store/chat';
 import { useChatApplyStore } from '../../../store/chatApply';
 import { ChatModel } from '../../../services/chatModel';
 import {
   createSubagentProcessor,
   type ToolResultInput,
   type ToolResultProcessContext,
-  type TerminalUpdateCallbacks
+  type TerminalUpdateCallbacks,
 } from '../../tool-result-processor';
-import { normalizeSystemContent, SystemPromptFormatter } from '../utils/systemPromptFormatter';
 import {
   preprocessSubagentMessages,
   buildSubagentChatPromptBody,
   type MessagePreprocessOptions,
 } from './message-preprocessor';
 import userReporter from '../../../utils/report';
-import { getAIGWModelWithFallback, getAIGWModel } from './../../../store/chat-config';
+import {
+  getAIGWModelWithFallback,
+  getAIGWModel,
+} from './../../../store/chat-config';
 import { promptBuilder } from './prompt-builder';
+import type { SubagentSpanContext } from '../types';
+import {
+  startSubagentTaskSpan,
+  startToolCallSpan,
+  stopToolCallSpan,
+  SpanStatusCode,
+  trace,
+  context as otelContext,
+} from '../../../telemetry/otel';
+import { ChatRole } from '../../../types/chat';
 import { getReportEventByToolName } from '../../../utils/toolCall';
 
-// ============================================================
-// 辅助函数
-// ============================================================
+import {
+  emitTaskStarted,
+  emitTaskCompleted,
+  emitTaskFailed,
+} from '../events/taskEventBus';
 
 /**
- * 估算子会话系统 prompt 的 token 数
+ * 等待用户对 failed subagent 的操作（retry 或 stop）。
+ * key = toolCallId
  */
+const pendingUserActions = new Map<
+  string,
+  { resolve: (doRetry: boolean) => void }
+>();
+
+/** 由 UI Retry 按钮调用，触发指定 subagent 重试。 */
+export function retrySubagent(toolCallId: string): void {
+  const pending = pendingUserActions.get(toolCallId);
+  if (pending) {
+    pending.resolve(true);
+    pendingUserActions.delete(toolCallId);
+  }
+}
+
+/** 由 UI Stop 按钮调用，用户选择不重试失败的 subagent。 */
+export function stopFailedSubagent(toolCallId: string): void {
+  const pending = pendingUserActions.get(toolCallId);
+  if (pending) {
+    // 用户选择 Stop，任务保持 failed 状态，不做重试
+    pending.resolve(false);
+    pendingUserActions.delete(toolCallId);
+  }
+}
+
+/** 估算子会话系统 prompt 的 token 数 */
 function estimateChildSessionSystemTokens(
   agentPrompt: string,
   skillPrompts: string[] = [],
   rulePrompts: string[] = [],
-  mcpPrompts: string[] = []
+  mcpPrompts: string[] = [],
 ): {
   systemTokens: number;
   skillTokens: number;
@@ -132,9 +127,18 @@ function estimateChildSessionSystemTokens(
   mcpTokens: number;
 } {
   const systemTokens = estimateTokens(agentPrompt);
-  const skillTokens = skillPrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
-  const ruleTokens = rulePrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
-  const mcpTokens = mcpPrompts.reduce((sum, prompt) => sum + estimateTokens(prompt), 0);
+  const skillTokens = skillPrompts.reduce(
+    (sum, prompt) => sum + estimateTokens(prompt),
+    0,
+  );
+  const ruleTokens = rulePrompts.reduce(
+    (sum, prompt) => sum + estimateTokens(prompt),
+    0,
+  );
+  const mcpTokens = mcpPrompts.reduce(
+    (sum, prompt) => sum + estimateTokens(prompt),
+    0,
+  );
 
   return {
     systemTokens,
@@ -144,64 +148,60 @@ function estimateChildSessionSystemTokens(
   };
 }
 
-// ============================================================
-// Subagent System Prompt 前置注入
-// ============================================================
+/** Claude 简化别名 → 完整模型代码 */
+const CLAUDE_ALIAS_MAP: Record<string, ChatModel> = {
+  sonnet: ChatModel.Claude45Sonnet20250929,
+  opus: ChatModel.Claude45Opus20251101,
+  haiku: ChatModel.Claude45Haiku20251001,
+};
+
+/** 魔法值：表示"继承主 agent 模型" */
+const INHERIT_SENTINEL = 'inherit';
+
+/** 默认兜底模型 */
+const DEFAULT_FALLBACK_MODEL = ChatModel.Claude45Sonnet20250929;
 
 /**
- * 为 Subagent 的 system prompt 追加运行时上下文片段：
- * - search_and_reading
- * - making_code_changes
- * - run_terminal_cmd
- * - user_info
- *
- * 参考 constructRemixPrompt.ts 中的对应实现。
+ * 按优先级策略推导出 agent 最终使用的模型：
+ *  1. 用户在 AgentSettingModal 中配置的模型
+ *  2. 自定义 agent 定义中的 model 字段（支持 Claude 短别名，'inherit' 视为空）
+ *  3. 特殊成本优化规则（Opus 主模型 + explore agent → 降级至 Sonnet）
+ *  4. 继承主 agent 模型
  */
-async function buildSubagentSystemPrompt(
-  basePrompt: string,
-  agentType?: string,
-): Promise<string> {
-  return await promptBuilder.buildSystemPrompt(basePrompt, agentType);
-}
+function determineAgentModel(
+  agentName: string,
+  agentModel?: string,
+): ChatModel {
+  const chatConfig = useChatConfig.getState();
 
-/**
- * 转换 Claude 简化模型名称到具体的 ChatModel 代码
- * @param modelName 可能是简化名称（sonnet, opus, haiku, inherit）或完整的模型代码
- * @returns 转换后的模型代码，如果不是简化名称则原样返回
- */
-function resolveClaudeModelName(modelName: string): string {
-  const claudeModelMap: Record<string, ChatModel> = {
-    sonnet: ChatModel.Claude45Sonnet20250929,
-    opus: ChatModel.Claude45Opus20251101,
-    haiku: ChatModel.Claude45Haiku20251001,
-  };
-
-  // 如果是预定义的简化名称，返回对应的完整模型代码
-  if (claudeModelMap[modelName]) {
-    return claudeModelMap[modelName];
+  const userModel = chatConfig.subagentModelConfig?.[agentName];
+  if (userModel) {
+    return getAIGWModelWithFallback(
+      CLAUDE_ALIAS_MAP[userModel] ?? (userModel as ChatModel),
+      DEFAULT_FALLBACK_MODEL,
+    );
   }
 
-  // 如果是 inherit，返回空字符串，表示使用系统配置
-  if (modelName === 'inherit') {
-    return '';
+  const isInherit = !agentModel || agentModel === INHERIT_SENTINEL;
+  if (!isInherit) {
+    const resolved = CLAUDE_ALIAS_MAP[agentModel] ?? (agentModel as ChatModel);
+    return getAIGWModelWithFallback(resolved, DEFAULT_FALLBACK_MODEL);
   }
 
-  // 否则原样返回（可能已经是完整的模型代码）
-  return modelName;
+  const primaryModelCode = chatConfig.config.model;
+  if (agentName === 'explore') {
+    return 'claude-haiku-4-5-20251001' as ChatModel;
+  }
+
+  const primaryModel = getAIGWModel(primaryModelCode);
+  return getAIGWModelWithFallback(primaryModel, DEFAULT_FALLBACK_MODEL);
 }
 
-// ============================================================
-// 主执行入口
-// ============================================================
-
-/**
- * 运行子代理的完整对话循环。
- */
+/** 运行子代理的完整对话循环。 */
 export async function runSubagent(
   params: TaskParams,
   context: RunSubagentContext,
 ): Promise<TaskResult> {
-  // 检查 Subagent 功能是否启用
   const subagentEnable = useExtensionStore.getState().subagentEnable;
   if (!subagentEnable) {
     return {
@@ -212,7 +212,6 @@ export async function runSubagent(
     };
   }
 
-  // 1. 查找 Agent 定义 - 使用 store 中的完整列表（包括自定义 agent）
   const subagentStore = useSubagentStore.getState();
   const agent = subagentStore.getAgent(params.subagent_type);
   if (!agent) {
@@ -225,7 +224,6 @@ export async function runSubagent(
     };
   }
 
-  // 整体通过调度器控制并发，传入任务信息用于 UI 展示排队状态
   return subagentScheduler.schedule(
     () => runSubagentInner(params, agent, context),
     {
@@ -237,89 +235,78 @@ export async function runSubagent(
   );
 }
 
-/**
- * 子代理内部执行逻辑，由 scheduler.schedule() 调度。
- */
 async function runSubagentInner(
   params: TaskParams,
   agent: Agent,
   context: RunSubagentContext,
 ): Promise<TaskResult> {
-  const { parentSessionId, parentAbortSignal, toolCallId } = context;
+  const { parentSessionId, parentAbortSignal, toolCallId, round } = context;
 
-  // 优先使用 agent 定义的 model，否则使用用户配置
-  let llmModel: ChatModel;
-  const agentDefinedModel = agent.model
-    ? resolveClaudeModelName(agent.model)
-    : '';
-
-  if (!agentDefinedModel) {
-    // agent 未指定模型或指定了 inherit，使用系统配置的模型
-    // 先通过 getAIGWModel 把 code 转换为实际使用的模型（useModel）
-    const actualModel = getAIGWModel(useChatConfig.getState().config.model);
-    llmModel = getAIGWModelWithFallback(
-      actualModel,
-      ChatModel.Claude45Sonnet20250929, // 使用最新的 Claude 4.5 Sonnet 作为默认
+  let subagentSpanContext: SubagentSpanContext | undefined;
+  if (round?.submitContext) {
+    const subagentAssociation = {
+      ...round.association,
+      agentType: 'sub_agent' as const,
+      agentName: agent.name,
+    };
+    const taskSpan = startSubagentTaskSpan(
+      agent.name,
+      round.submitContext,
+      subagentAssociation,
     );
-  } else {
-    // agent 指定了具体模型（已经过 Claude 名称转换）
-    // agentDefinedModel 已经是实际使用的模型格式，直接传入
-    llmModel = getAIGWModelWithFallback(
-      agentDefinedModel as ChatModel,
-      ChatModel.Claude45Sonnet20250929,
-    );
+    const taskContext = trace.setSpan(otelContext.active(), taskSpan.span);
+    subagentSpanContext = {
+      taskSpan,
+      taskContext,
+      association: subagentAssociation,
+    };
   }
 
-  // Cache 支持检测
+  const llmModel: ChatModel = determineAgentModel(agent.name, agent.model);
+
   let cacheEnable = false;
   const chatModels = useChatConfig.getState().chatModels;
-  const codebaseModelMaxTokens = useChatConfig.getState().codebaseModelMaxTokens;
-  if (chatModels[llmModel]?.hasTokenCache) {
-    if (codebaseModelMaxTokens[llmModel] > 64 * 1000) {
-      cacheEnable = true;
+  const codebaseModelMaxTokens =
+    useChatConfig.getState().codebaseModelMaxTokens;
+
+  for (const key in chatModels) {
+    if (!Object.hasOwn(chatModels, key)) continue;
+    const model = chatModels[key];
+    if (model.useModel === llmModel && model.hasTokenCache) {
+      const token = codebaseModelMaxTokens[key as ChatModel];
+      if (token > 64 * 1000) {
+        cacheEnable = true;
+      }
     }
   }
 
-  console.log(`[Subagent] ${params.subagent_type} cache configuration:`, {
+  debugLog(MODULE, 'Cache Enable Check', {
+    agentName: agent.name,
     model: llmModel,
     hasTokenCache: chatModels[llmModel]?.hasTokenCache,
     maxTokens: codebaseModelMaxTokens[llmModel],
+    threshold: 64 * 1000,
     cacheEnable,
   });
 
-  // 会话恢复 or 新建
-  let taskId: string;
-  let resumedMessages: ChatMessage[] | null = null;
+  const taskId = await createNewSession(
+    agent,
+    params,
+    parentSessionId,
+    llmModel,
+  );
 
-  if (params.task_id) {
-    // 尝试从后端恢复历史会话
-    const historyMessages = await resumeSession(params.task_id);
-    if (historyMessages) {
-      // 验证工具结果是否过期
-      resumedMessages = validateToolResults(historyMessages);
-      taskId = params.task_id;
-
-      // 触发 onResume 钩子
-      const hookCtx: HookContext = {
-        taskId,
-        toolCallId,
-        agentName: agent.name,
-        parentSessionId,
-      };
-      await lifecycleManager.trigger(
-        'onResume',
-        hookCtx,
-        resumedMessages.length,
-      );
-    } else {
-      taskId = await createNewSession(agent, params, parentSessionId, llmModel);
-    }
-  } else {
-    taskId = await createNewSession(agent, params, parentSessionId, llmModel);
+  if (subagentSpanContext) {
+    subagentSpanContext.taskSpan.setAttribute('subagent.task_id', taskId);
+    subagentSpanContext.taskSpan.setAttribute(
+      'subagent.parent_session_id',
+      parentSessionId,
+    );
+    subagentSpanContext.taskSpan.setAttribute('subagent.model', llmModel);
   }
 
-  // 3. 创建 AbortController 并注册运行时状态
-  // 使用 let 以便 Retry 时可以创建新的 controller
+  let localConsumedTokens: ConsumedTokens = createInitialConsumedTokens();
+
   let abortController = new AbortController();
   const runnerState: SubagentRunnerState = {
     taskId,
@@ -333,7 +320,10 @@ async function runSubagentInner(
 
   const maxSteps = agent.maxSteps || DEFAULT_MAX_STEPS;
 
-  // 创建钩子上下文
+  if (subagentSpanContext) {
+    subagentSpanContext.taskSpan.setAttribute('subagent.max_steps', maxSteps);
+  }
+
   const hookCtx: HookContext = {
     taskId,
     toolCallId,
@@ -341,9 +331,9 @@ async function runSubagentInner(
     parentSessionId,
   };
 
-  // 触发 onStart 钩子
   await lifecycleManager.trigger('onStart', hookCtx, {
     taskId,
+    parentSessionId,
     agentName: agent.name,
     step: 0,
     maxSteps,
@@ -354,91 +344,137 @@ async function runSubagentInner(
     toolCalls: [],
   });
 
-  // 子代理状态应该由 subagent store 管理，不再在这里维护全局计数
+  // ✅ 发射 TASK_STARTED 事件
+  emitTaskStarted(parentSessionId, toolCallId, taskId, agent.name);
 
-  // 主 agent 中止时联动中止子代理
-  // 使用间接引用，以便 Retry 时 abortController 更新后仍能正确中止
-  const onParentAbort = () => {
+  // ✅ 使用 let 声明，以便在 retry 时可以重新赋值
+  let onParentAbort = () => {
     abortController.abort();
   };
   if (parentAbortSignal) {
     parentAbortSignal.addEventListener('abort', onParentAbort, { once: true });
   }
 
-  // 4. 构建 messages 和 tools
-  // 对 agent 的 prompt 做前置处理，注入 search_and_reading / making_code_changes /
-  // run_terminal_cmd / user_info 等上下文片段
-  const enhancedPrompt = await buildSubagentSystemPrompt(agent.prompt, agent.name);
+  // 获取 OpenSpec 相关配置
+  const codebaseChatMode = useChatStore.getState().codebaseChatMode;
+  const openspecVersion = useWorkspaceStore
+    .getState()
+    .getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
+
+  const enhancedPrompt = await promptBuilder.buildSystemPrompt(
+    agent.prompt,
+    agent.name,
+    {
+      config: {
+        codebaseChatMode,
+        openspecVersion,
+      },
+    },
+  );
   const enhancedAgent: Agent = {
     ...agent,
     prompt: enhancedPrompt,
   };
-  let messages: ChatMessage[];
-  if (resumedMessages) {
-    // Resume 时需要规范化 system message 格式，确保与当前 cacheEnable 配置一致
-    messages = [...resumedMessages, { role: ChatRole.User, content: params.prompt }];
 
-    const firstSystemMsg = messages.find((m) => m.role === ChatRole.System);
-    if (firstSystemMsg) {
-      const originalContent = firstSystemMsg.content;
-      firstSystemMsg.content = normalizeSystemContent(originalContent, cacheEnable);
-
-      // 日志：格式转换统计
-      if (cacheEnable && typeof originalContent === 'string') {
-        const stats = SystemPromptFormatter.getStats(firstSystemMsg.content);
-        if (stats.format === 'tiered') {
-          console.log(`[Subagent Cache] ${taskId} Normalized resumed system message:`, stats);
-        }
-      }
-    }
-  } else {
-    messages = buildInitialMessages(enhancedAgent, params, cacheEnable);
-  }
+  const messages: ChatMessage[] = buildInitialMessages(
+    enhancedAgent,
+    params,
+    cacheEnable,
+  );
   const allTools = useWorkspaceStore.getState().getCodebaseChatTools() || [];
 
   const subagentTools = getToolsForAgent(allTools, agent);
 
-  // 获取认证信息和模型配置
+  const compressionState: SessionCompressionState = {
+    enabled: true,
+    compressionHistory: [],
+    totalTokensSaved: 0,
+    totalCompressionsCount: 0,
+  };
+
+  // const resumeResult = await resumeSession(taskId);
+  // if (resumeResult) {
+  //   // 关键：session.messages 现在包含初始的 user message
+  //   // 所以直接替换 messages[1] 之后的所有消息（保留 system prompt）
+  //   // 不需要 .slice(1)，因为 resumeResult.messages[0] 就是初始的 user message
+  //   messages.splice(1, messages.length - 1, ...resumeResult.messages);
+  //   if (resumeResult.compressionState) {
+  //     compressionState = resumeResult.compressionState;
+  //   }
+  // }
+
   const subagentAuthExtends = useAuthStore.getState().authExtends;
   const subagentChatModels = useChatConfig.getState().chatModels;
-  const modelName = (llmModel as any).model || (llmModel as any).name || llmModel;
+  const modelName =
+    (llmModel as any).model || (llmModel as any).name || llmModel;
   const isPrivateModel = subagentChatModels[modelName]?.isPrivate || false;
 
   const terminalCallbacks: TerminalUpdateCallbacks = {
     updateTerminalResult: (params) => {
-      // Subagent 的终端结果通过事件系统通知主 agent
-      console.log(`[Subagent] Terminal result for ${params.terminalId}:`, {
+      debugLog(MODULE, `Terminal result for ${params.terminalId}`, {
         status: params.terminalStatus,
         messageId: params.messageId,
         hasShellIntegration: params.hasShellIntegration,
       });
-
-      // 这里可以通过 runnerManager 发送事件到主 agent
-      // 或者直接通过 IDE 的消息系统处理
-      // 目前先记录日志，具体的终端状态同步可以通过现有的 TOOL_CALL_RESULT 机制处理
     },
     updateTerminals: (terminalId, status) => {
-      console.log(`[Subagent] Terminal status update for ${terminalId}:`, status);
-      // 同样通过事件系统或现有机制处理
+      debugLog(MODULE, `Terminal status update for ${terminalId}`, status);
     },
   };
 
-  const enhancedProcessor = createSubagentProcessor(undefined, terminalCallbacks);
+  const enhancedProcessor = createSubagentProcessor(
+    undefined,
+    terminalCallbacks,
+  );
 
   let step = 0;
   let success = true;
   let error: string | undefined;
+  let isTruncated = false;
+  let retryCount = 0; // 记录重试次数
 
   // Token 用量累计器
   const totalUsage: LLMCallUsage = createEmptyUsage();
 
-  // ── 外层循环：支持用户 Retry ──────────────────────────────
-  // 正常执行时只跑一轮；用户点击 Retry 后重置状态，重新进入内层循环。
+  // ============ 双重事件发射保证 ============
+  // 幂等标记：确保 TASK_COMPLETED 或 TASK_FAILED 事件只发射一次
+  let eventEmitted = false;
+
+  /**
+   * 幂等事件发射辅助函数
+   * 确保事件只发射一次，防止重复发射
+   */
+  const emitCompletionEvent = (
+    isSuccess: boolean,
+    taskResult?: TaskResult,
+    errorMsg?: string,
+  ) => {
+    if (eventEmitted) {
+      if (import.meta.env.DEV) {
+        console.log('[Subagent] Event already emitted, skipping');
+      }
+      return;
+    }
+    eventEmitted = true;
+
+    if (isSuccess && taskResult) {
+      emitTaskCompleted(parentSessionId, toolCallId, taskId, taskResult);
+    } else {
+      emitTaskFailed(
+        parentSessionId,
+        toolCallId,
+        errorMsg || 'Unknown error',
+        taskId,
+      );
+    }
+  };
+
+  // 外层循环：支持用户 Retry
   let retrying = false;
   do {
     retrying = false;
     try {
-      // 5. 主循环
+      // 主循环
       while (step < maxSteps) {
         // 检查是否已中止
         if (abortController.signal.aborted) {
@@ -449,7 +485,6 @@ async function runSubagentInner(
 
         step++;
 
-        // 触发 onBeforeStep 钩子
         const stepCtx: StepHookContext = {
           ...hookCtx,
           step,
@@ -457,7 +492,6 @@ async function runSubagentInner(
         };
         await lifecycleManager.trigger('onBeforeStep', stepCtx);
 
-        // 使用统一的消息预处理逻辑
         const preprocessOptions: MessagePreprocessOptions = {
           messages,
           agent,
@@ -465,86 +499,91 @@ async function runSubagentInner(
           tools: subagentTools,
           cacheEnable,
           taskId,
+          compressionState,
         };
 
-        const preprocessResult = await preprocessSubagentMessages(preprocessOptions);
+        const preprocessResult =
+          await preprocessSubagentMessages(preprocessOptions);
 
-        // 更新缓存状态（可能在预处理过程中被禁用）
-        // cacheEnable = preprocessResult.cacheEnable;
-
-        // 构建标准的 ChatPromptBody
         const promptData = buildSubagentChatPromptBody(
           preprocessResult,
           llmModel,
-          subagentTools,
           {
             stream: true,
             tool_choice: 'auto',
-            temperature: 1,
-          }
+            temperature: 0,
+            taskId,
+          },
         );
 
-        // 验证预处理结果
-        console.log(`[Subagent] ${taskId} Sending messages to LLM:`, {
-          totalMessages: promptData.messages.length,
-          systemMessages: promptData.messages.filter(m => m.role === ChatRole.System).length,
-          userMessages: promptData.messages.filter(m => m.role === ChatRole.User).length,
-          assistantMessages: promptData.messages.filter(m => m.role === ChatRole.Assistant).length,
-          toolMessages: promptData.messages.filter(m => m.role === ChatRole.Tool).length,
-        });
+        const llmResult = await streamChat(
+          promptData,
+          abortController,
+          subagentSpanContext,
+        );
 
-        // 调用 LLM
-        const llmResult = await callSubagentLLM(promptData, abortController);
-
+        // 检查是否被中断，但要排除正常完成时的 abort（ABORT_REASON_FINISHED）
+        // streamChat 返回后，finish() 会调用 abort()，这是正常的资源清理
+        // 只有在非 FINISHED 原因的 abort 才认为是真正的中断
         if (abortController.signal.aborted) {
-          error = 'Subagent was aborted during LLM call';
-          success = false;
-          break;
-        }
+          const abortReason = (abortController.signal as any).reason;
+          const isNormalFinish =
+            typeof abortReason === 'object' &&
+            abortReason !== null &&
+            'name' in abortReason &&
+            abortReason.name === ABORT_REASON_FINISHED;
 
-        // 累计本轮 token 用量
-        addUsage(totalUsage, llmResult.usage);
-
-        // Cache 性能日志
-        if (cacheEnable) {
-          const { cacheCreationInputTokens, cacheReadInputTokens } = llmResult.usage;
-          if (cacheCreationInputTokens > 0 || cacheReadInputTokens > 0) {
-            console.log(`[Subagent Cache] ${taskId} Step ${step}:`, {
-              cacheCreation: cacheCreationInputTokens,
-              cacheRead: cacheReadInputTokens,
-              promptTokens: llmResult.usage.promptTokens,
-              completionTokens: llmResult.usage.completionTokens,
-              cacheHitRate: cacheReadInputTokens > 0
-                ? `${((cacheReadInputTokens / (cacheReadInputTokens + llmResult.usage.promptTokens)) * 100).toFixed(1)}%`
-                : '0%',
-            });
+          if (!isNormalFinish) {
+            error = 'Subagent was aborted during LLM call';
+            success = false;
+            break;
           }
+          // 如果是 ABORT_REASON_FINISHED，说明流正常结束，继续处理结果
         }
 
-        // 将 assistant 消息追加到 messages
+        mergeUsage(totalUsage, llmResult.usage);
+
         const assistantMessage: ChatMessage = {
           role: ChatRole.Assistant,
           content: llmResult.text,
-          // 添加 usage 信息，确保 truncateMessagesIfNeeded 能正确识别 token 使用情况
           usage: {
             prompt_tokens: llmResult.usage.promptTokens,
             completion_tokens: llmResult.usage.completionTokens,
             total_tokens: llmResult.usage.totalTokens,
-            cache_creation_input_tokens: llmResult.usage.cacheCreationInputTokens,
+            cache_creation_input_tokens:
+              llmResult.usage.cacheCreationInputTokens,
             cache_read_input_tokens: llmResult.usage.cacheReadInputTokens,
           },
         };
         if (llmResult.toolCalls.length > 0) {
           assistantMessage.tool_calls = llmResult.toolCalls;
         }
+        // Gemini 模型需要保留 thinking_signature 以支持后续的 function call
+        if (llmResult.thinkingSignature) {
+          assistantMessage.thinking_signature = llmResult.thinkingSignature;
+        }
         messages.push(assistantMessage);
 
-        // 如果没有 tool_calls，子代理完成
+        // 实时更新 store: 追加 LLM 响应的 assistant message
+        useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+          const storeMessage: ChatMessage = {
+            id: nanoid(),
+            role: ChatRole.Assistant,
+            content: llmResult.text,
+            tool_calls: llmResult.toolCalls?.length > 0 ? llmResult.toolCalls : undefined,
+            createdAt: Date.now(),
+          } as ChatMessage;
+          // Gemini 模型需要保留 thinking_signature
+          if (llmResult.thinkingSignature) {
+            storeMessage.thinking_signature = llmResult.thinkingSignature;
+          }
+          draft.messages.push(storeMessage);
+        });
+
         if (llmResult.toolCalls.length === 0) {
           break;
         }
 
-        // 6. 处理工具调用
         for (const toolCall of llmResult.toolCalls) {
           if (abortController.signal.aborted) {
             error = 'Subagent was aborted during tool execution';
@@ -559,12 +598,6 @@ async function runSubagentInner(
             toolParams = {};
           }
 
-          console.log(`[Subagent] ${taskId} Processing tool call:`, {
-            toolId: toolCall.id,
-            toolName: toolCall.function.name,
-          });
-
-          // 构建工具调用钩子上下文
           const toolCallCtx: ToolCallHookContext = {
             ...hookCtx,
             toolId: toolCall.id,
@@ -572,11 +605,9 @@ async function runSubagentInner(
             toolArguments: toolCall.function.arguments || '',
           };
 
-          // 触发 onBeforeToolCall 钩子
           const toolStartTime = Date.now();
           await lifecycleManager.trigger('onBeforeToolCall', toolCallCtx);
 
-          // 对文件编辑类工具，在发送 TOOL_CALL 前预注册 ChatApplyItem（applying: true）
           const isFileEditTool = [
             'edit_file',
             'replace_in_file',
@@ -595,7 +626,9 @@ async function runSubagentInner(
               updateSnippet,
               replaceSnippet,
               type:
-                toolCall.function.name === 'replace_in_file' ? 'replace' : 'edit',
+                toolCall.function.name === 'replace_in_file'
+                  ? 'replace'
+                  : 'edit',
               toolCallId: toolCall.id,
               applying: true,
               accepted: false,
@@ -603,23 +636,101 @@ async function runSubagentInner(
             });
           }
 
-          // terminal 命令需要注入 messageId（用 toolCall.id），IDE 凭此追踪终端状态
           const isTerminalTool = toolCall.function.name === 'run_terminal_cmd';
           const extraToolParams = isTerminalTool
             ? { ...toolParams, messageId: toolCall.id }
             : toolParams;
 
-          // 通过 PostMessage 发送工具调用到 IDE
-          // 注意：必须先注册 waitForTool，再发送 TOOL_CALL，
-          // 否则 IDE 可能在同一个事件循环内返回 TOOL_CALL_RESULT，
-          // 导致 pendingToolResults 中找不到对应的 toolId
           const toolResultPromise = runnerManager.waitForTool(
             taskId,
             toolCall.id,
             abortController.signal,
             toolCall.function.name,
-            toolCall.function.arguments || '',
           );
+
+          debugLog(MODULE, `Registered waitForTool, sending TOOL_CALL`, {
+            taskId,
+            toolId: toolCall.id,
+            toolName: toolCall.function.name,
+          });
+
+          let toolSpan: ReturnType<typeof startToolCallSpan> | undefined;
+          if (subagentSpanContext) {
+            const agentName =
+              subagentSpanContext.association?.agentName || 'unknown';
+            toolSpan = startToolCallSpan({
+              toolName: toolCall.function.name,
+              toolId: toolCall.id,
+              toolArgs: toolCall.function.arguments || '',
+              agentName,
+              parentContext: subagentSpanContext.taskContext,
+              association: subagentSpanContext.association,
+              useSavedContext: false, // subagent 不使用 toolContextDataMap
+            });
+            toolSpan.setAttribute('subagent.tool.parent_task_id', taskId);
+          }
+
+          const { getExecutionStrategy } =
+            await import('../../../services/toolExecution/ToolExecutionStrategy');
+          const { createSubagentContext } =
+            await import('../../../types/executionContext');
+
+          const executionContext = createSubagentContext(toolCall.id, taskId);
+          const strategy = getExecutionStrategy(executionContext);
+          const shouldAutoExecute = strategy.shouldAutoExecute(
+            toolCall,
+            executionContext,
+          );
+
+          let userConfirmed = true;
+          if (!shouldAutoExecute) {
+            debugLog(MODULE, `Requesting user confirmation`, {
+              taskId,
+              toolId: toolCall.id,
+              toolName: toolCall.function.name,
+            });
+
+            const { useToolConfirmationStore } =
+              await import('../store/toolConfirmation');
+
+            try {
+              userConfirmed = await useToolConfirmationStore
+                .getState()
+                .requestConfirmation({
+                  taskId,
+                  toolId: toolCall.id,
+                  toolName: toolCall.function.name,
+                  toolParams: toolParams,
+                  isDangerous: true,
+                  timestamp: Date.now(),
+                });
+
+              debugLog(MODULE, `User confirmation result`, {
+                taskId,
+                toolId: toolCall.id,
+                confirmed: userConfirmed,
+              });
+            } catch (error) {
+              debugLog(MODULE, `Failed to get user confirmation`, {
+                taskId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              userConfirmed = false;
+            }
+
+            if (!userConfirmed) {
+              const rejectionMessage: ChatMessage = {
+                role: ChatRole.Tool,
+                tool_call_id: toolCall.id,
+                content: 'User rejected the tool call',
+              };
+              messages.push(rejectionMessage);
+
+              continue;
+            }
+          }
+
+          const finalApproval = shouldAutoExecute || userConfirmed;
 
           window.parent.postMessage(
             {
@@ -628,7 +739,7 @@ async function runSubagentInner(
                 tool_name: toolCall.function.name,
                 tool_params: {
                   ...extraToolParams,
-                  is_approve: true, // 子代理的工具调用默认通过，不需要用户二次确认
+                  is_approve: finalApproval,
                 },
                 tool_id: toolCall.id,
                 task_id: taskId,
@@ -637,11 +748,28 @@ async function runSubagentInner(
             '*',
           );
 
-          // 等待工具结果返回
+          if (!shouldAutoExecute && userConfirmed) {
+            debugLog(MODULE, `User confirmed tool execution`, {
+              taskId,
+              toolId: toolCall.id,
+              toolName: toolCall.function.name,
+            });
+          }
+
           const toolResult = await toolResultPromise;
 
-          // 对文件编辑类工具，在收到工具结果后更新 ChatApplyItem 状态（applying: false）
-          // 完整对应 CodeChat.tsx 中 TOOL_CALL_RESULT 对 edit_file/replace_in_file/reapply 的处理逻辑
+          if (toolSpan) {
+            const resultContent =
+              toolResult?.tool_result?.content || String(toolResult);
+            stopToolCallSpan(toolSpan, {
+              content: resultContent,
+              isError: toolResult?.tool_result?.isError,
+              errorMessage: toolResult?.tool_result?.isError
+                ? 'Tool execution failed'
+                : undefined,
+            });
+          }
+
           if (isFileEditTool) {
             const toolResultData = toolResult?.tool_result;
             const extra = toolResult?.extra;
@@ -655,32 +783,29 @@ async function runSubagentInner(
                 applying: false,
                 autoApply: useChatConfig.getState().autoApply,
               });
-              // Subagent 是自动执行流程，工具成功后需要主动触发 acceptEdit，
-              // 将文件变更真正写入磁盘（等价于 CodeChat.tsx 中 autoApply 时的 ACCEPT_EDIT 广播）
-              // 注意：必须先注册 waitForAcceptEdit，再发送 acceptEdit，
-              // 否则 IDE 可能在同一个事件循环内返回 ACCEPT_EDIT_RESULT，
-              // 导致 pendingAcceptResults 中找不到对应的 toolCallId
               const acceptPromise = runnerManager.waitForAcceptEdit(
                 toolCall.id,
                 abortController.signal,
               );
               useChatApplyStore.getState().acceptEdit(toolCall.id);
 
-              // 等待 IDE 返回 ACCEPT_EDIT_RESULT，确认文件是否真正写入成功
               try {
                 const acceptResult = await acceptPromise;
 
                 if (!acceptResult?.success) {
-                  console.error(
-                    '[Subagent] Accept edit failed:',
-                    acceptResult?.message,
-                  );
-                  // 文件编辑失败，更新状态并上报
-                  useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                    applying: false,
+                  debugLog(MODULE, 'Accept edit failed', {
+                    message: acceptResult?.message,
                   });
+                  useChatApplyStore
+                    .getState()
+                    .updateChatApplyItem(toolCall.id, {
+                      applying: false,
+                    });
                   userReporter.report({
-                    event: getReportEventByToolName({ toolName: toolCall.function.name, status: 2 }),
+                    event: getReportEventByToolName({
+                      toolName: toolCall.function.name,
+                      status: 1,
+                    }),
                     extends: {
                       filePath: toolResultData?.path,
                       beforeEdit: extra?.beforeEdit,
@@ -694,11 +819,7 @@ async function runSubagentInner(
                       error: acceptResult?.message,
                     },
                   });
-                  // 继续执行，让 LLM 知道编辑失败
                 } else {
-                  console.log('[Subagent] Accept edit success for:', toolCall.id);
-                  // 调用 handleAcceptEditSuccess 设置 accepted: true，
-                  // 触发 chatFileInfo 填充，使 ChatApplyPanel 显示修改
                   const applyItem = useChatApplyStore
                     .getState()
                     .getChatApplyItem(toolCall.id);
@@ -709,21 +830,25 @@ async function runSubagentInner(
                   }
                 }
               } catch (acceptError) {
-                // 超时或被 abort
-                console.error('[Subagent] Accept edit error:', acceptError);
+                debugLog(MODULE, 'Accept edit error', {
+                  error:
+                    acceptError instanceof Error
+                      ? acceptError.message
+                      : String(acceptError),
+                });
                 useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
                   applying: false,
                 });
-                // 如果是 abort，抛出错误终止执行
                 if (abortController.signal.aborted) {
                   throw acceptError;
                 }
-                // 超时情况，继续执行让 LLM 知道有问题
               }
 
-              // 5.3 文件编辑成功上报
               userReporter.report({
-                event: getReportEventByToolName({ toolName: toolCall.function.name, status: 1 }),
+                event: getReportEventByToolName({
+                  toolName: toolCall.function.name,
+                  status: 1,
+                }),
                 extends: {
                   filePath: toolResultData?.path,
                   finalResult: extra?.finalResult || '',
@@ -742,9 +867,11 @@ async function runSubagentInner(
                 applying: false,
               });
 
-              // 5.3 文件编辑失败上报
               userReporter.report({
-                event: getReportEventByToolName({ toolName: toolCall.function.name, status: 2 }),
+                event: getReportEventByToolName({
+                  toolName: toolCall.function.name,
+                  status: 1,
+                }),
                 extends: {
                   filePath: toolResult?.tool_result?.path,
                   beforeEdit: toolResult?.extra?.beforeEdit,
@@ -760,14 +887,12 @@ async function runSubagentInner(
             }
           }
 
-          // 触发 onAfterToolCall 钩子
           const toolResultCtx: ToolResultHookContext = {
             ...toolCallCtx,
             duration: Date.now() - toolStartTime,
           };
           await lifecycleManager.trigger('onAfterToolCall', toolResultCtx);
 
-          // 5.2 通过增强的工具结果处理器处理工具结果
           let processedContent: string;
 
           try {
@@ -800,12 +925,19 @@ async function runSubagentInner(
               authExtends: subagentAuthExtends,
             };
 
-            const processed = await enhancedProcessor.process(toolResultInput, processContext);
+            const processed = await enhancedProcessor.process(
+              toolResultInput,
+              processContext,
+            );
             processedContent = processed?.content || '';
           } catch (processingError) {
-            console.error('[Subagent] Tool result processing error:', processingError);
+            debugLog(MODULE, 'Tool result processing error', {
+              error:
+                processingError instanceof Error
+                  ? processingError.message
+                  : String(processingError),
+            });
 
-            // 兜底处理：使用原始内容
             const fallbackContent =
               toolResult?.tool_result?.content ?? JSON.stringify(toolResult);
             processedContent =
@@ -814,126 +946,169 @@ async function runSubagentInner(
                 : JSON.stringify(fallbackContent);
           }
 
-          // 将工具结果作为 tool 消息追加到 messages
           const toolMessage: ChatMessage = {
             role: ChatRole.Tool,
             content: processedContent,
             tool_call_id: toolCall.id,
           };
           messages.push(toolMessage);
+
+          // 实时更新 store: 追加工具调用结果 message
+          useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+            draft.messages.push({
+              id: nanoid(),
+              role: ChatRole.Tool,
+              content: processedContent,
+              tool_call_id: toolCall.id,
+              createdAt: Date.now(),
+            } as ChatMessage);
+          });
         }
 
         if (!success) break;
 
-        // 上下文压缩检测
-        const maxTokens = useChatConfig.getState().config.max_tokens || 60000;
-        const compressionResult = await checkAndCompress(
-          messages,
+        // ============================================================
+        // 压缩检查：与主 agent 保持一致
+        // ============================================================
+        // 关键设计：
+        // 1. 从 store 获取 session.messages（不含 system prompt）
+        // 2. checkAndCompress 分析的是原始 session.messages，不含 cache marks
+        // 3. 压缩后需要同步更新 session.messages 和 messages 数组
+
+        // 从 store 获取最新的 session.messages
+        const session = useSubagentStore.getState().getSubagentSession(taskId);
+        const sessionMessages = session?.messages || [];
+
+        const compressionCheck = await checkAndCompress(
+          sessionMessages, // 使用 session.messages，不含 system prompt
           llmModel,
           taskId,
-          maxTokens,
+          codebaseModelMaxTokens[llmModel] ?? 200000,
           subagentTools,
+          compressionState,
+          subagentSpanContext,
+          abortController.signal, // 传递 abort signal，支持中止压缩
         );
 
-        if (compressionResult.compressed) {
-          // 替换 messages 内容
-          messages.length = 0;
-          messages.push(...compressionResult.messages);
+        debugLog(MODULE, 'Compression check result', {
+          taskId,
+          result: compressionCheck,
+        });
 
-          // 构建压缩状态（参考主agent逻辑）
-          const compressionState: SessionCompressionState = {
-            enabled: true,
-            compressionHistory: [{
-              timestamp: Date.now(),
-              originalMessageCount: compressionResult.tokensBefore || 0,
-              tokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-              compressionRatio: compressionResult.tokensBefore && compressionResult.tokensAfter
-                ? compressionResult.tokensBefore / compressionResult.tokensAfter
-                : 1,
-            }],
-            totalTokensSaved: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-            totalCompressionsCount: 1,
-            pendingSavedTokens: (compressionResult.tokensBefore || 0) - (compressionResult.tokensAfter || 0),
-            messagesCountAtCompression: messages.length,
-          };
-
-          // 立即同步压缩状态到后端
-          // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
-          const systemPromptContent = messages
-            .filter(msg => msg.role === ChatRole.System)
-            .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
-            .join('\n');
-
-          // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-          const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-          const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-          const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
-
-          const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
-          const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
-          const mcpContent = mcpMatch ? mcpMatch.join('\n') : '';
-
-          const systemTokenEstimation = estimateChildSessionSystemTokens(
-            systemPromptContent,
-            skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
-            rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
-            mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
-          );
-
-          const compressionEnhancedUsage = {
-            ...totalUsage,
-            systemTokens: systemTokenEstimation.systemTokens,
-            skillTokens: systemTokenEstimation.skillTokens,
-            ruleTokens: systemTokenEstimation.ruleTokens,
-            mcpTokens: systemTokenEstimation.mcpTokens,
-          };
-
-          await syncSession(
-            taskId,
-            agent.name,
-            params.description,
-            messages,
-            llmModel,
-            compressionEnhancedUsage,
-            compressionState,
-          );
-
-          console.log(`[Subagent] ${taskId} Compression completed:`, {
-            tokensBefore: compressionResult.tokensBefore,
-            tokensAfter: compressionResult.tokensAfter,
-            tokensSaved: compressionState.totalTokensSaved,
-            messagesAfterCompression: messages.length,
-          });
-
-          // 压缩后，禁用后续的 cache，因为消息结构已变化
-          if (cacheEnable) {
-            console.log(`[Subagent] ${taskId} disabling cache due to compression`);
-            cacheEnable = false;
+        if (compressionCheck.compressed) {
+          // 步骤2：标记被压缩的消息 isCompressed=true / isOutdatedTokens=true
+          // 与主 agent markMessagesAsCompressed 逻辑保持一致
+          // 对消息数组做浅拷贝，避免直接修改被 Immer/freeze 冻结的对象
+          const finalMessages = compressionCheck.messages.map((msg) => ({
+            ...msg,
+          }));
+          if (compressionCheck.compressedMessageIds?.size) {
+            let maxCompressedIdx = 0;
+            for (let i = 0; i < finalMessages.length; i++) {
+              const key = `${finalMessages[i].id}-${finalMessages[i].role}`;
+              if (compressionCheck.compressedMessageIds.has(key)) {
+                finalMessages[i].isCompressed = true;
+                finalMessages[i].isOutdatedTokens = true;
+                maxCompressedIdx = i;
+              }
+            }
+            // 步骤3：被压缩消息之后的消息也标记 isOutdatedTokens=true
+            for (let i = maxCompressedIdx + 1; i < finalMessages.length; i++) {
+              finalMessages[i].isOutdatedTokens = true;
+            }
           }
 
-          // 触发 onCompression 钩子
-          await lifecycleManager.trigger(
-            'onCompression',
-            hookCtx,
-            compressionResult.tokensBefore || 0,
-            compressionResult.tokensAfter || 0,
+          // 同步更新 session.messages（已标记 isCompressed / isOutdatedTokens）
+          useSubagentStore.getState().updateSubagentSession(taskId, {
+            messages: finalMessages,
+          });
+
+          // 同步更新运行时 messages 数组
+          // 1. 保留 system prompt（第一条消息，role === 'system'）
+          // 2. 保留第一条 user message（如果被压缩了，避免丢失任务上下文）
+          // 3. 用压缩后的 session.messages 替换后续所有消息
+          const systemMessage = messages.find(
+            (msg) => msg.role === ChatRole.System,
           );
+          const firstUserMessage = messages.find(
+            (msg) => msg.role === ChatRole.User && !msg.tool_result,
+          );
+
+          // 检查第一条 user message 是否在 finalMessages 中
+          const firstUserInFinal =
+            firstUserMessage &&
+            finalMessages.some(
+              (msg) =>
+                msg.id === firstUserMessage.id ||
+                (msg.role === ChatRole.User &&
+                  !msg.tool_result &&
+                  !msg.isCompressionSummary),
+            );
+
+          if (systemMessage && firstUserMessage && !firstUserInFinal) {
+            // 第一条 user message 被压缩了，需要保留
+            messages.splice(
+              0,
+              messages.length,
+              systemMessage,
+              firstUserMessage,
+              ...finalMessages,
+            );
+          } else if (systemMessage) {
+            messages.splice(
+              0,
+              messages.length,
+              systemMessage,
+              ...finalMessages,
+            );
+          } else {
+            // 没有 system prompt（理论上不应该发生，但做防御性处理）
+            messages.splice(0, messages.length, ...finalMessages);
+          }
+
+          // 更新压缩状态
+          compressionState.totalCompressionsCount += 1;
+          const tokensSaved =
+            (compressionCheck.tokensBefore ?? 0) -
+            (compressionCheck.tokensAfter ?? 0);
+          compressionState.totalTokensSaved += tokensSaved;
+          compressionState.compressionHistory.push({
+            timestamp: Date.now(),
+            originalMessageCount: sessionMessages.length,
+            tokensSaved,
+            compressionRatio: compressionCheck.tokensBefore
+              ? (compressionCheck.tokensAfter ?? 0) /
+                compressionCheck.tokensBefore
+              : 1,
+          });
         }
 
-        // 触发 onAfterStep 钩子
-        await lifecycleManager.trigger('onAfterStep', stepCtx, totalUsage);
+        debugLog(MODULE, `Step ${step} completed`, {
+          taskId,
+          totalMessages: messages.length,
+          lastFiveRoles: messages.slice(-5).map((m) => m.role),
+          hasToolCalls: llmResult.toolCalls.length > 0,
+          compressed: compressionCheck.compressed,
+        });
 
-        // 每轮结束后同步 messages 到后端（不传递压缩状态，因为没有新的压缩）
-        // 构建增强的 usage，包含系统 token 估算，以确保后端 session 数据结构与主 agent 一致
         const systemPromptContent = messages
-          .filter(msg => msg.role === ChatRole.System)
-          .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
+          .filter((msg) => msg.role === ChatRole.System)
+          .map((msg) =>
+            typeof msg.content === 'string'
+              ? msg.content
+              : JSON.stringify(msg.content),
+          )
           .join('\n');
 
-        // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-        const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-        const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-        const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
+        const skillsMatch = systemPromptContent.match(
+          /<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g,
+        );
+        const rulesMatch = systemPromptContent.match(
+          /<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g,
+        );
+        const mcpMatch = systemPromptContent.match(
+          /<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g,
+        );
 
         const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
         const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
@@ -941,9 +1116,9 @@ async function runSubagentInner(
 
         const systemTokenEstimation = estimateChildSessionSystemTokens(
           systemPromptContent,
-          skillsContent ? [skillsContent] : [], // 从 subagent prompt 中提取的 skills
-          rulesContent ? [rulesContent] : [],   // 从 subagent prompt 中提取的 rules
-          mcpContent ? [mcpContent] : []        // 从 subagent prompt 中提取的 mcp
+          skillsContent ? [skillsContent] : [],
+          rulesContent ? [rulesContent] : [],
+          mcpContent ? [mcpContent] : [],
         );
 
         const enhancedUsage = {
@@ -954,89 +1129,419 @@ async function runSubagentInner(
           mcpTokens: systemTokenEstimation.mcpTokens,
         };
 
-        await syncSession(
+        localConsumedTokens = await syncSession(
           taskId,
           agent.name,
           params.description,
           messages,
           llmModel,
           enhancedUsage,
+          createInitialConsumedTokens(),
+          compressionState,
         );
+
+        // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计
+        useSubagentStore.getState().updateSubagentSession(taskId, {
+          consumedTokens: localConsumedTokens,
+        });
+
+        await lifecycleManager.trigger('onAfterStep', stepCtx, totalUsage);
       }
 
-      // 步数达到上限
       if (step >= maxSteps && success) {
-        console.log(`[Subagent] ${taskId} reached maxSteps (${maxSteps})`);
+        debugLog(
+          MODULE,
+          `Reached maxSteps (${maxSteps}), initiating force summary`,
+          { taskId },
+        );
+        isTruncated = true;
+
+        try {
+          const summaryRequestMessage: ChatMessage = {
+            role: ChatRole.User,
+            hidden: true,
+            content: `You have reached the maximum number of steps (${maxSteps}) while working on the task below.
+
+
+
+Now provide a structured handoff summary so that another agent can seamlessly continue your work. Follow this format EXACTLY:
+
+---
+
+## Status: [COMPLETED / PARTIALLY_COMPLETED / BARELY_STARTED]
+
+## Completion Estimate: [X]%
+
+## What Has Been Accomplished
+For each sub-task or requirement listed in the original task, state what was done:
+- **[Sub-task name/topic]**: [What was found, decided, or produced. Include specific file paths, code snippets, key data points, or conclusions. Do NOT paraphrase vaguely — be concrete.]
+- ...
+(Cover every sub-task that was touched, even partially. If you read a file and learned something relevant, include that finding here.)
+
+## Key Discoveries & Context
+List specific, non-obvious findings that would be lost if not recorded here:
+- [Finding 1: e.g., "src/store/chat.ts uses a flat array for messages, not normalized — this means compression must happen at the array level"]
+- [Finding 2: ...]
+(These are facts, observations, or gotchas discovered during exploration. Only include things that are NOT obvious from reading the task description alone.)
+
+## What Remains To Be Done
+For each sub-task or requirement NOT yet completed:
+- **[Sub-task name/topic]**: [What specifically still needs to happen. If you already have a partial plan or know the right approach, state it.]
+- ...
+
+## Recommended Next Steps (Ordered)
+Provide a concrete, actionable sequence that the next agent should follow:
+1. [First action — be specific: which file to read, which search to run, which function to implement]
+2. [Second action]
+3. ...
+(These should be immediately executable instructions, not general advice.)
+
+## Artifacts Produced
+List any files created, modified, or code written during this session:
+- [File path or artifact]: [Current state — complete/partial/draft]
+(If none, write "None".)
+
+---
+
+IMPORTANT RULES:
+- Reference specific file paths, function names, variable names, and line numbers whenever possible.
+- Do NOT repeat the original task requirements back to me — only report on actual progress and findings.
+- Do NOT pad with generic observations. Every sentence should contain information that would be LOST if not captured here.
+- Keep the total response under 800 words. Prioritize information density over completeness of prose.`,
+          };
+          messages.push(summaryRequestMessage);
+
+          const preprocessOptions: MessagePreprocessOptions = {
+            messages,
+            agent,
+            model: llmModel,
+            tools: subagentTools,
+            cacheEnable,
+            taskId,
+            compressionState,
+          };
+
+          const preprocessResult =
+            await preprocessSubagentMessages(preprocessOptions);
+
+          const summaryPromptData = buildSubagentChatPromptBody(
+            preprocessResult,
+            llmModel,
+            {
+              stream: true,
+              tool_choice: 'none',
+              temperature: 0,
+              taskId,
+            },
+          );
+
+          const summaryResult = await streamChat(
+            summaryPromptData,
+            abortController,
+          );
+
+          mergeUsage(totalUsage, summaryResult.usage);
+
+          const summaryAssistantMessage: ChatMessage = {
+            id: nanoid(),
+            role: ChatRole.Assistant,
+            content: summaryResult.text,
+            createdAt: Date.now(),
+            usage: {
+              prompt_tokens: summaryResult.usage.promptTokens,
+              completion_tokens: summaryResult.usage.completionTokens,
+              total_tokens: summaryResult.usage.totalTokens,
+              cache_creation_input_tokens:
+                summaryResult.usage.cacheCreationInputTokens,
+              cache_read_input_tokens: summaryResult.usage.cacheReadInputTokens,
+            },
+          };
+          messages.push(summaryAssistantMessage);
+
+          // 实时更新 store: 追加强制摘要的 assistant message（使用相同的消息对象）
+          useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+            draft.messages.push(summaryAssistantMessage);
+          });
+
+          debugLog(MODULE, `Force summary completed`, {
+            taskId,
+            summaryLength: summaryResult.text.length,
+            usage: summaryResult.usage,
+          });
+        } catch (summaryError) {
+          debugLog(
+            MODULE,
+            `Force summary failed, falling back to last assistant message`,
+            {
+              taskId,
+              error:
+                summaryError instanceof Error
+                  ? summaryError.message
+                  : String(summaryError),
+            },
+          );
+        }
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[Subagent] ${taskId} error:`, err);
+      debugLog(MODULE, `Error`, {
+        taskId,
+        error: err instanceof Error ? err.message : String(err),
+      });
       error = errorMsg;
       success = false;
 
-      // 如果是 abort 导致的错误
       if (abortController.signal.aborted) {
         error = 'Subagent was aborted';
       }
 
-      // 触发 onError 钩子（将状态更新为 failed，并携带错误信息）
+      // 将错误信息保存到 session messages 中，确保 UI 能持久显示错误
+      const finalErrorMsg = abortController.signal.aborted
+        ? 'Subagent was aborted'
+        : errorMsg;
+
+      // 构造错误消息
+      const errorMessage: ChatMessage = {
+        id: nanoid(),
+        role: ChatRole.Assistant,
+        content: `[Error] ${finalErrorMsg}`,
+        createdAt: Date.now(),
+        isError: true,
+      } as ChatMessage;
+
+      // 更新 store
+      useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+        draft.messages.push(errorMessage);
+        draft.error = finalErrorMsg;
+        draft.status = 'failed';
+      });
+
+      // 同步到后端（关键：确保错误信息持久化）
+      messages.push(errorMessage);
+      try {
+        await syncSession(
+          taskId,
+          agent.name,
+          params.description,
+          messages,
+          llmModel,
+          totalUsage,
+          localConsumedTokens,
+          compressionState,
+        );
+      } catch (syncErr) {
+        console.warn(
+          '[Subagent] Failed to sync error state to backend:',
+          syncErr,
+        );
+      }
+
+      if (subagentSpanContext) {
+        subagentSpanContext.taskSpan.setStatus(SpanStatusCode.ERROR, errorMsg);
+      }
+
       await lifecycleManager.trigger(
         'onError',
         hookCtx,
         err instanceof Error ? err : new Error(String(err)),
       );
 
-      // ── 非 abort 错误：等待用户 Retry 或 Stop ───────────────
       if (!abortController.signal.aborted) {
-        const doRetry = await new Promise<boolean>((resolve) => {
-          pendingUserActions.set(toolCallId, { resolve });
-        });
+        // ✅ 用户操作等待超时（30 分钟），超时后默认选择 Stop
+        const USER_ACTION_TIMEOUT_MS = 30 * 60 * 1000;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const doRetry = await Promise.race([
+          new Promise<boolean>((resolve) => {
+            // 包装 resolve，在用户操作完成时清除超时定时器并清理 Map
+            const wrappedResolve = (value: boolean) => {
+              // 清理 pendingUserActions 中的条目
+              pendingUserActions.delete(toolCallId);
+              // 清除超时定时器
+              if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              resolve(value);
+            };
+            pendingUserActions.set(toolCallId, { resolve: wrappedResolve });
+          }),
+          new Promise<boolean>((resolve) => {
+            timeoutId = setTimeout(() => {
+              timeoutId = null;
+              // 超时时清理 pending 状态
+              if (pendingUserActions.has(toolCallId)) {
+                pendingUserActions.delete(toolCallId);
+                console.warn(
+                  `[Subagent] User action timeout for ${toolCallId}, defaulting to Stop`,
+                );
+              }
+              resolve(false); // 超时默认选择 Stop
+            }, USER_ACTION_TIMEOUT_MS);
+          }),
+        ]);
 
         if (doRetry) {
-          // 用户选择 Retry：重置执行状态，基于现有 taskId 继续
-          // 更新 store 状态：failed → running（store 已允许此转换）
+          // 用户选择 Retry，清除错误状态和错误消息
+          retryCount++;
+
+          debugLog(MODULE, 'User chose to retry, cleaning up error state', {
+            taskId,
+            toolCallId,
+            retryCount,
+            currentStep: step,
+            messagesBeforeCleanup: messages.length,
+          });
+
+          // 1. 从本地 messages 数组中移除最后添加的错误消息
+          // 注意：只移除最后一条错误消息（刚刚添加的那条）
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.isError) {
+            messages.pop();
+          }
+
+          // 2. 从 store 中移除错误消息和错误状态
+          useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+            // 移除最后一条错误消息
+            const lastMsg = draft.messages[draft.messages.length - 1];
+            if (lastMsg && lastMsg.isError) {
+              draft.messages.pop();
+            }
+            // 清除错误状态
+            draft.error = undefined;
+            draft.status = 'running';
+          });
+
+          // 3. 更新 UI 状态
           useSubagentStore.getState().updateStatus(toolCallId, {
+            parentSessionId,
             status: 'running' as SubagentStatus,
             errorMessage: undefined,
           });
-          // 重置循环控制变量，外层 while(true) 会重新进入内层循环
+
+          // 4. 重置变量（保持 step 累加，防止无限重试）
           success = true;
           error = undefined;
-          // 重新创建 AbortController（旧的 controller 可能已有状态）
+          // 注意：step 不重置，继续累加以防止无限重试
+          // 如果需要重置 step，可以在这里设置 step = 0
+
+          // 5. 创建新的 AbortController
           const newAbortController = new AbortController();
           abortController = newAbortController;
           runnerState.abortController = newAbortController;
-          // 重新注册 runner state（manager 内部通过 taskId 索引）
           runnerManager.register(taskId, {
             ...runnerState,
             abortController: newAbortController,
           });
-          // 重新监听父 abort 信号
+
+          // 6. 重新绑定父级 abort（使用具名函数避免监听器泄漏）
+          // ✅ 更新 onParentAbort 引用指向新的 controller
           if (parentAbortSignal) {
             parentAbortSignal.removeEventListener('abort', onParentAbort);
-            parentAbortSignal.addEventListener('abort', () => newAbortController.abort(), { once: true });
+            // 重新定义 onParentAbort 以使用新的 abortController
+            onParentAbort = () => {
+              newAbortController.abort();
+            };
+            parentAbortSignal.addEventListener('abort', onParentAbort, {
+              once: true,
+            });
           }
-          // 标记 retrying，让 finally 跳过清理，外层 while(true) 继续下一轮
+
+          debugLog(MODULE, 'Retry setup complete', {
+            taskId,
+            retryCount,
+            messagesAfterCleanup: messages.length,
+            willContinueFromStep: step + 1,
+          });
+
           retrying = true;
         } else {
-          // 用户选择 Stop：abortController 中止，走正常 finally 清理流程
+          // 用户选择 Stop，更新主 agent 的 tool_result
+          const errorTaskStatus = TaskStatus.Failed;
+          const errorOutput = formatTaskResult({
+            id: taskId,
+            description: params.description || params.prompt,
+            status: errorTaskStatus,
+            messages,
+            error: finalErrorMsg,
+            abortReason: undefined,
+            agent: agent.name,
+            steps: step,
+          });
+
+          useChatStreamStore.getState().updateToolCallResults({
+            [toolCallId]: {
+              path: '',
+              content: errorOutput,
+              isError: true,
+              extra: {
+                isTruncated: false,
+              },
+            },
+          });
+
           abortController.abort();
         }
+      } else {
+        // 已经被中断（用户主动中止），更新主 agent 的 tool_result
+        const errorTaskStatus = TaskStatus.Aborted;
+        const errorOutput = formatTaskResult({
+          id: taskId,
+          description: params.description || params.prompt,
+          status: errorTaskStatus,
+          messages,
+          error: finalErrorMsg,
+          abortReason: 'Request interrupted by user for tool use.',
+          agent: agent.name,
+          steps: step,
+        });
+
+        useChatStreamStore.getState().updateToolCallResults({
+          [toolCallId]: {
+            path: '',
+            content: errorOutput,
+            isError: true,
+            extra: {
+              isTruncated: false,
+            },
+          },
+        });
+      }
+    } finally {
+      if (subagentSpanContext && !retrying) {
+        subagentSpanContext.taskSpan.setAttribute(
+          'subagent.actual_steps',
+          step,
+        );
+        subagentSpanContext.taskSpan.setAttribute(
+          'subagent.is_truncated',
+          isTruncated,
+        );
+        if (!error) {
+          subagentSpanContext.taskSpan.setStatus(SpanStatusCode.OK);
+        }
+        subagentSpanContext.taskSpan.end();
       }
 
-    } finally {
-      // retrying 时跳过最终清理，外层循环会继续下一轮
       if (!retrying) {
-        // 计算最终的 token 统计（只计算一次）
         const systemPromptContent = messages
-          .filter(msg => msg.role === ChatRole.System)
-          .map(msg => typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content))
+          .filter((msg) => msg.role === ChatRole.System)
+          .map((msg) =>
+            typeof msg.content === 'string'
+              ? msg.content
+              : JSON.stringify(msg.content),
+          )
           .join('\n');
 
-        // 从 subagent 自己的系统 prompt 中解析 skills/rules/mcp 相关内容进行独立估算
-        const skillsMatch = systemPromptContent.match(/<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g);
-        const rulesMatch = systemPromptContent.match(/<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g);
-        const mcpMatch = systemPromptContent.match(/<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g);
+        const skillsMatch = systemPromptContent.match(
+          /<skill[^>]*>[\s\S]*?<\/skill[^>]*>/g,
+        );
+        const rulesMatch = systemPromptContent.match(
+          /<rule-\d+[^>]*>[\s\S]*?<\/rule-\d+>/g,
+        );
+        const mcpMatch = systemPromptContent.match(
+          /<mcp_tool_call>[\s\S]*?<\/mcp_tool_call>/g,
+        );
 
         const skillsContent = skillsMatch ? skillsMatch.join('\n') : '';
         const rulesContent = rulesMatch ? rulesMatch.join('\n') : '';
@@ -1046,7 +1551,7 @@ async function runSubagentInner(
           systemPromptContent,
           skillsContent ? [skillsContent] : [],
           rulesContent ? [rulesContent] : [],
-          mcpContent ? [mcpContent] : []
+          mcpContent ? [mcpContent] : [],
         );
 
         const finalEnhancedUsage = {
@@ -1057,19 +1562,26 @@ async function runSubagentInner(
           mcpTokens: systemTokenEstimation.mcpTokens,
         };
 
-        // 最终同步到后端
-        await syncSession(
+        localConsumedTokens = await syncSession(
           taskId,
           agent.name,
           params.description,
           messages,
           llmModel,
           finalEnhancedUsage,
+          createInitialConsumedTokens(),
+          compressionState,
         );
 
-        // 将子代理 token 用量写入主会话独立的 children 字段
-        // 只有在有实际 token 消耗时才更新
-        if (finalEnhancedUsage.promptTokens > 0 || finalEnhancedUsage.completionTokens > 0) {
+        // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计
+        useSubagentStore.getState().updateSubagentSession(taskId, {
+          consumedTokens: localConsumedTokens,
+        });
+
+        if (
+          finalEnhancedUsage.promptTokens > 0 ||
+          finalEnhancedUsage.completionTokens > 0
+        ) {
           const chatStoreState = useChatStore.getState();
           const curSession = chatStoreState.sessions.get(parentSessionId);
           if (curSession?.data?.consumedTokens) {
@@ -1081,11 +1593,11 @@ async function runSubagentInner(
               useChatConfig.getState().chatModels?.[llmModel as ChatModel]
                 ?.priceInfo;
 
-            // 构建 token 增量对象
             const tokenIncrement: TokenIncrement = {
               promptTokens: finalEnhancedUsage.promptTokens,
               completionTokens: finalEnhancedUsage.completionTokens,
-              cacheCreationInputTokens: finalEnhancedUsage.cacheCreationInputTokens,
+              cacheCreationInputTokens:
+                finalEnhancedUsage.cacheCreationInputTokens,
               cacheReadInputTokens: finalEnhancedUsage.cacheReadInputTokens,
               systemTokens: finalEnhancedUsage.systemTokens,
               skillTokens: finalEnhancedUsage.skillTokens,
@@ -1093,7 +1605,6 @@ async function runSubagentInner(
               mcpTokens: finalEnhancedUsage.mcpTokens,
             };
 
-            // 更新子会话统计
             ct.children = updateChildSession(
               ct.children,
               taskId,
@@ -1109,52 +1620,32 @@ async function runSubagentInner(
               llmModel,
               modelCostInfo,
             );
-
-            const totalChildrenTokens = calculateChildrenTotalTokens(ct.children);
-
-            console.log('🤖 %cSubagent Token Merged to Main Agent:', 'color: #8B5CF6; font-weight: bold; font-size: 14px;', {
-              '🏷️ Agent': agent.name,
-              '🆔 Task ID': taskId.substring(0, 8) + '...',
-              '📊 Total Children Tokens': totalChildrenTokens,
-              '💾 Cache Enabled': cacheEnable,
-              '🏪 Model Has Token Cache': !!chatModels[llmModel]?.hasTokenCache,
-              '📈 This Task Usage': {
-                '📥 Prompt': finalEnhancedUsage.promptTokens,
-                '✅ Completion': finalEnhancedUsage.completionTokens,
-                '🎯 System': finalEnhancedUsage.systemTokens,
-                '⚡ Skill': finalEnhancedUsage.skillTokens,
-                '📏 Rule': finalEnhancedUsage.ruleTokens,
-                '🔌 MCP': finalEnhancedUsage.mcpTokens,
-                '🆕 Cache Creation': finalEnhancedUsage.cacheCreationInputTokens,
-                '💾 Cache Read': finalEnhancedUsage.cacheReadInputTokens,
-                '📊 Total': finalEnhancedUsage.promptTokens + finalEnhancedUsage.completionTokens,
-              }
-            });
           } else {
-            console.warn(
-              `[Subagent] Session not found for token update: ${parentSessionId}`,
-            );
+            debugLog(MODULE, `Session not found for token update`, {
+              parentSessionId,
+            });
           }
         }
 
-        // 输出总体 Cache 性能统计
         if (cacheEnable) {
-          console.log(`[Subagent Cache Summary] ${taskId}:`, {
+          debugLog(MODULE, `Cache summary`, {
+            taskId,
             totalSteps: step,
             totalCacheCreation: totalUsage.cacheCreationInputTokens,
             totalCacheRead: totalUsage.cacheReadInputTokens,
             totalPromptTokens: totalUsage.promptTokens,
             totalCompletionTokens: totalUsage.completionTokens,
-            overallCacheHitRate: totalUsage.cacheReadInputTokens > 0
-              ? `${((totalUsage.cacheReadInputTokens / (totalUsage.cacheReadInputTokens + totalUsage.promptTokens)) * 100).toFixed(1)}%`
-              : '0%',
-            estimatedSavings: totalUsage.cacheReadInputTokens > 0
-              ? `${totalUsage.cacheReadInputTokens} tokens (90% discount)`
-              : '0 tokens',
+            overallCacheHitRate:
+              totalUsage.cacheReadInputTokens > 0
+                ? `${((totalUsage.cacheReadInputTokens / (totalUsage.cacheReadInputTokens + totalUsage.promptTokens)) * 100).toFixed(1)}%`
+                : '0%',
+            estimatedSavings:
+              totalUsage.cacheReadInputTokens > 0
+                ? `${totalUsage.cacheReadInputTokens} tokens (90% discount)`
+                : '0 tokens',
           });
         }
 
-        // 触发 onComplete 钩子（先更新状态）
         const completeCtx: CompleteHookContext = {
           ...hookCtx,
           success,
@@ -1164,51 +1655,83 @@ async function runSubagentInner(
         };
         await lifecycleManager.trigger('onComplete', completeCtx);
 
-        // 清理运行时状态（状态更新完成后再清理）
         runnerManager.remove(taskId);
 
-        // 移除 parentAbort 监听
         if (parentAbortSignal) {
           parentAbortSignal.removeEventListener('abort', onParentAbort);
         }
       }
     }
-  } while (retrying); // end do-while outer retry loop
+  } while (retrying);
 
-  // 格式化返回
-  // 如果执行失败且没有 assistant 消息，将错误信息添加到 messages 中
-  let messagesForFormatting = messages;
-  if (!success && !abortController.signal.aborted && error) {
-    // 检查最后一条消息是否是 assistant 消息
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage || lastMessage.role !== ChatRole.Assistant) {
-      messagesForFormatting = [
-        ...messages,
-        {
-          role: ChatRole.Assistant,
-          content: `Error: ${error}`,
-        },
-      ];
+  // ============ 包装在 try-finally 中确保事件必定发出 ============
+  try {
+    let taskStatus: TaskStatus;
+    // 检查 abort 状态，但要区分正常完成（ABORT_REASON_FINISHED）和真正中断
+    if (abortController.signal.aborted) {
+      const abortReason = (abortController.signal as any).reason;
+      const isNormalFinish = abortReason?.name === ABORT_REASON_FINISHED;
+
+      if (isNormalFinish && success) {
+        // 如果是正常完成的 abort 且成功，按成功处理
+        taskStatus = isTruncated ? TaskStatus.Truncated : TaskStatus.Success;
+      } else if (!success && error) {
+        // 执行报错后用户点击"停止"，保留失败状态和错误信息
+        taskStatus = TaskStatus.Failed;
+      } else {
+        // 其他情况才是真正的中断（如执行中用户主动中止）
+        taskStatus = TaskStatus.Aborted;
+      }
+    } else if (!success && error) {
+      taskStatus = TaskStatus.Failed;
+    } else if (isTruncated) {
+      taskStatus = TaskStatus.Truncated;
+    } else {
+      taskStatus = TaskStatus.Success;
+    }
+
+    const output = formatTaskResult({
+      id: taskId,
+      description: params.description || params.prompt,
+      status: taskStatus,
+      messages,
+      error,
+      abortReason:
+        abortController.signal.aborted && taskStatus === TaskStatus.Aborted
+          ? 'Request interrupted by user for tool use.'
+          : undefined,
+      agent: agent.name,
+      steps: step,
+    });
+
+    const result: TaskResult = {
+      taskId,
+      output,
+      success,
+      error,
+      isAborted: abortController.signal.aborted,
+      isTruncated,
+      agentName: agent.name,
+      description: params.description,
+    };
+
+    // ✅ 使用幂等辅助函数发射完成/失败事件
+    emitCompletionEvent(success, result, error);
+
+    return result;
+  } finally {
+    // ============ 双重事件发射保证：finally 块兜底 ============
+    // 如果到达这里事件还没发射，说明发生了意外情况
+    if (!eventEmitted) {
+      console.error(
+        '[Subagent] Event not emitted in normal flow, forcing failure event',
+        { taskId, toolCallId, parentSessionId },
+      );
+      emitCompletionEvent(
+        false,
+        undefined,
+        error || 'Unexpected execution termination',
+      );
     }
   }
-
-  const output = formatTaskResult(
-    taskId,
-    abortController.signal.aborted
-      ? [
-        {
-          role: ChatRole.Assistant,
-          content: '[Request interrupted by user for tool use]',
-        },
-      ]
-      : messagesForFormatting,
-  );
-
-  return {
-    taskId,
-    output,
-    success,
-    error,
-    isAborted: abortController.signal.aborted,
-  };
 }

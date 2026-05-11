@@ -56,6 +56,7 @@ import { useTerminalMessage } from './ChatMessagesList/TermialPanel';
 import { UserEvent } from '../../types/report';
 import { ChatModel } from '../../services/chatModel';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
+import { useTaskCompletionStore } from '../../modules/subagent';
 interface NewChatSession extends ChatSession {
   disabled?: boolean;
 }
@@ -296,6 +297,7 @@ const ChatHistories = React.forwardRef((_, ref) => {
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
   );
+
   const isSearching = useChatStreamStore((state) => state.isSearching);
   const [isOpen, setIsOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
@@ -316,6 +318,10 @@ const ChatHistories = React.forwardRef((_, ref) => {
     state.revalidateChatSessions,
     state.chatType,
   ]);
+
+  const isSubagentProcessing = useTaskCompletionStore(
+    (state) => !state.isSessionComplete(currentSession?._id || ''),
+  );
 
   const updateModel = useChatConfig((state) => state.update);
   const [searchKeyword, setSearchKeyword] = React.useState('');
@@ -492,7 +498,14 @@ const ChatHistories = React.forwardRef((_, ref) => {
         fetchNextPage(sessionFilter, searchKeyword, pageRef.current + 1);
       }
     },
-    [isLoadingMore, hasMore, isFirstLoading, fetchNextPage, sessionFilter, searchKeyword],
+    [
+      isLoadingMore,
+      hasMore,
+      isFirstLoading,
+      fetchNextPage,
+      sessionFilter,
+      searchKeyword,
+    ],
   );
 
   // ===== 收藏会话打开方法 =====
@@ -705,8 +718,13 @@ const ChatHistories = React.forwardRef((_, ref) => {
   );
 
   const disabled = React.useMemo(() => {
-    return isStreaming || isProcessing || isTerminalProcessing;
-  }, [isStreaming, isProcessing, isTerminalProcessing]);
+    return (
+      isStreaming ||
+      isProcessing ||
+      isTerminalProcessing ||
+      isSubagentProcessing
+    );
+  }, [isStreaming, isProcessing, isTerminalProcessing, isSubagentProcessing]);
 
   return (
     <Tooltip label="历史会话" isDisabled={isOpen}>

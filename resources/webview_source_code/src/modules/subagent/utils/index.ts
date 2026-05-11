@@ -15,8 +15,9 @@ export { getToolsForAgent } from './tools';
 export {
   buildInitialMessages,
   formatTaskResult,
-  ChatRole,
+  TaskStatus,
 } from './messages';
+export type { TaskResultFormatOptions } from './messages';
 
 // 工具结果验证
 export { validateToolResults } from './validation';

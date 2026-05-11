@@ -22,6 +22,8 @@ export function getToolsEN(options: {
   codeMakerVersion?: string;
   isVSCode: boolean;
   skills?: SkillIndexItem[];
+  /** 强制包含 task 工具（用于 SLASH 命令触发时） */
+  forceIncludeTask?: boolean;
 }) {
   const {
     workspace,
@@ -30,6 +32,7 @@ export function getToolsEN(options: {
     enableTerminal,
     codeMakerVersion,
     isVSCode,
+    forceIncludeTask = false,
   } = options;
   const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
   const jetbrainsVersion = isJetbrains ? codeMakerVersion?.split('-')?.[1] || '0.0.0' : '0.0.0';
@@ -504,10 +507,19 @@ Critical rules:
     tools.push(AskUserQuestionTool);
   }
 
-  const enableSubAgent = autoApply && autoExecute && useExtensionStore.getState().subagentEnable;
-  // Only inject task tool when autoApply, autoExecute are enabled AND subagent functionality is enabled
-  if (enableSubAgent) {
-    tools.unshift(getTaskTool());
+  // Only inject task tool when:
+  // 1. autoApply, autoExecute are enabled AND subagent functionality is enabled
+  // 2. NOT in manual trigger mode, OR forceIncludeTask is true (triggered via SLASH command)
+  const subagentEnable = useExtensionStore.getState().subagentEnable;
+  const subagentManualTriggerOnly =
+    useExtensionStore.getState().subagentManualTriggerOnly;
+  const allowedSubagent = subagentEnable && autoApply && autoExecute;
+
+  if (allowedSubagent) {
+    // In manual trigger mode, only include task tool when explicitly forced
+    if (!subagentManualTriggerOnly || forceIncludeTask) {
+      tools.unshift(getTaskTool());
+    }
   }
 
   if (
@@ -517,7 +529,7 @@ Critical rules:
       (isJetbrains && versionCompare('26.4.1', jetbrainsVersion) >= 0)
     )
   ) {
-    tools.push(getGlobTool({ enableSubAgent }));
+    tools.push(getGlobTool({ enableSubAgent: allowedSubagent }));
   }
 
   if (chatApplyMode === ChatApplyType.ClaudeEdit &&

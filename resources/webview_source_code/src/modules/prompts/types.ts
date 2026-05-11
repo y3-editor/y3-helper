@@ -30,9 +30,15 @@ export interface PromptContext {
     openspecVersion?: string;
     codeMakerVersion?: string;
     codebaseChatMode?: string;
+    /** Subagent 手动触发模式：true 时仅允许通过 CRITICAL INSTRUCTION 触发 */
+    subagentManualTriggerOnly?: boolean;
   };
   /** 自定义变量 */
   variables?: Record<string, string>;
+  /**
+   * 为 true 时使用子代理专用片段（如 search-and-reading-subagent），避免与主会话探索策略混用。
+   */
+  isSubagent?: boolean;
 }
 
 /**

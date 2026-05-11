@@ -27,44 +27,44 @@ export enum ModelIconType {
 }
 
 export interface TokenInfo {
-  maxTokens: number; 
-  maxTokensInCodebase: number; 
+  maxTokens: number;
+  maxTokensInCodebase: number;
   maxInputTokens?: number;
   maxOutputTokens?: number;
 }
 
 export interface PriceInfo {
-  currency: string; 
-  promptWeight: number; 
-  completionWeight: number; 
-  cacheWeightFor5min: number; 
-  hitCacheWeight: number; 
+  currency: string;
+  promptWeight: number;
+  completionWeight: number;
+  cacheWeightFor5min: number;
+  hitCacheWeight: number;
 }
 
 // 权限配置信息
 export interface AuthInfo {
-  allowAll: boolean; 
-  allowedUsers: string[]; 
-  allowedDepartments: string[]; 
+  allowAll: boolean;
+  allowedUsers: string[];
+  allowedDepartments: string[];
 }
 
 // 模型配置接口
 export interface IChatModelConfig {
-  supplyChannel?: string; 
-  code: ChatModel; 
-  title: string; 
-  enabled: boolean; 
-  icon: string; 
-  chatType: ChatModelType; 
-  parseImgType: ParseImgType; 
-  isPrivate: boolean; 
+  supplyChannel?: string;
+  code: ChatModel;
+  title: string;
+  enabled: boolean;
+  icon: string;
+  chatType: ChatModelType;
+  parseImgType: ParseImgType;
+  isPrivate: boolean;
   tags: string[];
-  hasComputableToken: boolean; 
-  hasTokenCache: boolean; 
-  hasThinking: boolean; 
-  useModel?: ChatModel; 
-  peerUserContent: boolean; 
-  displayOrder: number; 
+  hasComputableToken: boolean;
+  hasTokenCache: boolean;
+  hasThinking: boolean;
+  useModel?: ChatModel;
+  peerUserContent: boolean;
+  displayOrder: number;
   tokenInfo: TokenInfo;
   priceInfo: PriceInfo;
   authInfo: AuthInfo;
@@ -120,10 +120,15 @@ export enum ChatModel {
   Glm46 = 'glm-4.6',
   Glm47 = 'glm-4.7',
   Glm5 = 'glm-5',
+  Glm5Turbo = 'glm-5-turbo',
+  Glm51 = 'glm-5.1',
 }
 
-export async function getUserModels() {
-  const { data } = await originalCodeMakerApi.get('/get_user_models');
+export async function getUserModels(): Promise<IGetUserModelsResponse> {
+  const { data } =
+    await originalCodeMakerApi.get<IGetUserModelsResponse>(
+      '/get_user_models'
+    );
   return data;
 }
 
@@ -757,10 +762,4 @@ export const CHAT_MODELS_MAP: Record<string, IChatModelConfig> = {
 export async function getModelRateLimitStats() {
   const { data } = await originalCodeMakerApi.get('/rate_limit_stats');
   return data;
-}
-
-export interface ModelPriceInfo {
-  currency: string;
-  promptWeight: number;
-  completionWeight: number;
 }

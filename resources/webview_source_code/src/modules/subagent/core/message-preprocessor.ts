@@ -20,12 +20,22 @@ import {
   repairToolIdOfMessages,
 } from '../../../utils/validateBeforeChat';
 import { pruneToolOutputs } from '../../../services/compressionService';
-import { truncateMessagesIfNeeded } from '../../../utils/truncateMessages';
+import {
+  truncateMessagesIfNeeded,
+  truncatedMessageWithSlideWindow,
+} from '../../../utils/truncateMessages';
 // import { useWorkspaceStore } from '../../../store/workspace';
 // import { CACHE_TIER_BREAK } from '../../../store/workspace/constructRemixPrompt';
-import addCacheMarksToMessages from '../../../utils/addCacheMarksToMessages';
+import addCacheMarksToMessages, {
+  addCacheMarksToTools,
+  checkReusable,
+} from '../../../utils/addCacheMarksToMessages';
 import type { Tool } from '../../../store/workspace';
 import type { Agent } from '../types';
+import type { SessionCompressionState } from '../../../types/contextCompression';
+import { debugLog, debugWarn } from '../../../utils/debugLog';
+
+const MODULE = 'Subagent/MessagePreprocessor';
 
 export interface MessagePreprocessOptions {
   messages: ChatMessage[];
@@ -34,10 +44,12 @@ export interface MessagePreprocessOptions {
   tools: Tool[];
   cacheEnable: boolean;
   taskId: string;
+  compressionState: SessionCompressionState;
 }
 
 export interface PreprocessedMessageResult {
   messages: ChatMessage[];
+  tools: Tool[];
   cacheEnable: boolean;
   metadata: {
     originalMessageCount: number;
@@ -54,17 +66,18 @@ export interface PreprocessedMessageResult {
 export async function preprocessSubagentMessages(
   options: MessagePreprocessOptions,
 ): Promise<PreprocessedMessageResult> {
-  const { messages, agent, model, taskId } = options;
+  const { messages, model, taskId, compressionState } = options;
   let { cacheEnable } = options;
 
   const originalMessageCount = messages.length;
   const processedMessages = [...messages];
 
-  console.log(`[Subagent] ${taskId} Starting message preprocessing:`, {
-    originalCount: originalMessageCount,
+  debugLog(MODULE, 'Preprocessing Start', {
+    taskId,
+    initialCacheEnable: cacheEnable,
+    compressionEnabled: compressionState.enabled,
+    messageCount: originalMessageCount,
     model,
-    cacheEnable,
-    agentName: agent.name,
   });
 
   // 1. 过滤未压缩的消息（参考主agent逻辑）
@@ -76,11 +89,7 @@ export async function preprocessSubagentMessages(
         !self?.[index + 1]?.isCompressed),
   );
 
-  console.log(
-    `[Subagent] ${taskId} After compression filtering: ${unCompressedMessages.length} messages`,
-  );
-
-  // 2. 消息截断策略（简化版本，主要使用pruneToolOutputs）
+  // 2. 消息截断策略：与主 agent 保持一致
   let truncationResult;
   const codebaseModelMaxTokens =
     useChatConfig.getState().codebaseModelMaxTokens;
@@ -89,27 +98,20 @@ export async function preprocessSubagentMessages(
   const prunedMessages = await pruneToolOutputs(unCompressedMessages);
 
   if (cacheEnable && prunedMessages.length !== unCompressedMessages.length) {
-    console.log(
-      `[Subagent] ${taskId} Applied tool output pruning: ${unCompressedMessages.length} -> ${prunedMessages.length} messages`,
-    );
+    debugLog(MODULE, 'Tool Output Pruning Applied', {
+      taskId,
+      before: unCompressedMessages.length,
+      after: prunedMessages.length,
+      pruned: unCompressedMessages.length - prunedMessages.length,
+    });
   }
 
-  // 如果启用缓存，尝试智能截断
-  if (cacheEnable) {
-    truncationResult = truncateMessagesIfNeeded({
-      messages: prunedMessages,
-      model,
-      codebaseModelMaxTokens,
-    });
+  // ✅ 关键修复：与主 agent 保持一致的逻辑
+  const compressionEnabled = compressionState.enabled;
 
-    if (truncationResult.fallbackToSlideWindow) {
-      console.log(
-        `[Subagent] ${taskId} Falling back to slide window, disabling cache`,
-      );
-      cacheEnable = false;
-    }
-  } else {
-    // 不启用缓存时，直接使用pruned消息
+  if (compressionEnabled) {
+    // 压缩启用时：只用 pruneToolOutputs，不调用 truncateMessagesIfNeeded
+    // 这样不会设置 truncateStart 标记，避免截断第一条 user message
     truncationResult = {
       sendMessages: prunedMessages,
       containUserMessage: true,
@@ -117,13 +119,52 @@ export async function preprocessSubagentMessages(
       previousTokens: 0,
       fallbackToSlideWindow: false,
     };
+
+    debugLog(MODULE, 'Compression Enabled - Skip Truncation', {
+      taskId,
+      messageCount: prunedMessages.length,
+      note: 'Using pruneToolOutputs only, no truncateMessagesIfNeeded',
+    });
+  } else if (cacheEnable) {
+    // 压缩未启用但 cache 启用时：才调用 truncateMessagesIfNeeded
+    truncationResult = truncateMessagesIfNeeded({
+      messages: prunedMessages,
+      model,
+      codebaseModelMaxTokens,
+    });
+
+    debugLog(MODULE, 'Truncation Result', {
+      taskId,
+      fallbackToSlideWindow: truncationResult.fallbackToSlideWindow,
+      newTruncateStart: truncationResult.newTruncateStart,
+      messageCount: truncationResult.sendMessages.length,
+      previousTokens: truncationResult.previousTokens,
+    });
+
+    if (truncationResult.fallbackToSlideWindow) {
+      debugWarn(MODULE, '⚠️ Cache Disabled by Slide Window Fallback', {
+        taskId,
+        reason: 'truncateMessagesIfNeeded returned fallbackToSlideWindow=true',
+        messageCount: prunedMessages.length,
+        maxTokens: codebaseModelMaxTokens[model],
+      });
+      cacheEnable = false;
+    }
+  } else {
+    // 都未启用：使用滑动窗口
+    truncationResult = truncatedMessageWithSlideWindow({
+      messages: prunedMessages,
+      model,
+      codebaseModelMaxTokens,
+    });
+
+    debugLog(MODULE, 'Slide Window Fallback', {
+      taskId,
+      messageCount: truncationResult.sendMessages.length,
+    });
   }
 
   const { sendMessages } = truncationResult;
-
-  console.log(
-    `[Subagent] ${taskId} After truncation: ${sendMessages.length} messages`,
-  );
 
   // 3. 系统提示词处理（使用简化的规则集）
   // const effectiveRules: Rule[] = []; // subagent可以传入空规则集，或者从agent配置中提取
@@ -158,29 +199,32 @@ export async function preprocessSubagentMessages(
   //   `[Subagent] ${taskId} System prompt ${systemMessageIndex >= 0 ? 'replaced' : 'added'}: ${codebaseChatSystemPrompt.length} chars`,
   // );
 
-  // 4. 消息序列化（关键步骤）
+  // 4. 序列化消息（处理文件内容等）
   let filteredMessages = await serializeCodebaseMessages(
     model,
     sendMessages,
-    undefined, // subagent不需要session参数
   );
 
-  console.log(
-    `[Subagent] ${taskId} After serialization: ${filteredMessages.length} messages`,
-  );
+  // 4.5 Gemini 模型的 thinking_signature 特殊处理
+  // 与主 agent 保持一致的逻辑 (src/store/chat.ts:6002-6007)
+  if ([ChatModel.Gemini25, ChatModel.Gemini3Pro].includes(model)) {
+    filteredMessages = filteredMessages.map((message) => {
+      // 对于 Gemini 模型,如果 assistant message 没有 thinking_signature,
+      // 则删除所有 thinking 相关字段
+      if (message.role === ChatRole.Assistant && !message.thinking_signature) {
+        const { redacted_thinking, thinking_signature, reasoning_content, ...rest } = message;
+        return rest as ChatMessage;
+      }
+      return message;
+    });
+  }
 
   // 5. 工具ID修复
   filteredMessages = repairToolIdOfMessages(filteredMessages, model);
 
-  console.log(
-    `[Subagent] ${taskId} After tool ID repair: ${filteredMessages.length} messages`,
-  );
-
-  // 6. 添加缓存标记（如果启用）
-  if (cacheEnable) {
-    filteredMessages = addCacheMarksToMessages(filteredMessages);
-    console.log(`[Subagent] ${taskId} Applied cache marks`);
-  }
+  // 6. 返回未添加缓存标记的消息（与主agent保持一致）
+  // 缓存标记将在 buildSubagentChatPromptBody 中添加，避免影响压缩逻辑
+  const filteredTools = options.tools;
 
   const metadata = {
     originalMessageCount,
@@ -190,10 +234,17 @@ export async function preprocessSubagentMessages(
     // systemPromptLength: codebaseChatSystemPrompt.length,
   };
 
-  console.log(`[Subagent] ${taskId} Preprocessing complete:`, metadata);
+  debugLog(MODULE, 'Preprocessing Complete', {
+    taskId,
+    finalCacheEnable: cacheEnable,
+    cacheDisabledReason: !cacheEnable && options.cacheEnable ? 'fallbackToSlideWindow' : undefined,
+    ...metadata,
+    note: 'Cache marks will be added in buildSubagentChatPromptBody',
+  });
 
   return {
     messages: filteredMessages,
+    tools: filteredTools,
     cacheEnable,
     metadata,
   };
@@ -205,12 +256,12 @@ export async function preprocessSubagentMessages(
 export function buildSubagentChatPromptBody(
   preprocessResult: PreprocessedMessageResult,
   model: ChatModel,
-  tools: Tool[],
   options: {
     stream?: boolean;
     tool_choice?: string;
     temperature?: number;
     max_tokens?: number;
+    taskId?: string;
   } = {},
 ): ChatPromptBody {
   const {
@@ -218,6 +269,7 @@ export function buildSubagentChatPromptBody(
     tool_choice = 'auto',
     temperature = 1,
     max_tokens,
+    taskId = 'unknown',
   } = options;
 
   // 计算默认max_tokens
@@ -226,10 +278,31 @@ export function buildSubagentChatPromptBody(
     defaultMaxTokens = 32000;
   }
 
+  // 在构建最终请求体时添加缓存标记（与主agent的时机保持一致）
+  let finalMessages = preprocessResult.messages;
+  let finalTools = preprocessResult.tools;
+
+  if (preprocessResult.cacheEnable) {
+    finalMessages = addCacheMarksToMessages(preprocessResult.messages);
+    finalTools = addCacheMarksToTools(preprocessResult.tools) || preprocessResult.tools;
+
+    debugLog(MODULE, 'Cache Marks Applied', {
+      taskId,
+      messageCount: finalMessages.length,
+      toolCount: finalTools.length,
+    });
+
+    // 验证缓存前缀匹配性（开发调试用）
+    checkReusable({
+      messages: finalMessages,
+      tools: finalTools,
+    });
+  }
+
   const promptData: ChatPromptBody = {
-    messages: preprocessResult.messages,
+    messages: finalMessages,
     model,
-    tools,
+    tools: finalTools,
     stream,
     tool_choice: model.startsWith('claude') ? undefined : tool_choice,
     temperature,

@@ -14,7 +14,7 @@ import {
   calculateSingleMessageContentTokensAsync,
   trimMessagesByTokenLimit,
 } from '../utils/tokenCalculator';
-import { Tool, useWorkspaceStore } from '../store/workspace';
+import { Tool, useWorkspaceStore, SpecFramework } from '../store/workspace';
 import { generateCompressionPrompt } from '../utils/compressionPrompt';
 import { fetchCodebaseGptResponse, GPTResponse } from '../services/chat';
 import { UserEvent } from '../types/report';
@@ -287,8 +287,22 @@ export class CompressionService {
         console.warn('[CompressionService] Not enough messages to compress');
       }
 
+      // 检测 spec 工作流模式，追加工作流保留指令
+      const workflowMode = useChatStore.getState().codebaseChatMode;
+      let instructions = additionalInstructions || '';
+      if (workflowMode && workflowMode !== 'vibe') {
+        let modeName: string;
+        if (workflowMode === 'openspec') {
+          const version = useWorkspaceStore.getState().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
+          modeName = version === '1.x' ? 'OpenSpec OPSX (1.x)' : 'OpenSpec (0.23)';
+        } else {
+          modeName = 'SpecKit';
+        }
+        instructions += `\nThis conversation is in ${modeName} workflow mode. You MUST include the active workflow mode, current phase (e.g., explore, apply, propose, continue), the active change name if any, and phase-specific constraints (e.g., explore mode STRICTLY prohibits code implementation — thinking and reading only; apply mode must follow the task list from change artifacts) in your summary. This is CRITICAL for maintaining workflow continuity after compression.`;
+      }
+
       // Generate compression prompt
-      const compressionPrompt = generateCompressionPrompt(additionalInstructions);
+      const compressionPrompt = generateCompressionPrompt(instructions || undefined);
 
       // Prepare messages for LLM call
       const compressionMessages = [
@@ -331,6 +345,8 @@ export class CompressionService {
 
       const extractSummaryText = (response: Awaited<ReturnType<typeof requestCompression>>) =>
         response?.choices?.[0]?.message?.content ?? '';
+
+
 
       const runCompressionWithFallback = async () => {
         // 第 1 次：全量消息压缩
@@ -419,7 +435,7 @@ export class CompressionService {
       }
 
       // Calculate compressed token count
-      const compressedTokenCount = compressionResponse.usage?.completion_tokens_details.text_tokens
+      const compressedTokenCount = compressionResponse.usage?.completion_tokens_details?.text_tokens
         || compressionResponse.usage?.completion_tokens
         || compressionResponse.usage?.total_tokens
         || 0;
@@ -504,23 +520,37 @@ ${summaryText}
     }
 
     if (unCompressedCount === 0) {
+      // 所有消息都已压缩，追加新的压缩结果到最后
       return [
         ...originalMessages,
         compressionResult.compressedResult,
       ]
     } else {
-      const compressedMessages = originalMessages.slice(0, -unCompressedCount);
+      // 计算实际保留的消息数量，使用 CompressionResult 中的信息
+      const actualPreserveCount = compressionResult.preserveRecentCount || 0;
+      
+      // 如果所有消息都未压缩，需要根据实际的保留数量来分割
+      const effectivePreserveCount = unCompressedCount === originalMessages.length 
+        ? actualPreserveCount 
+        : unCompressedCount;
+      
+      if (effectivePreserveCount === 0) {
+        // 没有保留消息，压缩summary放在最后
+        return [
+          ...originalMessages,
+          compressionResult.compressedResult,
+        ];
+      } else {
+        // 有保留消息，压缩summary放在被压缩内容和保留内容之间
+        const compressedMessages = originalMessages.slice(0, -effectivePreserveCount);
+        const recentMessages = originalMessages.slice(-effectivePreserveCount);
 
-      // Keep recent messages
-      const recentMessages = originalMessages.slice(-unCompressedCount);
-
-      // Replace compressed portion with summary + recent messages
-      return [
-        ...compressedMessages,
-        compressionResult.compressedResult,
-        ...recentMessages,
-      ];
-
+        return [
+          ...compressedMessages,
+          compressionResult.compressedResult,
+          ...recentMessages,
+        ];
+      }
     }
   }
 }

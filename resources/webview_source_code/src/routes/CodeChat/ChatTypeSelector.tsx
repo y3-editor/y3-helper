@@ -24,6 +24,7 @@ import type { IconType } from 'react-icons';
 import { RiChat1Line } from 'react-icons/ri';
 import { IoCodeSlashOutline } from 'react-icons/io5';
 import { usePanelContext } from '../../context/PanelContext';
+import { useTaskCompletionStore } from '../../modules/subagent';
 
 interface ChatTypeOption {
   label: string;
@@ -55,6 +56,7 @@ const ChatTypeSelector = () => {
   const { isPanelMode } = usePanelContext();
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const [isOpenPopover, setIsOpenPopover] = React.useState(false);
+  const currentSessionId = useChatStore((state) => state.currentSessionId);
   const chatType = useChatStore((state) => state.chatType);
   const setChatType = useChatStore((state) => state.setChatType);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
@@ -63,6 +65,9 @@ const ChatTypeSelector = () => {
     (state) => state.isTerminalProcessing,
   );
   const isSearching = useChatStreamStore((state) => state.isSearching);
+  const isSubagentProcessing = useTaskCompletionStore((state) =>
+    !state.isSessionComplete(currentSessionId || ''),
+  );
 
   const ide = useExtensionStore((state) => state.IDE);
   const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion);
@@ -80,8 +85,14 @@ const ChatTypeSelector = () => {
   }, [ide]);
 
   const disabled = React.useMemo(() => {
-    return isStreaming || isProcessing || isTerminalProcessing || isSearching;
-  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching]);
+    return (
+      isStreaming ||
+      isProcessing ||
+      isTerminalProcessing ||
+      isSearching ||
+      isSubagentProcessing
+    );
+  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching, isSubagentProcessing]);
 
   useOutsideClick({
     ref: popoverRef,
@@ -130,8 +141,7 @@ const ChatTypeSelector = () => {
   // 获取当前选中类型的显示文本
   const currentLabel = React.useMemo(() => {
     return (
-      chatTypeOptions.find((opt) => opt.value === chatType)?.label ||
-      chatType
+      chatTypeOptions.find((opt) => opt.value === chatType)?.label || chatType
     );
   }, [chatType, chatTypeOptions]);
 

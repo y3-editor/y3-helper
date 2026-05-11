@@ -134,7 +134,7 @@ export function DateFormat(d: Date | string | number, fmt?: string): string {
 }
 
 export function toastErrorMessage(error: Error) {
-  return `错误：${error.message}，请重试或联系我们：7896636`;
+  return `错误：${error.message}，请重试或联系我们：8270037`;
 }
 
 export function addString(
@@ -566,11 +566,11 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('invalid_request_error'),
-    message: '❌ 消息体异常，请联系 CodeMaker 团队(popo：7896636)反馈'
+    message: '❌ 消息体异常，请联系 CodeMaker 团队(popo：8270037)反馈'
   },
   {
     condition: (msg: string) => msg.includes("Error code: 500") && msg.includes('TypeError'),
-    message: '🔧 消息解析异常，请联系 CodeMaker 团队(popo：7896636)反馈'
+    message: '🔧 消息解析异常，请联系 CodeMaker 团队(popo：8270037)反馈'
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('RequestValidationError'),
@@ -578,7 +578,7 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => msg.includes("Error code: 400") && msg.includes('InvalidRequestErrorFromAIGW'),
-    message: '⚠️ 消息格式异常，请联系 CodeMaker 团队(popo：7896636)反馈'
+    message: '⚠️ 消息格式异常，请联系 CodeMaker 团队(popo：8270037)反馈'
   },
   {
     condition: (msg: string) => (
@@ -593,7 +593,7 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => /Error code: [54]\d{2}/.test(msg),
-    message: '❌ 系统报错，稍后重试或联系 CodeMaker 团队(popo：7896636)反馈。'
+    message: '❌ 系统报错，稍后重试或联系 CodeMaker 团队(popo：8270037)反馈。'
   },
   {
     condition: (msg: string) => msg.includes("anthropic_error_chunk type:overloaded_error message:Overloaded"),
@@ -705,7 +705,7 @@ export const handleStreamError = (
 
   const msg = error.message || error.msg
 
-  return `\n\n 出错了，【${msg}】，稍后重试或联系 CodeMaker 团队(popo：7896636)反馈。`;
+  return `\n\n 出错了，【${msg}】，稍后重试或联系 CodeMaker 团队(popo：8270037)反馈。`;
 }
 export const filterDocsetsFn = (docsets: Docset[]): Partial<Docset>[] => {
   // 深拷贝输入数据
@@ -865,27 +865,4 @@ export function getValidToolName(name: string) {
  */
 export function isImageFileByPath(path: string): boolean {
   return /\.(png|jpg|webp|gif|jpeg)$/i.test(path)
-}
-
-/**
- * 格式化 Token 数量为人类可读的简短字符串。
- * - >= 1B → '1B'
- * - >= 1M → '2M'
- * - >= 1K → '35K'
- * - < 1K  → 原始数值字符串
- */
-export function formatTokenCount(tokens: number): string {
-  const billion = 1_000_000_000;
-  const million = 1_000_000;
-  const thousand = 1_000;
-
-  if (tokens >= billion) {
-    return (tokens / billion).toFixed(0) + 'B';
-  } else if (tokens >= million) {
-    return (tokens / million).toFixed(0) + 'M';
-  } else if (tokens >= thousand) {
-    return (tokens / thousand).toFixed(0) + 'K';
-  } else {
-    return String(tokens);
-  }
 }

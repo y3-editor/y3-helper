@@ -16,7 +16,7 @@ import { devcloudOfficeRequest } from '../../services';
 import { IMultiAttachment, useChatStore } from '../chat';
 import { minimatch } from 'minimatch';
 import { AttachType } from '../attaches';
-import { useSkillsStore, SkillIndexItem } from '../skills';
+import { useSkillsStore } from '../skills';
 import { OPSX_BUILTIN_SKILLS } from '../skills/builtinSkills';
 import { PromptLinkMgr } from './pomptLinkMgr';
 
@@ -418,9 +418,11 @@ export type WorkspaceStore = {
   getCodebaseChatSystemPrompt: (options?: {
     isReAct?: boolean,
     effectiveRules: Rule[],
-    promptLink?: PromptLinkMgr
+    promptLink?: PromptLinkMgr,
+    /** Agent system reminders (listing + optional invocation directive) */
+    agentReminders?: string,
   }) => string;
-  getCodebaseChatTools: () => Tool[];
+  getCodebaseChatTools: (options?: { forceIncludeTask?: boolean }) => Tool[];
   getCodebaseFunctionPrompt: () => string;
   setDevSpace: (newDevSpace: DevSpace) => void;
   setDevSpaceOptions: (options: DevSpaceOption[]) => void;
@@ -632,12 +634,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       getCodebaseChatSystemPrompt(options: {
         isReAct?: boolean,
         effectiveRules: Rule[],
-        promptLink?: PromptLinkMgr
+        promptLink?: PromptLinkMgr,
+        agentReminders?: string,
       } = {
           isReAct: false,
           effectiveRules: [],
         }) {
-        const { isReAct, effectiveRules, promptLink } = options;
+        const { isReAct, effectiveRules, promptLink, agentReminders } = options;
         const { workspace, osName, shell, openFilePaths, repoCodeTable, codebaseCustomPrompt } =
           get().workspaceInfo;
         const { enableNewApply } = useChatApplyStore.getState();
@@ -682,7 +685,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const openspecVersion = get().getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
         const isOpsxMode = codebaseChatMode === 'openspec' && openspecVersion === '1.x';
         const effectiveSkills = isOpsxMode
-          ? [...skills, ...OPSX_BUILTIN_SKILLS.filter((s: SkillIndexItem) => !skills.some((fs: SkillIndexItem) => fs.name === s.name))]
+          ? [...skills, ...OPSX_BUILTIN_SKILLS.filter(s => !skills.some(fs => fs.name === s.name))]
           : skills;
 
         if (enableNewApply) {
@@ -695,6 +698,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             skills: effectiveSkills,
             openspecVersion,
             promptLink: promptLink,
+            agentReminders,
           });
         } else {
           return constructToolCallPrompt({
@@ -708,7 +712,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           });
         }
       },
-      getCodebaseChatTools() {
+      getCodebaseChatTools(options?: { forceIncludeTask?: boolean }) {
+        const { forceIncludeTask = false } = options || {};
         const { workspace } = get().workspaceInfo;
         const { codebases } = get().devSpace;
         const { enableNewApply } = useChatApplyStore.getState();
@@ -735,7 +740,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const skillsStoreForTools = useSkillsStore.getState();
           const skills = skillsStoreForTools.skills.filter(s => skillsStoreForTools.isSkillEnabled(s.name));
           const effectiveSkills = isOpsxMode
-            ? [...skills, ...OPSX_BUILTIN_SKILLS.filter((s: SkillIndexItem) => !skills.some((fs: SkillIndexItem) => fs.name === s.name))]
+            ? [...skills, ...OPSX_BUILTIN_SKILLS.filter(s => !skills.some(fs => fs.name === s.name))]
             : skills;
           return getToolsEN({
             workspace,
@@ -745,6 +750,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             codeMakerVersion,
             isVSCode,
             skills: effectiveSkills,
+            forceIncludeTask,
           });
         } else {
           return getTools({

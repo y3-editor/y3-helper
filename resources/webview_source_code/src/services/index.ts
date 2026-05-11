@@ -149,6 +149,7 @@ export interface ToolResult {
     terminalLog?: string;
     hasShellIntegration?: boolean;
     isLargeFile?: boolean; // 判定是否为大文件
+    isTruncated?: boolean; // For task tool: indicates if subagent was truncated at maxSteps
   }
 }
 
@@ -306,6 +307,28 @@ export interface ChatMessage {
   specPrompt?: string;
   /** 消息创建时间戳（ms）：user 消息为发送时间，assistant 消息为回复完成时间 */
   createdAt?: number;
+
+  /**
+   * 工具执行的扩展上下文，用于持久化工具特有的元数据
+   * 支持不同工具类型的横向扩展
+   */
+  context?: {
+    /** task 工具（subagent）的执行上下文 */
+    task?: {
+      taskId: string;
+      agentName: string;
+      description: string;
+      isError: boolean;
+      isTruncated: boolean;
+    };
+    // 未来可扩展其他工具类型，例如：
+    // mcp?: { ... }
+    // terminal?: { ... }
+    // file_edit?: { ... }
+  };
+
+  // ✅ 标记消息是否为错误消息（便于 UI 识别）
+  isError?: boolean;
 }
 
 // interface WebSearchType {

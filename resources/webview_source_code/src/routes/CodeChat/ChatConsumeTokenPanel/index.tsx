@@ -19,10 +19,7 @@ import { usePostMessage } from '../../../PostMessageProvider';
 import MiniButton from '../../../components/MiniButton';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
-import {
-  formatTokenCount,
-  calculateChildrenTotalTokens,
-} from '../../../utils/consumedTokensCalculator';
+import { formatTokenCount } from '../../../utils/consumedTokensCalculator';
 import type { ChildSession } from '../../../utils/consumedTokensCalculator';
 
 /** 基于 agent 名称 hash 稳定分配颜色 */
@@ -113,6 +110,47 @@ function TokenRow({
   );
 }
 
+/** 判断是否有缓存相关的 token 数据（Claude 模型特有） */
+function hasCacheTokens(consumedTokens?: {
+  cacheCreationInputTokens?: number;
+  readCacheTokens?: number;
+}): boolean {
+  if (!consumedTokens) return false;
+  return (
+    (consumedTokens.cacheCreationInputTokens || 0) > 0 ||
+    (consumedTokens.readCacheTokens || 0) > 0
+  );
+}
+
+/** 计算单个 Subagent session 的 token 总和 */
+function calculateSubagentSessionTotal(consumedTokens?: {
+  cacheCreationInputTokens?: number;
+  promptTokens?: number;
+  readCacheTokens?: number;
+}): number {
+  if (!consumedTokens) return 0;
+
+  // 如果有缓存相关数据（Claude 模型），使用三项相加
+  if (hasCacheTokens(consumedTokens)) {
+    return (
+      (consumedTokens.cacheCreationInputTokens || 0) +
+      (consumedTokens.promptTokens || 0) +
+      (consumedTokens.readCacheTokens || 0)
+    );
+  }
+
+  // 非 Claude 模型只使用 promptTokens
+  return consumedTokens.promptTokens || 0;
+}
+
+/** 计算所有 Subagent 的 token 总和 */
+function calculateSubagentTotalTokens(childrenSummary: ChildSession[]): number {
+  return childrenSummary.reduce(
+    (total, session) => total + calculateSubagentSessionTotal(session.consumedTokens),
+    0
+  );
+}
+
 /** 子会话 Token 折叠展示区域 */
 interface ChildSessionTokenSectionProps {
   childrenSummary: ChildSession[];
@@ -126,6 +164,20 @@ function ChildSessionTokenSection({
   isDark,
 }: ChildSessionTokenSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  // 记录展开的 session id
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+
+  const toggleSessionExpand = (sessionId: string) => {
+    setExpandedSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  };
 
   const sortedSessions = useMemo(
     () =>
@@ -133,17 +185,15 @@ function ChildSessionTokenSection({
         .filter((session) => session.consumedTokens) // 过滤掉没有 token 统计的会话
         .map((session) => [session.name, session] as const)
         .sort(([, a], [, b]) => {
-          const aTotal =
-            (a.consumedTokens?.input || 0) + (a.consumedTokens?.output || 0);
-          const bTotal =
-            (b.consumedTokens?.input || 0) + (b.consumedTokens?.output || 0);
+          const aTotal = calculateSubagentSessionTotal(a.consumedTokens);
+          const bTotal = calculateSubagentSessionTotal(b.consumedTokens);
           return bTotal - aTotal;
         }),
     [childrenSummary],
   );
 
   const sessionCount = sortedSessions.length;
-  const totalTokens = calculateChildrenTotalTokens(childrenSummary);
+  const totalTokens = calculateSubagentTotalTokens(childrenSummary);
   const pct = pctBase > 0 ? ((totalTokens / pctBase) * 100).toFixed(1) : '0.0';
 
   return (
@@ -218,58 +268,197 @@ function ChildSessionTokenSection({
           borderColor={isDark ? '#3a3a3a' : '#e5e7eb'}
         >
           {sortedSessions.map(([sessionName, stats]) => {
-            const sessionTotal =
-              (stats.consumedTokens?.input || 0) +
-              (stats.consumedTokens?.output || 0);
+            const ct = stats.consumedTokens;
+            const sessionTotal = calculateSubagentSessionTotal(ct);
             const sessionPct =
               pctBase > 0 ? ((sessionTotal / pctBase) * 100).toFixed(1) : '0.0';
+            const isSessionExpanded = expandedSessions.has(stats.id);
+
+            // 根据是否有缓存数据决定显示的行
+            const hasCache = hasCacheTokens(ct);
+            const detailRows = hasCache
+              ? [
+                  {
+                    color: '#60a5fa',
+                    label: 'Cache Creation',
+                    value: ct?.cacheCreationInputTokens || 0,
+                  },
+                  {
+                    color: '#34d399',
+                    label: 'Prompt Tokens',
+                    value: ct?.promptTokens || 0,
+                  },
+                  {
+                    color: '#a78bfa',
+                    label: 'Read Cache',
+                    value: ct?.readCacheTokens || 0,
+                  },
+                ]
+              : [
+                  {
+                    color: '#34d399',
+                    label: 'Prompt Tokens',
+                    value: ct?.promptTokens || 0,
+                  },
+                ];
+
             return (
-              <Flex key={stats.id} alignItems="center" gap={2} py={0.5} justifyContent="space-between">
-                {/* 左侧：圆点 + 名称 */}
-                <Flex alignItems="center" gap={2} flex={1} minW={0}>
-                  <Box
-                    w="6px"
-                    h="6px"
-                    borderRadius="50%"
+              <Box key={stats.id}>
+                {/* Session 汇总行 */}
+                <Flex
+                  alignItems="center"
+                  gap={2}
+                  py={0.5}
+                  justifyContent="space-between"
+                  cursor="pointer"
+                  onClick={() => toggleSessionExpand(stats.id)}
+                  _hover={{ opacity: 0.8 }}
+                  userSelect="none"
+                >
+                  {/* 左侧：圆点 + 名称 + 展开箭头 */}
+                  <Flex alignItems="center" gap={2} flex={1} minW={0}>
+                    <Box
+                      w="6px"
+                      h="6px"
+                      borderRadius="50%"
+                      flexShrink={0}
+                      bg={getAgentColor(sessionName)}
+                    />
+                    <Tooltip
+                      label={sessionName.length > 20 ? sessionName : undefined}
+                      placement="top"
+                    >
+                      <Text
+                        fontSize="xs"
+                        color={isDark ? '#aaa' : '#666'}
+                        flexShrink={0}
+                        maxW="140px"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        whiteSpace="nowrap"
+                        cursor={sessionName.length > 20 ? 'default' : 'pointer'}
+                      >
+                        {sessionName}
+                      </Text>
+                    </Tooltip>
+                    <Icon
+                      as={
+                        isSessionExpanded
+                          ? MdKeyboardArrowDown
+                          : MdKeyboardArrowRight
+                      }
+                      color={isDark ? '#666' : '#bbb'}
+                      boxSize={3}
+                      flexShrink={0}
+                    />
+                  </Flex>
+                  {/* 右侧：数值 + 百分比 */}
+                  <Flex
+                    fontSize="xs"
+                    fontFamily="mono"
+                    whiteSpace="nowrap"
+                    alignItems="center"
+                    gap={1}
                     flexShrink={0}
-                    bg={getAgentColor(sessionName)}
-                  />
-                  <Text fontSize="xs" color={isDark ? '#AAAAAA' : '#666'}>本次会话消耗 Tokens 分布</Text>
-                  <Tooltip
-                    label={sessionName.length > 20 ? sessionName : undefined}
-                    placement="top"
+                  >
+                    <Text
+                      fontWeight="semibold"
+                      color={isDark ? '#E0E0E0' : '#111'}
+                    >
+                      {formatTokens(sessionTotal)}
+                    </Text>
+                    <Text
+                      w="44px"
+                      textAlign="right"
+                      color={isDark ? '#888' : '#999'}
+                    >
+                      ({sessionPct}%)
+                    </Text>
+                  </Flex>
+                </Flex>
+
+                <Flex>
+                  <Box
+                    ml={3}
+                    pl={2}
+                    borderLeft="1px solid"
+                    borderColor={isDark ? '#2a2a2a' : '#f0f0f0'}
+                    mt={1}
                   >
                     <Text
                       fontSize="xs"
-                      color={isDark ? '#aaa' : '#666'}
-                      flexShrink={0}
-                      maxW="140px"
-                      overflow="hidden"
-                      textOverflow="ellipsis"
-                      whiteSpace="nowrap"
-                      cursor={sessionName.length > 20 ? 'default' : 'inherit'}
+                      color={isDark ? '#888' : '#888'}
+                      fontFamily="monospace"
+                      isTruncated
+                      maxW={240}
                     >
-                      {sessionName}
+                      {stats.extra?.description}
                     </Text>
-                  </Tooltip>
+                  </Box>
                 </Flex>
-                {/* 右侧：数值 + 百分比 */}
-                <Flex
-                  fontSize="xs"
-                  fontFamily="mono"
-                  whiteSpace="nowrap"
-                  alignItems="center"
-                  gap={1}
-                  flexShrink={0}
-                >
-                  <Text fontWeight="semibold" color={isDark ? '#E0E0E0' : '#111'}>
-                    {formatTokens(sessionTotal)}
-                  </Text>
-                  <Text w="44px" textAlign="right" color={isDark ? '#888' : '#999'}>
-                    ({sessionPct}%)
-                  </Text>
-                </Flex>
-              </Flex>
+
+                {/* Session 内部详细展开 */}
+                <Collapse in={isSessionExpanded} animateOpacity>
+                  <Box
+                    ml={3}
+                    pl={2}
+                    borderLeft="1px solid"
+                    borderColor={isDark ? '#2a2a2a' : '#f0f0f0'}
+                  >
+                    {detailRows.map((row) => {
+                      const rowPct =
+                        sessionTotal > 0
+                          ? ((row.value / sessionTotal) * 100).toFixed(1)
+                          : '0.0';
+                      return (
+                        <Flex
+                          key={row.label}
+                          alignItems="center"
+                          gap={2}
+                          py={0.5}
+                          justifyContent="space-between"
+                        >
+                          <Flex alignItems="center" gap={2} flex={1} minW={0}>
+                            <Box
+                              w="6px"
+                              h="6px"
+                              borderRadius="1px"
+                              flexShrink={0}
+                              bg={row.color}
+                            />
+                            <Text
+                              fontSize="xs"
+                              color={isDark ? '#888' : '#888'}
+                              fontFamily="monospace"
+                            >
+                              {row.label}
+                            </Text>
+                          </Flex>
+                          <Flex
+                            fontSize="xs"
+                            fontFamily="mono"
+                            whiteSpace="nowrap"
+                            alignItems="center"
+                            gap={1}
+                            flexShrink={0}
+                          >
+                            <Text color={isDark ? '#ccc' : '#333'}>
+                              {formatTokens(row.value)}
+                            </Text>
+                            <Text
+                              w="44px"
+                              textAlign="right"
+                              color={isDark ? '#666' : '#aaa'}
+                            >
+                              ({rowPct}%)
+                            </Text>
+                          </Flex>
+                        </Flex>
+                      );
+                    })}
+                  </Box>
+                </Collapse>
+              </Box>
             );
           })}
         </Box>
@@ -318,14 +507,16 @@ export default function ChatConsumeTokenPanel() {
   // 直接读取，避免 useMemo dep 写可选链引起的类型告警
   const childrenSummary = ct?.children ?? null;
   const childrenTotalTokens = childrenSummary
-    ? calculateChildrenTotalTokens(childrenSummary)
+    ? calculateSubagentTotalTokens(childrenSummary)
     : 0;
 
-  // 检查 Subagent 功能是否启用
+  // 检查 Subagent 功能是否启用，且仅在 codebase 模式下展示
   const subagentEnable = useExtensionStore((state) => state.subagentEnable);
+  const isCodebaseMode = chatType === 'codebase';
   const effectiveChildrenSummary =
-    subagentEnable && childrenSummary ? childrenSummary : null;
-  const effectiveChildrenTotalTokens = subagentEnable ? childrenTotalTokens : 0;
+    subagentEnable && isCodebaseMode && childrenSummary ? childrenSummary : null;
+  const effectiveChildrenTotalTokens =
+    subagentEnable && isCodebaseMode ? childrenTotalTokens : 0;
 
   const totalTokens = useMemo(() => {
     if (chatType === 'codebase') {

@@ -29,8 +29,8 @@ export type {
   SubagentStatus,
   SubagentToolCall,
   SubagentStatusInfo,
-  SubagentEventType,
-  SubagentEvent,
+  SubagentSession,
+  SubagentSessionMetadata,
 } from './types';
 
 export { ErrorSeverity } from './types';
@@ -82,7 +82,21 @@ export {
 // ============================================================
 
 export { useSubagentStore } from './state/store';
-export { useSubagentEventStore, emitEvent } from './state/events';
+
+// TaskCompletionTracker - 统一任务完成状态管理
+export {
+  useTaskCompletionStore,
+  TaskCompletionStatus,
+  PERSIST_TIMEOUT_MS,
+  COMPLETION_WATCHDOG_TIMEOUT_MS,
+  USER_ACTION_TIMEOUT_MS,
+  selectIsSessionComplete,
+  selectPendingTaskCount,
+} from './state/taskCompletionTracker';
+export type {
+  PendingPersistEntry,
+  PendingTask,
+} from './state/taskCompletionTracker';
 
 // ============================================================
 // Agents 导出
@@ -108,9 +122,9 @@ export {
 } from './core/session';
 
 export {
-  callSubagentLLM,
+  streamChat,
   createEmptyUsage,
-  addUsage,
+  mergeUsage,
 } from './core/llm';
 
 export { checkAndCompress } from './core/compression';
@@ -126,6 +140,19 @@ export type {
 export { useSubagentEnabled, useSubagentStatus } from './hooks/useSubagentEnabled';
 
 // ============================================================
+// Components 导出
+// ============================================================
+
+export { default as SubagentToolConfirmationPanel } from './components/SubagentToolConfirmationPanel';
+
+// ============================================================
+// Store 导出
+// ============================================================
+
+export { useToolConfirmationStore } from './store/toolConfirmation';
+export type { ToolConfirmationRequest } from './store/toolConfirmation';
+
+// ============================================================
 // Utils 导出
 // ============================================================
 
@@ -134,11 +161,54 @@ export {
   buildInitialMessages,
   formatTaskResult,
   validateToolResults,
-  ChatRole,
+  TaskStatus,
   classifyError,
   withRetry,
 } from './utils';
-export type { Tool, ChatMessage, RetryOptions } from './utils';
+export type { Tool, ChatMessage, RetryOptions, TaskResultFormatOptions } from './utils';
+
+// ============================================================
+// Events 导出 - 事件驱动完成通知机制
+// ============================================================
+
+export {
+  // Event bus
+  taskEventBus,
+  emitTaskRegistered,
+  emitTaskStarted,
+  emitTaskCompleted,
+  emitTaskFailed,
+  emitTaskTimeout,
+  emitTaskCancelled,
+  emitSessionAllTasksComplete,
+  // Event creators
+  createTaskRegisteredEvent,
+  createTaskStartedEvent,
+  createTaskCompletedEvent,
+  createTaskFailedEvent,
+  createTaskTimeoutEvent,
+  createTaskCancelledEvent,
+  createSessionAllTasksCompleteEvent,
+  // Coordinator
+  taskCoordinator,
+  // Pending Event Queue
+  pendingEventQueue,
+  PENDING_EVENT_EXPIRY_MS,
+} from './events';
+
+export type {
+  TaskEvent,
+  TaskEventType,
+  TaskEventHandler,
+  TaskEventHandlerMap,
+  TaskRegisteredEvent,
+  TaskStartedEvent,
+  TaskCompletedEvent,
+  TaskFailedEvent,
+  TaskTimeoutEvent,
+  TaskCancelledEvent,
+  SessionAllTasksCompleteEvent,
+} from './events';
 
 // ============================================================
 // 模块初始化：自动注册内置钩子

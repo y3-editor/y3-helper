@@ -13,6 +13,7 @@ import { useChatStore, useChatStreamStore } from '../../store/chat';
 import { ChatMessageContent } from '../../services/index';
 import { isMacOS } from '../../utils';
 import { useCodeChatContext } from './CodeChatProvider';
+import { useTaskCompletionStore } from '../../modules/subagent';
 
 interface SearchNode {
   node: Node;
@@ -58,6 +59,7 @@ const ChatSearch = () => {
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
+  const isSubagentProcessing = useTaskCompletionStore((state) => !state.isSessionComplete(currentSession?._id || ''));
 
   // MiniSearch 实例
   const miniSearchRef = React.useRef<MiniSearch<MessageDocument> | null>(null);
@@ -65,8 +67,8 @@ const ChatSearch = () => {
   const lastMessageCountRef = React.useRef<number>(0);
 
   const disabled = React.useMemo(() => {
-    return isStreaming || isProcessing || isTerminalProcessing || isSearching;
-  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching]);
+    return isStreaming || isProcessing || isTerminalProcessing || isSearching || isSubagentProcessing;
+  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching, isSubagentProcessing]);
 
 
   // 构建搜索索引 - 支持增量更新

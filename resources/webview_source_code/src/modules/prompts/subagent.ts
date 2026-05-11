@@ -16,6 +16,7 @@ import {
   generateTerminalPrompt,
   generateCallingExternalApisPrompt,
   generateSubagentToolCallingPrompt,
+  generateOpenSpecPrompt,
   createPromptContext
 } from './shared';
 import { PromptTemplateLoader } from './template-loader';
@@ -26,22 +27,18 @@ import { SubagentPromptOptions, PromptContext } from './types';
  * 支持 MCP 工具和 Skills 功能
  */
 export class EnhancedPromptBuilder {
-  /**
-   * 构建增强的子代理 system prompt
-   */
   async buildSystemPrompt(basePrompt: string, agentType?: string, contextOptions: Partial<PromptContext> = {}): Promise<string> {
     console.log(agentType);
 
-    // 获取当前状态（在非 React 环境中需要手动获取）
     const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
     const mcpStore = useMCPStore.getState();
     const skillsStore = useSkillsStore.getState();
 
-    // 创建上下文
     const context: PromptContext = createPromptContext({
       workspace: workspaceInfo,
       mcpServers: mcpStore.MCPServers.filter(s => s.status === 'connected' && !s.disabled),
       skills: skillsStore.skills,
+      isSubagent: true,
       config: {
         enableSkills: true, // 子代理默认启用 skills
         enableTerminal: true, // 子代理默认启用
@@ -51,65 +48,45 @@ export class EnhancedPromptBuilder {
       ...contextOptions
     });
 
-    // ================================================================
     // Tier 1: Agent 角色定义 + 通用规则 (仅 agent 定义变化时变)
-    // ================================================================
     const tier1Parts: string[] = [basePrompt];
 
-    // 基础系统规则（工具调用等）- 使用子代理专用版本
     const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
 
-    // 搜索和阅读指令
     const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);
 
-    // TODO: 后续再支持 外部API调用规则
-    // const callingExternalApisPrompt = await generateCallingExternalApisPrompt(context);
-    // if (callingExternalApisPrompt) tier1Parts.push(callingExternalApisPrompt);
-
     const tier1 = tier1Parts.filter(Boolean).join('\n\n');
 
-    // ================================================================
-    // Tier 2: 代码编辑 + 终端 + 用户信息 (workspace 级)
-    // ================================================================
+    // Tier 2: Workspace 配置 + 动态内容 (与主 Agent 对齐为 2 层结构)
     const tier2Parts: string[] = [];
 
-    // 代码编辑功能（子代理可能需要）
     const codeEditPrompt = await generateCodeEditPrompt(context);
     if (codeEditPrompt) tier2Parts.push(codeEditPrompt);
 
-    // 终端功能（如果启用）
     const terminalPrompt = await generateTerminalPrompt(context);
     if (terminalPrompt) tier2Parts.push(terminalPrompt);
 
-    // 用户环境信息
     const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
+    const skillsPrompt = await generateSkillsPrompt(context);
+    if (skillsPrompt) tier2Parts.push(skillsPrompt);
+
+    const rulesPrompt = await generateRulesPrompt(context);
+    if (rulesPrompt) tier2Parts.push(rulesPrompt);
+
+    const openspecPrompt = await generateOpenSpecPrompt(context);
+    if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 
-    // ================================================================
-    // Tier 3: Skills + Rules (session 级)
-    // ================================================================
-    const tier3Parts: string[] = [];
-
-    // Skills 功能支持（同步）
-    const skillsPrompt = await generateSkillsPrompt(context);
-    if (skillsPrompt) tier3Parts.push(skillsPrompt);
-
-    // 用户规则支持（同步）
-    const rulesPrompt = await generateRulesPrompt(context);
-    if (rulesPrompt) tier3Parts.push(rulesPrompt);
-
-    const tier3 = tier3Parts.filter(Boolean).join('\n\n');
-
-    // 用 CACHE_TIER_BREAK 分隔各 tier，cache 路径下按此标记 split 为多个 content block
-    const finalPrompt = [tier1, tier2, tier3]
+    // 使用 CACHE_TIER_BREAK 分隔 2 个 tiers
+    const finalPrompt = [tier1, tier2]
       .filter(Boolean)
       .join(CACHE_TIER_BREAK);
 
-    // 变量插值处理
     const variables = {
       shell: workspaceInfo.shell,
       osName: workspaceInfo.osName,
@@ -117,40 +94,25 @@ export class EnhancedPromptBuilder {
       ...context.variables
     };
 
-    // 使用新的模板系统进行变量插值
     return PromptTemplateLoader.interpolateVariables(finalPrompt, variables);
   }
 
-  /**
-   * 获取指定 section 的内容（向后兼容）
-   */
   getSectionContent(): string | null {
     console.warn('[EnhancedPromptBuilder] getSectionContent is deprecated. Use shared generators instead.');
     return null;
   }
 
-  /**
-   * 检查 section 是否启用（向后兼容）
-   */
   isSectionEnabled(): boolean {
     console.warn('[EnhancedPromptBuilder] isSectionEnabled is deprecated. Use condition functions instead.');
     return false;
   }
 
-  /**
-   * 获取版本
-   */
   getVersion(): string {
     return '2.0.0'; // 增强版本标识
   }
 }
 
-/**
- * Hook 式构建器
- * 在 React 组件中使用
- */
 export function useSubagentPromptBuilder() {
-  // 这里可以使用 React hooks
   const workspaceInfo = useWorkspaceStore(state => state.workspaceInfo);
   const mcpServers = useMCPStore(state =>
     state.MCPServers.filter(s => s.status === 'connected' && !s.disabled)
@@ -163,6 +125,7 @@ export function useSubagentPromptBuilder() {
       workspace: workspaceInfo,
       mcpServers,
       skills,
+      isSubagent: true,
       config: {
         enableSkills: true,
         enableTerminal: false, // 子代理一般不直接执行终端命令
@@ -172,65 +135,48 @@ export function useSubagentPromptBuilder() {
       ...options
     });
 
-    // ================================================================
-    // Tier 1: Agent 角色定义 + 通用规则 (仅 agent 定义变化时变)
-    // ================================================================
+    // Tier 1: Agent 角色定义 + 通用规则
     const tier1Parts: string[] = [basePrompt];
 
-    // 基础系统规则（工具调用等）- 使用子代理专用版本
     const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
 
-    // 搜索和阅读指令
     const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);
 
-    // 外部API调用规则
     const callingExternalApisPrompt = await generateCallingExternalApisPrompt(context);
     if (callingExternalApisPrompt) tier1Parts.push(callingExternalApisPrompt);
 
     const tier1 = tier1Parts.filter(Boolean).join('\n\n');
 
-    // ================================================================
-    // Tier 2: 代码编辑 + 终端 + 用户信息 (workspace 级)
-    // ================================================================
+    // Tier 2: Workspace 配置 + 动态内容
     const tier2Parts: string[] = [];
 
-    // 代码编辑功能（子代理可能需要）
     const codeEditPrompt = await generateCodeEditPrompt(context);
     if (codeEditPrompt) tier2Parts.push(codeEditPrompt);
 
-    // 终端功能（如果启用）
     const terminalPrompt = await generateTerminalPrompt(context);
     if (terminalPrompt) tier2Parts.push(terminalPrompt);
 
-    // 用户环境信息
     const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
+    const skillsPrompt = await generateSkillsPrompt(context);
+    if (skillsPrompt) tier2Parts.push(skillsPrompt);
+
+    const rulesPrompt = await generateRulesPrompt(context);
+    if (rulesPrompt) tier2Parts.push(rulesPrompt);
+
+    const openspecPrompt = await generateOpenSpecPrompt(context);
+    if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 
-    // ================================================================
-    // Tier 3: Skills + Rules (session 级)
-    // ================================================================
-    const tier3Parts: string[] = [];
-
-    // Skills 功能支持（同步）
-    const skillsPrompt = await generateSkillsPrompt(context);
-    if (skillsPrompt) tier3Parts.push(skillsPrompt);
-
-    // 用户规则支持（同步）
-    const rulesPrompt = await generateRulesPrompt(context);
-    if (rulesPrompt) tier3Parts.push(rulesPrompt);
-
-    const tier3 = tier3Parts.filter(Boolean).join('\n\n');
-
-    // 用 CACHE_TIER_BREAK 分隔各 tier，cache 路径下按此标记 split 为多个 content block
-    const finalPrompt = [tier1, tier2, tier3]
+    // 使用 CACHE_TIER_BREAK 分隔 2 个 tiers
+    const finalPrompt = [tier1, tier2]
       .filter(Boolean)
       .join(CACHE_TIER_BREAK);
 
-    // 变量插值
     const variables = {
       shell: workspaceInfo.shell,
       osName: workspaceInfo.osName,
@@ -256,8 +202,5 @@ export async function buildSubagentPrompt(options: SubagentPromptOptions): Promi
   return await builder.buildSystemPrompt(basePrompt, agentType, context);
 }
 
-// 创建单例实例（向后兼容）
 export const enhancedPromptBuilder = new EnhancedPromptBuilder();
-
-// 导出向后兼容的接口
 export const promptBuilder = enhancedPromptBuilder;

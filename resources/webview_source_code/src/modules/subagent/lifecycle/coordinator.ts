@@ -51,7 +51,7 @@ export class SubagentCoordinator {
       runnerManager.abortBySession(parentSessionId);
 
       // 2. 从调度器队列中移除所有排队中的相关任务
-      const removedQueuedCount = subagentScheduler.removeQueuedBySession(parentSessionId);
+      const removedQueuedCount = subagentScheduler.cancelBySession(parentSessionId);
 
       const result: AbortResult = {
         sessionId: parentSessionId,
@@ -114,7 +114,7 @@ export class SubagentCoordinator {
     parentSessionIds.forEach(sessionId => {
       try {
         const runningCount = runningTasksToAbort.get(sessionId)?.length || 0;
-        const removedQueuedCount = subagentScheduler.removeQueuedBySession(sessionId);
+        const removedQueuedCount = subagentScheduler.cancelBySession(sessionId);
 
         const result: AbortResult = {
           sessionId,
@@ -177,28 +177,27 @@ export class SubagentCoordinator {
    * 获取详细的系统性能指标
    */
   getDetailedSystemStatus() {
-    const schedulerMetrics = subagentScheduler.getPerformanceMetrics();
+    const metrics = subagentScheduler.getMetrics();
     const runnerDiagnostics = runnerManager.getDiagnostics();
 
     return {
       // 基础状态
-      runningTasks: schedulerMetrics.runningTasks,
-      queuedTasks: schedulerMetrics.queuedTasks,
+      runningTasks: metrics.running,
+      queuedTasks: metrics.pending,
       queuedTasksList: subagentScheduler.getQueuedTasks(),
 
       // 性能指标
       performance: {
-        concurrencyUtilization: `${(schedulerMetrics.utilization * 100).toFixed(1)}%`,
-        queueUtilization: `${(schedulerMetrics.queueUtilization * 100).toFixed(1)}%`,
-        avgQueueTime: schedulerMetrics.avgQueueTime ? `${schedulerMetrics.avgQueueTime.toFixed(0)}ms` : 'N/A',
-        queueThroughput: `${schedulerMetrics.queueThroughput.toFixed(2)} tasks/sec`,
+        concurrencyUtilization: `${(metrics.utilization * 100).toFixed(1)}%`,
+        queueUtilization: `${(metrics.queueUtilization * 100).toFixed(1)}%`,
+        avgQueueTime: metrics.avgWaitTime ? `${metrics.avgWaitTime.toFixed(0)}ms` : 'N/A',
       },
 
       // 资源使用
       resources: {
         maxConcurrentRunners: MAX_CONCURRENT_RUNNERS,
         maxQueueSize: MAX_QUEUE_SIZE,
-        memoryUsage: schedulerMetrics.memoryUsage,
+        memoryUsage: metrics.memory,
       },
 
       // 诊断信息
@@ -206,8 +205,8 @@ export class SubagentCoordinator {
 
       // 健康状态
       health: {
-        isHealthy: schedulerMetrics.utilization < 0.9 && schedulerMetrics.queueUtilization < 0.8,
-        warnings: this.getHealthWarnings(schedulerMetrics),
+        isHealthy: metrics.utilization < 0.9 && metrics.queueUtilization < 0.8,
+        warnings: this.getHealthWarnings(metrics),
       }
     };
   }
@@ -215,7 +214,7 @@ export class SubagentCoordinator {
   /**
    * 分析系统健康状况，返回警告信息
    */
-  private getHealthWarnings(metrics: ReturnType<SubagentScheduler['getPerformanceMetrics']>): string[] {
+  private getHealthWarnings(metrics: ReturnType<SubagentScheduler['getMetrics']>): string[] {
     const warnings: string[] = [];
 
     if (metrics.utilization > 0.9) {
@@ -226,11 +225,11 @@ export class SubagentCoordinator {
       warnings.push('High queue utilization (>80%), tasks may be rejected');
     }
 
-    if (metrics.avgQueueTime && metrics.avgQueueTime > 30000) {
+    if (metrics.avgWaitTime && metrics.avgWaitTime > 30000) {
       warnings.push('High average queue time (>30s), performance degradation detected');
     }
 
-    if (metrics.memoryUsage.abortedSessions > 100) {
+    if (metrics.memory.abortedSessions > 100) {
       warnings.push('Large number of aborted sessions in memory, cleanup may be needed');
     }
 
@@ -238,12 +237,12 @@ export class SubagentCoordinator {
   }
 
   /**
-   * 获取系统状态摘要（兼容旧版本）
+   * 获取系统状态摘要
    */
   getSystemStatus() {
     return {
       runningTasks: runnerManager.getActiveTaskIds().length,
-      queuedTasks: subagentScheduler.getQueueSize(),
+      queuedTasks: subagentScheduler.pendingCount,
       queuedTasksList: subagentScheduler.getQueuedTasks(),
       runnerDiagnostics: runnerManager.getDiagnostics()
     };

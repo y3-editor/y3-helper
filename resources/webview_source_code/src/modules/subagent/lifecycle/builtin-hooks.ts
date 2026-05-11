@@ -3,15 +3,12 @@
  *
  * 注册系统默认的生命周期钩子：
  * - UI 状态同步钩子
- * - 事件发射钩子
- * - 会话同步钩子
  * - 开发日志钩子（仅开发模式）
  */
 
 import type { SubagentLifecycleHooks } from './hooks';
 import { lifecycleManager } from './hooks';
 import { useSubagentStore } from '../state/store';
-import { emitEvent } from '../state/events';
 import type { SubagentStatus } from '../types';
 
 // ============================================================
@@ -89,49 +86,6 @@ const uiStateHooks: SubagentLifecycleHooks = {
   },
 };
 
-// ============================================================
-// 事件发射钩子
-// ============================================================
-
-const eventEmitHooks: SubagentLifecycleHooks = {
-  onStart: (ctx) => {
-    emitEvent('status_change', ctx.taskId, {
-      from: undefined,
-      to: 'pending',
-      step: 0,
-    });
-  },
-
-  onBeforeStep: (ctx) => {
-    emitEvent('status_change', ctx.taskId, {
-      // from: ctx.step === 1 ? 'pending' : 'running',
-      from: 'pending',
-      to: 'running',
-      step: ctx.step,
-    });
-  },
-
-  onComplete: (ctx) => {
-    const finalStatus = ctx.success
-      ? 'completed'
-      : ctx.isAborted
-        ? 'aborted'
-        : 'failed';
-
-    emitEvent('status_change', ctx.taskId, {
-      from: 'running',
-      to: finalStatus,
-      step: ctx.step,
-    });
-  },
-
-  onError: (ctx, error) => {
-    emitEvent('error', ctx.taskId, {
-      message: error.message,
-      severity: 'fatal',
-    });
-  },
-};
 
 // ============================================================
 // 开发日志钩子（仅开发模式）
@@ -190,9 +144,6 @@ export function registerBuiltinHooks(): void {
 
   // UI 状态同步钩子
   lifecycleManager.register(uiStateHooks);
-
-  // 事件发射钩子
-  lifecycleManager.register(eventEmitHooks);
 
   // 开发日志钩子（仅开发模式）
   if (import.meta.env.DEV) {

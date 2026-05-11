@@ -14,7 +14,6 @@
 
 import { TOOL_TIMEOUT_MS } from '../constants';
 import type { SubagentRunnerState, PendingToolCall } from '../types';
-import { emitEvent } from '../state/events';
 
 /** AcceptEdit 结果等待结构 */
 interface PendingAcceptEdit {
@@ -104,37 +103,36 @@ export class RunnerManager {
   /**
    * 格式化单个 runner 的诊断信息
    */
-  public formatRunnerDiagnostic(runner: any, index: number): void {
-    const hasStuckTools = runner.pendingTools.some((tool: any) => tool.waitingMs > 30000);
-    const statusIcon = hasStuckTools ? '🔴' : '🟢';
+  // public formatRunnerDiagnostic(runner: any, index: number): void {
+  //   const hasStuckTools = runner.pendingTools.some((tool: any) => tool.waitingMs > 30000);
+  //   const statusIcon = hasStuckTools ? '🔴' : '🟢';
 
-    console.log(`${statusIcon} [Runner ${index + 1}] TaskId: ${runner.taskId} (${runner.agentName})`);
-    console.log(`  Pending Tools: ${runner.pendingToolsCount}`);
-    runner.pendingTools.forEach((tool: any) => {
-      const waitingSeconds = Math.floor(tool.waitingMs / 1000);
-      const timeIcon = tool.waitingMs > 30000 ? '⚠️' : '⏱️';
-      console.log(`    ${timeIcon} ${tool.toolId} (${tool.toolName}) - waiting ${waitingSeconds}s`);
-    });
-  }
+  //   console.log(`${statusIcon} [Runner ${index + 1}] TaskId: ${runner.taskId} (${runner.agentName})`);
+  //   runner.pendingTools.forEach((tool: any) => {
+  //     const waitingSeconds = Math.floor(tool.waitingMs / 1000);
+  //     const timeIcon = tool.waitingMs > 30000 ? '⚠️' : '⏱️';
+  //     console.log(`    ${timeIcon} ${tool.toolId} (${tool.toolName}) - waiting ${waitingSeconds}s`);
+  //   });
+  // }
 
   /**
    * 打印详细诊断信息到控制台
    */
-  printDiagnostics(): void {
-    const diagnostics = this.getDiagnostics();
-    console.log('🔍 === Subagent Diagnostics ===');
-    console.log(`Active Runners: ${diagnostics.activeRunners.length}`);
-    console.log(`Pending Accept Edits: ${diagnostics.pendingAcceptEditsCount}`);
+  // printDiagnostics(): void {
+  //   const diagnostics = this.getDiagnostics();
+  //   console.log('🔍 === Subagent Diagnostics ===');
+  //   console.log(`Active Runners: ${diagnostics.activeRunners.length}`);
+  //   console.log(`Pending Accept Edits: ${diagnostics.pendingAcceptEditsCount}`);
 
-    if (diagnostics.activeRunners.length === 0) {
-      console.log('✅ No active subagents');
-    } else {
-      diagnostics.activeRunners.forEach((runner, index) => {
-        console.log(''); // Empty line for readability
-        this.formatRunnerDiagnostic(runner, index);
-      });
-    }
-  }
+  //   if (diagnostics.activeRunners.length === 0) {
+  //     console.log('✅ No active subagents');
+  //   } else {
+  //     diagnostics.activeRunners.forEach((runner, index) => {
+  //       console.log(''); // Empty line for readability
+  //       this.formatRunnerDiagnostic(runner, index);
+  //     });
+  //   }
+  // }
 
   /**
    * 强制清理指定 taskId 的所有 pending 工具（调试用）
@@ -209,7 +207,6 @@ export class RunnerManager {
     toolId: string,
     abortSignal: AbortSignal,
     toolName: string,
-    toolArguments = '',
     timeout: number = TOOL_TIMEOUT_MS,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -227,8 +224,6 @@ export class RunnerManager {
       // 设置超时定时器
       const timeoutId = setTimeout(() => {
         runner.pendingToolResults.delete(toolId);
-        // 发射 timeout 事件
-        emitEvent('timeout', taskId, { toolId, toolName, timeoutMs: timeout });
         reject(new Error(`Tool ${toolName} timed out after ${timeout}ms`));
       }, timeout);
 
@@ -266,13 +261,6 @@ export class RunnerManager {
 
       // 注册到 runner
       runner.pendingToolResults.set(toolId, pending);
-
-      // 发射 tool_call 事件（携带 arguments 供实时 UI 展示）
-      emitEvent('tool_call', taskId, {
-        toolId,
-        toolName,
-        arguments: toolArguments,
-      });
 
       // 监听 abort 事件，提前 reject 并清理
       const onAbort = () => {
@@ -332,11 +320,6 @@ export class RunnerManager {
         clearTimeout(pending.timeoutId);
         pending.timeoutId = setTimeout(() => {
           runner.pendingToolResults.delete(toolId);
-          emitEvent('timeout', taskId, {
-            toolId,
-            toolName: pending.toolName,
-            timeoutMs: TOOL_TIMEOUT_MS,
-          });
           pending.reject(
             new Error(
               `Tool ${pending.toolName} timed out after ${TOOL_TIMEOUT_MS}ms`,
@@ -358,8 +341,6 @@ export class RunnerManager {
       clearTimeout(pending.timeoutId);
       pending.resolve(normalizedData);
       runner.pendingToolResults.delete(toolId);
-      const duration = Date.now() - pending.startTime;
-      emitEvent('tool_result', taskId, { toolId, duration });
       return;
     }
 
@@ -367,8 +348,6 @@ export class RunnerManager {
     clearTimeout(pending.timeoutId);
     pending.resolve(data);
     runner.pendingToolResults.delete(toolId);
-    const duration = Date.now() - pending.startTime;
-    emitEvent('tool_result', taskId, { toolId, duration });
   }
 
   /**
@@ -453,28 +432,28 @@ export const runnerManager = new RunnerManager();
  * 手动触发诊断 - 可以在代码中调用或通过导入使用
  * 示例：import { printSubagentDiagnostics } from '@/modules/subagent/lifecycle/manager'
  */
-export function printSubagentDiagnostics(): void {
-  runnerManager.printDiagnostics();
-}
+// export function printSubagentDiagnostics(): void {
+//   runnerManager.printDiagnostics();
+// }
 
 // 开发环境下定期输出诊断信息到控制台（替代全局对象）
-if (import.meta.env.DEV) {
-  // 每30秒自动打印一次诊断信息（如果有活跃的subagent）
-  setInterval(() => {
-    const diagnostics = runnerManager.getDiagnostics();
-    if (diagnostics.activeRunners.length > 0 || diagnostics.pendingAcceptEditsCount > 0) {
-      console.log('🔍 [Subagent] Auto-diagnostics:');
-      console.log(`Active Runners: ${diagnostics.activeRunners.length}`);
-      console.log(`Pending Accept Edits: ${diagnostics.pendingAcceptEditsCount}`);
+// if (import.meta.env.DEV) {
+//   // 每30秒自动打印一次诊断信息（如果有活跃的subagent）
+//   setInterval(() => {
+//     const diagnostics = runnerManager.getDiagnostics();
+//     if (diagnostics.activeRunners.length > 0 || diagnostics.pendingAcceptEditsCount > 0) {
+//       console.log('🔍 [Subagent] Auto-diagnostics:');
+//       console.log(`Active Runners: ${diagnostics.activeRunners.length}`);
+//       console.log(`Pending Accept Edits: ${diagnostics.pendingAcceptEditsCount}`);
 
-      diagnostics.activeRunners.forEach((runner, index) => {
-        runnerManager.formatRunnerDiagnostic(runner, index);
-      });
-    }
-  }, 30000);
+//       diagnostics.activeRunners.forEach((runner, index) => {
+//         runnerManager.formatRunnerDiagnostic(runner, index);
+//       });
+//     }
+//   }, 30000);
 
-  console.log(
-    '%c[Subagent] Auto-diagnostics enabled - will show status every 30s when active',
-    'color: #4CAF50; font-weight: bold;'
-  );
-}
+//   console.log(
+//     '%c[Subagent] Auto-diagnostics enabled - will show status every 30s when active',
+//     'color: #4CAF50; font-weight: bold;'
+//   );
+// }

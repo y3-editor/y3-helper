@@ -4,7 +4,13 @@
  * 定义 Agent 注册表、Runner 运行时状态、任务参数和结果等核心类型。
  */
 
-import { ToolCall } from "../../services";
+import { ToolCall } from '../../services';
+import type {
+  AssociationProperties,
+  ConversationRoundState,
+  Context,
+  SafeSpan,
+} from '../../telemetry/otel';
 
 // ============================================================
 // Agent 定义
@@ -69,8 +75,6 @@ export interface TaskParams {
   prompt: string;
   /** 目标 Agent 名称 */
   subagent_type: string;
-  /** 可选：之前任务的 task_id，用于恢复子代理会话 */
-  task_id?: string;
 }
 
 /** task 工具的返回结果 */
@@ -85,6 +89,12 @@ export interface TaskResult {
   error?: string;
   /** 是否被用户中止 */
   isAborted?: boolean;
+  /** 是否因达到 maxSteps 被强制截断 */
+  isTruncated?: boolean;
+  /** 执行的 agent 名称 */
+  agentName?: string;
+  /** 任务描述 */
+  description?: string;
 }
 
 // ============================================================
@@ -99,6 +109,8 @@ export interface RunSubagentContext {
   parentAbortSignal?: AbortSignal;
   /** 主会话中 tool_call 的 ID，作为 UI 状态的主键 */
   toolCallId: string;
+  /** 主 agent 的 ConversationRound 状态，用于 tracing context 传递 */
+  round?: ConversationRoundState;
 }
 
 // ============================================================
@@ -119,6 +131,8 @@ export interface LLMCallResult {
   text: string;
   toolCalls: ToolCall[]
   usage: LLMCallUsage;
+  /** Gemini 模型的 thinking_signature，用于后续请求的签名验证 */
+  thinkingSignature?: string;
 }
 
 // ============================================================
@@ -165,6 +179,8 @@ export interface SubagentToolCall {
 export interface SubagentStatusInfo {
   /** 子会话 ID（后端 session _id） */
   taskId: string;
+  /** 父会话 ID，用于按主会话过滤状态（解决跨 session 污染问题） */
+  parentSessionId: string;
   /** 使用的 Agent 名称 */
   agentName: string;
   /** 当前步数 */
@@ -188,9 +204,74 @@ export interface SubagentStatusInfo {
 }
 
 // ============================================================
-// 事件类型
+// Subagent Session 数据结构
 // ============================================================
 
+import type { ChatMessage } from '../../services';
+import type { ChatModel } from '../../services/chatModel';
+import type { ConsumedTokens } from '../../utils/consumedTokensCalculator';
+import type { SessionCompressionState } from '../../types/contextCompression';
+
+/**
+ * Subagent Session - 子代理会话完整数据结构
+ * 
+ * 参考主 agent 的 ChatSession 结构,存储子代理的完整会话状态。
+ * Store 中使用 Map<taskId, SubagentSession> 缓存所有子会话。
+ */
+export interface SubagentSession {
+  /** 会话唯一标识 (即 taskId) */
+  _id: string;
+  /** 使用的 agent 名称 (如 "explore", "general") */
+  agentName: string;
+  /** 任务描述 */
+  description: string;
+  /** 当前状态 */
+  status: SubagentStatus;
+  /** 完整的对话消息数组 */
+  messages: ChatMessage[];
+  /** 元数据 */
+  metadata?: {
+    create_time: string;
+    update_time: string;
+  };
+  /** Token 消耗统计 */
+  consumedTokens?: ConsumedTokens;
+  /** 使用的模型名称 */
+  model?: ChatModel;
+  /** 上下文压缩状态 */
+  compression?: SessionCompressionState;
+  /** 压缩进行状态 */
+  compressionInProgress?: boolean;
+  /** 父会话 ID */
+  parentSessionId?: string;
+  /** 错误信息（执行失败时） */
+  error?: string;
+}
+
+/**
+ * 持久化到 localStorage 的元数据结构
+ * 
+ * 仅包含关键字段,完整 messages 不持久化以节省存储空间。
+ */
+export interface SubagentSessionMetadata {
+  _id: string;
+  agentName: string;
+  description: string;
+  status: SubagentStatus;
+  metadata?: {
+    create_time: string;
+    update_time: string;
+  };
+  parentSessionId?: string;
+}
+
+// ============================================================
+// 事件类型 (标记为废弃,将在后续版本移除)
+// ============================================================
+
+/**
+ * @deprecated 事件机制已废弃,改用 Store 架构。将在后续版本移除。
+ */
 export type SubagentEventType =
   | 'status_change'
   | 'tool_call'
@@ -198,6 +279,9 @@ export type SubagentEventType =
   | 'error'
   | 'timeout';
 
+/**
+ * @deprecated 事件机制已废弃,改用 Store 架构。将在后续版本移除。
+ */
 export interface SubagentEvent {
   /** 事件类型 */
   type: SubagentEventType;
@@ -296,4 +380,18 @@ export interface SubagentTokens {
   byAgent: Record<string, SubagentAgentStats>;
   /** 最近任务样本 */
   recentTasks?: SubagentTaskSample[];
+}
+
+// ============================================================
+// OpenTelemetry 追踪相关
+// ============================================================
+
+/** Subagent Span 上下文，包含 Task span 和 context 用于子 span 继承 */
+export interface SubagentSpanContext {
+  /** Task span（{agent_name}.agent） */
+  taskSpan: SafeSpan;
+  /** Task context，用于创建子 span（LLM、ToolCall、Compression） */
+  taskContext: Context;
+  /** Association properties（包含 agentType 和 agentName） */
+  association?: AssociationProperties;
 }

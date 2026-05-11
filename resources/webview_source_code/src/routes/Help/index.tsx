@@ -39,6 +39,7 @@ import { toastError } from '../../services/error';
 import { createDebouncedToast } from '../../components/CustomToast/debounceToast';
 import { proxyRequest } from '../../services/common';
 import { UserEvent } from '../../types/report';
+// import { useConfigStore } from '../../store/config';
 
 const debouncedToast = createDebouncedToast();
 
@@ -107,6 +108,16 @@ export default function Help() {
       type: 'OPEN_CHECK_UPDATE',
     });
   }, [postMessage]);
+
+  // const openNewSetting = React.useCallback(() => {
+  //   postMessage({
+  //     type: 'OPEN_NEW_SETTING',
+  //     data: {
+  //       ThemeColor: themePreference,
+  //       Tabs: tabs,
+  //     },
+  //   });
+  // }, [postMessage, themePreference, tabs]);
 
   const uploadLog = React.useCallback(() => {
     setUploadingLog(true);
@@ -257,7 +268,7 @@ export default function Help() {
             odeMaker 一站式智能研发工作台
           </Text>
         </Flex>
-        <Text color="text.default">{extensionStore.codeMakerVersion}</Text>
+        <Text color="text.default">{extensionStore.codeMakerVersion}(2026.3.24.0)</Text>
         <Box
           my="6"
           display="flex"
@@ -418,13 +429,13 @@ export default function Help() {
               <Text fontSize="14px" fontWeight="bold" mr="4" minW="126px">
                 用户群
               </Text>
-              <Text isTruncated>000000</Text>
+              <Text isTruncated>8270037</Text>
             </Box>
             <Box display="flex" mt="2">
               <Text fontSize="14px" fontWeight="bold" mr="4" minW="126px">
                 服务助手
               </Text>
-              <Text>support@example.com</Text>
+              <Text>grp.codemaker@corp.netease.com</Text>
             </Box>
             {(extensionStore.IDE === IDE.VisualStudioCode ||
               extensionStore.IDE === IDE.JetBrains) && (
@@ -450,7 +461,7 @@ export default function Help() {
               bg="blue.300"
               mt="6"
               onClick={() => {
-                openInBrowser('https://github.com/user/codemaker');
+                openInBrowser('https://g.126.fm/03uVkNI');
               }}
               w="96px"
               h="32px"

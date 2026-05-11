@@ -1,12 +1,25 @@
 /**
  * Subagent执行策略
- * 默认所有安全操作自动执行，危险操作拒绝或需要确认
+ * 
+ * 此策略在 Subagent executor 中被调用，用于判断工具是否应该自动执行。
+ * 
+ * 策略规则：
+ * - 安全操作（只读工具、文件编辑、MCP工具等）：自动执行（返回 true）
+ * - 危险操作（危险的终端命令）：需要用户确认（返回 false）
+ * - 嵌套 task 工具：自动执行（返回 true）
+ * 
+ * 使用位置：src/modules/subagent/core/executor.ts
+ * 确认方式：WebView 蒙层显示确认对话框
+ * 
+ * 注意：危险命令判断与主 Agent 保持一致，使用统一的 codeBaseCheckCommands 配置
  */
 
 import { ToolCall } from '../../services';
 import { ExecutionContext } from '../../types/executionContext';
 import { ToolExecutionStrategy } from './ToolExecutionStrategy';
 import { terminalCmdFunction } from '../../routes/CodeChat/ChatMessagesList/TermialPanel';
+import { useConfigStore } from '../../store/config';
+import { isCommandSafe } from '../../utils';
 
 export class SubagentExecutionStrategy implements ToolExecutionStrategy {
   getStrategyName(): string {
@@ -175,66 +188,24 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
 
   /**
    * 检查终端命令是否安全
+   * 使用与主 Agent 相同的判断逻辑和配置
    */
   private isSafeCommand(toolCall: ToolCall): boolean {
     try {
       const params = JSON.parse(toolCall.function.arguments || '{}');
-      const command = params.command?.toLowerCase() || '';
+      const command = params.command || '';
 
-      // Subagent对危险命令更严格
-      const dangerousPatterns = [
-        'rm -rf',
-        'sudo',
-        'chmod 777',
-        'chmod +x',
-        'mv /',
-        'dd if=',
-        'format',
-        '> /dev/',
-        'killall',
-        'pkill',
-        'init ',
-        'shutdown',
-        'reboot',
-        'halt',
-        'systemctl',
-        'service ',
-        'apt install',
-        'yum install',
-        'pip install',
-        'npm install -g',
-        'curl | sh',
-        'wget | sh',
-        'bash <',
-        'sh <',
-      ];
+      // 获取 IDE 配置的危险命令列表（与主 Agent 统一）
+      const dangerousCommands = useConfigStore.getState().config.codeBaseCheckCommands;
 
-      const isDangerous = dangerousPatterns.some(pattern =>
-        command.includes(pattern)
-      );
+      // 使用统一的 isCommandSafe 函数判断
+      const isSafe = isCommandSafe(dangerousCommands, command);
 
-      if (isDangerous) {
+      if (!isSafe) {
         console.warn(`[Subagent] Blocking dangerous command: ${command}`);
-        return false;
       }
 
-      // 检查是否是安全的常用命令
-      const safeCommandPatterns = [
-        /^ls\s/,
-        /^cat\s/,
-        /^grep\s/,
-        /^find\s/,
-        /^echo\s/,
-        /^pwd$/,
-        /^whoami$/,
-        /^date$/,
-        /^which\s/,
-        /^node\s.*\.js$/,
-        /^python\s.*\.py$/,
-        /^npm\s+(run|test|build)$/,
-      ];
-
-      return safeCommandPatterns.some(pattern => pattern.test(command));
+      return isSafe;
     } catch (error) {
       console.warn('[Subagent] Command parsing failed, blocking execution:', error);
       return false;

@@ -13,9 +13,9 @@ export {
 
 // LLM 调用
 export {
-  callSubagentLLM,
+  streamChat,
   createEmptyUsage,
-  addUsage,
+  mergeUsage,
 } from './llm';
 
 // 上下文压缩

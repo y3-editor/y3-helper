@@ -1,14 +1,9 @@
 /**
- * TaskDetailModal —— Subagent 任务详情弹窗
- *
- * 两种模式：
- * - 活跃任务：实时订阅 useSubagentEventStore 的事件流
- * - 历史任务：展示 session.data.messages 完整对话时间线
+ * TaskDetailModal - Subagent 任务详情弹窗
  */
 
 import * as React from 'react';
 import { useEffect, useMemo, useRef } from 'react';
-import type { SubagentEvent } from '../../../../modules/subagent';
 import {
   Badge,
   Box,
@@ -28,22 +23,17 @@ import {
 import { keyframes } from '@emotion/react';
 import {
   TbTool,
-  TbRobot,
   TbUser,
   TbCheck,
   TbX,
-  TbBolt,
   TbCircleDot,
   TbBrain,
 } from 'react-icons/tb';
+import { RiRobot2Line } from 'react-icons/ri';
 
 import { ChatMessage, ToolCall, ToolResult } from '../../../../services';
-import { ChatSession } from '../../../../store/chat';
-import { useSubagentEventStore } from '../../../../modules/subagent';
-
-// ============================================================
-// Animations
-// ============================================================
+import { useSubagentStore } from '../../../../modules/subagent';
+import TaskCompressionSummary from './TaskCompressionSummary';
 
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
@@ -55,16 +45,6 @@ const slideIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
-// ============================================================
-// Props
-// ============================================================
-
-interface ToolCallBlock {
-  id: string;
-  name: string;
-  arguments: string;
-}
-
 export interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -72,16 +52,9 @@ export interface TaskDetailModalProps {
   isActive: boolean;
   agentName: string;
   description: string;
-  session: ChatSession | null;
-  blocks: ToolCallBlock[];
   loading: boolean;
   error: string;
-  onRetry: () => void;
 }
-
-// ============================================================
-// 工具函数
-// ============================================================
 
 function formatJsonSafe(raw: string): string {
   if (!raw) return '';
@@ -103,10 +76,6 @@ function extractTextContent(content: ChatMessage['content']): string {
   return '';
 }
 
-// ============================================================
-// 通用：时间线条目容器（左侧 accent bar）
-// ============================================================
-
 interface TimelineItemProps {
   accentColor: string;
   children: React.ReactNode;
@@ -120,7 +89,6 @@ function TimelineItem({ accentColor, children, animate }: TimelineItemProps) {
       gap={3}
       sx={animate ? { animation: `${slideIn} 0.2s ease-out` } : undefined}
     >
-      {/* 左侧竖线 + 圆点 */}
       <Box
         display="flex"
         flexDirection="column"
@@ -138,17 +106,12 @@ function TimelineItem({ accentColor, children, animate }: TimelineItemProps) {
         />
         <Box w="1px" flex={1} bg="whiteAlpha.100" mt={1} minH="16px" />
       </Box>
-      {/* 内容 */}
       <Box flex={1} minW={0} pb={2}>
         {children}
       </Box>
     </Box>
   );
 }
-
-// ============================================================
-// 通用：代码/内容区块
-// ============================================================
 
 interface ContentBlockProps {
   children: React.ReactNode;
@@ -178,241 +141,17 @@ function ContentBlock({
   );
 }
 
-// ============================================================
-// 活跃模式：单个事件条目
-// ============================================================
-
-interface EventItemProps {
-  event: SubagentEvent;
-}
-
-const EventItem = React.memo(function EventItem({ event }: EventItemProps) {
-  const time = new Date(event.timestamp).toLocaleTimeString();
-
-  const formattedArgs = useMemo(
-    () => formatJsonSafe(event.payload?.arguments || ''),
-    [event.payload?.arguments],
-  );
-
-  if (event.type === 'status_change') {
-    const to = event.payload?.to || 'unknown';
-    const color =
-      to === 'completed'
-        ? 'green.400'
-        : to === 'failed'
-          ? 'red.400'
-          : 'blue.400';
-    const scheme =
-      to === 'completed' ? 'green' : to === 'failed' ? 'red' : 'blue';
-    return (
-      <TimelineItem accentColor={color} animate>
-        <HStack spacing={2}>
-          <Icon as={TbBolt} color={color} boxSize={3.5} flexShrink={0} />
-          <Badge
-            colorScheme={scheme}
-            fontSize="xs"
-            variant="subtle"
-            flexShrink={0}
-          >
-            {to}
-          </Badge>
-          {event.payload?.step !== undefined && (
-            <Text fontSize="xs" color="text.secondary">
-              step {event.payload.step}
-            </Text>
-          )}
-          <Text fontSize="xs" color="text.secondary" ml="auto" flexShrink={0}>
-            {time}
-          </Text>
-        </HStack>
-      </TimelineItem>
-    );
-  }
-
-  if (event.type === 'tool_call') {
-    return (
-      <TimelineItem accentColor="orange.400" animate>
-        <HStack spacing={2}>
-          <Icon as={TbTool} color="orange.400" boxSize={3.5} flexShrink={0} />
-          <Badge colorScheme="orange" fontSize="xs" flexShrink={0}>
-            tool_call
-          </Badge>
-          <Text
-            fontSize="sm"
-            fontWeight="medium"
-            color="orange.200"
-            isTruncated
-            flex={1}
-            fontFamily="mono"
-          >
-            {event.payload?.toolName || 'unknown'}
-          </Text>
-          <Text fontSize="xs" color="text.secondary" flexShrink={0}>
-            {time}
-          </Text>
-        </HStack>
-        {formattedArgs && (
-          <ContentBlock maxH="180px">
-            <Text
-              as="pre"
-              fontSize="xs"
-              fontFamily="mono"
-              color="whiteAlpha.700"
-              whiteSpace="pre-wrap"
-              wordBreak="break-all"
-            >
-              {formattedArgs}
-            </Text>
-          </ContentBlock>
-        )}
-      </TimelineItem>
-    );
-  }
-
-  if (event.type === 'tool_result') {
-    return (
-      <TimelineItem accentColor="green.400" animate>
-        <HStack spacing={2}>
-          <Icon as={TbCheck} color="green.400" boxSize={3.5} flexShrink={0} />
-          <Badge
-            colorScheme="green"
-            fontSize="xs"
-            variant="subtle"
-            flexShrink={0}
-          >
-            tool_result
-          </Badge>
-          {/* <Text fontSize="xs" color="text.secondary" isTruncated flex={1}>
-            {event.payload?.toolId || '—'}
-          </Text> */}
-          <Text flex={1}></Text>
-          <Text fontSize="xs" color="text.secondary" flexShrink={0}>
-            {time}
-          </Text>
-        </HStack>
-      </TimelineItem>
-    );
-  }
-
-  if (event.type === 'error') {
-    return (
-      <TimelineItem accentColor="red.400" animate>
-        <HStack spacing={2}>
-          <Icon as={TbX} color="red.400" boxSize={3.5} flexShrink={0} />
-          <Badge
-            colorScheme="red"
-            fontSize="xs"
-            variant="subtle"
-            flexShrink={0}
-          >
-            error
-          </Badge>
-          <Text fontSize="sm" color="red.300" isTruncated flex={1}>
-            {event.payload?.message || 'Unknown error'}
-          </Text>
-          <Text fontSize="xs" color="text.secondary" flexShrink={0}>
-            {time}
-          </Text>
-        </HStack>
-      </TimelineItem>
-    );
-  }
-
-  return (
-    <TimelineItem accentColor="yellow.400" animate>
-      <HStack spacing={2}>
-        <Badge
-          colorScheme="yellow"
-          fontSize="xs"
-          variant="subtle"
-          flexShrink={0}
-        >
-          {event.type}
-        </Badge>
-        <Text fontSize="xs" color="text.secondary" flexShrink={0}>
-          {time}
-        </Text>
-      </HStack>
-    </TimelineItem>
-  );
-});
-
-// ============================================================
-// 活跃模式：事件时间线
-// ============================================================
-
-interface ActiveTimelineProps {
-  taskId: string;
-}
-
-const ActiveTimeline = React.memo(function ActiveTimeline({
-  taskId,
-}: ActiveTimelineProps) {
-  // 哨兵 div，始终滚动到它即可，不依赖外层滚动容器
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  const events = useSubagentEventStore((s) =>
-    s.events.filter((e) => e.taskId === taskId),
-  );
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [events.length]);
-
-  if (events.length === 0) {
-    return (
-      <HStack spacing={3} py={6} justify="center">
-        <Box
-          w="6px"
-          h="6px"
-          borderRadius="full"
-          bg="blue.400"
-          sx={{ animation: `${pulse} 1.4s ease-in-out infinite` }}
-        />
-        <Text fontSize="sm" color="text.secondary">
-          Waiting for events…
-        </Text>
-      </HStack>
-    );
-  }
-
-  return (
-    <Box px={2}>
-      {events.map((event, index) => (
-        <EventItem key={`${event.timestamp}-${index}`} event={event} />
-      ))}
-      {/* 末尾脉冲提示正在运行 */}
-      <HStack spacing={2} pl={5} pt={1} pb={2}>
-        <Box
-          w="6px"
-          h="6px"
-          borderRadius="full"
-          bg="blue.400"
-          sx={{ animation: `${pulse} 1.2s ease-in-out infinite` }}
-        />
-        <Text fontSize="xs" color="blue.400">
-          Running…
-        </Text>
-      </HStack>
-      {/* 哨兵：自动滚动目标 */}
-      <div ref={bottomRef} />
-    </Box>
-  );
-});
-
-// ============================================================
-// 历史模式：tool_call + tool_result 内联卡片
-// ============================================================
-
-interface InlineToolCallProps {
+interface CompactToolCallProps {
   tc: ToolCall;
   result: ToolResult | undefined;
 }
 
-const InlineToolCall = React.memo(function InlineToolCall({
+const CompactToolCall = React.memo(function CompactToolCall({
   tc,
   result,
-}: InlineToolCallProps) {
+}: CompactToolCallProps) {
+  const [expanded, setExpanded] = React.useState(false);
+
   const formatted = useMemo(
     () => formatJsonSafe(tc.function.arguments || ''),
     [tc.function.arguments],
@@ -421,36 +160,44 @@ const InlineToolCall = React.memo(function InlineToolCall({
   const isError = result?.isError;
   const resultContent = result?.content || '';
   const hasResult = result !== undefined;
+  const hasExpandableContent = Boolean(formatted || resultContent);
+
+  const handleToggleExpand = React.useCallback(() => {
+    if (hasExpandableContent) {
+      setExpanded(!expanded);
+    }
+  }, [hasExpandableContent, expanded]);
 
   return (
-    <Box
-      borderRadius="lg"
-      overflow="hidden"
-      borderWidth="1px"
-      borderColor={isError ? 'red.700' : 'whiteAlpha.150'}
-      bg="whiteAlpha.50"
+    <TimelineItem
+      accentColor={isError ? 'red.400' : hasResult ? 'green.400' : 'orange.400'}
     >
-      {/* tool_call 行 */}
       <HStack
-        px={3}
-        py={2}
         spacing={2}
-        borderBottomWidth={formatted || hasResult ? '1px' : 0}
-        borderColor={isError ? 'red.700' : 'whiteAlpha.100'}
-        bg="orange.900"
+        cursor={hasExpandableContent ? 'pointer' : 'default'}
+        onClick={handleToggleExpand}
+        _hover={{
+          bg: hasExpandableContent ? 'whiteAlpha.50' : 'transparent',
+        }}
+        borderRadius="md"
+        px={hasExpandableContent ? 2 : 0}
+        py={hasExpandableContent ? 1 : 0}
+        mx={hasExpandableContent ? -2 : 0}
+        my={hasExpandableContent ? -1 : 0}
+        transition="background-color 0.15s ease"
       >
-        <Icon as={TbTool} color="orange.300" boxSize={3.5} flexShrink={0} />
+        <Icon as={TbTool} color="orange.400" boxSize={4} flexShrink={0} />
         <Badge
           colorScheme="orange"
           fontSize="xs"
           variant="subtle"
           flexShrink={0}
         >
-          tool_call
+          tool
         </Badge>
         <Text
           fontSize="sm"
-          fontWeight="semibold"
+          fontWeight="medium"
           color="orange.200"
           fontFamily="mono"
           isTruncated
@@ -458,59 +205,60 @@ const InlineToolCall = React.memo(function InlineToolCall({
         >
           {tc.function.name}
         </Text>
+        {hasResult && (
+          <Icon
+            as={isError ? TbX : TbCheck}
+            color={isError ? 'red.400' : 'green.400'}
+            boxSize={3}
+            flexShrink={0}
+          />
+        )}
+        {hasExpandableContent && (
+          <Box
+            fontSize="xs"
+            color="whiteAlpha.500"
+            flexShrink={0}
+            transition="color 0.15s ease"
+          >
+            {expanded ? '▼' : '▶'}
+          </Box>
+        )}
       </HStack>
 
-      {/* arguments */}
-      {formatted && (
-        <Box
-          px={3}
-          py={2}
-          maxH="160px"
-          overflowY="auto"
-          borderBottomWidth={hasResult ? '1px' : 0}
-          borderColor={isError ? 'red.700' : 'whiteAlpha.100'}
-        >
-          <Text
-            as="pre"
-            fontSize="xs"
-            fontFamily="mono"
-            color="whiteAlpha.600"
-            whiteSpace="pre-wrap"
-            wordBreak="break-all"
-          >
-            {formatted}
-          </Text>
-        </Box>
-      )}
-
-      {/* tool_result */}
-      {hasResult && (
-        <>
-          <HStack
-            px={3}
-            py={1.5}
-            spacing={2}
-            bg={isError ? 'red.900' : 'green.900'}
-            borderBottomWidth={resultContent ? '1px' : 0}
-            borderColor={isError ? 'red.700' : 'whiteAlpha.100'}
-          >
-            <Icon
-              as={isError ? TbX : TbCheck}
-              color={isError ? 'red.400' : 'green.400'}
-              boxSize={3.5}
-              flexShrink={0}
-            />
-            <Badge
-              colorScheme={isError ? 'red' : 'green'}
-              fontSize="xs"
-              variant="subtle"
-              flexShrink={0}
-            >
-              tool_result
-            </Badge>
-          </HStack>
+      {expanded && hasExpandableContent && (
+        <ContentBlock maxH="150px" bg="whiteAlpha.30">
+          {formatted && (
+            <Box mb={resultContent ? 2 : 0}>
+              <Text
+                fontSize="10px"
+                color="orange.300"
+                fontWeight="medium"
+                mb={1}
+              >
+                ARGS
+              </Text>
+              <Text
+                as="pre"
+                fontSize="xs"
+                fontFamily="mono"
+                color="whiteAlpha.600"
+                whiteSpace="pre-wrap"
+                wordBreak="break-all"
+              >
+                {formatted}
+              </Text>
+            </Box>
+          )}
           {resultContent && (
-            <Box px={3} py={2} maxH="200px" overflowY="auto">
+            <Box>
+              <Text
+                fontSize="10px"
+                color={isError ? 'red.300' : 'green.300'}
+                fontWeight="medium"
+                mb={1}
+              >
+                {isError ? 'ERROR' : 'RESULT'}
+              </Text>
               <Text
                 as="pre"
                 fontSize="xs"
@@ -523,167 +271,135 @@ const InlineToolCall = React.memo(function InlineToolCall({
               </Text>
             </Box>
           )}
-        </>
+        </ContentBlock>
       )}
-    </Box>
+    </TimelineItem>
   );
 });
 
-// ============================================================
-// 历史模式：单条消息
-// ============================================================
-
-interface HistoryMessageItemProps {
+interface CompactMessageItemProps {
   message: ChatMessage;
   index: number;
-  /** tool_call_id → ToolResult，由父组件预构建传入 */
   toolResultMap: Map<string, ToolResult>;
+  isLastAssistant?: boolean;
 }
 
-const HistoryMessageItem = React.memo(function HistoryMessageItem({
+const CompactMessageItem = React.memo(function CompactMessageItem({
   message,
   toolResultMap,
-}: HistoryMessageItemProps) {
+}: CompactMessageItemProps) {
   const { role, content, tool_calls, reasoning_content } = message;
 
+  const isCompressionSummary = message.isCompressionSummary || false;
   const textContent = useMemo(() => extractTextContent(content), [content]);
 
-  // ---- assistant ----
+  if (isCompressionSummary) {
+    return <TaskCompressionSummary message={message} />;
+  }
+
   if (role === 'assistant') {
-    const hasBody = !!(reasoning_content || textContent || tool_calls?.length);
     return (
-      <TimelineItem accentColor="blue.400">
-        {/* 角色标签 */}
-        <HStack spacing={2} mb={hasBody ? 2 : 0}>
-          <Icon as={TbRobot} color="blue.400" boxSize={4} flexShrink={0} />
-          <Text
-            fontSize="xs"
-            fontWeight="semibold"
-            color="blue.300"
-            letterSpacing="wider"
-            textTransform="uppercase"
-          >
-            Assistant
-          </Text>
-        </HStack>
-
-        {/* reasoning */}
+      <>
         {reasoning_content && (
-          <Box
-            mb={2}
-            px={3}
-            py={2}
-            borderRadius="md"
-            bg="purple.900"
-            borderWidth="1px"
-            borderColor="purple.700"
-            borderLeftWidth="3px"
-            borderLeftColor="purple.400"
-          >
-            <HStack spacing={1.5} mb={1.5}>
-              <Icon as={TbBrain} color="purple.300" boxSize={3} />
-              <Text
+          <TimelineItem accentColor="purple.400">
+            <HStack spacing={2}>
+              <Icon
+                as={TbBrain}
+                color="purple.400"
+                boxSize={4}
+                flexShrink={0}
+              />
+              <Badge
+                colorScheme="purple"
                 fontSize="xs"
-                color="purple.300"
-                fontWeight="semibold"
-                textTransform="uppercase"
-                letterSpacing="wider"
+                variant="subtle"
+                flexShrink={0}
               >
-                Reasoning
-              </Text>
+                reasoning
+              </Badge>
             </HStack>
-            <Text
-              as="pre"
-              fontSize="xs"
-              fontFamily="mono"
-              color="purple.200"
-              whiteSpace="pre-wrap"
-              wordBreak="break-all"
-              maxH="160px"
-              overflowY="auto"
-            >
-              {reasoning_content}
-            </Text>
-          </Box>
+            <ContentBlock maxH="120px" bg="purple.900">
+              <Text
+                as="pre"
+                fontSize="xs"
+                fontFamily="mono"
+                color="purple.200"
+                whiteSpace="pre-wrap"
+                wordBreak="break-all"
+              >
+                {reasoning_content}
+              </Text>
+            </ContentBlock>
+          </TimelineItem>
         )}
 
-        {/* 文本内容 */}
         {textContent && (
-          <Box
-            mb={tool_calls?.length ? 2 : 0}
-            px={3}
-            py={2.5}
-            borderRadius="md"
-            bg="blue.900"
-            borderWidth="1px"
-            borderColor="blue.800"
-            borderLeftWidth="3px"
-            borderLeftColor="blue.400"
-            maxH="300px"
-            overflowY="auto"
-          >
-            <Text
-              as="pre"
-              fontSize="sm"
-              fontFamily="sans-serif"
-              color="blue.100"
-              whiteSpace="pre-wrap"
-              wordBreak="break-word"
-              lineHeight="1.7"
-            >
-              {textContent}
-            </Text>
-          </Box>
+          <TimelineItem accentColor="blue.400">
+            <HStack spacing={2}>
+              <Icon
+                as={RiRobot2Line}
+                color="blue.400"
+                boxSize={4}
+                flexShrink={0}
+              />
+              <Badge
+                colorScheme="blue"
+                fontSize="xs"
+                variant="subtle"
+                flexShrink={0}
+              >
+                response
+              </Badge>
+            </HStack>
+            <ContentBlock maxH="400px">
+              <Text
+                as="pre"
+                fontSize="sm"
+                fontFamily="sans-serif"
+                color="blue.100"
+                whiteSpace="pre-wrap"
+                wordBreak="break-word"
+                lineHeight="1.6"
+              >
+                {textContent}
+              </Text>
+            </ContentBlock>
+          </TimelineItem>
         )}
 
-        {/* tool calls */}
         {tool_calls && tool_calls.length > 0 && (
-          <VStack align="stretch" spacing={2}>
+          <>
             {tool_calls.map((tc: ToolCall) => (
-              <InlineToolCall
+              <CompactToolCall
                 key={tc.id}
                 tc={tc}
                 result={toolResultMap.get(tc.id)}
               />
             ))}
-          </VStack>
+          </>
         )}
-      </TimelineItem>
+      </>
     );
   }
 
-  // ---- tool：已内联到 assistant，跳过独立渲染 ----
   if (role === 'tool') return null;
 
-  // ---- user ----
   if (role === 'user') {
     return (
       <TimelineItem accentColor="purple.400">
-        <HStack spacing={2} mb={textContent ? 2 : 0}>
+        <HStack spacing={2}>
           <Icon as={TbUser} color="purple.400" boxSize={4} flexShrink={0} />
-          <Text
+          <Badge
+            colorScheme="purple"
             fontSize="xs"
-            fontWeight="semibold"
-            color="purple.300"
-            letterSpacing="wider"
-            textTransform="uppercase"
+            variant="subtle"
+            flexShrink={0}
           >
-            User
-          </Text>
+            user
+          </Badge>
         </HStack>
         {textContent && (
-          <Box
-            px={3}
-            py={2.5}
-            borderRadius="md"
-            bg="purple.900"
-            borderWidth="1px"
-            borderColor="purple.800"
-            borderLeftWidth="3px"
-            borderLeftColor="purple.400"
-            maxH="200px"
-            overflowY="auto"
-          >
+          <ContentBlock maxH="150px">
             <Text
               as="pre"
               fontSize="sm"
@@ -691,81 +407,49 @@ const HistoryMessageItem = React.memo(function HistoryMessageItem({
               color="purple.100"
               whiteSpace="pre-wrap"
               wordBreak="break-word"
-              lineHeight="1.7"
+              lineHeight="1.6"
             >
               {textContent}
             </Text>
-          </Box>
+          </ContentBlock>
         )}
       </TimelineItem>
     );
   }
 
-  // ---- system ----
-  return null
-  // return (
-  //   <TimelineItem accentColor="gray.500">
-  //     <HStack spacing={2} mb={textContent ? 1.5 : 0} opacity={0.6}>
-  //       <Icon as={TbSettings} color="gray.400" boxSize={3.5} flexShrink={0} />
-  //       <Text
-  //         fontSize="xs"
-  //         fontWeight="semibold"
-  //         color="gray.400"
-  //         letterSpacing="wider"
-  //         textTransform="uppercase"
-  //       >
-  //         System
-  //       </Text>
-  //     </HStack>
-  //     {textContent && (
-  //       <Box
-  //         px={3}
-  //         py={2}
-  //         borderRadius="md"
-  //         bg="whiteAlpha.50"
-  //         borderWidth="1px"
-  //         borderColor="whiteAlpha.100"
-  //         maxH="120px"
-  //         overflowY="auto"
-  //         opacity={0.6}
-  //       >
-  //         <Text
-  //           as="pre"
-  //           fontSize="xs"
-  //           fontFamily="sans-serif"
-  //           color="gray.300"
-  //           whiteSpace="pre-wrap"
-  //           wordBreak="break-word"
-  //         >
-  //           {textContent}
-  //         </Text>
-  //       </Box>
-  //     )}
-  //   </TimelineItem>
-  // );
+  return null;
 });
 
-// ============================================================
-// 历史模式：消息时间线
-// ============================================================
-
-interface HistoryTimelineProps {
-  session: ChatSession | null;
-  loading: boolean;
-  error: string;
+interface UnifiedTimelineProps {
+  taskId: string;
+  isActive: boolean;
+  loading?: boolean;
+  error?: string;
 }
 
-const HistoryTimeline = React.memo(function HistoryTimeline({
-  session,
-  loading,
-  error,
-}: HistoryTimelineProps) {
-  const messages = useMemo(
-    () => session?.data?.messages || [],
-    [session?.data?.messages],
-  );
+const UnifiedTimeline = React.memo(function UnifiedTimeline({
+  taskId,
+  isActive,
+  loading = false,
+  error = '',
+}: UnifiedTimelineProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 预构建 tool_call_id → ToolResult 映射，供 assistant 消息内联展示
+  const storeSession = useSubagentStore((s) => s.getSubagentSession(taskId));
+
+  const messages = useMemo(() => {
+    return storeSession?.messages || [];
+  }, [storeSession?.messages]);
+
+  const lastAssistantIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages]);
+
   const toolResultMap = useMemo(() => {
     const map = new Map<string, ToolResult>();
     for (const msg of messages) {
@@ -792,7 +476,28 @@ const HistoryTimeline = React.memo(function HistoryTimeline({
     }
     return map;
   }, [messages]);
-  if (loading) {
+
+  const currentStatus = useMemo(() => {
+    if (storeSession?.compressionInProgress) {
+      return {
+        status: 'Compacting',
+        color: 'orange.400',
+      };
+    } else {
+      return {
+        status: 'Thinking',
+        color: 'blue.400',
+      };
+    }
+  }, [storeSession?.compressionInProgress]);
+
+  useEffect(() => {
+    if (isActive && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [messages.length, isActive]);
+
+  if (!isActive && loading) {
     return (
       <HStack spacing={3} py={6} justify="center">
         <Spinner size="sm" color="blue.400" />
@@ -803,7 +508,7 @@ const HistoryTimeline = React.memo(function HistoryTimeline({
     );
   }
 
-  if (error) {
+  if (!isActive && error) {
     return (
       <HStack spacing={2} py={4} px={2}>
         <Icon as={TbX} color="red.400" boxSize={4} />
@@ -815,46 +520,67 @@ const HistoryTimeline = React.memo(function HistoryTimeline({
   }
 
   if (messages.length === 0) {
-    return (
-      <HStack spacing={2} py={6} justify="center">
-        <Icon as={TbCircleDot} color="gray.500" boxSize={4} />
-        <Text fontSize="sm" color="text.secondary">
-          No messages recorded.
-        </Text>
-      </HStack>
-    );
+    if (isActive) {
+      return (
+        <HStack spacing={3} py={6} justify="center">
+          <Box
+            w="6px"
+            h="6px"
+            borderRadius="full"
+            bg="blue.400"
+            sx={{ animation: `${pulse} 1.4s ease-in-out infinite` }}
+          />
+          <Text fontSize="sm" color="text.secondary">
+            Waiting for messages…
+          </Text>
+        </HStack>
+      );
+    } else {
+      return (
+        <HStack spacing={2} py={6} justify="center">
+          <Icon as={TbCircleDot} color="gray.500" boxSize={4} />
+          <Text fontSize="sm" color="text.secondary">
+            No messages recorded.
+          </Text>
+        </HStack>
+      );
+    }
   }
 
   return (
     <Box px={2}>
       {messages.map((msg, index) => (
-        <HistoryMessageItem
+        <CompactMessageItem
           key={msg.id || index}
           message={msg}
           index={index}
           toolResultMap={toolResultMap}
+          isLastAssistant={
+            index === lastAssistantIndex && msg.role === 'assistant'
+          }
         />
       ))}
-      {/* 末尾完成标记，与 ActiveTimeline 风格一致 */}
-      <HStack spacing={2} pl={5} pt={1} pb={4}>
-        <Box
-          w="6px"
-          h="6px"
-          borderRadius="full"
-          bg="green.400"
-          boxShadow="0 0 6px rgba(72,187,120,0.6)"
-        />
-        <Text fontSize="xs" color="green.400">
-          Completed
-        </Text>
-      </HStack>
+
+      {isActive && (
+        <>
+          <HStack spacing={2} pl={5} pt={1} pb={2}>
+            <Box
+              w="6px"
+              h="6px"
+              borderRadius="full"
+              bg={currentStatus.color}
+              sx={{ animation: `${pulse} 1.2s ease-in-out infinite` }}
+            />
+            <Text as="b" fontSize="xs" color={currentStatus.color}>
+              {currentStatus.status}...
+            </Text>
+          </HStack>
+          <div ref={bottomRef} />
+        </>
+      )}
     </Box>
   );
 });
-
-// ============================================================
-// TaskDetailModal 主组件
-// ============================================================
 
 export function TaskDetailModal({
   isOpen,
@@ -863,7 +589,6 @@ export function TaskDetailModal({
   isActive,
   agentName,
   description,
-  session,
   loading,
   error,
 }: TaskDetailModalProps) {
@@ -888,7 +613,6 @@ export function TaskDetailModal({
           bg="gray.900"
         >
           <HStack spacing={3} pr={8}>
-            {/* 左侧 AI 图标 */}
             <Box
               w="36px"
               h="36px"
@@ -910,7 +634,7 @@ export function TaskDetailModal({
                   sx={{ animation: `${pulse} 1.2s ease-in-out infinite` }}
                 />
               ) : (
-                <Icon as={TbRobot} color="blue.400" boxSize={4} />
+                <Icon as={RiRobot2Line} color="blue.400" boxSize={4} />
               )}
             </Box>
 
@@ -946,12 +670,10 @@ export function TaskDetailModal({
 
         <ModalCloseButton color="whiteAlpha.600" top={4} right={4} />
 
-        {/* Body */}
         <ModalBody
           flex={1}
           overflowY="auto"
-          px={6}
-          py={5}
+          p={4}
           sx={{
             '&::-webkit-scrollbar': { width: '5px' },
             '&::-webkit-scrollbar-track': { background: 'transparent' },
@@ -967,18 +689,14 @@ export function TaskDetailModal({
             },
           }}
         >
-          {isActive ? (
-            <ActiveTimeline taskId={taskId} />
-          ) : (
-            <HistoryTimeline
-              session={session}
-              loading={loading}
-              error={error}
-            />
-          )}
+          <UnifiedTimeline
+            taskId={taskId}
+            isActive={isActive}
+            loading={loading}
+            error={error}
+          />
         </ModalBody>
 
-        {/* Footer 分隔线 */}
         <Divider borderColor="whiteAlpha.100" />
         <HStack
           px={6}

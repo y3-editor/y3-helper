@@ -28,6 +28,7 @@ import * as ChatNavUtils from './chatNavigationUtils';
 import { cloneDeep, unionBy } from 'lodash';
 import type { ChatMessage } from '../../services';
 import SessionModalFooter from './SessionModalFooter';
+import { useTaskCompletionStore } from '../../modules/subagent';
 
 // 判断一轮消息中是否包含工具调用
 function roundHasToolCalls(messages: ChatMessage[], userIdx: number): boolean {
@@ -47,7 +48,7 @@ export interface ChatExporterHandle {
 }
 const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  const currentSesion = useChatStore((state) => state.currentSession());
+  const currentSession = useChatStore((state) => state.currentSession());
 
   const { postMessage } = usePostMessage();
   const { toast } = useCustomToast();
@@ -71,10 +72,26 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isTerminalProcessing = useChatStreamStore((state) => state.isTerminalProcessing);
   const isSearching = useChatStreamStore((state) => state.isSearching);
+  const isSubagentProcessing = useTaskCompletionStore(
+    (state) => !state.isSessionComplete(currentSession?._id || ''),
+  );
+
 
   const disabled = React.useMemo(() => {
-    return isStreaming || isProcessing || isTerminalProcessing || isSearching;
-  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching]);
+    return (
+      isStreaming ||
+      isProcessing ||
+      isTerminalProcessing ||
+      isSearching ||
+      isSubagentProcessing
+    );
+  }, [
+    isStreaming,
+    isProcessing,
+    isTerminalProcessing,
+    isSearching,
+    isSubagentProcessing,
+  ]);
 
   const handleOpen = () => {
     userReporter.report({
@@ -82,7 +99,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     });
 
     // 初始化选中所有 user 消息
-    const userMessages = currentSesion?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
+    const userMessages = currentSession?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
     const allUserMessageIds = new Set(userMessages.map(msg => msg.id).filter((id): id is string => id !== undefined));
     setSelectedMessageIds(allUserMessageIds);
 
@@ -90,7 +107,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     setToolCallRoundIds(new Set());
 
     // 初始化导航状态
-    const messages = currentSesion?.data?.messages || [];
+    const messages = currentSession?.data?.messages || [];
     const indexes = ChatNavUtils.calculateUserMsgIndexes(messages);
     setUserMsgIndexes(indexes);
     setCurrentUserMsgIdx(indexes.length > 0 ? indexes.length - 1 : -1);
@@ -104,79 +121,72 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
   };
 
 
+  /**
+   * 根据选中的 user 消息 + 每轮 toolCallRoundIds，
+   * 生成最终要导出的消息列表。
+   * 与 ChatFavoriter 保持一致的轮次过滤逻辑。
+   */
   const selectSession = React.useMemo(() => {
-    const messages = currentSesion?.data?.messages || [];
+    const messages = currentSession?.data?.messages || [];
 
-    return cloneDeep(messages).filter((message, index) => {
-      // 如果是 user 消息，检查是否被选中
-      if (message.role === ChatRole.User) {
-        return message.id !== undefined && selectedMessageIds.has(message.id);
+    type Round = {
+      userMsg: ChatMessage;
+      toolMsgs: ChatMessage[];
+      answerMsg: ChatMessage | null;
+    };
+
+    const rounds: Round[] = [];
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (msg.role !== ChatRole.User) continue;
+      if (msg.id === undefined || !selectedMessageIds.has(msg.id)) continue;
+
+      const includeToolCalls = toolCallRoundIds.has(msg.id);
+
+      // 收集这条 user 之后、下一条 user 之前的所有消息
+      const roundMsgs: ChatMessage[] = [];
+      for (let j = i + 1; j < messages.length; j++) {
+        if (messages[j].role === ChatRole.User) break;
+        roundMsgs.push(messages[j]);
       }
 
-      // 对于非 user 消息（assistant, tool），检查它前面最近的 user 消息是否被选中
-      // 向前查找最近的 user 消息
-      for (let i = index - 1; i >= 0; i--) {
-        if (messages[i].role === ChatRole.User) {
-          const userId = messages[i].id;
-          // 如果找到的 user 消息被选中，则包含当前消息
-          if (userId !== undefined && selectedMessageIds.has(userId)) {
-            // 还需要检查当前消息和该 user 消息之间是否有其他 user 消息
-            // 如果有，说明当前消息属于后面的对话组，不应包含
-            let hasUserBetween = false;
-            for (let j = i + 1; j < index; j++) {
-              if (messages[j].role === ChatRole.User) {
-                hasUserBetween = true;
-                break;
-              }
-            }
-            return !hasUserBetween;
+      // 区分工具调用相关消息 vs 最终回答消息
+      const toolMsgs: ChatMessage[] = [];
+      let answerMsg: ChatMessage | null = null;
+
+      for (const m of roundMsgs) {
+        if (m.role === ChatRole.Tool) {
+          if (includeToolCalls) toolMsgs.push(m);
+        } else if (m.role === ChatRole.Assistant) {
+          if (m.tool_calls?.length) {
+            if (includeToolCalls) toolMsgs.push(m);
+          } else {
+            answerMsg = m;
           }
-          // 如果找到的 user 消息未被选中，则不包含当前消息
-          return false;
         }
       }
-      return false;
-    });
-  }, [currentSesion?.data?.messages, selectedMessageIds]);
+
+      rounds.push({ userMsg: cloneDeep(msg), toolMsgs, answerMsg });
+    }
+
+    // 展开为最终消息列表
+    const result: ChatMessage[] = [];
+    for (const round of rounds) {
+      result.push(round.userMsg);
+      result.push(...round.toolMsgs);
+      if (round.answerMsg) result.push(cloneDeep(round.answerMsg));
+    }
+
+    return result;
+  }, [currentSession?.data?.messages, selectedMessageIds, toolCallRoundIds]);
 
   const sessionContent = React.useMemo(() => {
-    const messages = currentSesion?.data?.messages || [];
-
-    return messages
-      .filter((message, index) => {
-        // 如果是 user 消息，检查是否被选中
-        if (message.role === ChatRole.User) {
-          return message.id !== undefined && selectedMessageIds.has(message.id);
-        }
-
-        // 对于非 user 消息（assistant, tool），检查它前面最近的 user 消息是否被选中
-        // 向前查找最近的 user 消息
-        for (let i = index - 1; i >= 0; i--) {
-          if (messages[i].role === ChatRole.User) {
-            const userId = messages[i].id;
-            // 如果找到的 user 消息被选中，则包含当前消息
-            if (userId !== undefined && selectedMessageIds.has(userId)) {
-              // 还需要检查当前消息和该 user 消息之间是否有其他 user 消息
-              // 如果有，说明当前消息属于后面的对话组，不应包含
-              let hasUserBetween = false;
-              for (let j = i + 1; j < index; j++) {
-                if (messages[j].role === ChatRole.User) {
-                  hasUserBetween = true;
-                  break;
-                }
-              }
-              return !hasUserBetween;
-            }
-            // 如果找到的 user 消息未被选中，则不包含当前消息
-            return false;
-          }
-        }
-        return false;
-      })
+    return selectSession
       .map((message) => {
         let prefixLabel = '## 对话消息';
         if (message.role === ChatRole.Assistant) {
-          prefixLabel = '## 来自 Y3Maker 的消息';
+          prefixLabel = '## 来自 CodeMaker 的消息';
         } else if (message.role === ChatRole.Tool) {
           prefixLabel = '## 工具调用结果';
         } else {
@@ -255,7 +265,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
         return content;
       })
       .join('\n\n');
-  }, [currentSesion?.data?.messages, selectedMessageIds]);
+  }, [selectSession]);
 
   // 切换单个消息的选中状态
   const handleToggleMessage = React.useCallback((messageId: string) => {
@@ -288,7 +298,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
 
   // 计算所有有工具调用的轮次 user message id 列表
   const allToolCallUserMsgIds = React.useMemo(() => {
-    const messages = currentSesion?.data?.messages || [];
+    const messages = currentSession?.data?.messages || [];
     const ids: string[] = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
@@ -299,7 +309,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
       }
     }
     return ids;
-  }, [currentSesion?.data?.messages, selectedMessageIds]);
+  }, [currentSession?.data?.messages, selectedMessageIds]);
 
   // 全局工具调用 checkbox 状态
   const isAllToolCallSelected = React.useMemo(() => {
@@ -326,7 +336,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
 
   // 全选/取消全选
   const handleToggleAll = React.useCallback(() => {
-    const userMessages = currentSesion?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
+    const userMessages = currentSession?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
     const allUserMessageIds = new Set(userMessages.map(msg => msg.id).filter((id): id is string => id !== undefined));
 
     if (selectedMessageIds.size === allUserMessageIds.size) {
@@ -336,19 +346,19 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
       // 否则全选
       setSelectedMessageIds(allUserMessageIds);
     }
-  }, [currentSesion?.data?.messages, selectedMessageIds.size]);
+  }, [currentSession?.data?.messages, selectedMessageIds.size]);
 
   // 检查是否全选
   const isAllSelected = React.useMemo(() => {
-    const userMessages = currentSesion?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
+    const userMessages = currentSession?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
     return userMessages.length > 0 && selectedMessageIds.size === userMessages.length;
-  }, [currentSesion?.data?.messages, selectedMessageIds.size]);
+  }, [currentSession?.data?.messages, selectedMessageIds.size]);
 
   // 检查是否部分选中
   const isIndeterminate = React.useMemo(() => {
-    const userMessages = currentSesion?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
+    const userMessages = currentSession?.data?.messages.filter(msg => msg.role === ChatRole.User) || [];
     return selectedMessageIds.size > 0 && selectedMessageIds.size < userMessages.length;
-  }, [currentSesion?.data?.messages, selectedMessageIds.size]);
+  }, [currentSession?.data?.messages, selectedMessageIds.size]);
 
   const handleCopy = () => {
     try {
@@ -385,7 +395,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
   };
 
   const createHistory = async () => {
-    const cloneCurrentSession:any = cloneDeep(currentSesion);
+    const cloneCurrentSession:any = cloneDeep(currentSession);
     if (!cloneCurrentSession) return null;
 
     cloneCurrentSession.data.messages = selectSession;
@@ -406,7 +416,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
 
   const shareLink = async () => {
     // 参数验证
-    if (!currentSesion) {
+    if (!currentSession) {
       toast({
         title: '当前会话不存在',
         position: 'top',
@@ -418,30 +428,35 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     }
 
     try {
-
-
-      // 判断是否全选
-      const totalUserMessages = currentSesion?.data?.messages.filter(msg => msg.role === ChatRole.User).length || 0;
-      const isFullSelection = selectedMessageIds.size === totalUserMessages;
+      // 判断是否需要创建临时会话
+      const totalUserMessages = currentSession?.data?.messages.filter(msg => msg.role === ChatRole.User).length || 0;
+      const isFullUserSelection = selectedMessageIds.size === totalUserMessages;
+      // 检查是否有工具调用被排除（存在工具调用轮次但未全选）
+      const hasToolCallDeselected = allToolCallUserMsgIds.length > 0 &&
+        allToolCallUserMsgIds.some((id) => !toolCallRoundIds.has(id));
+      // 只有全选消息且工具调用也全选时，才能直接使用原会话
+      const needsNewSession = !isFullUserSelection || hasToolCallDeselected;
 
       let sessionIdToShare: string;
 
-      if (!isFullSelection) {
-        // 部分选择：先创建新的会话
+      if (needsNewSession) {
+        // 部分选择或工具调用未全选：先创建新的会话
         const newHistoryId = await createHistory();
         if (!newHistoryId) {
           throw new Error('创建分享会话失败');
         }
         sessionIdToShare = newHistoryId;
       } else {
-        // 全选：使用当前会话 ID
-        sessionIdToShare = currentSesion._id;
+        // 完全全选：使用当前会话 ID
+        sessionIdToShare = currentSession._id;
       }
 
       // 统一调用分享接口生成分享 ID
       const response = await codemakerApiRequest.post<any>(
         `/chat/chat_histories/${sessionIdToShare}/share`,
-        {},
+        {
+          origin_history_id: currentSession._id,
+        },
       );
       const shareId = response.data._id;
 
@@ -512,7 +527,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     // 直接使用 currentUserMsgIdx，不依赖 DOM 检测
     if (currentUserMsgIdx <= 0) return;
 
-    const messages = currentSesion?.data?.messages || [];
+    const messages = currentSession?.data?.messages || [];
     ChatNavUtils.scrollToUserMessage({
       targetIdx: currentUserMsgIdx - 1,
       userMsgIndexes,
@@ -522,7 +537,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
       onScrollEnd: () => { isScrollingRef.current = false; },
       onUpdateCurrentIdx: setCurrentUserMsgIdx,
     });
-  }, [userMsgIndexes, currentSesion?.data?.messages, currentUserMsgIdx]);
+  }, [userMsgIndexes, currentSession?.data?.messages, currentUserMsgIdx]);
 
   // 下一组对话
   const handleNextUserMessage = React.useCallback(() => {
@@ -531,7 +546,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     // 直接使用 currentUserMsgIdx，不依赖 DOM 检测
     if (currentUserMsgIdx >= userMsgIndexes.length - 1) return;
 
-    const messages = currentSesion?.data?.messages || [];
+    const messages = currentSession?.data?.messages || [];
     ChatNavUtils.scrollToUserMessage({
       targetIdx: currentUserMsgIdx + 1,
       userMsgIndexes,
@@ -541,7 +556,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
       onScrollEnd: () => { isScrollingRef.current = false; },
       onUpdateCurrentIdx: setCurrentUserMsgIdx,
     });
-  }, [userMsgIndexes, currentSesion?.data?.messages, currentUserMsgIdx]);
+  }, [userMsgIndexes, currentSession?.data?.messages, currentUserMsgIdx]);
 
   // 检查是否可以上一组
   const canGoPrev = React.useCallback(() => {

@@ -60,9 +60,13 @@ import ChatFunctionalToolbar from './ChatFunctionalToolbar';
 import { isMacOS } from '../../utils';
 import { SubmitKey, useConfigStore } from '../../store/config';
 import { BroadcastActions } from '../../PostMessageProvider';
+import DevSpaceSelect from '../../components/DevSpaceSelect';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { ChatModel, ParseImgType } from '../../services/chatModel';
+import ChatTypeSelector from './ChatTypeSelector';
 import RulesPanel from '../../components/RulesPanel';
+import { useChatBillStore } from '../../store/chatBill';
+import { useTaskCompletionStore } from '../../modules/subagent';
 // import { useDocsetStore } from '../../store/docset';
 // import { usePostMessage } from '../../PostMessageProvider';
 
@@ -116,10 +120,15 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
   const currentSession = useChatStore((state) => state.currentSession());
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
+  const isExceedCost = useChatBillStore((state) => state.isExceedCost);
+  const isSubagentProcessing = !useTaskCompletionStore((state) =>
+    state.isSessionComplete(currentSession?._id || ''),
+  );
 
   // 检查仓库智聊是否应该禁用按钮
   const isCodebaseInputDisabled = React.useMemo(() => {
     if (chatType !== 'codebase') return false;
+    if (isExceedCost) return true;
     if (!workspaceInfo.repoName) return true;
     if (
       currentSession?.chat_repo &&
@@ -127,7 +136,12 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
     )
       return true;
     return false;
-  }, [chatType, workspaceInfo.repoName, currentSession?.chat_repo]);
+  }, [
+    chatType,
+    isExceedCost,
+    workspaceInfo.repoName,
+    currentSession?.chat_repo,
+  ]);
 
   const lastMessage = React.useMemo(() => {
     const length = currentSession?.data?.messages?.length || 0;
@@ -197,7 +211,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
   const renderSendButton = React.useMemo(() => {
     // const isCodebaseMode = chatType === 'codebase';
 
-    if (isStreaming) {
+    if (isStreaming || isSubagentProcessing) {
       return (
         <MiniButton
           aria-label="中止生成"
@@ -319,7 +333,20 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
         </Menu>
       </HStack>
     );
-  }, [isStreaming, isLight, onSend, isCodebaseInputDisabled, isShortcutMenuOpen, shortcutOptions, onStop, lastMessage?.isAutoCompressingMessage, lastMessage?.content, submitKey, handleShortcutChange]);
+  }, [
+    isStreaming,
+    isSubagentProcessing,
+    isLight,
+    onSend,
+    isCodebaseInputDisabled,
+    isShortcutMenuOpen,
+    shortcutOptions,
+    onStop,
+    lastMessage?.isAutoCompressingMessage,
+    lastMessage?.content,
+    submitKey,
+    handleShortcutChange,
+  ]);
 
   // 非codebase聊天类型的原有逻辑
   const getIconOrName = React.useCallback(
@@ -357,6 +384,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
   );
 
   const renderChatMask = React.useMemo(() => {
+    if (isExceedCost) return null;
     if (ide !== IDE.VisualStudio) {
       return (
         <div id="mask-trigger" ref={triggerMaskProtalRef}>
@@ -365,17 +393,17 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             onClick={() => {
               promptProtalRef.current?.trigger(TypeAheadMode.Mask);
             }}
-          // color="text.secondary"
-          // bg={isLight ? '#F2F2F2' : '#2C2C2C'}
-          // h="28px"
-          // minH="28px"
-          // _hover={{
-          //   bg: isLight ? '#F2F2F2' : '#2C2C2C',
-          //   color: 'blue.300',
-          // }}
-          // px="2"
-          // fontSize="12px"
-          // fontWeight="normal"
+            // color="text.secondary"
+            // bg={isLight ? '#F2F2F2' : '#2C2C2C'}
+            // h="28px"
+            // minH="28px"
+            // _hover={{
+            //   bg: isLight ? '#F2F2F2' : '#2C2C2C',
+            //   color: 'blue.300',
+            // }}
+            // px="2"
+            // fontSize="12px"
+            // fontWeight="normal"
           >
             {getIconOrName(mask?.name)}
           </MiniButton>
@@ -384,7 +412,14 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
     } else {
       return <ChatMaskOldSelector />;
     }
-  }, [getIconOrName, ide, mask?.name, promptProtalRef, triggerMaskProtalRef]);
+  }, [
+    getIconOrName,
+    isExceedCost,
+    ide,
+    mask?.name,
+    promptProtalRef,
+    triggerMaskProtalRef,
+  ]);
 
   // const allButtons = React.useMemo(
   //   () => [
@@ -595,13 +630,20 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
               </MenuList>
             </Menu>
             <Divider h="14px" mx="1" orientation="vertical" />
+
+            <ChatTypeSelector />
+            <Divider h="14px" mx="1" orientation="vertical" />
             {/* 模型选择器 */}
             <ChatModelSelector disabled={isCodebaseInputDisabled} />
             <Divider h="14px" mx="1" orientation="vertical" />
             {/* <Divider h="14px" mx="1" orientation="vertical" /> */}
 
             {/* 知识集选择器 */}
-            <RulesPanel disabled={isCodebaseInputDisabled} />
+            {ide === IDE.VisualStudioCode || ide === IDE.JetBrains ? (
+              <RulesPanel disabled={isCodebaseInputDisabled} />
+            ) : (
+              <DevSpaceSelect />
+            )}
 
             <Divider h="14px" mx="1" orientation="vertical" />
             <ChatFunctionalToolbar disabled={isCodebaseInputDisabled} />
@@ -618,6 +660,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             {/* <ChatFunctionalToolbar disabled={isCodebaseInputDisabled} /> */}
 
             {/* Auto配置 */}
+            {/* Auto配置 (Y3 自定义工具栏) */}
             <ChatAutoToolbar disabled={isCodebaseInputDisabled} />
 
             {/* <Divider h="14px" mx="1" orientation="vertical" /> */}
@@ -640,7 +683,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             <MiniMenuButton
               tooltip="附加信息"
               // icon={<Icon as={AiOutlinePlus} />}
-              isDisabled={isCodebaseInputDisabled}
+              isDisabled={isExceedCost}
               icon={
                 <Icon
                   as={AiOutlinePlus}
@@ -649,7 +692,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
                 />
               }
             ></MiniMenuButton>
-            <MenuList>
+            <MenuList hidden={isExceedCost}>
               <MenuItem
                 onClick={() =>
                   promptProtalRef.current?.trigger(TypeAheadMode.Attach, false)
@@ -684,8 +727,10 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             </MenuList>
           </Menu>
           <Divider h="14px" mx="1" orientation="vertical" />
+          <ChatTypeSelector />
+          <Divider h="14px" mx="1" orientation="vertical" />
           {/* 模型选择器 */}
-          <ChatModelSelector />
+          <ChatModelSelector disabled={isExceedCost} />
           <Divider h="14px" mx="1" orientation="vertical" />
           {/* 角色选择器 */}
           {renderChatMask}
@@ -693,7 +738,7 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
           {/* Token数字显示 */}
           {/* {renderMaxTokenPopover} */}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" hidden={isExceedCost}>
           {/* 联网增强 */}
           <MiniButton
             aria-label="联网增强"

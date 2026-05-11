@@ -106,10 +106,10 @@ export const generateTaskDelegationPrompt: PromptGenerator = (context) => {
 You have the ability to delegate complex, multi-step tasks to specialized subagents using the "task" tool. Key guidelines:
 
 1. **When to delegate**: Use subagents for tasks requiring many steps of file reading, code search, or analysis that can run independently. For simple lookups (1-2 tool calls), handle them directly.
-2. **Concurrent execution**: When multiple independent subtasks are needed, launch them all in a single message with multiple tool calls to maximize parallelism.
+2. **Concurrent execution**: Only when subtasks are **independent and non-overlapping** (different questions or modules). Do not parallelize the same exploration twice.
 3. **Result visibility**: Subagent results are NOT visible to the user. After receiving task results, you MUST summarize the findings in your response to the user.
-4. **Context isolation**: Each subagent starts fresh with no access to your conversation history. Provide all necessary context in the prompt parameter.
-5. **Resumption**: Task results include a task_id. You can pass this task_id back to continue the same subagent session with its full history intact.
+4. **Context isolation**: Each subagent starts fresh. In \`prompt\`, include: **effort level** (quick vs deep), **definition of done**, **output shape**, and **paths already checked** so the subagent does not repeat work.
+5. **Resumption**: Task results may include a task_id. Resume only when partial results are insufficient for the user's question; avoid redundant resume loops.
 
 Example - Exploring code across multiple areas concurrently:
 \`\`\`
@@ -196,10 +196,13 @@ export const generateUserInfoPrompt: PromptGenerator = async (context) => {
 };
 
 /**
- * 生成搜索和阅读 prompt
+ * 生成搜索和阅读 prompt（主会话用 search-and-reading；子代理用 search-and-reading-subagent）
  */
-export const generateSearchAndReadingPrompt: PromptGenerator = async () => {
-  return await PromptTemplateLoader.renderTemplate('search-and-reading');
+export const generateSearchAndReadingPrompt: PromptGenerator = async (context) => {
+  const template = context?.isSubagent
+    ? 'search-and-reading-subagent'
+    : 'search-and-reading';
+  return await PromptTemplateLoader.renderTemplate(template);
 };
 
 /**
@@ -217,7 +220,7 @@ export const generateToolCallingPrompt: PromptGenerator = async () => {
  */
 export const generateSubagentToolCallingPrompt: PromptGenerator = async () => {
   const variables = {
-    subagentRule: '8. **NEVER use the "task" tool.** You are a subagent and cannot delegate work to other subagents. Handle all work directly.',
+    subagentRule: '9. **NEVER use the "task" tool.** You are a subagent and cannot delegate work to other subagents. Handle all work directly.\n10. **ABSOLUTE LIMIT: Maximum 2 tools per response.** Calling 3 or more tools simultaneously will cause system errors. If you call 3 or more tools, the execution will fail.',
   };
   return await PromptTemplateLoader.renderTemplate('tool-calling', variables);
 };
@@ -249,6 +252,7 @@ export function createPromptContext(options: Partial<PromptContext> = {}): Promp
     mentionFiles: [],
     config: {},
     variables: {},
-    ...options
+    isSubagent: false,
+    ...options,
   };
 }

@@ -45,6 +45,19 @@ import { BroadcastActions, SubscribeActions } from '../PostMessageProvider';
 // import { mutateService } from '../hooks/useService';
 import { Docset, DocsetType, Docsets } from '../services/docsets';
 import { useMaskStore, DEFAULT_MASKS, IS_PROGRAMMING_MODE } from './mask';
+import { useExtensionStore } from './extension';
+import {
+  subagentCoordinator,
+  useSubagentStore,
+  TaskResult,
+  formatTaskResult,
+  TaskStatus,
+  taskEventBus,
+  emitTaskRegistered,
+  taskCoordinator,
+  pendingEventQueue,
+  useTaskCompletionStore,
+} from '../modules/subagent';
 import { AttachType } from '../store/attaches';
 import { getCodeSearchDataNew, SearchResultNew } from '../services/search';
 import { concatenatePrompt } from '../utils/search';
@@ -76,6 +89,8 @@ import {
   getErrorMessage,
   specialErrorPatterns,
 } from '../utils';
+import { AsyncLock } from '../utils/asyncLock';
+import { validateToolResultIntegrity } from '../utils/toolResultIntegrity';
 import { truncateSessionTopic } from '../utils/common';
 import getEnvironmentDetails from '../utils/getEnvironmentDetail';
 import { Prompt, PromptCategoryType } from '../services/prompt';
@@ -114,6 +129,7 @@ import { useSkillPromptApp } from './skills/skill-prompt';
 import { useChatApplyStore } from './chatApply';
 import { terminalCmdFunction } from '../routes/CodeChat/ChatMessagesList/TermialPanel';
 import { getLocalStorage } from '../utils/storage';
+import { formatUserDeniedResult } from '../utils/toolResultFormatter';
 import { formatResultContent, getReportEventByToolName } from '../utils/toolCall';
 import type { ExtendedPlanData, PlanStatus } from '../types/plan';
 import type { TodoList } from './workspace/tools/todo';
@@ -126,6 +142,13 @@ import { Tool as PlanTool, processMakePlanDenied, report as planReport } from '.
 import { Tool as TodoTool } from '../store/workspace/tools/todo'
 import addCacheMarksToMessages, { addCacheMarksToTools } from '../utils/addCacheMarksToMessages';
 import EventBus, { EBusEvent } from '../utils/eventbus';
+import { debugSuccess } from '../utils/debugLog';
+import {
+  AgentTaskDirective,
+  buildAgentListingReminder,
+  wrapSystemReminder,
+  generateSubagentConstraintText,
+} from '../modules/subagent/utils/messages';
 import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../utils/truncateMessages';
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
 import {
@@ -159,7 +182,8 @@ import {
   AutoExecutePermissions,
 } from '../types/executionContext';
 import { getExecutionStrategy } from '../services/toolExecution/ToolExecutionStrategy';
-import { useSubagentStore } from './subagent';
+
+const sessionUpdateLock = new AsyncLock();
 
 const CODE_BACKTICKS = '```';
 export const DEFAULT_TOPIC = '';
@@ -796,12 +820,17 @@ export const useChatStore = create<ChatStore>()(
           return;
         }
         updater(currentSession);
-        set(() => ({ sessions: sessions }));
+        // ✅ 创建新 Map 引用，确保 Zustand 能检测到变化（修复并发更新 tool_result 的问题）
+        set(() => ({ sessions: new Map(sessions) }));
       },
 
       removeSession: async (id: string) => {
         const sessions = get().sessions;
         const chatType = useChatStore.getState().chatType;
+
+        // 清理被删除 session 的 subagent 状态
+        useSubagentStore.getState().clearSessionStatuses(id);
+
         try {
           await removeSession(id);
         } catch (error) {
@@ -864,6 +893,8 @@ export const useChatStore = create<ChatStore>()(
 
       async selectSession(id: string, callback?: () => void) {
         try {
+          const oldSessionId = get().currentSessionId;
+
           await get().loadSessionData(id, { callback: callback });
           // 检查加载后 currentSessionId 是否被清空（说明加载失败）
           if (get().currentSessionId === null) {
@@ -873,6 +904,11 @@ export const useChatStore = create<ChatStore>()(
           set({
             currentSessionId: id,
           });
+
+          // 清理旧 session 的 subagent 状态，避免跨 session 污染
+          if (oldSessionId && oldSessionId !== id) {
+            useSubagentStore.getState().clearSessionStatuses(oldSessionId);
+          }
         } catch (error) {
           // 确保错误能够传递给调用者
           console.warn(`[Debug] selectSession failed for session ${id}`);
@@ -886,6 +922,9 @@ export const useChatStore = create<ChatStore>()(
           return;
         }
         useChatApplyStore.getState().clearChatApplyInfo();
+
+        // 清理当前 session 的 subagent 状态
+        useSubagentStore.getState().clearSessionStatuses(session._id);
 
         const newSession = {
           ...session,
@@ -1493,10 +1532,6 @@ export type ChatStreamState = {
   streamRetryCount: number;
   setStreamRetryCount: (count: number) => void;
   retryChatStream: (retryId: string, retryType: keyof typeof ERetryType) => void
-  // // toolCall 结果
-  // toolCallResults: {
-  //   [propName: string]: ToolCallResult;
-  // }
 };
 
 type ChatStreamActions = {
@@ -1508,6 +1543,7 @@ type ChatStreamActions = {
       mcpServerUsed?: string;
       skipUserMessage?: boolean;
       specPrompt?: Prompt;
+      agentTaskDirective?: AgentTaskDirective;
     },
     originPrompt?: string,
     toolResponse?: {
@@ -1535,8 +1571,26 @@ type ChatStreamActions = {
   // // 清空 toolCall 结果
   // clearToolCallResults: () => void;
   updateToolCallResults: (result: {
-    [propName: string]: { path: string; content: string, isError?: boolean, extra?: Record<string, any> };
-  }, extra?: any, executionContext?: ExecutionContext) => void;
+    [propName: string]: { path: string; content: string, isError?: boolean, extra?: Record<string, any>, isTruncated?: boolean };
+  }, extra?: any, executionContext?: ExecutionContext, options?: { skipSync?: boolean; skipAutoExecute?: boolean }) => void;
+  /**
+   * 更新 task 工具结果（原子操作，使用锁保护）。
+   * 整合工具结果更新和消息持久化，确保原子性和正确的插入顺序。
+   * 使用 AsyncLock 防止并发更新导致的竞态条件。
+   */
+  updateTaskToolResult: (params: {
+    toolCallId: string;
+    taskResult: TaskResult;
+    sessionId: string;
+  }) => Promise<void>;
+  /**
+   * 找到 Tool 消息的正确插入位置
+   * 确保 Tool 消息紧跟在对应的 Assistant 消息后面
+   */
+  findCorrectToolMessageIndex: (
+    messages: ChatMessage[],
+    toolCallId: string,
+  ) => number;
   // 新增的执行上下文相关方法
   inferExecutionContext: (
     session: ChatSession,
@@ -1667,10 +1721,11 @@ export const useChatStreamStore = create(
     prePromptCodeBlock: null,
     updateToolCallResults(
       result: {
-        [propName: string]: { path: string; content: string };
+        [propName: string]: { path: string; content: string; isError?: boolean; isTruncated?: boolean };
       },
       extra?: any,
-      executionContext?: ExecutionContext, // 新增执行上下文参数
+      executionContext?: ExecutionContext,
+      options?: { skipSync?: boolean; skipAutoExecute?: boolean },
     ) {
       const chatStoreState = useChatStore.getState();
       let isProcessing = true;
@@ -1683,7 +1738,22 @@ export const useChatStreamStore = create(
       chatStoreState.updateCurrentSession((session) => {
         if (session && session.data) {
           const messages = session.data.messages || [];
-          const lastMessage = messages[messages.length - 1];
+
+          // ✅ 修复：找到最后一条包含 tool_calls 的 assistant message
+          // 因为 updateTaskToolResult 可能已经在 messages 中插入了 tool message
+          let lastMessage: ChatMessage | undefined;
+          for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === ChatRole.Assistant && messages[i].tool_calls) {
+              lastMessage = messages[i];
+              break;
+            }
+          }
+
+          if (!lastMessage) {
+            console.warn('[Debug][updateToolCallResults] 未找到包含 tool_calls 的 assistant message');
+            return;
+          }
+
           lastMessage.tool_result = lastMessage.tool_result || {};
           lastMessage.tool_result = {
             ...lastMessage.tool_result,
@@ -1709,22 +1779,29 @@ export const useChatStreamStore = create(
             (tc) => lastMessage.tool_result?.[tc.id],
           ).length;
 
-          // 改进的 hasActiveTaskTools 判断：
-          // 1. 检查是否有 task 工具调用
-          // 2. 结合 subagent 运行状态判断是否还有活跃的 task
+          // hasActiveTaskTools 判断：使用 TaskCompletionTracker 作为唯一状态源
           const hasTaskTools = taskToolCalls.length > 0;
           const allTasksHaveResults = taskResultCount === taskToolCalls.length;
-          const subagentStillRunning = useSubagentStore
+          const currentSessionId = useChatStore.getState().currentSessionId;
+          const trackerSessionComplete = useTaskCompletionStore
             .getState()
-            .hasActiveSubagents();
+            .isSessionComplete(currentSessionId || '');
 
-          // 如果有 task 工具，且要么有些还没返回结果，要么 subagent 仍在运行，则认为有活跃的 task
-          // 修复：优先检查 subagent 运行状态，避免工具结果到齐但 subagent 未完成时的竞态条件
+          // 使用 Tracker 统一判断：有 task 工具且 Tracker 认为 session 未完成
           hasActiveTaskTools =
-            hasTaskTools && (subagentStillRunning || !allTasksHaveResults);
+            hasTaskTools && (!trackerSessionComplete || !allTasksHaveResults);
 
-          // 所有 tool call 结果都已收到时，清除 message 上的 processing 标记，
-          // 确保 ToolCallResults.tsx 中 isTaskTool 等卡片能够正常渲染
+          // ✅ 使用 TaskCompletionTracker 进行统一判断
+          if (taskToolCalls.length > 0) {
+            const tracker = useTaskCompletionStore.getState();
+            const isComplete = tracker.isSessionComplete(currentSessionId || '');
+
+            if (!isComplete) {
+              return;
+            }
+          }
+
+          // 所有 tool call 结果都已收到时，清除 message 上的 processing 标记
           if (
             !lastMessage.tool_calls?.length ||
             Object.keys(lastMessage.tool_result).length ===
@@ -1733,25 +1810,18 @@ export const useChatStreamStore = create(
             isProcessing = false;
             lastMessage.processing = false;
 
-            // 兜底措施: 如果当前会话已循环多次，停止自动继续，暂定一个问题 50 条消息作为上限
-            // const lastUserIndex = findLastIndex(messages, (msg => msg.role === ChatRole.User));
-            // if (lastUserIndex >= 0) {
-            //   if (messages.length - lastUserIndex > 50) {
-            //   userReporter.report({
-            //       event: UserEvent.MAX_AUTO_APPROVED_REACHED
-            //     })
-            //     return;
-            //   }
-            // }
-            // TODO: 先直接判断 edit_file 自动确认 toolcall 操作，后续拆分
-            // 使用新的策略模式处理自动执行逻辑
-            get().handleAutoExecute(lastMessage, context, hasActiveTaskTools);
+            // ✅ 修复：只有在未设置 skipAutoExecute 时才调用 handleAutoExecute
+            // 这是为了避免与事件驱动的完成通知机制产生竞态
+            if (!options?.skipAutoExecute) {
+              get().handleAutoExecute(lastMessage, context, hasActiveTaskTools);
+            }
           }
         }
       });
-      chatStoreState.syncHistory();
+      if (!options?.skipSync) {
+        chatStoreState.syncHistory();
+      }
       // 如果有正在运行的 task 工具，不设置 isProcessing（由 subagent store 管理）
-      // 只有在没有活跃的 task 工具时，才根据计算结果设置 isProcessing
       const currentStoreIsProcessing = get().isProcessing;
       if (!hasActiveTaskTools) {
         set(() => ({
@@ -1764,6 +1834,143 @@ export const useChatStreamStore = create(
         );
       }
     },
+
+    /**
+     * 找到 Tool 消息的正确插入位置
+     * 确保 Tool 消息紧跟在对应的 Assistant 消息后面，解决并发插入顺序问题
+     */
+    findCorrectToolMessageIndex(messages: ChatMessage[], toolCallId: string): number {
+      let assistantIndex = -1;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === ChatRole.Assistant &&
+            messages[i].tool_calls?.some(tc => tc.id === toolCallId)) {
+          assistantIndex = i;
+          break;
+        }
+      }
+
+      if (assistantIndex === -1) {
+        console.warn(
+          `[findCorrectToolMessageIndex] Assistant message with tool_call ${toolCallId} not found, appending to end`
+        );
+        return messages.length;
+      }
+
+      let insertIndex = assistantIndex + 1;
+      while (insertIndex < messages.length && messages[insertIndex].role === ChatRole.Tool) {
+        insertIndex++;
+      }
+      return insertIndex;
+    },
+
+    async updateTaskToolResult(params) {
+      const { toolCallId, taskResult, sessionId } = params;
+
+      // 🔒 使用全局锁保护，防止并发更新导致的竞态条件
+      const release = await sessionUpdateLock.acquire(sessionId, 60000);
+
+      try {
+        get().updateToolCallResults({
+          [toolCallId]: {
+            path: '',
+            content: taskResult.output,
+            isError: !taskResult.success,
+            extra: {
+              isTruncated: taskResult.isTruncated,
+            },
+          },
+        }, undefined, undefined, { skipSync: true });
+
+        // ✅ Step 2: 持久化 task tool message 到主 session
+        const chatStore = useChatStore.getState();
+        const sessions = chatStore.sessions;
+        const session = sessions.get(sessionId);
+
+        if (!session?.data?.messages) {
+          console.warn(`[updateTaskToolResult] Session ${sessionId} not found`);
+          return;
+        }
+
+        // 幂等检查：如果 tool message 已存在，跳过写入
+        const alreadyExists = session.data.messages.some(
+          (msg: ChatMessage) => msg.role === ChatRole.Tool && msg.tool_call_id === toolCallId
+        );
+        if (alreadyExists) {
+          // ✅ 即使 message 存在，也要确保 tool_result 被更新
+          let lastMessage: ChatMessage | undefined;
+          for (let i = session.data.messages.length - 1; i >= 0; i--) {
+            const msg = session.data.messages[i];
+            if (msg.role === ChatRole.Assistant &&
+                msg.tool_calls?.some(tc => tc.id === toolCallId)) {
+              lastMessage = msg;
+              break;
+            }
+          }
+
+          if (lastMessage) {
+            if (!lastMessage.tool_result) {
+              lastMessage.tool_result = {};
+            }
+            if (!lastMessage.tool_result[toolCallId]) {
+              lastMessage.tool_result[toolCallId] = {
+                path: '',
+                content: taskResult.output,
+                isError: !taskResult.success,
+                extra: {
+                  isTruncated: taskResult.isTruncated || false,
+                },
+              };
+            }
+          }
+          return;
+        }
+
+        // 🔧 找到正确的插入位置
+        const insertIndex = get().findCorrectToolMessageIndex(session.data.messages, toolCallId);
+
+        session.data.messages.splice(insertIndex, 0, {
+          id: nanoid(),
+          role: ChatRole.Tool,
+          tool_call_id: toolCallId,
+          content: taskResult.output,
+          createdAt: Date.now(),
+          context: {
+            task: {
+              taskId: taskResult.taskId,
+              agentName: taskResult.agentName || 'unknown',
+              description: taskResult.description || '',
+              isError: !taskResult.success,
+              isTruncated: taskResult.isTruncated || false,
+            },
+          },
+        });
+
+        useChatStore.setState({ sessions: new Map(sessions) });
+        chatStore.syncHistory();
+
+        // 🔍 完整性验证
+        const integrityReport = validateToolResultIntegrity(
+          session.data.messages,
+          sessionId
+        );
+
+        if (!integrityReport.isComplete) {
+          console.warn(
+            `[updateTaskToolResult] ⚠️ Tool result integrity check failed after updating ${toolCallId}`,
+            integrityReport
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[updateTaskToolResult] ❌ Task tool ${toolCallId} 更新失败:`,
+          err
+        );
+        throw err;
+      } finally {
+        release();
+      }
+    },
+
     /**
      * 推断执行上下文
      * 根据最后一条消息是否包含 task 工具调用来判断是主 agent 还是 subagent
@@ -1815,13 +2022,12 @@ export const useChatStreamStore = create(
         return;
       }
 
-      const hasActiveSubagents = useSubagentStore
+      const currentSessionId = useChatStore.getState().currentSessionId;
+      const trackerSessionComplete = useTaskCompletionStore
         .getState()
-        .hasActiveSubagents();
-      console.log('[mcp][auto-execute] hasActiveSubagents:', hasActiveSubagents, 'hasActiveTaskTools:', hasActiveTaskTools);
-      
-      if (hasActiveSubagents && !hasActiveTaskTools) {
-        console.log('[mcp][auto-execute] 有活跃子代理且无活跃任务工具，退出');
+        .isSessionComplete(currentSessionId || '');
+      if (!trackerSessionComplete && !hasActiveTaskTools) {
+        console.log('[mcp][auto-execute] Tracker 显示 session 未完成且无活跃任务工具，退出');
         return;
       }
 
@@ -2148,6 +2354,7 @@ export const useChatStreamStore = create(
         retryCount?: number;
         skipUserMessage?: boolean;
         specPrompt?: Prompt;
+        agentTaskDirective?: AgentTaskDirective;
       },
       originPrompt?: string,
       toolResponse?: {
@@ -2156,8 +2363,9 @@ export const useChatStreamStore = create(
       unselectedResults?: Set<string>,
     ) => {
       const chatStoreState = useChatStore.getState();
+      const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
-      if (get().isStreaming || get().isSearching || get().isTerminalProcessing) {
+      if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
         userReporter.report({
           event: UserEvent.CHAT_SUBMIT_ERROR,
           extends: {
@@ -2478,6 +2686,14 @@ export const useChatStreamStore = create(
             lastMessage.response = toolResponse;
             if (lastMessage.tool_calls) {
               lastMessage.tool_calls.forEach((tool, index) => {
+                // 跳过已存在的 tool message（去重，避免与 updateTaskToolResult 冲突）
+                const alreadyExists = session.data?.messages.some(
+                  (msg) => msg.role === ChatRole.Tool && msg.tool_call_id === tool.id
+                );
+                if (alreadyExists) {
+                  return;
+                }
+
                 const toolResults = lastMessage.tool_result || {};
                 const result = toolResults[tool.id] || {
                   content: '',
@@ -2564,7 +2780,7 @@ export const useChatStreamStore = create(
                     ? processMakePlanDenied()
                     : tool?.function.name === TodoTool.function.name
                       ? processWriteTodoDenied()
-                      : 'The user denied this operation.',
+                      : formatUserDeniedResult(tool?.function.name || 'unknown', toolId),
                 });
                 lastMessage.tool_result = lastMessage.tool_result || {};
                 if (tool?.function.name === 'ask_user_question') {
@@ -3620,9 +3836,33 @@ export const useChatStreamStore = create(
           cacheEnable = false;
         }
         const isReAct = false;
+
+        // 收集 agent system-reminders（注入到 system prompt tier2）
+        const subagentEnable = useExtensionStore.getState().subagentEnable;
+        const agents = useSubagentStore.getState().agents;
+        const systemReminders: string[] = [];
+
+        // Agent listing：subagentEnable 时始终注入（无论手动/自动触发模式）
+        if (subagentEnable && agents.length > 0) {
+          systemReminders.push(buildAgentListingReminder(agents));
+        }
+
+        // Agent 调用 reminder：仅在 slash 触发时注入
+        if (options.agentTaskDirective) {
+          const invocationReminder = wrapSystemReminder(
+            generateSubagentConstraintText(options.agentTaskDirective.agentName),
+          );
+          systemReminders.push(invocationReminder);
+        }
+
+        const agentReminders = systemReminders.length > 0
+          ? systemReminders.join('\n\n')
+          : undefined;
+
         const codebaseChatSystemPrompt = getCodebaseChatSystemPrompt({
           isReAct,
-          effectiveRules
+          effectiveRules,
+          agentReminders,
         });
         sendMessages.unshift({
           role: ChatRole.System,
@@ -3673,6 +3913,9 @@ export const useChatStreamStore = create(
           prompApp.reset();
         }
 
+        // 当有 agentTaskDirective 时（用户通过 SLASH 命令触发），强制包含 task 工具
+        const forceIncludeTask = !!options.agentTaskDirective;
+
         const data: ChatPromptBody = {
           messages: filteredMessages,
           model: getAIGWModel(chatConfig.model),
@@ -3681,7 +3924,7 @@ export const useChatStreamStore = create(
           tool_choice: chatConfig.model.startsWith('claude')
             ? undefined
             : 'auto',
-          tools: getCodebaseChatTools(),
+          tools: getCodebaseChatTools({ forceIncludeTask }),
         };
 
         // 如果用户填了 apikey，则使用用户���定的 apiKey
@@ -3943,7 +4186,142 @@ export const useChatStreamStore = create(
                   }
                   if (toolCalls.length) {
                     if (!allResponsed) {
-                      for (const tool of toolCalls) {
+                      // 分离 task 工具和非 task 工具
+                      const taskToolCalls = toolCalls.filter(
+                        (t) => t.function.name === 'task',
+                      );
+                      const nonTaskToolCalls = toolCalls.filter(
+                        (t) => t.function.name !== 'task',
+                      );
+                      // task 工具：并行启动所有（不等待，各自完成后独立更新结果）
+                      if (taskToolCalls.length > 0 && chatStoreState.currentSessionId) {
+                        const parentSessionId = chatStoreState.currentSessionId;
+                        const taskToolCallIds = taskToolCalls.map((t) => t.id);
+
+                        // ✅ 启动 watchdog 定时器
+                        taskCoordinator.startSessionWatchdog(
+                          parentSessionId,
+                          taskToolCallIds,
+                        );
+
+                        // ============ 阶段 1：原子注册所有 task ============
+                        taskToolCalls.forEach((taskTool) => {
+                          let task_params: any = {};
+                          try {
+                            task_params = JSON.parse(
+                              taskTool.function.arguments || '{}',
+                            );
+                          } catch (err) {
+                            console.error(err);
+                            task_params = {};
+                          }
+
+                          // ✅ 发射 TASK_REGISTERED 事件（同步）
+                          emitTaskRegistered(
+                            parentSessionId,
+                            taskTool.id,
+                            task_params.subagent_type || 'explore',
+                            task_params.description,
+                          );
+                        });
+
+                        // ============ 阶段 2：标记注册完成 ============
+                        taskCoordinator.markRegistrationComplete(
+                          parentSessionId,
+                          taskToolCallIds,
+                        );
+
+                        // ============ 阶段 3：异步执行所有 task ============
+                        taskToolCalls.forEach((taskTool) => {
+                          let task_params: any = {};
+                          try {
+                            task_params = JSON.parse(
+                              taskTool.function.arguments || '{}',
+                            );
+                          } catch (err) {
+                            console.error(err);
+                            task_params = {};
+                          }
+
+                          // 异步执行子代理，完成后将结果注入主会话
+                          (async () => {
+                            try {
+                              const { runSubagent } =
+                                await import('../modules/subagent');
+                              const parentController =
+                                ControllerPool.controllers.get(
+                                  ControllerPool.key(sessionId, messageIndex),
+                                );
+                              // 获取当前的 conversationRound（用于 OTEL 追踪，Y3 可能为空）
+                              const round = (get() as any).conversationRound;
+
+                              const taskResult = await runSubagent(
+                                {
+                                  description: task_params.description || '',
+                                  prompt: task_params.prompt || '',
+                                  subagent_type:
+                                    task_params.subagent_type || 'explore',
+                                },
+                                {
+                                  parentSessionId,
+                                  parentAbortSignal: parentController?.signal,
+                                  toolCallId: taskTool.id,
+                                  round,
+                                },
+                              );
+
+                              // ✅ 使用 await 等待锁保护的异步更新完成
+                              await get().updateTaskToolResult({
+                                toolCallId: taskTool.id,
+                                taskResult,
+                                sessionId: parentSessionId,
+                              });
+                            } catch (err) {
+                              const errorMsg =
+                                err instanceof Error ? err.message : String(err);
+
+                              // ✅ 错误恢复：将错误信息作为 tool result 注入主会话
+                              try {
+                                get().updateToolCallResults({
+                                  [taskTool.id]: {
+                                    path: '',
+                                    content: `Subagent execution failed: ${errorMsg}`,
+                                    isError: true,
+                                  },
+                                });
+                              } catch (updateErr) {
+                                console.error(
+                                  `[Debug][subagent] CRITICAL: Failed to update error tool_result for ${taskTool.id}:`,
+                                  updateErr,
+                                );
+                              }
+                            }
+                          })().catch((err) => {
+                            console.error(
+                              `[Debug][subagent] CRITICAL: Unhandled promise rejection in task tool ${taskTool.id}:`,
+                              err,
+                            );
+
+                            try {
+                              get().updateToolCallResults({
+                                [taskTool.id]: {
+                                  path: '',
+                                  content: `Critical error: ${err instanceof Error ? err.message : String(err)}`,
+                                  isError: true,
+                                },
+                              });
+                            } catch (finalErr) {
+                              console.error(
+                                `[Debug][subagent] FATAL: Cannot update tool_result even in final catch for ${taskTool.id}:`,
+                                finalErr,
+                              );
+                            }
+                          });
+                        });
+                      }
+
+                      // 非 task 工具：处理全部工具
+                      for (const tool of nonTaskToolCalls) {
                         if (!response[tool.id]) {
                           let tool_params: any = {};
                           if (tool.function.arguments) {
@@ -4476,20 +4854,27 @@ export const useChatStreamStore = create(
 
           // 这里是真正给LLM发送消息的地方
           requestCodebaseChatStream(
+            UserEvent.CODE_CHAT_CODEBASE,
             data,
             chatRequestUrl,
             {
               onMessage(content, done, toolCalls, totalTokens, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId) {
                 get().setStreamRetryCount(0)
 
-                if (toolCalls && toolCalls.length) {
-                  // 仅当本轮工具全部属于可批白名单时，保留前两个；否则只保留第一个
-                  toolCalls = toolCalls.slice(0, toolCalls.every(tc => ['view_source_code_definitions_top_level', 'grep_search', 'glob_search', 'read_file'].includes(tc.function?.name ?? '')) ? 2 : 1);
-                }
                 if (chatStoreState.isError) {
                   chatStoreState.setError(false);
                 }
                 if (done) {
+                  // 检查 Subagent 功能是否启用，如果禁用则过滤掉 task 工具
+                  if (toolCalls?.length && !useExtensionStore.getState().subagentEnable) {
+                    toolCalls = toolCalls.filter(
+                      (tc) => tc.function?.name !== 'task',
+                    );
+                  }
+                  debugSuccess('Main Agent onMessage', 'Stream done. Final tool calls:', {
+                    toolCalls,
+                    data,
+                  });
                   // 模型返回后检测是否需要压缩
                   // 先检查请求期间是否发生过压缩（通过比较压缩摘要数量）
                   const currentSession = chatStoreState.currentSession();
@@ -6133,7 +6518,14 @@ export const useChatStreamStore = create(
       if (get().retryTimmer) {
         clearTimeout(get().retryTimmer)
       }
-      if (!get().isStreaming && !get().isProcessing && !get().isMCPProcessing && !get().isApplying) {
+      const currentSessionId = useChatStore.getState().currentSessionId;
+      if (
+        !get().isStreaming &&
+        !get().isProcessing &&
+        !get().isMCPProcessing &&
+        useTaskCompletionStore.getState().isSessionComplete(currentSessionId || '') &&
+        !get().isApplying
+      ) {
         return;
       }
 
@@ -6180,7 +6572,91 @@ export const useChatStreamStore = create(
           if (streamingMessage) {
             streamingMessage.processing = false;
           }
-          if (!get().isMCPProcessing && !get().isApplying) {
+
+          // ✅ 检查最后一条 assistant message 是否有未完成的 tool_calls
+          let lastAssistantMessage: ChatMessage | null = null;
+          let lastAssistantIndex = -1;
+
+          if (session?.data?.messages) {
+            for (let i = session.data.messages.length - 1; i >= 0; i--) {
+              const msg = session.data.messages[i];
+              if (msg.role === ChatRole.Assistant && msg.tool_calls?.length) {
+                lastAssistantMessage = msg;
+                lastAssistantIndex = i;
+                break;
+              }
+            }
+          }
+
+          // ✅ 检查哪些 tool_calls 没有对应的 tool message
+          const existingToolMessages = new Set<string>();
+          if (lastAssistantMessage && session?.data?.messages) {
+            for (let i = lastAssistantIndex + 1; i < session.data.messages.length; i++) {
+              const msg = session.data.messages[i];
+              if (msg.role === ChatRole.Tool && msg.tool_call_id) {
+                existingToolMessages.add(msg.tool_call_id);
+              }
+            }
+          }
+
+          // ✅ 找出未完成的 task tool_calls
+          const unfinishedTaskCalls = lastAssistantMessage?.tool_calls?.filter(
+            (tc) => tc.function.name === 'task' && !existingToolMessages.has(tc.id)
+          ) || [];
+
+          // 如果有未完成的 task 工具，为它们添加 aborted 状态
+          if (unfinishedTaskCalls.length > 0) {
+            console.log(
+              `[onStop] Found ${unfinishedTaskCalls.length} unfinished task tools, adding aborted messages`,
+              { toolCallIds: unfinishedTaskCalls.map(tc => tc.id) }
+            );
+
+            unfinishedTaskCalls.forEach((toolCall) => {
+              // 构造 aborted 状态的 tool result content
+              const abortedContent = formatTaskResult({
+                id: 'aborted',
+                description: 'Task aborted by user',
+                status: TaskStatus.Aborted,
+                messages: [],
+                abortReason: 'User stopped the conversation',
+                agent: 'unknown',
+                steps: 0,
+              } as any);
+
+              // ✅ 直接添加 tool message，不调用 updateTaskToolResult
+              session.data?.messages.push({
+                id: nanoid(),
+                role: ChatRole.Tool,
+                tool_call_id: toolCall.id,
+                content: abortedContent,
+                createdAt: Date.now(),
+              } as ChatMessage);
+
+              // ✅ 同时更新 tool_result 和 response（用于 UI 显示）
+              if (lastAssistantMessage) {
+                if (!lastAssistantMessage.tool_result) {
+                  lastAssistantMessage.tool_result = {};
+                }
+                lastAssistantMessage.tool_result[toolCall.id] = {
+                  path: '',
+                  content: abortedContent,
+                  isError: true,
+                };
+
+                if (!lastAssistantMessage.response) {
+                  lastAssistantMessage.response = {};
+                }
+                lastAssistantMessage.response[toolCall.id] = false;
+              }
+            });
+          }
+
+          // ✅ 只有在没有未完成的 tool_calls 时，才添加 assistant message
+          const hasUnfinishedTools = lastAssistantMessage?.tool_calls?.some(
+            (tc) => !existingToolMessages.has(tc.id)
+          ) || false;
+
+          if (!hasUnfinishedTools && !get().isMCPProcessing && !get().isApplying) {
             session.data?.messages.push({
               ...DEFAULT_ASSISTANT_MESSAGE,
               id: lastMessageId,
@@ -6220,6 +6696,7 @@ export const useChatStreamStore = create(
         chatStoreState.syncHistory();
         get().reset();
         ControllerPool.stop(sessionId, isStreamingMessageIndex + 1);
+        subagentCoordinator.abortBySession(sessionId);
         get().setStreamRetryCount(0);
       }
     },
@@ -6804,4 +7281,138 @@ export function autoSelectActiveChangeOrFeature(specInfo: SpecInfo): void {
     }
   }
   // vibe 模式或 undefined 不触发自动选择
+}
+
+// =====================================================
+// 开发环境调试 & 事件驱动完成通知机制初始化
+// =====================================================
+
+if (process.env.NODE_ENV === 'development') {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  window.chatStore = useChatStore;
+
+  // 加载 subagent completion 调试工具
+  import('../utils/subagentCompletionDebug').catch(() => {
+    // 忽略加载错误
+  });
+}
+
+/**
+ * 处理 SESSION_ALL_TASKS_COMPLETE 事件的核心逻辑
+ */
+function processSessionComplete(
+  event: { sessionId: string; results: Record<string, unknown> },
+): void {
+  const { sessionId } = event;
+  const chatStore = useChatStore.getState();
+  const chatStreamStore = useChatStreamStore.getState();
+
+  const session = chatStore.sessions.get(sessionId);
+  if (!session?.data?.messages) {
+    return;
+  }
+
+  const messages = session.data.messages;
+  // 找到最后一条包含 tool_calls 的 assistant message
+  let lastMessage: ChatMessage | undefined;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === ChatRole.Assistant && messages[i].tool_calls) {
+      lastMessage = messages[i];
+      break;
+    }
+  }
+
+  if (!lastMessage?.tool_calls) {
+    return;
+  }
+
+  // 幂等检查：如果 processing 已经是 false，说明已经被处理过
+  if (lastMessage.processing === false) {
+    return;
+  }
+
+  // 检查所有工具结果是否完整
+  const tool_result = lastMessage.tool_result || {};
+  const tool_calls = lastMessage.tool_calls || [];
+
+  const allToolResultsComplete =
+    Object.keys(tool_result).length === tool_calls.length;
+
+  if (!allToolResultsComplete) {
+    const missingToolCallIds = tool_calls
+      .filter(tc => !tool_result[tc.id])
+      .map(tc => tc.id);
+
+    const existingResultIds = Object.keys(tool_result);
+
+    console.warn(
+      `[TaskEventBus] Tool results incomplete: ${existingResultIds.length}/${tool_calls.length} completed. Missing: ${missingToolCallIds.join(', ')}`,
+    );
+    return;
+  }
+
+  // 推断执行上下文
+  const context = chatStreamStore.inferExecutionContext(session, lastMessage);
+
+  // 事件驱动路径：所有 task 都已完成，hasActiveTaskTools = false
+  const hasActiveTaskTools = false;
+
+  // ✅ 幂等检查增强：检查 isProcessing 状态
+  if (chatStreamStore.isProcessing) {
+    return;
+  }
+
+  // 设置 processing = false
+  lastMessage.processing = false;
+
+  // 触发自动执行（兜底路径）
+  chatStreamStore.handleAutoExecute(lastMessage, context, hasActiveTaskTools);
+}
+
+/**
+ * 监听 SESSION_ALL_TASKS_COMPLETE 事件，触发 handleAutoExecute（兜底路径）。
+ */
+if (typeof window !== 'undefined') {
+  taskEventBus.on('SESSION_ALL_TASKS_COMPLETE', (event) => {
+    const { sessionId } = event;
+
+    const chatStore = useChatStore.getState();
+
+    // 检查是否是当前会话
+    if (chatStore.currentSessionId !== sessionId) {
+      // 存储非当前 session 的事件
+      pendingEventQueue.enqueue(sessionId, event);
+      return;
+    }
+
+    // 当前 session 的事件直接处理
+    processSessionComplete(event);
+  });
+
+  // ========== 监听 session 切换，处理待处理事件 ==========
+  let prevSessionId: string | null = useChatStore.getState().currentSessionId;
+  useChatStore.subscribe((state) => {
+    const currentSessionId = state.currentSessionId;
+    if (currentSessionId && currentSessionId !== prevSessionId) {
+      prevSessionId = currentSessionId;
+
+      const pendingEvent = pendingEventQueue.dequeue(currentSessionId);
+      if (pendingEvent) {
+        processSessionComplete(pendingEvent);
+      }
+    } else if (!currentSessionId) {
+      prevSessionId = null;
+    }
+  });
+
+  // ========== 定期清理过期事件（每 5 分钟） ==========
+  const cleanupIntervalId = setInterval(() => {
+    pendingEventQueue.cleanup();
+  }, 5 * 60 * 1000);
+
+  // 确保页面卸载时清理定时器
+  window.addEventListener('beforeunload', () => {
+    clearInterval(cleanupIntervalId);
+  });
 }

@@ -6,7 +6,7 @@
 
 import { TOOL_TIMEOUT_MS } from '../constants';
 import type { ChatMessage } from '../../../services';
-import { ChatRole } from './messages';
+import { ChatRole } from '../../../types/chat';
 
 /**
  * 验证历史消息中的工具结果是否过期。

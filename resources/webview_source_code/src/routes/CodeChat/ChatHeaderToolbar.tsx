@@ -1,7 +1,6 @@
 import * as React from 'react';
 import ChatHistories, { ChatHistoriesHandle } from './ChatHistories';
 import ChatDelete from './ChatDelete';
-import ChatFavoriter, { ChatFavoriterHandle } from './ChatFavoriter';
 import {
   IconButton,
   Popover,
@@ -23,6 +22,9 @@ import {
 import { TbPlus, TbDotsVertical } from 'react-icons/tb';
 import { useChatStore, useChatStreamStore } from '../../store/chat';
 import { useWorkspaceStore } from '../../store/workspace';
+// import { useTourStore } from '../../components/FeatureTour';
+import ChatExporter, { ChatExporterHandle } from './ChatExporter';
+import ChatFavoriter, { ChatFavoriterHandle } from './ChatFavoriter';
 import userReporter from '../../utils/report';
 import Icon from '../../components/Icon';
 import useCustomToast from '../../hooks/useCustomToast';
@@ -36,6 +38,9 @@ import { debounce } from 'lodash';
 // import { TfiMenuAlt } from 'react-icons/tfi';
 import ChatSearch from './ChatSearch';
 import { AiOutlineClear } from 'react-icons/ai';
+import { usePostMessage } from '../../PostMessageProvider';
+import { useExtensionStore } from '../../store/extension';
+import { useTaskCompletionStore } from '../../modules/subagent';
 
 function ChatHeaderToolbar() {
   const chatType = useChatStore((state) => state.chatType);
@@ -44,6 +49,8 @@ function ChatHeaderToolbar() {
     (state) => [state.onNewSession, state.clearSession],
     shallow,
   );
+  const selectedModel = undefined;
+  void selectedModel;
   // const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   // const activeChangeId = useChatStore((state) => state.activeChangeId);
   // const activeFeatureId = useChatStore((state) => state.activeFeatureId);
@@ -62,10 +69,15 @@ function ChatHeaderToolbar() {
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
   );
+    const isSubagentProcessing = useTaskCompletionStore(
+      (state) => !state.isSessionComplete(currentSession?._id || ''),
+    );
+
   const isSearching = useChatStreamStore((state) => state.isSearching);
   const [isOpenPopover, setIsOpenPopover] = React.useState(false);
   const [isOpenModal, setIsOpenModal] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
+  const exportModelRef = React.useRef<ChatExporterHandle>(null);
   const favoriterRef = React.useRef<ChatFavoriterHandle>(null);
   const historyRef = React.useRef<ChatHistoriesHandle>(null);
   const { toast } = useCustomToast();
@@ -77,8 +89,26 @@ function ChatHeaderToolbar() {
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
   // const startTour = useTourStore((state) => state.startTour);
   const disabled = React.useMemo(() => {
-    return isStreaming || isProcessing || isTerminalProcessing || isSearching;
-  }, [isStreaming, isProcessing, isTerminalProcessing, isSearching]);
+    return (
+      isStreaming ||
+      isProcessing ||
+      isTerminalProcessing ||
+      isSearching ||
+      isSubagentProcessing
+    );
+  }, [
+    isStreaming,
+    isProcessing,
+    isTerminalProcessing,
+    isSearching,
+    isSubagentProcessing,
+  ]);
+
+  const ide = useExtensionStore((state) => state.IDE);
+  void ide;
+
+  const { postMessage } = usePostMessage();
+  void postMessage;
 
   useOutsideClick({
     ref: popoverRef,
@@ -88,6 +118,10 @@ function ChatHeaderToolbar() {
         popoverRef.current &&
         popoverRef.current.contains(e.target as Node)
       ) {
+        return;
+      }
+      const isOpen = exportModelRef.current?.isOpen;
+      if (isOpen) {
         return;
       }
       const favoriterIsOpen = favoriterRef.current?.isOpen;
@@ -173,6 +207,8 @@ function ChatHeaderToolbar() {
     ],
   );
 
+  // 新建并行会话 - Y3 不支持（并行会话功能已回退）
+
   return (
     <div className="flex flex-row-reverse gap-2 items-center p-2 box-border">
       <div className="flex flex-row-reverse gap-1 items-center w-full">
@@ -192,6 +228,7 @@ function ChatHeaderToolbar() {
             <PopoverContent w="90px">
               <PopoverBody py="1" pl="0" pr="1">
                 <VStack align="center" overflowY="auto" p="0">
+                  <ChatExporter ref={exportModelRef} />
                   <ChatFavoriter ref={favoriterRef} />
                   <ChatDelete />
                   <Button
@@ -213,6 +250,7 @@ function ChatHeaderToolbar() {
           </Popover>
         </div>
         <ChatHistories ref={historyRef} />
+        {/* Y3: 并行会话功能已回退 */}
         <Tooltip label="新建会话">
           <IconButton
             aria-label="新建会话"

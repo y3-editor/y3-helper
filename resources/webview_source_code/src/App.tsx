@@ -38,6 +38,7 @@ import { useChatApplyStore } from './store/chatApply';
 import { useChatConfig } from './store/chat-config';
 import { ChatModel, ParseImgType, ModelIconType, ChatModelType } from './services/chatModel';
 import { fetchBuiltInServers, fetchNameMappings, fetchPrivateModelOnlyServers } from './services/mcp';
+import { supportsSubagent } from './utils/specVersionUtils';
 import { useChatTerminalStore } from './store/chatTerminal';
 import { usePanelContext } from './context/PanelContext';
 import { useSkillsStore, SkillIndexItem } from './store/skills';
@@ -399,6 +400,7 @@ function App() {
           login_from,
           fixedModel,
           subagentEnable,
+          subagentManualTriggerOnly,
           chatApplyMode,
         } = event.data.data as any;
         setCodeCoverageApiUrl(CODE_COVERAGE_API_URL);
@@ -473,7 +475,12 @@ function App() {
         });
 
         // 设置 Subagent 功能开关
-        extensionStore.setSubagentEnable(!!subagentEnable);
+        const versionSupported = supportsSubagent(codeMakerVersion, IDE);
+        extensionStore.setSubagentEnable(!!subagentEnable && versionSupported);
+        // 设置 Subagent 手动触发模式
+        extensionStore.setSubagentManualTriggerOnly(
+          !!subagentManualTriggerOnly,
+        );
 
         // Y3Helper: 当 fixedModel 存在时，自动注入到 chatModels 中，使自定义模型支持图片上传
         extensionStore.setFixedModel(fixedModel || '');

@@ -14,9 +14,15 @@ import {
   VStack,
   Icon,
 } from '@chakra-ui/react';
-import SelectWithTooltip, { SelectOption } from '../../components/SelectWithTooltip';
-import { RiFileEditLine, RiQuestionnaireLine, RiToolsLine } from 'react-icons/ri';
-import { FiFileText, FiSearch, FiTarget } from "react-icons/fi";
+import SelectWithTooltip, {
+  SelectOption,
+} from '../../components/SelectWithTooltip';
+import {
+  RiFileEditLine,
+  RiQuestionnaireLine,
+  RiToolsLine,
+} from 'react-icons/ri';
+import { FiFileText, FiSearch, FiTarget } from 'react-icons/fi';
 import { useChatConfig } from '../../store/chat-config';
 import { LuListTodo } from 'react-icons/lu';
 import { IoTerminalOutline } from 'react-icons/io5';
@@ -27,7 +33,10 @@ import { TbBrandNetbeans } from 'react-icons/tb';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
 import SkillSettingModal from './SkillSettingModal';
+import AgentConfigCollapse from './AgentConfigCollapse';
+import AgentSettingModal from './AgentSettingModal';
 import { IDE, useExtensionStore } from '../../store/extension';
+import { versionCompare } from '../../utils/common';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { useChatAttach, useChatStore } from '../../store/chat';
@@ -55,19 +64,42 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mcpSettingOpen, setMcpSettingOpen] = useState(false);
   const [skillSettingOpen, setSkillSettingOpen] = useState(false);
+  const [agentSettingOpen, setAgentSettingOpen] = useState(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const popoverContentRef = useRef<HTMLDivElement>(null);
+  const ide = useExtensionStore((state) => state.IDE);
+  const pluginVersion =
+    useExtensionStore((state) => state.codeMakerVersion) || '';
   const attachs = useChatAttach((state) => state.attachs);
   const filterAttachHook = useFilteredAttach();
   const syncHistory = useChatStore((state) => state.syncHistory);
   const { postMessage } = usePostMessage();
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
+  const isJetbrians = useExtensionStore.getState().IDE === IDE.JetBrains;
+
+  const jetbrainVersion = useMemo(() => {
+    if (isJetbrians) {
+      return pluginVersion?.split?.('-')?.[1] || '0.0.0';
+    }
+    return '0.0.0';
+  }, [isJetbrians, pluginVersion])
 
   const supportNewApply = useMemo(() => {
-    return true;
-  }, []);
+    let newApplyVersion = false;
+    if (ide === IDE.VisualStudioCode) {
+      newApplyVersion = versionCompare('2.5.8', pluginVersion) >= 0;
+    } else if (ide === IDE.JetBrains && pluginVersion) {
+      try {
+        const jbVersion = pluginVersion.split('-')[1];
+        newApplyVersion = versionCompare('2.3.9', jbVersion) >= 0;
+      } catch {
+        newApplyVersion = false;
+      }
+    }
+    return newApplyVersion;
+  }, [ide, pluginVersion]);
 
   const currentSession = useCurrentSession();
 
@@ -178,22 +210,29 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       onAutoChange?: (val: boolean) => void;
       alwaysEnabled?: boolean; // 始终启用模式，只有"启用"和"启用(Auto)"两个选项
     }) => {
-      if (item?.hidden) return null
-      const hasAutoOption = item.autoConfigKey && item.onAutoChange !== undefined;
+      if (item?.hidden) return null;
+      const hasAutoOption =
+        item.autoConfigKey && item.onAutoChange !== undefined;
 
       // 确定 Select 的值
       // alwaysEnabled 模式下没有 'off' 选项，直接根据 autoValue 判断
       const selectValue = item.alwaysEnabled
-        ? (item.autoValue ? 'auto' : 'on')
-        : (!item.value ? 'off' : (item.autoValue ? 'auto' : 'on'));
+        ? item.autoValue
+          ? 'auto'
+          : 'on'
+        : !item.value
+          ? 'off'
+          : item.autoValue
+            ? 'auto'
+            : 'on';
 
       // Build options array
       const selectOptions: SelectOption[] = item.alwaysEnabled
         ? [{ value: 'on', label: '启用' }]
         : [
-          { value: 'off', label: '关闭' },
-          { value: 'on', label: '启用' },
-        ];
+            { value: 'off', label: '关闭' },
+            { value: 'on', label: '启用' },
+          ];
 
       if (hasAutoOption) {
         // For autoTip, extract text or use a simplified version
@@ -202,13 +241,16 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
 
         if (item.autoConfigKey === EAutoConfig.AutoApprove) {
           tooltipTitle = '自动读取';
-          tooltipText = '开启后，智聊过程将自动进行目录/文件授权，可通过配置忽略目录来保护敏感文件';
+          tooltipText =
+            '开启后，智聊过程将自动进行目录/文件授权，可通过配置忽略目录来保护敏感文件';
         } else if (item.autoConfigKey === EAutoConfig.AutoExecute) {
           tooltipTitle = '自动执行';
-          tooltipText = '智聊过程需运行的命令将自动执行，可通过配置忽略命令来规避高危操作';
+          tooltipText =
+            '智聊过程需运行的命令将自动执行，可通过配置忽略命令来规避高危操作';
         } else if (item.autoConfigKey === EAutoConfig.AutoApply) {
           tooltipTitle = '自动应用';
-          tooltipText = '智聊过程的代码修改将自动应用，可通过消息回撤来恢复变更';
+          tooltipText =
+            '智聊过程的代码修改将自动应用，可通过消息回撤来恢复变更';
         } else if (item.autoConfigKey === EAutoConfig.AutoTodo) {
           tooltipTitle = '自动规划';
           tooltipText = '智聊过程生成的plan执行过程全自动，无需手动确认';
@@ -220,7 +262,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
           value: 'auto',
           label: '启用(Auto)',
           tooltipTitle: tooltipTitle,
-          tooltip: tooltipText
+          tooltip: tooltipText,
         });
       }
 
@@ -267,7 +309,11 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 const isAuto = value === 'auto';
 
                 // 先更新启用状态
-                if (!item.alwaysEnabled && item.value !== isEnabled && item.onChange) {
+                if (
+                  !item.alwaysEnabled &&
+                  item.value !== isEnabled &&
+                  item.onChange
+                ) {
                   item.onChange(isEnabled);
                 }
 
@@ -333,7 +379,13 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
             </Tooltip>
           </MiniButton>
         </PopoverTrigger>
-        <PopoverContent w={'330px'} ref={popoverContentRef} maxH="80vh" display="flex" flexDirection="column">
+        <PopoverContent
+          w={'330px'}
+          ref={popoverContentRef}
+          maxH="80vh"
+          display="flex"
+          flexDirection="column"
+        >
           <PopoverHeader
             display="flex"
             justifyContent="space-between"
@@ -350,12 +402,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
             </Text>
             <CloseButton size="sm" onClick={() => setIsOpen(false)} />
           </PopoverHeader>
-          <Box
-            className="show-scrollbar"
-            flex="1"
-            minH="0"
-            overflowY="auto"
-          >
+          <Box className="show-scrollbar" flex="1" minH="0" overflowY="auto">
             <PopoverBody display="flex" flexDirection="column" p="2">
               <VStack align="stretch" py={1}>
                 {renderSwitchItem({
@@ -370,30 +417,32 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                     config.updateAutoApprove(val);
                   },
                 })}
-                {!['openspec', 'speckit'].includes(codebaseChatMode || '') && renderSwitchItem({
-                  title: 'Plan Mode',
-                  hidden: true,
-                  icon: <LuListTodo size={16} />,
-                  value: currentSession?.data?.enablePlanMode || false,
-                  lebalTooltips:
-                    '将复杂需求分解成可执行的任务，提供plan面板可视化思路与进度，可随时介入调整计划方向',
-                  onChange: (val) => {
-                    console.log('更新plan');
-                    updateCurrentSession((session) => {
-                      if (session.data) {
-                        session.data.enablePlanMode = val;
-                        requestAnimationFrame(syncHistory)
-                      }
-                    });
-                  },
-                  autoConfigKey: EAutoConfig.AutoTodo,
-                  autoValue: config.autoTodo,
-                  autoTip: '开启后，智聊过程生成的plan执行过程全自动，无需手动确认',
-                  onAutoChange: (val) => {
-                    onReportAutoConfig(EAutoConfig.AutoTodo, val);
-                    config.updateAutoTodo(val);
-                  },
-                })}
+                {!['openspec', 'speckit'].includes(codebaseChatMode || '') &&
+                  renderSwitchItem({
+                    title: 'Plan Mode',
+                    hidden: true,
+                    icon: <LuListTodo size={16} />,
+                    value: currentSession?.data?.enablePlanMode || false,
+                    lebalTooltips:
+                      '将复杂需求分解成可执行的任务，提供plan面板可视化思路与进度，可随时介入调整计划方向',
+                    onChange: (val) => {
+                      console.log('更新plan');
+                      updateCurrentSession((session) => {
+                        if (session.data) {
+                          session.data.enablePlanMode = val;
+                          requestAnimationFrame(syncHistory);
+                        }
+                      });
+                    },
+                    autoConfigKey: EAutoConfig.AutoTodo,
+                    autoValue: config.autoTodo,
+                    autoTip:
+                      '开启后，智聊过程生成的plan执行过程全自动，无需手动确认',
+                    onAutoChange: (val) => {
+                      onReportAutoConfig(EAutoConfig.AutoTodo, val);
+                      config.updateAutoTodo(val);
+                    },
+                  })}
                 {renderSwitchItem({
                   title: '代码地图检索',
                   hidden: true,
@@ -444,7 +493,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                     },
                     autoConfigKey: EAutoConfig.AutoApply,
                     autoValue: config.autoApply,
-                    autoTip: '开启后，智聊过程的代码修改将自动应用，可通过消息回撤来恢复变更',
+                    autoTip:
+                      '开启后，智聊过程的代码修改将自动应用，可通过消息回撤来恢复变更',
                     onAutoChange: (val) => {
                       onReportAutoConfig(EAutoConfig.AutoApply, val);
                       config.updateAutoApply(val);
@@ -485,9 +535,13 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderSwitchItem({
                   title: 'Glob 文件检索',
                   icon: <FiTarget size={16} />,
-                  hidden: !isVSCode,
+                  hidden: !(
+                    isVSCode && versionCompare('26.3.7', pluginVersion || '') >= 0 ||
+                    isJetbrians && versionCompare('26.4.1', jetbrainVersion || '') >= 0
+                  ),
                   value: enableGlobSearch,
-                  lebalTooltips: '使用 glob 模式匹配文件路径，支持 "**/*.js" 等模式，快速定位文件',
+                  lebalTooltips:
+                    '使用 glob 模式匹配文件路径，支持 "**/*.js" 等模式，快速定位文件',
                   onChange: (val) => {
                     setEnableGlobSearch(val);
                   },
@@ -496,7 +550,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   title: 'Grep 内容检索',
                   icon: <FiSearch size={16} />,
                   value: enableGrepSearch,
-                  lebalTooltips: '基于正则表达式的文本搜索工具，快速在代码中查找特定模式和内容',
+                  lebalTooltips:
+                    '基于正则表达式的文本搜索工具，快速在代码中查找特定模式和内容',
                   onChange: (val) => {
                     setEnableGrepSearch(val);
                   },
@@ -507,14 +562,21 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   hidden: true,
                   icon: <RiQuestionnaireLine size={'16'} color="white" />,
                   value: enableUserQuestion,
-                  lebalTooltips: '针对不明确的问题，仓库智聊会主动向你提问并提供相关选项，助力澄清需求',
+                  lebalTooltips:
+                    '针对不明确的问题，仓库智聊会主动向你提问并提供相关选项，助力澄清需求',
                   onChange: (val) => {
                     setEnableUserQuestion(val);
                   },
                 })}
+
                 {/* Y3不需要研发知识集 */}
                 {/* <DevspaceCollapse /> */}
-                <SkillConfigCollapse setSkillSettingOpen={setSkillSettingOpen} />
+                <AgentConfigCollapse
+                  setAgentSettingOpen={setAgentSettingOpen}
+                />
+                <SkillConfigCollapse
+                  setSkillSettingOpen={setSkillSettingOpen}
+                />
                 <MCPConfigCollapse setMcpSettingOpen={setMcpSettingOpen} />
               </VStack>
             </PopoverBody>
@@ -529,6 +591,10 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
       <SkillSettingModal
         isOpen={skillSettingOpen}
         onClose={() => setSkillSettingOpen(false)}
+      />
+      <AgentSettingModal
+        isOpen={agentSettingOpen}
+        onClose={() => setAgentSettingOpen(false)}
       />
     </Box>
   );

@@ -25,7 +25,7 @@ import { GroupAIMessageProps } from './types';
 import ChatMessageActionBar from '../ChatMessageActionBar';
 import userReporter from '../../../utils/report';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
-import { useSubagentStore } from '../../../modules/subagent';
+import { useTaskCompletionStore } from '../../../modules/subagent';
 import { useCallback, useMemo, useState } from 'react';
 import { BroadcastActions, usePostMessage } from '../../../PostMessageProvider';
 import { createNewSession } from '../../../utils/chat';
@@ -214,13 +214,15 @@ function ShareToolCallPanel({
   return (
     <Box mb={2}>
       <Flex alignItems="flex-start" gap={1}>
-        <Checkbox
-          isChecked={isDisabled ? false : isToolCallSelected}
-          isDisabled={isDisabled}
-          onChange={() => onToggleToolCallRound?.(userMsgId)}
-          size="md"
-          mt={1.5}
-        />
+        {onToggleToolCallRound && (
+          <Checkbox
+            isChecked={isDisabled ? false : isToolCallSelected}
+            isDisabled={isDisabled}
+            onChange={() => onToggleToolCallRound(userMsgId)}
+            size="md"
+            mt={1.5}
+          />
+        )}
         {/* 外层容器 - 带背景/边框/圆角 */}
         <Box
           flex={1}
@@ -603,12 +605,13 @@ export function GroupAIMessage({
     state.chatType,
   ]);
   const currentSession = useChatStore((state) => state.currentSession());
+  const currentSessionId = currentSession?._id;
   const { postMessage } = usePostMessage();
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isSearching = useChatStreamStore((state) => state.isSearching);
-  const isSubagentProcessing = useSubagentStore((state) =>
-    state.hasActiveSubagents(),
+  const isSubagentProcessing = !useTaskCompletionStore((state) =>
+    state.isSessionComplete(currentSessionId || ''),
   );
   const showFeedback = useChatStreamStore((state) => state.showFeedback);
   const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
@@ -937,7 +940,7 @@ export function GroupAIMessage({
           <Box display="flex" alignItems="center" flexShrink={0}>
             <Avatar w="16px" h="18px" src={CodeMakerLogo} mr="2" />
             <Box color="text.secondary" fontSize="12px" whiteSpace="nowrap">
-              Y3Maker
+              CodeMaker
             </Box>
           </Box>
           {isShowAction && timeInfoText && (

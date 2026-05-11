@@ -29,6 +29,7 @@ import {
   getContentString,
   FolderItem,
 } from '../../store/chat';
+import { useTaskCompletionStore } from '../../modules/subagent';
 import { useConfigStore } from '../../store/config';
 import {
   BroadcastActions,
@@ -231,6 +232,9 @@ function CodeChat() {
   const isAutoApproved = useChatStreamStore((state) => state.isAutoApproved);
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
+  );
+  const isSubagentProcessing = !useTaskCompletionStore((state) =>
+    state.isSessionComplete(currentSessionId || ''),
   );
   const isApplying = useChatStreamStore((state) => state.isApplying);
   // const endSubmitSpan = useChatStreamStore((state) => state.endSubmitSpan); // Y3不需要遥测
@@ -765,7 +769,7 @@ function CodeChat() {
       }
 
       // 回复中或者查询中不能重复发送消息
-      if (isStreaming || isSearching || isProcessing) {
+      if (isStreaming || isSearching || isProcessing || isSubagentProcessing) {
         if (!isActive(TOAST_STREAMING_PREVENT_SUBMIT_ID)) {
           toast({
             id: TOAST_STREAMING_PREVENT_SUBMIT_ID,
@@ -984,6 +988,7 @@ function CodeChat() {
       mcpRunner,
       skillRunner,
       clearInputDraft, // 添加 clearInputDraft 依赖
+      isSubagentProcessing,
     ],
   );
 
@@ -1369,11 +1374,11 @@ function CodeChat() {
           tool_name,
           extra = {},
         } = eventData?.data || {};
-        const toolSpan = otel.startToolCallSpan(
-          tool_name,
-          tool_id,
-          (useChatStreamStore.getState() as any).conversationRound ?? 0,
-        );
+        const toolSpan = otel.startToolCallSpan({
+          toolName: tool_name,
+          toolId: tool_id,
+          round: (useChatStreamStore.getState() as any).conversationRound ?? 0,
+        });
         if (tool_name === 'use_skill' && isSkillToolId(tool_id)) {
           if (compressionSkillToolIds.has(tool_id)) {
             return;

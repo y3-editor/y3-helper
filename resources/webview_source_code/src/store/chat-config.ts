@@ -28,9 +28,46 @@ export enum ChatModelSupplyChannel {
 // TODO: 兼容老会话为百川的情况，后续不需要可以删除
 export const BAI_CHUAN = 'baichuan2' as ChatModel;
 
+const modelCacheMap = new Map<ChatModel, IChatModelConfig>();
+
+/**
+ * 获取有效的模型配置
+ * - 优先从 modelCacheMap 查找（缓存中均为 enabled=true 的模型）
+ * - 若不在缓存中（模型已下线），从缓存里找同 supplyChannel 中 displayOrder 最高的模型
+ */
+export const getValidChatModel = (model: ChatModel): IChatModelConfig | null => {
+  // 优先从缓存获取，命中即为有效模型
+  if (modelCacheMap.has(model)) {
+    return modelCacheMap.get(model)!;
+  }
+
+  // 模型不在缓存中（已下线），查询原始配置获取 channel 信息
+  const chatModels = useChatConfig.getState().chatModels;
+  const modelConfig = chatModels[model];
+  if (!modelConfig) return null;
+
+  if (modelConfig.enabled) {
+    modelCacheMap.set(model, modelConfig)
+    return modelConfig
+  }
+
+  const modelList = Object.values(chatModels)
+  let maxDisplayOrder = -1;
+  for (const modelItem of modelList) {
+    if (modelItem.supplyChannel === modelConfig.supplyChannel && modelItem.enabled && modelItem.chatType === modelConfig.chatType) {
+      if (modelItem.displayOrder > maxDisplayOrder) {
+        maxDisplayOrder = modelItem.displayOrder;
+        modelCacheMap.set(model, modelItem)
+      }
+    }
+  }
+  return modelCacheMap.get(model) || null;
+}
+
 
 export const getAIGWModel = (model: ChatModel) => {
-  return (useChatConfig.getState().chatModels[model]?.useModel || model) as ChatModel
+  const validModel = getValidChatModel(model);
+  return (validModel?.useModel || DEFAULT_USAGE_MODEL) as ChatModel
 }
 
 /**
@@ -40,9 +77,10 @@ export const getAIGWModel = (model: ChatModel) => {
  * @returns 可用的模型
  */
 export const getAIGWModelWithFallback = (model: ChatModel, fallback?: ChatModel): ChatModel => {
+  const chatModels = useChatConfig.getState().chatModels;
   const modelCodeList = []
-  for (const key in useChatConfig.getState().chatModels) {
-    const modelConfig = useChatConfig.getState().chatModels[key];
+  for (const key in chatModels) {
+    const modelConfig = chatModels[key];
     if (modelConfig && modelConfig.useModel) {
       modelCodeList.push(modelConfig.useModel);
     }
@@ -60,6 +98,44 @@ export const getAIGWModelWithFallback = (model: ChatModel, fallback?: ChatModel)
 export const getModelSupplyChannel = (model: ChatModel) => {
   return (useChatConfig.getState().chatModels[model]?.supplyChannel?.toLocaleLowerCase?.()) as ChatModelSupplyChannel
 }
+
+/**
+ * 根据模型 code，在同一供应商渠道（supplyChannel）中找出性价比最高（价格最低）的模型。
+ * 适用于 subagent 自动降级选模型、成本分析等场景。
+ *
+ * @param modelCode 目标模型的 code 值（即 IChatModelConfig.code，也是 chatModels 的 key）
+ * @returns 同渠道中 promptWeight + completionWeight 最小的 enabled 模型配置，无匹配时返回 null
+ */
+export const getBestFastModel = (modelCode: string): IChatModelConfig | null => {
+  const chatModels = useChatConfig.getState().chatModels;
+
+  // Step 1: 通过 code（key）直接获取 supplyChannel
+  const targetChannel = chatModels[modelCode]?.supplyChannel;
+
+  if (!targetChannel) {
+    return null;
+  }
+
+  // Step 2: 过滤同渠道且 enabled = true 的模型
+  const candidates = Object.values(chatModels).filter(
+    (config) =>
+      config?.enabled &&
+      config.supplyChannel === targetChannel,
+  );
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  // Step 3: 按 promptWeight + completionWeight 升序排序，取最便宜的一个
+  candidates.sort(
+    (a, b) =>
+      (a.priceInfo.promptWeight + a.priceInfo.completionWeight) -
+      (b.priceInfo.promptWeight + b.priceInfo.completionWeight),
+  );
+
+  return candidates[0];
+};
 
 export interface ChatConfig {
   backend: GptBackendService;
@@ -160,6 +236,10 @@ interface ChatConfigStore {
   enableSkills: boolean;
   setEnableSkills: (enable: boolean) => void;
   /** 仓库智聊 特殊工具启用 End */
+
+  /** 内置子代理模型配置：key = agent name，value = 模型代码（空字符串表示继承默认） */
+  subagentModelConfig: Record<string, string>;
+  setSubagentModelConfig: (agentName: string, model: string) => void;
 }
 
 export const useChatConfig = create<ChatConfigStore>()(
@@ -171,6 +251,7 @@ export const useChatConfig = create<ChatConfigStore>()(
       codebaseModelMaxTokens: MODEL_MAX_TOKENS_MAP,
       chatModels: {},
       setChatModels: (models: Record<string, IChatModelConfig>) => {
+        modelCacheMap.clear();
         set(() => ({ chatModels: models }));
       },
       chatModelsLoading: false,
@@ -295,6 +376,15 @@ export const useChatConfig = create<ChatConfigStore>()(
           enableGrepSearch: enable
         }))
       },
+      subagentModelConfig: {},
+      setSubagentModelConfig: (agentName: string, model: string) => {
+        set((state) => ({
+          subagentModelConfig: {
+            ...state.subagentModelConfig,
+            [agentName]: model,
+          },
+        }));
+      },
     }),
     {
       name: 'codechat-config',
@@ -315,6 +405,7 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableDevspaceConfig: state.enableDevspaceConfig,
         enableGlobSearch: state.enableGlobSearch,
         enableGrepSearch: state.enableGrepSearch,
+        subagentModelConfig: state.subagentModelConfig,
       }),
     },
   ),

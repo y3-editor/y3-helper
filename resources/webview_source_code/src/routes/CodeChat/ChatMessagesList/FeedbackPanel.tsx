@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Flex, Box, IconButton, Tooltip } from '@chakra-ui/react';
 import { TbThumbUp, TbThumbDown } from 'react-icons/tb';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
-import { useSubagentStore } from '../../../modules/subagent';
+import { useTaskCompletionStore } from '../../../modules/subagent';
 import { ChatFeedbackType } from '../../../services';
 import { useAuthStore } from '../../../store/auth';
 import userReporter from '../../../utils/report';
@@ -20,6 +20,7 @@ export default function FeedbackPanel(props: {
   const { userScrollLock, onCodeBaseFeedback, submitMessageFeedback } = props;
   const chatType = useChatStore((state) => state.chatType);
   const currentSession = useChatStore((state) => state.currentSession());
+  const currentSessionId = currentSession?._id;
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isProcessing = useChatStreamStore((state) => state.isProcessing);
   const isSearching = useChatStreamStore((state) => state.isSearching);
@@ -29,8 +30,8 @@ export default function FeedbackPanel(props: {
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
   );
-  const isSubagentProcessing = useSubagentStore(
-    (state) => state.hasActiveSubagents(),
+  const isSubagentProcessing = !useTaskCompletionStore(
+    (state) => state.isSessionComplete(currentSessionId || ''),
   );
   const setShowFeedback = useChatStreamStore((state) => state.setShowFeedback);
   const lastMessageSearchRecordId = useChatStore(

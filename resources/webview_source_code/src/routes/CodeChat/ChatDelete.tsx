@@ -19,12 +19,16 @@ import userReporter from '../../utils/report';
 import useCustomToast from '../../hooks/useCustomToast';
 import Icon from '../../components/Icon';
 import { UserEvent } from '../../types/report';
+import { useTaskCompletionStore } from '../../modules/subagent';
 
 export default function ChatDelete() {
   const currentSessionId = useChatStore((state) => state.currentSessionId);
   const removeSession = useChatStore((state) => state.removeSession);
   const isStreaming = useChatStreamStore((state) => state.isStreaming);
   const isSearching = useChatStreamStore((state) => state.isSearching);
+  const isSubagentProcessing = useTaskCompletionStore(
+    (state) => !state.isSessionComplete(currentSessionId || ''),
+  );
   const [isOpen, setIsOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   const { toast } = useCustomToast();
@@ -69,15 +73,15 @@ export default function ChatDelete() {
             <Button
               aria-label="删除会话"
               size="xs"
-              isDisabled={isStreaming || isSearching}
+              isDisabled={isStreaming || isSearching || isSubagentProcessing}
               onClick={() => {
-                if (isStreaming || isSearching) return;
+                if (isStreaming || isSearching || isSubagentProcessing) return;
                 setIsOpen((prev) => !prev);
               }}
               bg="none"
               color="text.default"
             >
-              <Icon as={RiDeleteBinLine} size="xs" className='mr-1' /> 删除会话
+              <Icon as={RiDeleteBinLine} size="xs" className="mr-1" /> 删除会话
             </Button>
           </PopoverTrigger>
           <PopoverContent>

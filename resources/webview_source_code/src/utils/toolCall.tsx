@@ -9,6 +9,7 @@ import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspa
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
 import { isImageFileByPath } from ".";
 import { onChunkLoadError } from "./chunkErrorHandler";
+import { formatUserDeniedResult } from "./toolResultFormatter";
 import { UserEvent } from "../types/report";
 
 
@@ -161,9 +162,7 @@ export function formatResultContent(options: {
           resultContent = processWriteTodoDenied();
           break;
         default:
-          console.log('format user deni');
-
-          resultContent = 'The user denied this operation.';
+          resultContent = formatUserDeniedResult(tool.function.name, tool.id);
       }
     } else if (tool.function.name === 'retrieve_code') {
       let tempResult = '';
@@ -303,7 +302,7 @@ export function formatResultContent(options: {
     } else if (tool.function.name === terminalCmdFunction) {
       resultContent = toolResponse
         ? (result.extra?.terminalLog || resultContent)
-        : 'The user denied this operation.';
+        : formatUserDeniedResult(tool.function.name, tool.id);
     } else if (['edit_file', 'replace_in_file'].includes(tool.function.name)) {
       if (result.isError) {
         resultContent = `The file was not edited successfully. Error message: \n\n${result.content}`;

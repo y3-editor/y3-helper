@@ -167,7 +167,7 @@ export function createChildSession(
   type: SessionType,
   name: string,
   extra: Record<string, any> = {},
-  tokens?: Partial<ConsumedTokens>
+  tokens?: Partial<ConsumedTokens>,
 ): ChildSession {
   return {
     id,
@@ -582,13 +582,10 @@ export function calculateMainAgentTotalTokens(
  * @returns 所有子会话的总 token 消耗
  */
 export function calculateChildrenTotalTokens(children: ChildSession[]): number {
-  return children.reduce(
-    (total, session) => {
-      if (!session.consumedTokens) return total;
-      return total + calculateMainAgentTotalTokens(session.consumedTokens);
-    },
-    0,
-  );
+  return children.reduce((total, session) => {
+    if (!session.consumedTokens) return total;
+    return total + calculateMainAgentTotalTokens(session.consumedTokens);
+  }, 0);
 }
 
 /**
@@ -610,8 +607,13 @@ export function calculateGrandTotalTokens(
 /**
  * 格式化 token 数量为可读字符串
  *
+ * - >= 1B → '1B'
+ * - >= 1M → '2M'
+ * - >= 1K → '35K'
+ * - < 1K  → 原始数值字符串
  * @param tokenCount token 数量
  * @returns 格式化后的字符串 (如: "1.2k", "3.4M")
+ *
  */
 export function formatTokenCount(tokenCount: number): string {
   const billion = 1_000_000_000;
