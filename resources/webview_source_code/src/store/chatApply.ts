@@ -538,7 +538,12 @@ function parseDiffToCodeAndLines(diffStr: string) {
     const line = lines[i];
 
     if (line.startsWith('@@')) {
-      // hunk header，跳过不加入 content
+      // hunk header，解析新文件的起始行号来重置 realLine
+      // 格式: @@ -oldStart,oldCount +newStart,newCount @@
+      const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      if (match) {
+        realLine = parseInt(match[1], 10);
+      }
       continue;
     } else if (line.startsWith('+')) {
       // 添加的行：占用真实行号

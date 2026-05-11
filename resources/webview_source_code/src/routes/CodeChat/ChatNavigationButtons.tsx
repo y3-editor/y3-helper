@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Box, IconButton, Tooltip, Divider } from '@chakra-ui/react';
-import { FaAngleDoubleDown, FaAngleUp, FaAngleDown } from 'react-icons/fa';
+import { FaAngleDoubleDown, FaAngleDoubleUp, FaAngleUp, FaAngleDown } from 'react-icons/fa';
 import Icon from '../../components/Icon';
 export interface ChatNavigationButtonsProps {
   userMsgIndexes: number[];
@@ -8,6 +8,7 @@ export interface ChatNavigationButtonsProps {
   onPrevMessage: () => void;
   onNextMessage: () => void;
   onScrollToBottom: () => void;
+  onScrollToTop?: () => void;
   canGoPrev?: () => boolean;
   canGoNext?: () => boolean;
 }
@@ -18,6 +19,7 @@ const ChatNavigationButtons: React.FC<ChatNavigationButtonsProps> = ({
   onPrevMessage,
   onNextMessage,
   onScrollToBottom,
+  onScrollToTop,
   canGoPrev,
   canGoNext,
 }) => {
@@ -75,7 +77,15 @@ const ChatNavigationButtons: React.FC<ChatNavigationButtonsProps> = ({
         </Box>
       )}
       {!isStreaming && <Divider h="14px" orientation="vertical" />}
-      <Box display="flex" alignItems="center">
+      <Box display="flex" alignItems="center" gap="1">
+        {/* 置顶按钮 - 仅当消息数量超过 2 条时显示 */}
+        {!isStreaming && onScrollToTop && (
+          <Tooltip label="置顶" placement="top">
+            <Box as="span" display="inline-flex" cursor="pointer" onClick={onScrollToTop}>
+              <Icon as={FaAngleDoubleUp} size="xxs" />
+            </Box>
+          </Tooltip>
+        )}
         <Tooltip label="置底" placement="top">
           <Box as="span" display="inline-flex" cursor="pointer" onClick={onScrollToBottom}>
             <Icon as={FaAngleDoubleDown} size="xxs" />

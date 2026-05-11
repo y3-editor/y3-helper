@@ -312,21 +312,6 @@ function ChangesHeaderActions() {
 
   return (
     <Flex alignItems="center" gap={1}>
-      <Tooltip label="全部回退">
-        <IconButton
-          aria-label="全部回退"
-          size="xs"
-          variant="ghost"
-          icon={<Icon as={RxReset} boxSize="14px" />}
-          p={0}
-          m={0}
-          minW="auto"
-          w="22px"
-          h="22px"
-          color="text.default"
-          onClick={handleBatchRevert}
-        />
-      </Tooltip>
       <Tooltip label="全部保留">
         <IconButton
           aria-label="全部保留"
@@ -340,6 +325,21 @@ function ChangesHeaderActions() {
           h="22px"
           color="text.default"
           onClick={handleBatchConfirm}
+        />
+      </Tooltip>
+      <Tooltip label="全部回退">
+        <IconButton
+          aria-label="全部回退"
+          size="xs"
+          variant="ghost"
+          icon={<Icon as={RxReset} boxSize="14px" />}
+          p={0}
+          m={0}
+          minW="auto"
+          w="22px"
+          h="22px"
+          color="text.default"
+          onClick={handleBatchRevert}
         />
       </Tooltip>
     </Flex>
