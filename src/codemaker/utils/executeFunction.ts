@@ -11,6 +11,7 @@ import { readFile, listFiles, viewSourceCodeDefinitionsTopLevel } from './analyz
 import grepSearch from './grepSearch';
 import { globSearch } from './globSearch';
 import editFile, { writeToFile } from './editFile/index';
+import { executeClaudeEdit, executeClaudeWrite } from './editFile/claudeEdit';
 import replaceInFile from './replaceInFile/index';
 import runTerminalCmd from './terminal/index';
 
@@ -83,6 +84,20 @@ export default async function executeFunction(
                 isCreateFile: toolParams?.is_create_file,
                 toolCallId: params.toolId,
             });
+        case 'write':
+            // Claude 原生 write 工具：整文件覆写/创建
+            return executeClaudeWrite({
+                file_path: toolParams?.file_path,
+                content: toolParams?.content ?? '',
+            }) as Promise<ExecuteCommandResult>;
+        case 'edit':
+            // Claude 原生 edit 工具：old_string → new_string 精确替换
+            return executeClaudeEdit({
+                file_path: toolParams?.file_path,
+                old_string: toolParams?.old_string ?? '',
+                new_string: toolParams?.new_string ?? '',
+                replace_all: toolParams?.replace_all,
+            }) as Promise<ExecuteCommandResult>;
         case 'run_terminal_cmd':
             return runTerminalCmd(toolParams, params.toolId, params.provider);
         case 'make_plan':

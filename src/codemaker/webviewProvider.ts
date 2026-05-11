@@ -227,7 +227,9 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 // IDE 标识
                 IDE: 'vscode',
                 app_version: vscode.version,
-                codeMakerVersion: '1.0.0',
+                // 版本门已在 webview 源码里被打掉（versionCompare 恒返 1），
+                // 这里写什么都行，保留一个能与 codemaker 对得上的值即可。
+                codeMakerVersion: '26.5.0',
 
                 // 配置项
                 codeChatApiKey: config.apiKey,
@@ -253,6 +255,10 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 disableNewApply: false,
                 planModeEnabled: false,
                 subagentEnable: true,
+                // 强制使用 ClaudeEdit 应用模式：
+                // - AI 走 write / edit 原生工具（配合 autoApply=true 可静默落盘）
+                // - 避免回答里出现「文件变更」推荐面板（FileRecommendApplyPanel）
+                chatApplyMode: 'claudeedit',
             },
         };
 

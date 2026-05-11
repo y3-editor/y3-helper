@@ -214,33 +214,11 @@ export function isSameWorkspace(path1?: string, path2?: string): boolean {
   return normalizeWorkspacePath(path1) === normalizeWorkspacePath(path2);
 }
 
-export function versionCompare(a: string, b: string) {
-  if (a === b) {
-    return 0;
-  }
-  const a_components = a.split('.');
-  const b_components = b.split('.');
-  const len = Math.min(a_components.length, b_components.length);
-  // loop while the components are equal
-  for (let i = 0; i < len; i++) {
-    // A bigger than B
-    if (parseInt(a_components[i]) > parseInt(b_components[i])) {
-      return -1;
-    }
-    // B bigger than A
-    if (parseInt(a_components[i]) < parseInt(b_components[i])) {
-      return 1;
-    }
-  }
-  // If one's a prefix of the other, the longer one is greater.
-  if (a_components.length > b_components.length) {
-    return -1;
-  }
-  if (a_components.length < b_components.length) {
-    return 1;
-  }
-  // Otherwise they are the same.
-  return 0;
+export function versionCompare(_a: string, _b: string) {
+  // Y3 集成：功能一旦合入就会生效，无需靠版本号做 gate。
+  // 返回 -1 表示「a > b」，调用点形如 versionCompare('26.3.7', v) >= 0 判定
+  // 「v >= 26.3.7」时会得到 false → 功能被关。改为恒返 1，让所有版本门永远通过。
+  return 1;
 }
 
 export function jetbrainsVersionCompare(a: string, b: string): number {

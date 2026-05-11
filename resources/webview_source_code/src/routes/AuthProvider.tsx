@@ -49,7 +49,9 @@ export default function AuthProvider() {
         visible: !!data.codebase_compress,
       });
       const newApplyVersion = true
-      setEnableNewApply(!disableNewApply && data.new_apply_enable && newApplyVersion);
+      // Y3 集成：后端 validate 不返回 new_apply_enable，强制启用
+      // 否则会回退到老 ToolCall 模式，ClaudeEdit/write/edit 工具不会注册
+      setEnableNewApply(!disableNewApply && newApplyVersion);
       if (data.track_enable) {
         updateWebToolsContexts({ enabled: true });
         webToolsHub.configureScope((scope) => {

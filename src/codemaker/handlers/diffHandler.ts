@@ -227,17 +227,17 @@ export async function handleAcceptEdit(data: any, provider: CodeMakerWebviewProv
             viewColumn: vscode.ViewColumn.Active,
             preserveFocus: true,
         });
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const edit = new vscode.WorkspaceEdit();
-            edit.replace(
-                currentDocument.uri,
-                new vscode.Range(0, 0, currentDocument.lineCount, 0),
-                afterEdit,
-            );
-            await vscode.workspace.applyEdit(edit);
-            await currentDocument.save();
-        }
+        // 用 WorkspaceEdit 精确作用在目标文档的 uri 上，
+        // 不依赖 activeTextEditor —— 后者在 showTextDocument(preserveFocus=true)
+        // 时可能仍指向原来的编辑器，导致内容被写进错误文件。
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+            currentDocument.uri,
+            new vscode.Range(0, 0, currentDocument.lineCount, 0),
+            afterEdit,
+        );
+        await vscode.workspace.applyEdit(edit);
+        await currentDocument.save();
 
         provider.sendMessage({
             type: 'ACCEPT_EDIT_RESULT',
@@ -422,60 +422,148 @@ export async function handleReapplyReplace(data: any, provider: CodeMakerWebview
 
 // ─── Batch Apply ───────────────────────────────────────
 
+// 参考上游 DiffViewProvider.getReplacedCode：做纯文本替换，
+// 不做 indent 调整以保持轻量；indent 调整上游也是启发式，不完全可靠。
+function getReplacedCode(rawCode: string, searches: string[], replaces: string[]): string {
+    let result = rawCode;
+    for (let i = 0; i < searches.length; i++) {
+        const s = searches[i];
+        const r = replaces[i] ?? '';
+        if (!s) { continue; }
+        if (result.includes(s)) {
+            result = result.replace(s, r);
+        }
+    }
+    return result;
+}
+
 export async function handleBatchApplyChanges(data: any, provider: CodeMakerWebviewProvider) {
     const { type: actionType, fileChanges = {} } = data;
     const isRevert = actionType === 'revert';
     const appliedCodeBlockIds: string[] = [];
-    let hasError = false;
+    const createdPaths: string[] = [];
+    const allCodeBlocks: string[] = [];
+    let msgId = '';
 
     try {
         for (const [filePath, codeBlocks] of Object.entries(fileChanges as Record<string, any>)) {
             const absPath = resolveFilePath(filePath);
-            let content = '';
-
-            if (fs.existsSync(absPath)) {
-                content = await fs.promises.readFile(absPath, 'utf-8');
-            }
+            let fileExist = fs.existsSync(absPath);
+            // 聚合每个文件的 search / replace 列表
+            const curSearchCodes: string[] = [];
+            const curReplacedCodes: string[] = [];
+            const blockIds: string[] = [];
+            let isNewFile = !fileExist;
 
             for (const [codeBlockId, blockData] of Object.entries(codeBlocks as Record<string, any>)) {
-                try {
-                    const searchCode = isRevert
-                        ? (blockData.replacedCode || '')
-                        : (blockData.searchCode || '');
-                    const replaceCode = isRevert
-                        ? (blockData.searchCode || '')
-                        : (blockData.replacedCode || '');
+                const {
+                    searchCodes = [],
+                    replacedCodes = [],
+                    createdFilePaths = [],
+                    messageId,
+                } = blockData || {};
+                if (messageId) { msgId = messageId; }
+                allCodeBlocks.push(codeBlockId);
+                blockIds.push(codeBlockId);
 
-                    if (searchCode) {
-                        content = content.replace(searchCode, replaceCode);
-                    } else if (replaceCode) {
-                        content += '\n' + replaceCode;
+                const searches: string[] = Array.isArray(searchCodes) ? searchCodes : [];
+                const replaces: string[] = Array.isArray(replacedCodes) ? replacedCodes : [];
+                curSearchCodes.push(...searches);
+                curReplacedCodes.push(...replaces);
+
+                // webview 会把「AI 新建过的文件」记到 createdFilePaths 中
+                if (Array.isArray(createdFilePaths) && createdFilePaths.includes(filePath) && !isNewFile) {
+                    isNewFile = true;
+                }
+
+                // 对已存在文件的逐块修改
+                if (!isNewFile) {
+                    try {
+                        const currentDocument = await vscode.workspace.openTextDocument(absPath);
+                        const rawCode = currentDocument.getText().replace(/\r\n/g, '\n');
+                        const replaced = isRevert
+                            ? getReplacedCode(rawCode, replaces, searches)
+                            : getReplacedCode(rawCode, searches, replaces);
+                        if (replaced && replaced !== rawCode) {
+                            const edit = new vscode.WorkspaceEdit();
+                            edit.replace(
+                                currentDocument.uri,
+                                new vscode.Range(0, 0, currentDocument.lineCount, 0),
+                                replaced,
+                            );
+                            await vscode.workspace.applyEdit(edit);
+                            await currentDocument.save();
+                            appliedCodeBlockIds.push(codeBlockId);
+                        }
+                    } catch (err) {
+                        console.error('[Y3Maker] BATCH_APPLY_CHANGES apply single block failed:', err);
                     }
-
-                    appliedCodeBlockIds.push(codeBlockId);
-                } catch {
-                    hasError = true;
                 }
             }
 
-            await fs.promises.writeFile(absPath, content, 'utf-8');
+            // 新文件整体处理
+            if (isNewFile) {
+                createdPaths.push(filePath);
+                try {
+                    if (isRevert) {
+                        if (fs.existsSync(absPath)) {
+                            await fs.promises.unlink(absPath);
+                        }
+                    } else {
+                        // 纯代码块场景 replacedCodes 可能为空，此时 fallback 到 searchCodes
+                        // （ChatCodeBlock 里非 SEARCH/REPLACE 格式会把整段代码塞进 searchCodes）
+                        let newContent = curReplacedCodes.join('\n');
+                        if (!newContent) {
+                            newContent = curSearchCodes.join('\n');
+                        }
+                        await fs.promises.mkdir(path.dirname(absPath), { recursive: true });
+                        await fs.promises.writeFile(absPath, newContent, 'utf-8');
+                    }
+                    appliedCodeBlockIds.push(...blockIds);
+                } catch (err) {
+                    console.error('[Y3Maker] BATCH_APPLY_CHANGES create/revert file failed:', err);
+                }
+            }
+        }
+
+        if (!appliedCodeBlockIds.length) {
+            provider.sendMessage({
+                type: 'BATCH_APPLY_CHANGES_FAILED',
+                data: { messageId: msgId, message: '未找到应用位置' },
+            });
+            return;
         }
 
         provider.sendMessage({
             type: 'BATCH_APPLY_CHANGES_SUCCESS',
             data: {
+                type: actionType,
+                messageId: msgId,
+                createdFilePaths: createdPaths,
                 appliedCodeBlockIds,
-                status: hasError ? 'part' : 'all',
+                replacedCodes: [],
+                status: allCodeBlocks.length === appliedCodeBlockIds.length ? 'all' : 'part',
             },
         });
     } catch (err: any) {
         provider.sendMessage({
             type: 'BATCH_APPLY_CHANGES_FAILED',
-            data: { message: err.message },
+            data: { messageId: msgId, message: err.message },
         });
     }
 }
 
 export async function handleApplySingleChanges(data: any, provider: CodeMakerWebviewProvider) {
-    await handleBatchApplyChanges(data, provider);
+    // webview 单文件应用：{ type, diffId, codeBlockIds, fileChange: { codeBlockId: meta } }
+    // fileChange 中每个 meta 都含 filePath，通常同一个 filePath。
+    // 这里把它改造成 fileChanges: { filePath: { codeBlockId: meta } } 交给批量实现。
+    const { type, codeBlockIds = [], fileChange = {} } = data || {};
+    const fileChanges: Record<string, Record<string, any>> = {};
+    for (const codeBlockId of codeBlockIds) {
+        const meta = fileChange[codeBlockId];
+        if (!meta || !meta.filePath) { continue; }
+        if (!fileChanges[meta.filePath]) { fileChanges[meta.filePath] = {}; }
+        fileChanges[meta.filePath][codeBlockId] = meta;
+    }
+    await handleBatchApplyChanges({ type, fileChanges }, provider);
 }
