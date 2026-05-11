@@ -240,6 +240,7 @@ export class AgentsHandler {
       description: agent.metaData.description,
       source: agent.source,
       model: agent.metaData.model,
+      maxSteps: agent.metaData.maxSteps,
       // tools: agent.metaData.tools,
       prompt: agent.metaData.prompt
     }));

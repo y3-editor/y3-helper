@@ -24,6 +24,7 @@ export interface AgentParseResult {
  * description: Reviews code for quality and best practices
  * tools: Read, Glob, Grep
  * model: sonnet
+ * maxSteps: 50
  * ---
  *
  * You are a code reviewer. When invoked, analyze the code and provide
@@ -164,6 +165,13 @@ export class AgentMdcParser {
         metaData.tools = String(parsed.tools).trim();
       }
 
+      if (parsed.maxSteps !== undefined && parsed.maxSteps !== null) {
+        const maxSteps = Number(parsed.maxSteps);
+        if (!isNaN(maxSteps) && maxSteps > 0) {
+          metaData.maxSteps = maxSteps;
+        }
+      }
+
       return metaData;
     } catch (error) {
       // 如果YAML解析失败，返回默认值
@@ -192,6 +200,10 @@ export class AgentMdcParser {
 
       if (metaData.model) {
         frontMatterObj.model = metaData.model;
+      }
+
+      if (metaData.maxSteps !== undefined && metaData.maxSteps !== null) {
+        frontMatterObj.maxSteps = metaData.maxSteps;
       }
 
       // 生成YAML front matter

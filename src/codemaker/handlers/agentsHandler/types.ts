@@ -12,6 +12,7 @@ export interface AgentMetaData {
   model?: string;
   tools?: string;
   prompt: string;
+  maxSteps?: number;
 }
 
 export interface Agent {
@@ -28,6 +29,7 @@ export interface AgentIndexItem {
   description: string;
   source: AgentSource;
   model?: string;
+  maxSteps?: number;
   tools?: string;
   prompt?: string;
 }

@@ -255,6 +255,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 disableNewApply: false,
                 planModeEnabled: false,
                 subagentEnable: true,
+                subagentManualTriggerOnly: false,
                 // 强制使用 ClaudeEdit 应用模式：
                 // - AI 走 write / edit 原生工具（配合 autoApply=true 可静默落盘）
                 // - 避免回答里出现「文件变更」推荐面板（FileRecommendApplyPanel）
