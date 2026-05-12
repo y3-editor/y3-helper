@@ -10,10 +10,12 @@ import { requestCodebaseChatStream } from '../../../services/useChatStream';
 import { generateTraceId } from '../../../utils/trace';
 import { debugSuccess } from '../../../utils/debugLog';
 import { ChatModel } from '../../../services/chatModel';
+import { LLM_CALL_TIMEOUT_MS } from '../constants';
 
 /**
  * 封装 LLM 流式调用，返回 Promise 化的结果。
  * - 内部通过 withRetry 对瞬态错误自动指数退避重试
+ * - 每次调用有 3 分钟超时限制，避免 API 卡住
  * - Tracing 由 requestCodebaseChatStream 内部统一管理
  */
 export function streamChat(
@@ -39,7 +41,24 @@ export function streamChat(
      promptData.temperature = 2;
    }
 
-  return withRetry(
+  // LLM 调用超时 Promise
+  const timeoutPromise = new Promise<LLMCallResult>((_, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`LLM call timeout after ${LLM_CALL_TIMEOUT_MS}ms`));
+    }, LLM_CALL_TIMEOUT_MS);
+
+    // 如果 abort 信号触发，清除超时计时器
+    if (abortController.signal.aborted) {
+      clearTimeout(timeoutId);
+    } else {
+      abortController.signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId);
+      }, { once: true });
+    }
+  });
+
+  // 实际的 LLM 调用逻辑
+  const llmCallPromise = withRetry(
     () =>
       new Promise<LLMCallResult>((resolve, reject) => {
         let resolved = false;
@@ -129,6 +148,9 @@ export function streamChat(
       }),
     { abortSignal: abortController.signal },
   );
+
+  // 使用 Promise.race 实现超时机制
+  return Promise.race([llmCallPromise, timeoutPromise]);
 }
 
 /** 创建空的 token 用量统计对象 */

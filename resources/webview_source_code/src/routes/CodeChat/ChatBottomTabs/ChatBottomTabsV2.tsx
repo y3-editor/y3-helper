@@ -35,6 +35,7 @@ import { BroadcastActions, usePostMessage } from '../../../PostMessageProvider';
 import useCustomToast from '../../../hooks/useCustomToastWithUseCallback';
 import { RiCalendarTodoLine } from 'react-icons/ri';
 import { GrTransaction } from "react-icons/gr";
+import RevertConfirmDialog from './RevertConfirmDialog';
 
 // 高度持久化相关常量
 const HEIGHT_STORAGE_KEY = 'chat-bottom-tabs-height';
@@ -190,6 +191,17 @@ function ChangesListContent({ contentHeight }: { contentHeight: number }) {
   const clearChatApplyInfoByFilePath = useChatApplyStore((state) => state.clearChatApplyInfoByFilePath);
   const { postMessage } = usePostMessage();
 
+  // 确认对话框状态
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    mode: 'single' | 'batch';
+    fileItem?: ChatFileItem;
+    filePath?: string;
+  }>({
+    isOpen: false,
+    mode: 'single',
+  });
+
   const fileCount = useMemo(
     () => Object.keys(chatFileInfo).length,
     [chatFileInfo],
@@ -212,17 +224,36 @@ function ChangesListContent({ contentHeight }: { contentHeight: number }) {
 
   const handleRevert = useCallback(
     (item: ChatFileItem) => {
+      // 显示确认对话框而不是直接回退
+      setConfirmDialog({
+        isOpen: true,
+        mode: 'single',
+        fileItem: item,
+        filePath: item.filePath,
+      });
+    },
+    [],
+  );
+
+  const handleConfirmRevert = useCallback(() => {
+    if (confirmDialog.fileItem) {
       postMessage({
         type: BroadcastActions.REVERT_EDIT,
-        data: { item },
+        data: { item: confirmDialog.fileItem },
       });
       userReporter.report({
         event: UserEvent.CODE_CHAT_REVERT_EDIT,
-        extends: { item },
+        extends: { item: confirmDialog.fileItem },
       });
-    },
-    [postMessage],
-  );
+    }
+  }, [confirmDialog.fileItem, postMessage]);
+
+  const handleCloseConfirmDialog = useCallback(() => {
+    setConfirmDialog({
+      isOpen: false,
+      mode: 'single',
+    });
+  }, []);
 
   const handleSave = useCallback((item: ChatFileItem) => {
     clearChatApplyInfoByFilePath(item.filePath);
@@ -245,25 +276,36 @@ function ChangesListContent({ contentHeight }: { contentHeight: number }) {
   }
 
   return (
-    <Box
-      className="overflow-y-auto flex flex-col gap-y-1 px-2"
-      style={{
-        minHeight: `${MIN_CONTENT_HEIGHT}px`,
-        maxHeight: `${contentHeight}px`,
-        height: `${contentHeight}px`,
-      }}
-    >
-      {Object.keys(chatFileInfo).map((filePath) => (
-        <ChangesListItem
-          key={filePath}
-          filePath={filePath}
-          chatFileItem={chatFileInfo[filePath]}
-          onPreview={handlePreview}
-          onRevert={handleRevert}
-          onSave={handleSave}
-        />
-      ))}
-    </Box>
+    <>
+      <Box
+        className="overflow-y-auto flex flex-col gap-y-1 px-2"
+        style={{
+          minHeight: `${MIN_CONTENT_HEIGHT}px`,
+          maxHeight: `${contentHeight}px`,
+          height: `${contentHeight}px`,
+        }}
+      >
+        {Object.keys(chatFileInfo).map((filePath) => (
+          <ChangesListItem
+            key={filePath}
+            filePath={filePath}
+            chatFileItem={chatFileInfo[filePath]}
+            onPreview={handlePreview}
+            onRevert={handleRevert}
+            onSave={handleSave}
+          />
+        ))}
+      </Box>
+      
+      <RevertConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={handleCloseConfirmDialog}
+        onConfirm={handleConfirmRevert}
+        mode={confirmDialog.mode}
+        fileItem={confirmDialog.fileItem}
+        filePath={confirmDialog.filePath}
+      />
+    </>
   );
 }
 
@@ -277,6 +319,9 @@ function ChangesHeaderActions() {
   );
   const { postMessage } = usePostMessage();
   const { toast } = useCustomToast();
+
+  // 批量回退确认对话框状态
+  const [batchRevertDialog, setBatchRevertDialog] = useState(false);
 
   const hasChanges = useMemo(
     () => Object.keys(chatFileInfo).length > 0,
@@ -292,14 +337,29 @@ function ChangesHeaderActions() {
       }
     });
     if (items.length) {
+      // 显示批量回退确认对话框
+      setBatchRevertDialog(true);
+    } else {
+      toast({ title: '无待回退修改' });
+    }
+  }, [chatFileInfo, toast]);
+
+  const handleConfirmBatchRevert = useCallback(() => {
+    const items: ChatFileItem[] = [];
+    Object.keys(chatFileInfo).forEach((filePath) => {
+      const chatFileItem = chatFileInfo[filePath];
+      if (chatFileItem.finalResult && chatFileItem.accepted) {
+        items.push(chatFileItem);
+      }
+    });
+    if (items.length) {
       postMessage({
         type: BroadcastActions.BATCH_REVERT_EDIT,
         data: { items },
       });
-    } else {
-      toast({ title: '无待回退修改' });
     }
-  }, [chatFileInfo, postMessage, toast]);
+    setBatchRevertDialog(false);
+  }, [chatFileInfo, postMessage]);
 
   const handleBatchConfirm = useCallback(() => {
     clearChatFileInfo();
@@ -308,41 +368,62 @@ function ChangesHeaderActions() {
     });
   }, [clearChatFileInfo]);
 
+  const batchCount = useMemo(() => {
+    let count = 0;
+    Object.keys(chatFileInfo).forEach((filePath) => {
+      const chatFileItem = chatFileInfo[filePath];
+      if (chatFileItem.finalResult && chatFileItem.accepted) {
+        count++;
+      }
+    });
+    return count;
+  }, [chatFileInfo]);
+
   if (!hasChanges) return null;
 
   return (
-    <Flex alignItems="center" gap={1}>
-      <Tooltip label="全部保留">
-        <IconButton
-          aria-label="全部保留"
-          size="xs"
-          variant="ghost"
-          icon={<Icon as={LuFileCheck} boxSize="14px" />}
-          p={0}
-          m={0}
-          minW="auto"
-          w="22px"
-          h="22px"
-          color="text.default"
-          onClick={handleBatchConfirm}
-        />
-      </Tooltip>
-      <Tooltip label="全部回退">
-        <IconButton
-          aria-label="全部回退"
-          size="xs"
-          variant="ghost"
-          icon={<Icon as={RxReset} boxSize="14px" />}
-          p={0}
-          m={0}
-          minW="auto"
-          w="22px"
-          h="22px"
-          color="text.default"
-          onClick={handleBatchRevert}
-        />
-      </Tooltip>
-    </Flex>
+    <>
+      <Flex alignItems="center" gap={1}>
+        <Tooltip label="全部保留">
+          <IconButton
+            aria-label="全部保留"
+            size="xs"
+            variant="ghost"
+            icon={<Icon as={LuFileCheck} boxSize="14px" />}
+            p={0}
+            m={0}
+            minW="auto"
+            w="22px"
+            h="22px"
+            color="text.default"
+            onClick={handleBatchConfirm}
+          />
+        </Tooltip>
+        <Tooltip label="全部回退">
+          <IconButton
+            aria-label="全部回退"
+            size="xs"
+            variant="ghost"
+            icon={<Icon as={RxReset} boxSize="14px" />}
+            p={0}
+            m={0}
+            minW="auto"
+            w="22px"
+            h="22px"
+            color="text.default"
+            onClick={handleBatchRevert}
+          />
+        </Tooltip>
+      </Flex>
+      
+      <RevertConfirmDialog
+        isOpen={batchRevertDialog}
+        onClose={() => setBatchRevertDialog(false)}
+        onConfirm={handleConfirmBatchRevert}
+        mode="batch"
+        batchCount={batchCount}
+      />
+    </>
   );
 }
 

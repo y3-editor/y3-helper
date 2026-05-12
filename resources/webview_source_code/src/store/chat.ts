@@ -92,7 +92,6 @@ import {
   specialErrorPatterns,
 } from '../utils';
 import { AsyncLock } from '../utils/asyncLock';
-import { validateToolResultIntegrity } from '../utils/toolResultIntegrity';
 import { truncateSessionTopic } from '../utils/common';
 import getEnvironmentDetails from '../utils/getEnvironmentDetail';
 import { Prompt, PromptCategoryType } from '../services/prompt';
@@ -219,6 +218,8 @@ const SUMMARY_SESSION_PROMPT = `使用四到五个字直接返回上一段话的
 5. 如果没有主题，请直接返回"闲聊"`;
 
 export type ChatType = 'default' | 'codebase';
+
+let submitTimestamp = 0
 
 /**
  * 仓库智聊的开发模式
@@ -1871,18 +1872,13 @@ export const useChatStreamStore = create(
       const release = await sessionUpdateLock.acquire(sessionId, 60000);
 
       try {
-        get().updateToolCallResults({
-          [toolCallId]: {
-            path: '',
-            content: taskResult.output,
-            isError: !taskResult.success,
-            extra: {
-              isTruncated: taskResult.isTruncated,
-            },
-          },
-        }, undefined, undefined, { skipSync: true });
+        // ✅ 修复竞态：先插入 tool message，再调 updateToolCallResults
+        // 原因：updateToolCallResults 在所有 tool result 齐全时会自动触发 handleAutoExecute。
+        // 若 handleAutoExecute → onUserSubmit 时 tool message 还未在 messages 数组中，
+        // API payload 构建会因缺少该消息而报错。
+        // 正确顺序：splice message → updateToolCallResults（自动触发 handleAutoExecute）
 
-        // ✅ Step 2: 持久化 task tool message 到主 session
+        // Step 1: 持久化 task tool message 到主 session
         const chatStore = useChatStore.getState();
         const sessions = chatStore.sessions;
         const session = sessions.get(sessionId);
@@ -1896,71 +1892,47 @@ export const useChatStreamStore = create(
         const alreadyExists = session.data.messages.some(
           (msg: ChatMessage) => msg.role === ChatRole.Tool && msg.tool_call_id === toolCallId
         );
-        if (alreadyExists) {
-          // ✅ 即使 message 存在，也要确保 tool_result 被更新
-          let lastMessage: ChatMessage | undefined;
-          for (let i = session.data.messages.length - 1; i >= 0; i--) {
-            const msg = session.data.messages[i];
-            if (msg.role === ChatRole.Assistant &&
-                msg.tool_calls?.some(tc => tc.id === toolCallId)) {
-              lastMessage = msg;
-              break;
-            }
-          }
 
-          if (lastMessage) {
-            if (!lastMessage.tool_result) {
-              lastMessage.tool_result = {};
-            }
-            if (!lastMessage.tool_result[toolCallId]) {
-              lastMessage.tool_result[toolCallId] = {
-                path: '',
-                content: taskResult.output,
+        if (!alreadyExists) {
+          // 找到正确的插入位置，确保 Tool 消息紧跟对应的 Assistant 消息
+          const insertIndex = get().findCorrectToolMessageIndex(session.data.messages, toolCallId);
+
+          session.data.messages.splice(insertIndex, 0, {
+            id: nanoid(),
+            role: ChatRole.Tool,
+            tool_call_id: toolCallId,
+            content: taskResult.output,
+            createdAt: Date.now(),
+            context: {
+              task: {
+                taskId: taskResult.taskId,
+                agentName: taskResult.agentName || 'unknown',
+                description: taskResult.description || '',
                 isError: !taskResult.success,
-                extra: {
-                  isTruncated: taskResult.isTruncated || false,
-                },
-              };
-            }
-          }
-          return;
+                isTruncated: taskResult.isTruncated || false,
+              },
+            },
+          });
+
+          // ✅ 只更新内存状态，不在此处调 syncHistory。
+          // 最终持久化由下方的 updateToolCallResults（skipSync 默认 false）统一完成，
+          // 确保 tool message 和 tool_result 都就绪后才做一次 sync，避免重复写入。
+          useChatStore.setState({ sessions: new Map(sessions) });
         }
 
-        // 🔧 找到正确的插入位置
-        const insertIndex = get().findCorrectToolMessageIndex(session.data.messages, toolCallId);
-
-        session.data.messages.splice(insertIndex, 0, {
-          id: nanoid(),
-          role: ChatRole.Tool,
-          tool_call_id: toolCallId,
-          content: taskResult.output,
-          createdAt: Date.now(),
-          context: {
-            task: {
-              taskId: taskResult.taskId,
-              agentName: taskResult.agentName || 'unknown',
-              description: taskResult.description || '',
-              isError: !taskResult.success,
-              isTruncated: taskResult.isTruncated || false,
+        // Step 2: 更新 tool_result 并（在所有工具完成时）自动触发 handleAutoExecute
+        // 此时 tool message 已在 messages 数组中，handleAutoExecute 可安全执行。
+        // 不传 skipSync，由 updateToolCallResults 在末尾统一调 syncHistory（一次写入）。
+        get().updateToolCallResults({
+          [toolCallId]: {
+            path: '',
+            content: taskResult.output,
+            isError: !taskResult.success,
+            extra: {
+              isTruncated: taskResult.isTruncated,
             },
           },
         });
-
-        useChatStore.setState({ sessions: new Map(sessions) });
-        chatStore.syncHistory();
-
-        // 🔍 完整性验证
-        const integrityReport = validateToolResultIntegrity(
-          session.data.messages,
-          sessionId
-        );
-
-        if (!integrityReport.isComplete) {
-          console.warn(
-            `[updateTaskToolResult] ⚠️ Tool result integrity check failed after updating ${toolCallId}`,
-            integrityReport
-          );
-        }
       } catch (err) {
         console.error(
           `[updateTaskToolResult] ❌ Task tool ${toolCallId} 更新失败:`,
@@ -2364,9 +2336,12 @@ export const useChatStreamStore = create(
       },
       unselectedResults?: Set<string>,
     ) => {
+      // 防止重复触发
+      if (Date.now() - submitTimestamp < 2000) return;
       const chatStoreState = useChatStore.getState();
       const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
       const chatType = chatStoreState.chatType;
+      submitTimestamp = Date.now();
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
       if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
         userReporter.report({
@@ -7529,6 +7504,33 @@ function processSessionComplete(
       `[TaskEventBus] Tool results incomplete: ${existingResultIds.length}/${tool_calls.length} completed. Missing: ${missingToolCallIds.join(', ')}`,
     );
     return;
+  }
+
+  // ✅ 修复竞态：校验所有 task tool_calls 在 messages 数组中均存在对应的 tool message
+  // 场景：executor abort catch block 先调 updateToolCallResults（设 tool_result），
+  // 再 synchronously emitCompletionEvent → SESSION_ALL_TASKS_COMPLETE → 此处。
+  // 此时 updateTaskToolResult 尚未执行，tool message 还未 splice 进 messages。
+  // 若此处直接 handleAutoExecute，onUserSubmit 构建 API payload 时会因缺少 tool message 报错。
+  // 返回后由 updateTaskToolResult 在插入消息后手动触发 handleAutoExecute。
+  const taskToolCalls = tool_calls.filter(tc => tc.function.name === 'task');
+  if (taskToolCalls.length > 0) {
+    const missingMessages = taskToolCalls.filter(
+      tc => !messages.some(
+        msg => msg.role === ChatRole.Tool && msg.tool_call_id === tc.id
+      )
+    );
+    if (missingMessages.length > 0) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[TaskEventBus] ⚠️ Tool messages not yet in session, deferring handleAutoExecute to updateTaskToolResult',
+          {
+            sessionId,
+            missingToolCallIds: missingMessages.map(tc => tc.id),
+          },
+        );
+      }
+      return;
+    }
   }
 
   // 推断执行上下文

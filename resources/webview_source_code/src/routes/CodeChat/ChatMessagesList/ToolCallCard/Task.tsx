@@ -47,16 +47,14 @@ import {
   useToolConfirmationStore,
 } from '../../../../modules/subagent';
 import SubagentToolConfirmationPanel from '../../../../modules/subagent/components/SubagentToolConfirmationPanel';
-import {
-  getStringContent,
-  truncateContent,
-} from '../../../../utils';
+import { getStringContent, truncateContent } from '../../../../utils';
 import { useTheme, ThemeStyle } from '../../../../ThemeContext';
 import MemoCodeBlock from '../../../../components/Markdown/CodeBlock';
 import TaskDetailModal from './TaskDetailModal';
 import styles from './Task.module.scss';
 import { formatTokenCount } from '../../../../utils/consumedTokensCalculator';
 import { ChatRole } from '../../../../types/chat';
+import { useChatConfig } from '../../../../store/chat-config';
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -141,21 +139,18 @@ function TokenUsagePopover({ tokenUsage, isDark }: TokenUsagePopoverProps) {
   // 根据是否有缓存数据决定显示的行
   const tokenRows = tokenUsage.hasCache
     ? [
-        { color: '#60a5fa', label: 'Cache Creation', value: tokenUsage.cacheCreation },
+        {
+          color: '#60a5fa',
+          label: 'Cache Creation',
+          value: tokenUsage.cacheCreation,
+        },
         { color: '#34d399', label: 'Prompt Tokens', value: tokenUsage.prompt },
         { color: '#a78bfa', label: 'Read Cache', value: tokenUsage.readCache },
       ]
-    : [
-        { color: '#34d399', label: 'Prompt Tokens', value: tokenUsage.prompt },
-      ];
+    : [{ color: '#34d399', label: 'Prompt Tokens', value: tokenUsage.prompt }];
 
   return (
-    <Popover
-      placement="top"
-      trigger="hover"
-      openDelay={0}
-      closeDelay={200}
-    >
+    <Popover placement="top" trigger="hover" openDelay={0} closeDelay={200}>
       <PopoverTrigger>
         <HStack
           spacing={1}
@@ -211,50 +206,6 @@ function TokenUsagePopover({ tokenUsage, isDark }: TokenUsagePopoverProps) {
       </PopoverContent>
     </Popover>
   );
-}
-
-/**
- * 格式化模型名称以便在 UI 中友好显示
- * @param modelName 原始模型名称
- * @returns 格式化后的模型名称
- */
-function formatModelName(modelName: string): string {
-  if (!modelName) return '';
-
-  // 将常见的模型名称格式化
-  const formatMap: Record<string, string> = {
-    // Claude 4.5 系列
-    'claude-sonnet-4-5-20250929': 'Claude 4.5 Sonnet',
-    'claude-opus-4-5-20251101': 'Claude 4.5 Opus',
-    'claude-haiku-4-5-20251001': 'Claude 4.5 Haiku',
-    // Claude 4.0 系列
-    'claude-sonnet-4-20250514': 'Claude 4 Sonnet',
-    'claude-opus-4-20250514': 'Claude 4 Opus',
-    'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
-    // 其他模型
-    'gpt-4o': 'GPT-4o',
-    'gpt-4': 'GPT-4',
-    'deepseek-chat': 'DeepSeek Chat',
-    'deepseek-reasoner': 'DeepSeek Reasoner',
-    'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-    'qwen-max-2025-01-25': 'Qwen Max',
-  };
-
-  // 如果有精确匹配，返回友好名称
-  if (formatMap[modelName]) {
-    return formatMap[modelName];
-  }
-
-  // 否则进行简单的启发式格式化
-  return modelName
-    .replace(/^claude-/, 'Claude ')
-    .replace(/^gpt-/, 'GPT ')
-    .replace(/^deepseek-/, 'DeepSeek ')
-    .replace(/^gemini-/, 'Gemini ')
-    .replace(/^qwen/, 'Qwen')
-    .replace(/-20\d{6}.*$/, '') // 移除日期后缀
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase()); // 首字母大写
 }
 
 /**
@@ -522,9 +473,7 @@ function useSessionData(taskId: string, enabled: boolean): SessionLoadState {
 
   useEffect(() => {
     if (!enabled || !taskId) return;
-
     const needsLoad = !subagentSession || subagentSession.messages.length === 0;
-
     if (needsLoad && !loadedRef.current) {
       load();
     }
@@ -547,6 +496,7 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
   const statusInfo = useSubagentStore((s) => s.statuses[tool.id]);
   const queuedInfo = useSubagentStore((s) => s.queuedStatuses[tool.id]);
   const currentSession = useChatStore((s) => s.currentSession());
+  const chatModels = useChatConfig((state) => state.chatModels);
   const [expandedIndex, setExpandedIndex] = useState<number[]>([]);
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -574,7 +524,7 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
         (msg) =>
           msg.role === ChatRole.Tool &&
           msg.tool_call_id === tool.id &&
-          msg.context?.task?.taskId
+          msg.context?.task?.taskId,
       );
       if (toolMsg?.context?.task?.taskId) {
         return toolMsg.context.task.taskId;
@@ -582,7 +532,12 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     }
 
     return '';
-  }, [statusInfo?.taskId, taskIdFromContent, currentSession?.data?.messages, tool.id]);
+  }, [
+    statusInfo?.taskId,
+    taskIdFromContent,
+    currentSession?.data?.messages,
+    tool.id,
+  ]);
 
   const subagentSession = useSubagentStore((s) => s.getSubagentSession(taskId));
 
@@ -612,7 +567,9 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     const content = typeof result.content === 'string' ? result.content : '';
 
     // 精确匹配 <task_status>aborted</task_status>（允许中间有空白字符）
-    const statusMatch = content.match(/<task_status>\s*aborted\s*<\/task_status>/i);
+    const statusMatch = content.match(
+      /<task_status>\s*aborted\s*<\/task_status>/i,
+    );
     if (statusMatch) {
       return true;
     }
@@ -625,7 +582,6 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     return false;
   }, [statusInfo?.status, result.content]);
 
-
   // 从多个来源判断失败状态（statusInfo 可能在 5 秒后被延迟清理）
   // 注意：aborted 状态不应该被认为是 failed
   const isFailed = useMemo(() => {
@@ -636,16 +592,26 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     if (statusInfo?.status === 'failed') return true;
 
     // 2. 从 subagentSession 获取（持久化存储）
-    if (subagentSession?.status === 'failed' || subagentSession?.error) return true;
+    if (subagentSession?.status === 'failed' || subagentSession?.error)
+      return true;
 
     // 3. 从 result.isError 判断
     if (result.isError) return true;
 
     // 4. 备用：从 task 工具返回的内容中精确解析状态
     const content = typeof result.content === 'string' ? result.content : '';
-    const statusMatch = content.match(/<task_status>\s*failed\s*<\/task_status>/i);
+    const statusMatch = content.match(
+      /<task_status>\s*failed\s*<\/task_status>/i,
+    );
     return !!statusMatch;
-  },  [isAborted, statusInfo?.status, subagentSession?.status, subagentSession?.error, result.isError, result.content]);
+  }, [
+    isAborted,
+    statusInfo?.status,
+    subagentSession?.status,
+    subagentSession?.error,
+    result.isError,
+    result.content,
+  ]);
 
   // 判断是否处于活跃状态（运行中）
   // 注意：必须排除 failed 和 aborted 状态，确保与失败/中止状态互斥
@@ -709,15 +675,25 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     if (result.isError) {
       const content = getStringContent(result.content);
       // 尝试从 XML 格式中提取错误信息
-      const taskResultMatch = content.match(/<task_result>\n?([\s\S]*?)\n?<\/task_result>/);
+      const taskResultMatch = content.match(
+        /<task_result>\n?([\s\S]*?)\n?<\/task_result>/,
+      );
       if (taskResultMatch) {
         const extracted = taskResultMatch[1].trim();
-        return extracted.startsWith('Error:') ? extracted.slice(7).trim() : extracted;
+        return extracted.startsWith('Error:')
+          ? extracted.slice(7).trim()
+          : extracted;
       }
       return content;
     }
     return '';
-  }, [statusInfo?.errorMessage, subagentSession?.error, result.isError, result.content, taskResultText]);
+  }, [
+    statusInfo?.errorMessage,
+    subagentSession?.error,
+    result.isError,
+    result.content,
+    taskResultText,
+  ]);
 
   const toolCallCount = isActive
     ? (statusInfo?.toolCalls || []).length
@@ -753,9 +729,7 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
     // 根据是否有缓存数据计算总量
     // Claude 模型：cacheCreation + prompt + readCache
     // 非 Claude 模型：只使用 prompt
-    const total = hasCache
-      ? cacheCreation + prompt + readCache
-      : prompt;
+    const total = hasCache ? cacheCreation + prompt + readCache : prompt;
 
     return total > 0
       ? { cacheCreation, prompt, readCache, total, hasCache }
@@ -763,8 +737,20 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
   }, [subagentSession]);
 
   const modelName = useMemo(() => {
-    return statusInfo?.model || subagentSession?.model;
-  }, [statusInfo?.model, subagentSession?.model]);
+    const model = statusInfo?.model || subagentSession?.model || '';
+    if (!chatModels || Object.keys(chatModels).length === 0) {
+      return model || 'Unknown Model';
+    }
+    for (const key in chatModels) {
+      if (!Object.hasOwn(chatModels, key)) continue;
+      const modelInfo = chatModels[key];
+      if (!modelInfo.useModel) continue;
+      if (modelInfo.useModel === model) {
+        return modelInfo.title;
+      }
+    }
+    return 'Unknown Model';
+  }, [statusInfo?.model, subagentSession?.model, chatModels]);
 
   const handleAccordionChange = useCallback((index: number[]) => {
     setExpandedIndex(index);
@@ -1105,7 +1091,7 @@ function SubagentTaskCard({ tool, toolParams, result }: SubagentTaskCardProps) {
             Model:
           </Text>
           <Text fontSize="xs" color="text.primary" fontWeight="medium">
-            {modelName ? formatModelName(modelName) : '—'}
+            {modelName || '—'}
           </Text>
         </HStack>
         <HStack spacing={1}>

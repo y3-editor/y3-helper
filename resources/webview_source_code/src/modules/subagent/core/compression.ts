@@ -18,6 +18,13 @@ import { serializeCodebaseMessages } from '../../../utils/validateBeforeChat';
 import { trace, SpanStatusCode, type Span } from '../../../telemetry/otel';
 import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
 import { applyAssociationAttributes } from '../../../telemetry/otel';
+import {
+  GEN_AI_OPERATION_NAME,
+  GEN_AI_AGENT_NAME,
+  GEN_AI_CONVERSATION_ID,
+  AGENT_BUILTIN,
+  GenAiOperationName,
+} from '../../../telemetry/attributes';
 import type { SubagentSpanContext } from '../types';
 import { useSubagentStore } from '../state/store';
 
@@ -136,18 +143,28 @@ export async function checkAndCompress(
     }
 
     // 创建 OTEL compression span
+    // Design D3: ContextCompression → invoke_agent compact.agent
     let compressionSpan: Span | undefined;
     if (subagentSpanContext) {
       const tracer = trace.getTracer(TRACING_DEFAULT_TRACER);
       compressionSpan = tracer.startSpan(
-        'ContextCompression',
+        'compact.agent',
         undefined,
         subagentSpanContext.taskContext,
       );
 
+      // OTel GenAI spec: invoke_agent required attributes
+      compressionSpan.setAttribute(
+        GEN_AI_OPERATION_NAME,
+        GenAiOperationName.InvokeAgent,
+      );
+      compressionSpan.setAttribute(GEN_AI_AGENT_NAME, 'compact.agent');
+      compressionSpan.setAttribute(AGENT_BUILTIN, true);
+      compressionSpan.setAttribute(GEN_AI_CONVERSATION_ID, sessionId);
+
+      // Keep for Phoenix/openinference compatibility
       compressionSpan.setAttribute('openinference.span.kind', 'CHAIN');
-      const agentName = subagentSpanContext.association?.agentName || 'unknown';
-      compressionSpan.setAttribute('gen_ai.agent.name', `${agentName}.agent`);
+      // Business attributes
       compressionSpan.setAttribute('compression.session_id', sessionId);
 
       if (subagentSpanContext.association) {

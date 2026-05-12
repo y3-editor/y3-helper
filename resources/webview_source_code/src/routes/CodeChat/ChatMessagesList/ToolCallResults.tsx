@@ -718,14 +718,18 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
         const isAskUserQuestionTool =
           tool.function.name === 'ask_user_question';
         const isRunTerminalTool = tool.function.name === terminalCmdFunction;
+        const isMCPTool =
+          tool.function.name === 'use_mcp_tool' ||
+          tool.function.name === 'access_mcp_resource';
 
-        // task, ask_user_question, run_terminal_cmd, make_plan 工具总是显示(用于展示实时执行状态和等待用户交互)
+        // task, ask_user_question, run_terminal_cmd, make_plan, MCP工具总是显示(用于展示实时执行状态和等待用户交互)
         // 其他工具只有在有结果时才显示(避免空白卡片)
         if (
           !isTaskTool &&
           !isAskUserQuestionTool &&
           !isRunTerminalTool &&
           !isMakePlanTool &&
+          !isMCPTool &&
           !toolCallResults[tool.id]
         ) {
           return null;

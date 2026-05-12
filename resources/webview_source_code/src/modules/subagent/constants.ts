@@ -16,6 +16,33 @@
  * - 平衡用户体验和系统稳定性
  */
 export const TOOL_TIMEOUT_MS = 7 * 60 * 1000;
+// export const TOOL_TIMEOUT_MS = 10 * 1000;
+
+/** LLM 调用超时时间（5 分钟）
+ *
+ * 每次 LLM 调用的最大等待时间，包括流式响应的完整过程。
+ * - 避免 LLM API 响应卡住导致 subagent 永久等待
+ * - 配合 withRetry 机制，瞬态错误会自动重试
+ */
+export const LLM_CALL_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** Subagent 总执行超时时间（10 分钟）
+ *
+ * 整个 subagent 从启动到结束的最大时间限制。
+ * - 防止 subagent 因各种原因（循环、多步骤累积）无限执行
+ * - 超时后会自动终止，释放资源
+ * - 应大于单个 LLM 调用超时 × 预期步数
+ */
+export const SUBAGENT_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
+
+/** 用户操作等待超时时间（5 分钟）
+ *
+ * 当 subagent 失败后，等待用户选择 Retry/Stop 的最大时间。
+ * - 从原来的 30 分钟缩短到 5 分钟
+ * - 避免失败任务长时间占用并发槽位
+ * - 超时后默认选择 Stop
+ */
+export const USER_ACTION_TIMEOUT_MS = 5 * 60 * 1000;
 
 // ============================================================
 // 并发与队列控制

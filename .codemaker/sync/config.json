@@ -29,6 +29,7 @@
       "resources/webview_source_code/src/routes/CodeReview/utils.ts",
       "resources/webview_source_code/src/store/chatBill.ts",
       "resources/webview_source_code/src/store/chat.ts",
+      "resources/webview_source_code/src/store/chat-config.ts",
       "resources/webview_source_code/src/routes/CodeChat/CodeChatInputActionBar.tsx",
       "resources/webview_source_code/src/utils/specVersionUtils.ts",
       "resources/webview_source_code/src/routes/CodeChat/CodeChat.tsx",
@@ -36,7 +37,9 @@
       "resources/webview_source_code/src/routes/CodeChat/SkillSettingModal.tsx",
       "resources/webview_source_code/src/store/skills/index.ts",
       "resources/webview_source_code/src/store/workspace/tools.ts",
-      "resources/webview_source_code/src/store/workspace/toolsEN.ts"
+      "resources/webview_source_code/src/store/workspace/toolsEN.ts",
+      "resources/webview_source_code/src/services/chatModel.ts",
+      "resources/webview_source_code/src/utils/chatThinkingHandler.ts"
     ],
     "y3_only": [
       "resources/webview_source_code/src/stubs/"
@@ -44,6 +47,7 @@
     "excluded_upstream": [
       "src/patchSetup.ts",
       "src/telemetry/",
+      "src/routes/CodeChat/ChatEffotSelect.tsx",
       ".github/",
       ".gitlab-ci.yml",
       "Dockerfile",

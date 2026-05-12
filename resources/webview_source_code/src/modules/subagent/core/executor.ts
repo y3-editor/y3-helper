@@ -8,7 +8,11 @@ import type {
   SubagentStatus,
 } from '../types';
 import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
-import { DEFAULT_MAX_STEPS } from '../constants';
+import {
+  DEFAULT_MAX_STEPS,
+  SUBAGENT_TOTAL_TIMEOUT_MS,
+  USER_ACTION_TIMEOUT_MS,
+} from '../constants';
 import { useSubagentStore } from '../state/store';
 import { runnerManager } from '../lifecycle/manager';
 import { subagentScheduler } from '../lifecycle/scheduler';
@@ -32,7 +36,11 @@ import { createNewSession, syncSession } from './session';
 import { checkAndCompress } from './compression';
 import type { SessionCompressionState } from '../../../types/contextCompression';
 import { debugLog } from '../../../utils/debugLog';
-import { ABORT_REASON_FINISHED } from '../../../utils/abort';
+import {
+  SubagentAbortManager,
+  isSubagentAbortError,
+  createAbortControllerAdapter,
+} from './abortManager';
 
 const MODULE = 'Subagent/Executor';
 import { streamChat, createEmptyUsage, mergeUsage } from './llm';
@@ -50,7 +58,7 @@ import { useAuthStore } from '../../../store/auth';
 import { useWorkspaceStore, SpecFramework } from '../../../store/workspace';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
 import { useChatApplyStore } from '../../../store/chatApply';
-import { ChatModel } from '../../../services/chatModel';
+import { ChatModel, IChatModelConfig } from '../../../services/chatModel';
 import {
   createSubagentProcessor,
   type ToolResultInput,
@@ -74,11 +82,32 @@ import {
   startToolCallSpan,
   stopToolCallSpan,
 } from '../../../telemetry/otel';
+import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
 import {
   SpanStatusCode,
   trace,
   context as otelContext,
 } from '../../../telemetry/otel';
+import {
+  AGENT_TASK_ID,
+  AGENT_PARENT_SESSION_ID,
+  AGENT_MAX_STEPS,
+  AGENT_ACTUAL_STEPS,
+  AGENT_IS_TRUNCATED,
+  AGENT_CURRENT_STEP,
+  AGENT_RETRY_COUNT,
+  AGENT_RESULT_SYNCED_TO_PARENT,
+  AGENT_FINAL_STEPS,
+  AGENT_SYNC_STEP,
+  AGENT_SYNC_MESSAGE_COUNT,
+  AGENT_SYNC_IS_FINAL,
+  AGENT_SYNC_IS_ERROR_SYNC,
+  GEN_AI_OPERATION_NAME,
+  GEN_AI_CONVERSATION_ID,
+  GEN_AI_REQUEST_MODEL,
+  GenAiOperationName,
+  ERROR_TYPE,
+} from '../../../telemetry/attributes';
 import { ChatRole } from '../../../types/chat';
 import { getReportEventByToolName } from '../../../utils/toolCall';
 
@@ -87,6 +116,7 @@ import {
   emitTaskCompleted,
   emitTaskFailed,
 } from '../events/taskEventBus';
+import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
 
 /**
  * 等待用户对 failed subagent 的操作（retry 或 stop）。
@@ -148,6 +178,44 @@ function estimateChildSessionSystemTokens(
     ruleTokens,
     mcpTokens,
   };
+}
+
+/**
+ * Wraps a syncSession() call with an agent.sync_session span for observability.
+ */
+async function wrapSyncSessionSpan<T>(
+  spanContext: SubagentSpanContext | undefined,
+  taskId: string,
+  step: number,
+  messageCount: number,
+  options: { isFinal?: boolean; isErrorSync?: boolean },
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!spanContext) {
+    return fn();
+  }
+  const tracer = trace.getTracer(TRACING_DEFAULT_TRACER);
+  const syncSpan = tracer.startSpan('agent.sync_session', undefined, spanContext.taskContext);
+  syncSpan.setAttribute(AGENT_TASK_ID, taskId);
+  syncSpan.setAttribute(AGENT_SYNC_STEP, step);
+  syncSpan.setAttribute(AGENT_SYNC_MESSAGE_COUNT, messageCount);
+  if (options.isFinal) syncSpan.setAttribute(AGENT_SYNC_IS_FINAL, true);
+  if (options.isErrorSync) syncSpan.setAttribute(AGENT_SYNC_IS_ERROR_SYNC, true);
+
+  // 将 syncSpan 设置为活跃上下文，确保 fn() 内部产生的子 span 能正确关联到该父 span
+  const ctx = trace.setSpan(otelContext.active(), syncSpan);
+  try {
+    const result = await otelContext.with(ctx, () => fn());
+    syncSpan.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    syncSpan.setStatus({ code: SpanStatusCode.ERROR, message: msg });
+    syncSpan.setAttribute(ERROR_TYPE, '_OTHER');
+    throw e;
+  } finally {
+    syncSpan.end();
+  }
 }
 
 /** Claude 简化别名 → 完整模型代码 */
@@ -227,7 +295,48 @@ export async function runSubagent(
   }
 
   return subagentScheduler.schedule(
-    () => runSubagentInner(params, agent, context),
+    async () => {
+      // ✅ 包装 runSubagentInner，添加总超时机制
+      // 使用 AbortController 在超时时主动取消 runSubagentInner，避免其在后台继续运行
+      const timeoutAbortController = new AbortController();
+
+      // 若外部已有 parentAbortSignal，则将其与超时信号合并：
+      // 任意一方 abort 都会触发 timeoutAbortController 中止
+      if (context.parentAbortSignal) {
+        context.parentAbortSignal.addEventListener(
+          'abort',
+          () => timeoutAbortController.abort(context.parentAbortSignal!.reason),
+          { once: true },
+        );
+      }
+
+      const timeoutId = setTimeout(() => {
+        timeoutAbortController.abort(
+          new Error(
+            `Subagent total execution timeout after ${SUBAGENT_TOTAL_TIMEOUT_MS}ms (10 minutes)`,
+          ),
+        );
+      }, SUBAGENT_TOTAL_TIMEOUT_MS);
+
+      try {
+        return await runSubagentInner(params, agent, {
+          ...context,
+          parentAbortSignal: timeoutAbortController.signal,
+        });
+      } catch (e) {
+        // 若是因超时 abort 导致的错误，转换为更清晰的超时错误信息
+        if (
+          timeoutAbortController.signal.aborted &&
+          timeoutAbortController.signal.reason instanceof Error
+        ) {
+          throw timeoutAbortController.signal.reason;
+        }
+        throw e;
+      } finally {
+        // 正常完成或发生其他错误时，清理定时器，防止定时器泄漏
+        clearTimeout(timeoutId);
+      }
+    },
     {
       toolCallId: context.toolCallId,
       agentName: agent.name,
@@ -271,6 +380,7 @@ async function runSubagentInner(
   const codebaseModelMaxTokens =
     useChatConfig.getState().codebaseModelMaxTokens;
 
+  let chatModelConfig: IChatModelConfig | undefined;
   for (const key in chatModels) {
     if (!Object.hasOwn(chatModels, key)) continue;
     const model = chatModels[key];
@@ -279,6 +389,10 @@ async function runSubagentInner(
       if (token > 64 * 1000) {
         cacheEnable = true;
       }
+    }
+    if (model.useModel === llmModel) {
+      // chatModelConfig = model;
+      chatModelConfig = model
     }
   }
 
@@ -299,21 +413,30 @@ async function runSubagentInner(
   );
 
   if (subagentSpanContext) {
+    // @deprecated - use agent.task_id (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute('subagent.task_id', taskId);
+    subagentSpanContext.taskSpan.setAttribute(AGENT_TASK_ID, taskId);
+    // @deprecated - use agent.parent_session_id (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute(
       'subagent.parent_session_id',
       parentSessionId,
     );
+    subagentSpanContext.taskSpan.setAttribute(AGENT_PARENT_SESSION_ID, parentSessionId);
+    subagentSpanContext.taskSpan.setAttribute(GEN_AI_CONVERSATION_ID, parentSessionId);
+    // @deprecated - use gen_ai.request.model (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute('subagent.model', llmModel);
+    subagentSpanContext.taskSpan.setAttribute(GEN_AI_REQUEST_MODEL, llmModel);
+    subagentSpanContext.taskSpan.setAttribute(GEN_AI_OPERATION_NAME, GenAiOperationName.InvokeAgent);
   }
 
   let localConsumedTokens: ConsumedTokens = createInitialConsumedTokens();
 
-  let abortController = new AbortController();
+  // ✅ 使用 AbortManager 替代原始 AbortController
+  let abortManager = new SubagentAbortManager(parentAbortSignal);
   const runnerState: SubagentRunnerState = {
     taskId,
     agentName: agent.name,
-    abortController,
+    abortController: createAbortControllerAdapter(abortManager), // 向后兼容
     pendingToolResults: new Map(),
     parentSessionId,
   };
@@ -323,7 +446,9 @@ async function runSubagentInner(
   const maxSteps = agent.maxSteps || DEFAULT_MAX_STEPS;
 
   if (subagentSpanContext) {
+    // @deprecated - use agent.max_steps (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute('subagent.max_steps', maxSteps);
+    subagentSpanContext.taskSpan.setAttribute(AGENT_MAX_STEPS, maxSteps);
   }
 
   const hookCtx: HookContext = {
@@ -348,14 +473,6 @@ async function runSubagentInner(
 
   // ✅ 发射 TASK_STARTED 事件
   emitTaskStarted(parentSessionId, toolCallId, taskId, agent.name);
-
-  // ✅ 使用 let 声明，以便在 retry 时可以重新赋值
-  let onParentAbort = () => {
-    abortController.abort();
-  };
-  if (parentAbortSignal) {
-    parentAbortSignal.addEventListener('abort', onParentAbort, { once: true });
-  }
 
   // 获取 OpenSpec 相关配置
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
@@ -478,14 +595,13 @@ async function runSubagentInner(
     try {
       // 主循环
       while (step < maxSteps) {
-        // 检查是否已中止
-        if (abortController.signal.aborted) {
-          error = 'Subagent was aborted';
-          success = false;
-          break;
-        }
+        // ✅ 检查是否已中止（自动抛出异常）
+        abortManager.checkAbort('main-loop-start');
 
         step++;
+        if (subagentSpanContext) {
+          subagentSpanContext.taskSpan.setAttribute(AGENT_CURRENT_STEP, step);
+        }
 
         const stepCtx: StepHookContext = {
           ...hookCtx,
@@ -518,32 +634,20 @@ async function runSubagentInner(
           },
         );
 
+        if (chatModelConfig) {
+          configureThinkingSignature(chatModelConfig, promptData)
+        }
+
         promptData.mode_type = `${agent.name || "unknown"}.agent`;
 
         const llmResult = await streamChat(
           promptData,
-          abortController,
+          createAbortControllerAdapter(abortManager),
           subagentSpanContext,
         );
 
-        // 检查是否被中断，但要排除正常完成时的 abort（ABORT_REASON_FINISHED）
-        // streamChat 返回后，finish() 会调用 abort()，这是正常的资源清理
-        // 只有在非 FINISHED 原因的 abort 才认为是真正的中断
-        if (abortController.signal.aborted) {
-          const abortReason = (abortController.signal as any).reason;
-          const isNormalFinish =
-            typeof abortReason === 'object' &&
-            abortReason !== null &&
-            'name' in abortReason &&
-            abortReason.name === ABORT_REASON_FINISHED;
-
-          if (!isNormalFinish) {
-            error = 'Subagent was aborted during LLM call';
-            success = false;
-            break;
-          }
-          // 如果是 ABORT_REASON_FINISHED，说明流正常结束，继续处理结果
-        }
+        // ✅ 检查 LLM 调用后是否被中止（自动排除 ABORT_REASON_FINISHED）
+        abortManager.checkAbort('after-llm-call');
 
         mergeUsage(totalUsage, llmResult.usage);
 
@@ -589,11 +693,8 @@ async function runSubagentInner(
         }
 
         for (const toolCall of llmResult.toolCalls) {
-          if (abortController.signal.aborted) {
-            error = 'Subagent was aborted during tool execution';
-            success = false;
-            break;
-          }
+          // ✅ 每个工具执行前检查是否中止
+          abortManager.checkAbort('tool-execution-start');
 
           let toolParams: Record<string, any>;
           try {
@@ -685,7 +786,7 @@ async function runSubagentInner(
               await import('../store/toolConfirmation');
 
             // 如果在等待动态 import 期间已经 abort，直接跳过
-            if (abortController.signal.aborted) {
+            if (abortManager.signal.aborted) {
               userConfirmed = false;
             } else {
               try {
@@ -713,12 +814,12 @@ async function runSubagentInner(
                         useToolConfirmationStore.getState().clear();
                         resolve(false);
                       };
-                      abortController.signal.addEventListener('abort', onAbort, {
+                      abortManager.signal.addEventListener('abort', onAbort, {
                         once: true,
                       });
                       // 保存清理函数，用于在 race 完成后移除监听器
                       abortCleanup.current = () => {
-                        abortController.signal.removeEventListener('abort', onAbort);
+                        abortManager.signal.removeEventListener('abort', onAbort);
                       };
                     }),
                   ]);
@@ -762,7 +863,7 @@ async function runSubagentInner(
           const toolResultPromise = runnerManager.waitForTool(
             taskId,
             toolCall.id,
-            abortController.signal,
+            abortManager.signal,
             toolCall.function.name,
           );
 
@@ -825,7 +926,7 @@ async function runSubagentInner(
               });
               const acceptPromise = runnerManager.waitForAcceptEdit(
                 toolCall.id,
-                abortController.signal,
+                abortManager.signal,
               );
               useChatApplyStore.getState().acceptEdit(toolCall.id);
 
@@ -879,9 +980,8 @@ async function runSubagentInner(
                 useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
                   applying: false,
                 });
-                if (abortController.signal.aborted) {
-                  throw acceptError;
-                }
+                // ✅ 检查是否因 abort 导致的错误
+                abortManager.checkAbort('after-accept-edit-error');
               }
 
               userReporter.report({
@@ -1027,7 +1127,7 @@ async function runSubagentInner(
           subagentTools,
           compressionState,
           subagentSpanContext,
-          abortController.signal, // 传递 abort signal，支持中止压缩
+          abortManager.signal, // 传递 abort signal，支持中止压缩
         );
 
         debugLog(MODULE, 'Compression check result', {
@@ -1118,7 +1218,7 @@ async function runSubagentInner(
             tokensSaved,
             compressionRatio: compressionCheck.tokensBefore
               ? (compressionCheck.tokensAfter ?? 0) /
-                compressionCheck.tokensBefore
+              compressionCheck.tokensBefore
               : 1,
           });
         }
@@ -1169,15 +1269,13 @@ async function runSubagentInner(
           mcpTokens: systemTokenEstimation.mcpTokens,
         };
 
-        localConsumedTokens = await syncSession(
+        localConsumedTokens = await wrapSyncSessionSpan(
+          subagentSpanContext,
           taskId,
-          agent.name,
-          params.description,
-          messages,
-          llmModel,
-          enhancedUsage,
-          createInitialConsumedTokens(),
-          compressionState,
+          step,
+          messages.length,
+          {},
+          () => syncSession(taskId, agent.name, params.description, messages, llmModel, enhancedUsage, createInitialConsumedTokens(), compressionState),
         );
 
         // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计
@@ -1277,7 +1375,7 @@ IMPORTANT RULES:
 
           const summaryResult = await streamChat(
             summaryPromptData,
-            abortController,
+            createAbortControllerAdapter(abortManager),
           );
 
           mergeUsage(totalUsage, summaryResult.usage);
@@ -1323,22 +1421,26 @@ IMPORTANT RULES:
         }
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      debugLog(MODULE, `Error`, {
-        taskId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      error = errorMsg;
-      success = false;
-
-      if (abortController.signal.aborted) {
-        error = 'Subagent was aborted';
+      // ✅ 统一处理 abort 异常
+      if (isSubagentAbortError(err)) {
+        error = `Subagent was aborted at ${err.stage}`;
+        success = false;
+        debugLog(MODULE, `Subagent aborted`, {
+          taskId,
+          stage: err.stage,
+        });
+      } else {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        debugLog(MODULE, `Error`, {
+          taskId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        error = errorMsg;
+        success = false;
       }
 
       // 将错误信息保存到 session messages 中，确保 UI 能持久显示错误
-      const finalErrorMsg = abortController.signal.aborted
-        ? 'Subagent was aborted'
-        : errorMsg;
+      const finalErrorMsg = error || 'Unknown error';
 
       // 构造错误消息
       const errorMessage: ChatMessage = {
@@ -1359,15 +1461,13 @@ IMPORTANT RULES:
       // 同步到后端（关键：确保错误信息持久化）
       messages.push(errorMessage);
       try {
-        await syncSession(
+        await wrapSyncSessionSpan(
+          subagentSpanContext,
           taskId,
-          agent.name,
-          params.description,
-          messages,
-          llmModel,
-          totalUsage,
-          localConsumedTokens,
-          compressionState,
+          step,
+          messages.length,
+          { isErrorSync: true },
+          () => syncSession(taskId, agent.name, params.description, messages, llmModel, totalUsage, localConsumedTokens, compressionState),
         );
       } catch (syncErr) {
         console.warn(
@@ -1377,7 +1477,7 @@ IMPORTANT RULES:
       }
 
       if (subagentSpanContext) {
-        subagentSpanContext.taskSpan.setStatus(SpanStatusCode.ERROR, errorMsg);
+        subagentSpanContext.taskSpan.setStatus(SpanStatusCode.ERROR, finalErrorMsg);
       }
 
       await lifecycleManager.trigger(
@@ -1386,10 +1486,13 @@ IMPORTANT RULES:
         err instanceof Error ? err : new Error(String(err)),
       );
 
-      if (!abortController.signal.aborted) {
-        // ✅ 用户操作等待超时（30 分钟），超时后默认选择 Stop
-        const USER_ACTION_TIMEOUT_MS = 30 * 60 * 1000;
+      if (!abortManager.isActuallyAborted()) {
+        // ✅ 用户操作等待超时（5 分钟），超时后默认选择 Stop
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        // 将 onAbort 和对应的 signal 引用提升到 race 外部，
+        // 确保无论哪个 Promise 先完成，都能在 finally 中清理监听器，防止内存泄漏
+        let abortCleanup: (() => void) | undefined;
 
         const doRetry = await Promise.race([
           new Promise<boolean>((resolve) => {
@@ -1421,7 +1524,7 @@ IMPORTANT RULES:
           }),
           // 监听 abort 信号：主界面点"中止生成"时立即响应，不再等待用户在子代理 UI 操作
           new Promise<boolean>((resolve) => {
-            if (abortController.signal.aborted) {
+            if (abortManager.isActuallyAborted()) {
               // 信号已终止时，清理已创建的资源后立即返回
               pendingUserActions.delete(toolCallId);
               if (timeoutId !== null) {
@@ -1439,13 +1542,23 @@ IMPORTANT RULES:
               }
               resolve(false);
             };
-            abortController.signal.addEventListener('abort', onAbort, { once: true });
+            const currentSignal = abortManager.signal;
+            currentSignal.addEventListener('abort', onAbort, { once: true });
+            // 保存清理函数，使用捕获时的 signal 引用，
+            // 防止 retry 重置 abortManager 后 signal 引用变化导致 removeEventListener 失效
+            abortCleanup = () => currentSignal.removeEventListener('abort', onAbort);
           }),
-        ]);
+        ]).finally(() => {
+          // 无论哪个 Promise 先决议，都清理 abort 监听器，防止内存泄漏
+          abortCleanup?.();
+        });
 
         if (doRetry) {
           // 用户选择 Retry，清除错误状态和错误消息
           retryCount++;
+          if (subagentSpanContext) {
+            subagentSpanContext.taskSpan.setAttribute(AGENT_RETRY_COUNT, retryCount);
+          }
 
           debugLog(MODULE, 'User chose to retry, cleaning up error state', {
             taskId,
@@ -1487,27 +1600,10 @@ IMPORTANT RULES:
           // 注意：step 不重置，继续累加以防止无限重试
           // 如果需要重置 step，可以在这里设置 step = 0
 
-          // 5. 创建新的 AbortController
-          const newAbortController = new AbortController();
-          abortController = newAbortController;
-          runnerState.abortController = newAbortController;
-          runnerManager.register(taskId, {
-            ...runnerState,
-            abortController: newAbortController,
-          });
-
-          // 6. 重新绑定父级 abort（使用具名函数避免监听器泄漏）
-          // ✅ 更新 onParentAbort 引用指向新的 controller
-          if (parentAbortSignal) {
-            parentAbortSignal.removeEventListener('abort', onParentAbort);
-            // 重新定义 onParentAbort 以使用新的 abortController
-            onParentAbort = () => {
-              newAbortController.abort();
-            };
-            parentAbortSignal.addEventListener('abort', onParentAbort, {
-              once: true,
-            });
-          }
+          // ✅ 5. 使用 AbortManager 重置（一行代码完成）
+          abortManager = abortManager.reset(parentAbortSignal);
+          runnerState.abortController = createAbortControllerAdapter(abortManager);
+          runnerManager.register(taskId, runnerState);
 
           debugLog(MODULE, 'Retry setup complete', {
             taskId,
@@ -1531,6 +1627,10 @@ IMPORTANT RULES:
             steps: step,
           });
 
+          if (subagentSpanContext) {
+            subagentSpanContext.taskSpan.setAttribute(AGENT_RESULT_SYNCED_TO_PARENT, true);
+            subagentSpanContext.taskSpan.setAttribute(AGENT_FINAL_STEPS, step);
+          }
           useChatStreamStore.getState().updateToolCallResults({
             [toolCallId]: {
               path: '',
@@ -1542,7 +1642,7 @@ IMPORTANT RULES:
             },
           });
 
-          abortController.abort();
+          abortManager.abort();
         }
       } else {
         // 已经被中断（用户主动中止），更新主 agent 的 tool_result
@@ -1558,6 +1658,10 @@ IMPORTANT RULES:
           steps: step,
         });
 
+        if (subagentSpanContext) {
+          subagentSpanContext.taskSpan.setAttribute(AGENT_RESULT_SYNCED_TO_PARENT, true);
+          subagentSpanContext.taskSpan.setAttribute(AGENT_FINAL_STEPS, step);
+        }
         useChatStreamStore.getState().updateToolCallResults({
           [toolCallId]: {
             path: '',
@@ -1571,14 +1675,18 @@ IMPORTANT RULES:
       }
     } finally {
       if (subagentSpanContext && !retrying) {
+        // @deprecated - use agent.actual_steps (will be removed in next major cleanup)
         subagentSpanContext.taskSpan.setAttribute(
           'subagent.actual_steps',
           step,
         );
+        subagentSpanContext.taskSpan.setAttribute(AGENT_ACTUAL_STEPS, step);
+        // @deprecated - use agent.is_truncated (will be removed in next major cleanup)
         subagentSpanContext.taskSpan.setAttribute(
           'subagent.is_truncated',
           isTruncated,
         );
+        subagentSpanContext.taskSpan.setAttribute(AGENT_IS_TRUNCATED, isTruncated);
         if (!error) {
           subagentSpanContext.taskSpan.setStatus(SpanStatusCode.OK);
         }
@@ -1624,15 +1732,13 @@ IMPORTANT RULES:
           mcpTokens: systemTokenEstimation.mcpTokens,
         };
 
-        localConsumedTokens = await syncSession(
+        localConsumedTokens = await wrapSyncSessionSpan(
+          subagentSpanContext,
           taskId,
-          agent.name,
-          params.description,
-          messages,
-          llmModel,
-          finalEnhancedUsage,
-          createInitialConsumedTokens(),
-          compressionState,
+          step,
+          messages.length,
+          { isFinal: true },
+          () => syncSession(taskId, agent.name, params.description, messages, llmModel, finalEnhancedUsage, createInitialConsumedTokens(), compressionState),
         );
 
         // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计
@@ -1713,15 +1819,14 @@ IMPORTANT RULES:
           success,
           step,
           error,
-          isAborted: abortController.signal.aborted,
+          isAborted: abortManager.isActuallyAborted(),
         };
         await lifecycleManager.trigger('onComplete', completeCtx);
 
         runnerManager.remove(taskId);
 
-        if (parentAbortSignal) {
-          parentAbortSignal.removeEventListener('abort', onParentAbort);
-        }
+        // ✅ 清理 AbortManager 资源
+        abortManager.cleanup();
       }
     }
   } while (retrying);
@@ -1729,13 +1834,10 @@ IMPORTANT RULES:
   // ============ 包装在 try-finally 中确保事件必定发出 ============
   try {
     let taskStatus: TaskStatus;
-    // 检查 abort 状态，但要区分正常完成（ABORT_REASON_FINISHED）和真正中断
-    if (abortController.signal.aborted) {
-      const abortReason = (abortController.signal as any).reason;
-      const isNormalFinish = abortReason?.name === ABORT_REASON_FINISHED;
-
-      if (isNormalFinish && success) {
-        // 如果是正常完成的 abort 且成功，按成功处理
+    // ✅ 检查 abort 状态（使用 AbortManager）
+    if (abortManager.isAborted()) {
+      if (!abortManager.isActuallyAborted() && success) {
+        // 如果是正常完成的 abort（ABORT_REASON_FINISHED）且成功，按成功处理
         taskStatus = isTruncated ? TaskStatus.Truncated : TaskStatus.Success;
       } else if (!success && error) {
         // 执行报错后用户点击"停止"，保留失败状态和错误信息
@@ -1759,7 +1861,7 @@ IMPORTANT RULES:
       messages,
       error,
       abortReason:
-        abortController.signal.aborted && taskStatus === TaskStatus.Aborted
+        abortManager.isActuallyAborted() && taskStatus === TaskStatus.Aborted
           ? 'Request interrupted by user for tool use.'
           : undefined,
       agent: agent.name,
@@ -1771,7 +1873,7 @@ IMPORTANT RULES:
       output,
       success,
       error,
-      isAborted: abortController.signal.aborted,
+      isAborted: abortManager.isActuallyAborted(),
       isTruncated,
       agentName: agent.name,
       description: params.description,

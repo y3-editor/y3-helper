@@ -205,7 +205,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
         {
           toolCall.function.name === 'use_mcp_tool' && (
             <Box marginTop={'10px'}>
-              <Box my={1}>参数</Box>
+              {/* <Box my={1}>参数</Box> */}
               <Box>
                 <pre style={{ marginBottom: 0 }}>
                   <ChatCodeBlock
@@ -230,7 +230,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
         {
           hasResult && (
             <Box marginTop={'10px'} marginBottom={'10px'}>
-              <Box my={1}>结果</Box>
+              {/* <Box my={1}>结果</Box> */}
               {renderResult(result.content, shouldExpandResult, dynamicResultKey)}
             </Box>
           )

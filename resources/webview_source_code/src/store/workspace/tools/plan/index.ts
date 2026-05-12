@@ -15,7 +15,7 @@ interface Task {
 export interface Plan {
   title: string;
   description?: string;
-  tasks: Task[];
+  tasks: Task[] | string[];
 }
 
 export const PLAN_SKILL = `to analyze technical requirements and produce clear, actionable implementation plans.
@@ -180,12 +180,12 @@ export function processMakePlanResult(tool: ToolCall, result: ToolResultItem, us
 function createPlanData(toolParams: Plan, userMessage?: ChatMessage): ExtendedPlanData {
   const tasks = (toolParams.tasks || []).map((task, index) => ({
     id: `task-${Date.now()}-${index}`,
-    title: task.title,
-    description: task.description,
+    title: typeof task === 'string' ? task : task.title,
+    description: typeof task === 'string' ? '' : task.description,
     status: 'pending' as TaskStatus,
     toolCalls: [],
     results: [],
-    priority: task.priority || 'medium',
+    priority: typeof task === 'string' ? 'medium' : (task.priority || 'medium'),
     tags: []
   }));
 
@@ -220,8 +220,12 @@ export function generatePlanText(toolParams: Plan): string {
 
   planText += '## 计划列表\n\n';
   (toolParams.tasks || []).forEach((task) => {
-    planText += `### **${task.title}**\n`;
-    planText += `   > ${task.description}\n\n`;
+    if (typeof task === 'string') {
+      planText += `### **${task}**\n\n`;
+    } else {
+      planText += `### **${task.title}**\n`;
+      planText += `   > ${task.description}\n\n`;
+    }
   });
 
   return planText;

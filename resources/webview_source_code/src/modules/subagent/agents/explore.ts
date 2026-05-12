@@ -72,5 +72,5 @@ Complete the user's search request efficiently and report your findings clearly.
     'retrieve_code',
     'retrieve_knowledge',
   ],
-  maxSteps: 20,
+  maxSteps: 50,
 };

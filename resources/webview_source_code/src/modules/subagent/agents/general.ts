@@ -50,5 +50,5 @@ Guidelines:
   ],
   disallowedTools: ['task'],
   model: 'inherit',
-  maxSteps: 40,
+  maxSteps: 100,
 };
