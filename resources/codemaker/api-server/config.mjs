@@ -21,6 +21,10 @@ export const config = {
   // API 协议类型：'chat-completions' (默认) 或 'responses'
   wireApi: process.env.AI_WIRE_API || 'chat-completions',
 
+  // 模型名称（由 VSCode 设置 Y3Maker.CodeChatModel 提供）
+  // 若为空，则使用客户端请求体中的 model 字段
+  model: process.env.AI_MODEL || '',
+
   // 服务端口（默认 3001）
   port: parseInt(process.env.PORT || '3001', 10),
 
@@ -62,6 +66,7 @@ export function printConfigStatus() {
   console.log(`   API Key: ${config.apiKey ? '✅ 已配置（服务器端）' : '⏳ 等待客户端提供'}`);
   console.log(`   Base URL: ${config.baseUrl ? config.baseUrl : '⏳ 等待客户端提供'}`);
   console.log(`   Wire API: ${config.wireApi}`);
+  console.log(`   Model: ${config.model ? config.model : '⏳ 使用客户端请求体 model 字段'}`);
   console.log(`   Port: ${config.port}`);
   
   const { warnings } = validateConfig();

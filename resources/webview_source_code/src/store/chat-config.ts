@@ -67,7 +67,9 @@ export const getValidChatModel = (model: ChatModel): IChatModelConfig | null => 
 
 export const getAIGWModel = (model: ChatModel) => {
   const validModel = getValidChatModel(model);
-  return (validModel?.useModel || DEFAULT_USAGE_MODEL) as ChatModel
+  // Y3Helper: fallback 到传入的 model 原值（而非写死的 DEFAULT_USAGE_MODEL），
+  // 保证 VSCode 设置的 fixedModel 永远能透传到 API
+  return (validModel?.useModel || model || DEFAULT_USAGE_MODEL) as ChatModel
 }
 
 /**

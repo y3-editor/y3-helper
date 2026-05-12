@@ -491,6 +491,10 @@ function App() {
               ...currentModels,
               [fixedModel]: {
                 code: fixedModel as ChatModel,
+                // 关键：useModel 决定实际发送给 API 的模型名。
+                // 若不设置，getAIGWModel() 会 fallback 到 DEFAULT_USAGE_MODEL，
+                // 导致请求携带错误的默认模型名（Y3Helper bug 修复）
+                useModel: fixedModel as ChatModel,
                 title: fixedModel,
                 enabled: true,
                 icon: ModelIconType.GPT,

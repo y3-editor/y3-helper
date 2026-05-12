@@ -427,8 +427,11 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
   // 构建 Responses API 请求体
   const apiRequestBody = buildResponsesRequestBody(requestBody);
   
-  // 设置模型
-  if (requestBody.model) {
+  // 设置模型：优先使用 VSCode 设置的 Y3Maker.CodeChatModel（env AI_MODEL）
+  // 否则 fallback 到客户端请求体中的 model
+  if (config.model) {
+    apiRequestBody.model = config.model;
+  } else if (requestBody.model) {
     apiRequestBody.model = requestBody.model;
   }
 
@@ -572,7 +575,10 @@ export async function chatCompletion(requestBody, res) {
     stream: false,
   };
 
-  if (requestBody.model) {
+  // 设置模型：优先使用 VSCode 设置的 Y3Maker.CodeChatModel（env AI_MODEL）
+  if (config.model) {
+    apiRequestBody.model = config.model;
+  } else if (requestBody.model) {
     apiRequestBody.model = requestBody.model;
   }
 
@@ -681,7 +687,10 @@ export async function streamChatCompletion(requestBody, res) {
   }
   
   // 如果有指定模型，使用指定的模型
-  if (requestBody.model) {
+  // 优先使用 VSCode 设置的 Y3Maker.CodeChatModel（env AI_MODEL）
+  if (config.model) {
+    apiRequestBody.model = config.model;
+  } else if (requestBody.model) {
     apiRequestBody.model = requestBody.model;
   }
 

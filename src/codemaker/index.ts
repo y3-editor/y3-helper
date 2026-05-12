@@ -41,8 +41,7 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
         })
     );
 
-    // 监听配置变化 → 重发 INIT_DATA，刷新前端配置（API Key、Base URL、Model 等）
-    // 注：API Server 不需要重启，因为前端请求体中会携带最新的 api_key 和 base_url
+    // 监听配置变化 → 重发 INIT_DATA 刷新前端，同时重启 API Server 让 env 生效
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (
@@ -54,6 +53,11 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
                 // 向 webview 重新发送 INIT_DATA，刷新前端配置
                 if (webviewProvider) {
                     webviewProvider.refreshInitData();
+                }
+                // 重启 API Server，使新的环境变量（AI_MODEL / AI_API_KEY / AI_API_BASE_URL / AI_WIRE_API）生效
+                if (apiServer) {
+                    apiServer.stop();
+                    startApiServer(context);
                 }
             }
         })

@@ -54,6 +54,9 @@ export class CodeMakerApiServer {
         if (config.wireApi) {
             env['AI_WIRE_API'] = config.wireApi;
         }
+        if (config.model) {
+            env['AI_MODEL'] = config.model;
+        }
 
         return this._tryStartOnPort(serverEntryPath, env, this._port, MAX_PORT_ATTEMPTS);
     }
