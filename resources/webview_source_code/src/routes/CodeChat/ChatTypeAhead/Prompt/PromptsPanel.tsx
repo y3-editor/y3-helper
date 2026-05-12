@@ -145,7 +145,7 @@ const PromptsPanel = (
 
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const subagents = useSubagentStore((state) => state.agents);
-  const subagentEnable = useExtensionStore((state) => state.subagentEnable);
+  const subagentEnable = useChatConfig((state) => state.enableSubagent);
   const setAgentRunner = useAgentPromptStore((state) => state.setRunner);
   const setOpenspecUpdateModalVisible = useWorkspaceStore(
     (state) => state.setOpenspecUpdateModalVisible,

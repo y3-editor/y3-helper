@@ -6,6 +6,7 @@
 import { useMCPStore } from '../../store/mcp';
 import { generateSkillsPromptSection } from '../../store/skills/prompt';
 import { OPENSPEC_RULES } from '../../store/workspace/openSpecRules';
+import { ChatApplyType, useChatApplyStore } from '../../store/chatApply';
 import { versionCompare } from '../../utils/common';
 import { PromptContext, PromptGenerator } from './types';
 import { PromptTemplateLoader } from './template-loader';
@@ -133,6 +134,14 @@ export const generateCodeEditPrompt: PromptGenerator = async (context) => {
 
   if (!config.enableEditableMode) return null;
 
+  const applyMode = useChatApplyStore.getState().chatApplyMode;
+  
+  // ClaudeEdit 模式：使用 'edit' 工具，直接返回 claude-edit 模板
+  if (applyMode === ChatApplyType.ClaudeEdit) {
+    return await PromptTemplateLoader.renderTemplate('claude-edit');
+  }
+
+  // CodemakerEdit 模式：使用 'replace_in_file' 工具，处理版本兼容逻辑
   const enableReplaceInFile = config.codeMakerVersion &&
     (versionCompare('2.4.9', config.codeMakerVersion) > 0);
 

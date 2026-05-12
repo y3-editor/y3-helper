@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { useTheme, ThemeStyle } from '../../../ThemeContext';
 import { useChatStore } from '../../../store/chat';
-import { useExtensionStore } from '../../../store/extension';
+import { useChatConfig } from '../../../store/chat-config';
 import { useMemo, useState } from 'react';
 import { usePostMessage } from '../../../PostMessageProvider';
 import MiniButton from '../../../components/MiniButton';
@@ -511,12 +511,12 @@ export default function ChatConsumeTokenPanel() {
     : 0;
 
   // 检查 Subagent 功能是否启用，且仅在 codebase 模式下展示
-  const subagentEnable = useExtensionStore((state) => state.subagentEnable);
+  const enableSubagent = useChatConfig((state) => state.enableSubagent);
   const isCodebaseMode = chatType === 'codebase';
   const effectiveChildrenSummary =
-    subagentEnable && isCodebaseMode && childrenSummary ? childrenSummary : null;
+    enableSubagent && isCodebaseMode && childrenSummary ? childrenSummary : null;
   const effectiveChildrenTotalTokens =
-    subagentEnable && isCodebaseMode ? childrenTotalTokens : 0;
+    enableSubagent && isCodebaseMode ? childrenTotalTokens : 0;
 
   const totalTokens = useMemo(() => {
     if (chatType === 'codebase') {

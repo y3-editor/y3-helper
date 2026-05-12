@@ -2,7 +2,6 @@ import { Rule, WorkspaceInfo } from '.';
 import { versionCompare } from '../../utils/common';
 import { useChatStore } from '../chat';
 import { useChatConfig } from '../chat-config';
-import { useExtensionStore } from '../extension';
 import { MCPServer, useMCPStore } from '../mcp';
 import { SkillIndexItem } from '../skills';
 import { generateSkillsPromptSection } from '../skills/prompt';
@@ -197,8 +196,8 @@ When you receive results from the task tool, ALWAYS evaluate before responding:
 Only after completing this evaluation should you craft your response to the user.
 </tool_calling>
 
-${autoApply && autoExecute && useExtensionStore.getState().subagentEnable
-      ? useExtensionStore.getState().subagentManualTriggerOnly
+${autoApply && autoExecute && useChatConfig.getState().enableSubagent
+      ? useChatConfig.getState().enableSubagentManualTriggerOnly
         ? '' // 手动触发模式下，task 工具默认不注入，无需 <task_delegation> 段落
         : `<task_delegation>
 You can delegate tasks to specialized subagents using the "task" tool. Subagents

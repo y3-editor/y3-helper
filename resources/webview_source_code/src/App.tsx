@@ -474,11 +474,10 @@ function App() {
           };
         });
 
-        // 设置 Subagent 功能开关
+        // 首次加载时用 INIT_DATA 值初始化子代理配置（之后以用户手动设置为准）
         const versionSupported = supportsSubagent(codeMakerVersion, IDE);
-        extensionStore.setSubagentEnable(!!subagentEnable && versionSupported);
-        // 设置 Subagent 手动触发模式
-        extensionStore.setSubagentManualTriggerOnly(
+        useChatConfig.getState().initSubagentConfig(
+          !!(subagentEnable && versionSupported),
           !!subagentManualTriggerOnly,
         );
 

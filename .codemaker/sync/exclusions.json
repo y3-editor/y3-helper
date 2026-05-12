@@ -152,7 +152,19 @@
     "merge_14e597a4": "MERGED: chore: 补充危险命令检测 (14e597a4)。webviewProvider.ts终端spawn添加detached:true+进程组kill(-pid SIGTERM/SIGKILL)，确保子进程树被完整终止",
     "merge_c39e4691": "MERGED: feat: 限制非多模态模型访问图片资源 (c39e4691)。2026-04-15 webui 轮。新增 stripImagesForUnsupportedModel 工具在 serializeCodebaseMessages 的 iterator 中过滤图片；影响 subagent/core/{compression,message-preprocessor}.ts、services/compressionService.ts、utils/validateBeforeChat.ts、store/chat.ts。Y3 有多模型，防止向非多模态模型发图片报错",
     "merge_5ac3e2d6": "MERGED: feat: 增加重试机制 #25836 (5ac3e2d6)。2026-04-15 webui 轮。useChatStream.ts 新增 StreamError.InvalidModelIdentifier 枚举+供应商响应失败时的重试逻辑；utils/index.ts 配套变更",
-    "skip_19b1d7d4": "SKIP: feat: 限制git图片资源上传 #27957 (19b1d7d4)。2026-04-15 webui 轮。仅影响 components/ImageUpload/ImageResize.ts。Y3 无 git 仓库上传/内网资源场景，不适用。需保留 Y3 原 ImageResize.ts，不要覆盖"
+    "skip_19b1d7d4": "SKIP: feat: 限制git图片资源上传 #27957 (19b1d7d4)。2026-04-15 webui 轮。仅影响 components/ImageUpload/ImageResize.ts。Y3 无 git 仓库上传/内网资源场景，不适用。需保留 Y3 原 ImageResize.ts，不要覆盖",
+    "skip_a157b9e7": "SKIP: feat: 优化模型检索入口 (a157b9e7)。2026-04-21 webui 轮。ChatModelSelector 交互优化，Y3 无模型选择器",
+    "skip_b849a189": "SKIP: feat: Local Review 分页查看已过滤文件 (b849a189)。2026-04-21 webui 轮。Y3 无 LocalReview 功能，UI 已屏蔽。已加 excluded_upstream_dirs: src/routes/CodeReview/LocalReview/",
+    "skip_3d1217da": "SKIP: feat: 新增 P4 仓库文件树加载支持 (3d1217da)。2026-04-21 webui 轮。Y3 无 CodeReview 功能。已加 excluded: OperateCommitReview.tsx/OperateCommitReviewOld.tsx/services/review.ts",
+    "skip_f293aad4_843fde01": "SKIP: feat+refactor: 恢复/revert Skill 默认启用配置 (f293aad4+843fde01)。2026-04-21 webui 轮。净差异几乎都是注释化+空白行清理，且都落在 Y3 不需要的 SkillSettingModal 功能块上",
+    "skip_8d6b6636": "SKIP: feat: 再次恢复 Skill 默认启用配置功能 (8d6b6636)。2026-04-22 webui 轮。同 f293aad4 决策，Y3 不需要",
+    "skip_58cbde2e_partial": "PARTIAL-SKIP: feat: 新增 BackendApplyCode 配置项支持 (58cbde2e)。2026-04-22 extension 轮。BackendApplyCode 是 CodeMaker VSCode Webview CodeChat 的后台应用代码配置（走 editApplyProvider），默认 false。Y3 不走 editApplyProvider（Y3 webview 改代码通过 claudeEdit.ts 直接操作），不需要此配置。但该 commit 内的 claudeEdit.ts filePath 空值校验 + write 失败保留 originalContent 必须合",
+    "merge_c103dd1c": "MERGED: fix: MCP 自动调用开关（gate2 防重入）(c103dd1c)。2026-04-21 webui 轮。store/chat.ts 的 gate2 派发添加 isMCPProcessing 守卫，避免 user 点 checkbox 已派发过 TOOL_CALL 时重复派发。删除所有 [mcp][*] console.log",
+    "merge_14fff8b4": "MERGED: feat: 子代理通信规范+规则支持+版本比较修复 (14fff8b4)。2026-04-21 webui 轮。新增 prompts/templates/communication.txt。prompts/shared.ts/subagent.ts/subagent/constants.ts/core/executor.ts。注意 executor.ts import 必须改为 from '../../../telemetry/otel'",
+    "merge_453159c9": "MERGED: feat: 代码块添加 Markdown 预览 (453159c9)。2026-04-21 webui 轮。ChatCodeBlock/MCPToolCall/ToolCallResults/types/report.ts，通用 UI 改进",
+    "merge_d2cbc61f_d4589b57": "MERGED: fix: edit 文件清空 (d2cbc61f webui + d4589b57 extension)。前者将 type 字段从 'edit'|'replace' 改 string 并移除 chat.ts cast；后者 claudeEdit.ts 的 executeSingleEdit catch 中用 originalContent 代替空串，避免 edit 失败把文件写空。Y3 之前用 1503669 自行修过（type cast 'edit'|'replace'|'write'），本次回滚 cast 与上游一致",
+    "merge_6dc8bfa0": "MERGED: feat: Claude Edit 模式 + 子代理用户侧开关 (6dc8bfa0)。2026-04-22 webui 轮。(1) chat-config.ts 新增 enableSubagent/enableSubagentManualTriggerOnly/subagentConfigInitialized/initSubagentConfig 字段（从 extension.ts subagentEnable 字段迁移过来，并加持久化）(2) App.tsx 用 useChatConfig.getState().initSubagentConfig 替代 extensionStore.setSubagentEnable/setSubagentManualTriggerOnly (3) chat.ts/toolsEN.ts 引用从 useExtensionStore 改 useChatConfig (4) chat.ts 新增 agentTaskDirective 时向最后一条 user message 末尾注入约束 reminder 块 (5) 新增 modules/prompts/templates/claude-edit.txt 与 subagent/ 内多文件改动。claudeEdit 扩展到 write+edit 工具",
+    "merge_58cbde2e_claudeedit_only": "MERGED: chore(只合 claudeEdit.ts 部分): filePath 空值校验（throw early 而非传 undefined 给 validateAndResolveFilePath）+ executeSingleWrite 把 originalContent 提到 try 外，catch 中用 originalContent 代替空串避免 write 失败把文件写空 + path 用 filePath || '' 兜空"
   },
 
   "_merge_lessons_learned": {
@@ -164,6 +176,13 @@
     "rule6_store_chat_too_risky_to_overwrite": "store/chat.ts 是 Y3 改动最大的文件之一，绝对不能直接覆盖上游版本。即使注释掉不存在的 import，上游版本的结构性改动（如 onMessage 参数数量变化）也会导致大量类型错误。只合必要的增量逻辑。",
     "rule7_powershell_replace_destroys_code": "不要用 PowerShell 的 -replace 做全局文本替换，会破坏代码结构（字符串中的特殊字符被错误转义）。用 grep_search 找到位置后手动 edit。",
     "rule8_verify_build_after_each_batch": "每批文件合并后立即编译验证，不要等全部合完再编译。早发现早修复。",
-    "rule9_new_files_must_git_add": "上游新增的文件（ClaudeEditFile.tsx、grep.ts、write.ts、chunk.ts 等）是 untracked 状态，需要 git add。"
+    "rule9_new_files_must_git_add": "上游新增的文件（ClaudeEditFile.tsx、grep.ts、write.ts、chunk.ts 等）是 untracked 状态，需要 git add。",
+    "rule10_safe_category_can_lose_y3_customization": "分类器判 SAFE 只看 Y3 本地是否有 override，但 Y3 在同名文件内部可能有定制（如 extension.ts 中 Y3 加了 fixedModel/setFixedModel 的 Y3Helper 定制字段）。合 SAFE 批后若编译报 Y3 自有字段缺失，务必从 git show HEAD: 读原版恢复。重点警惕文件：extension.ts（fixedModel）、任何在 exclusions.excluded_upstream_files_notes 中标 REVIEW 的文件若被误判 SAFE。",
+    "rule11_safe_classify_nonexistent_y3_target": "上游文件即便 Y3 本地没对应文件，分类器也可能判 SAFE（作 added 处理）。某些整块功能（CodeReview 的 OperateCommitReview/LocalReview 等）Y3 UI 已屏蔽但底层目录未加入 excluded_upstream_dirs 时，会被当 SAFE 写入 Y3。发现此类情况要：(a) 当次跳过 (b) 补 excluded_upstream_dirs 防止后续再误判 (c) 本次 webui 已补 LocalReview/、OperateCommitReview*.tsx、services/review.ts。",
+    "rule12_state_migration_across_stores": "上游重构常把字段从一个 store 迁到另一个 store（本次：extension.subagentEnable → chatConfig.enableSubagent）。合并时：(a) 先 git show 看 extension 改动是否删字段 (b) 同步更新所有引用点（chat.ts/App.tsx/toolsEN.ts/executor.ts）(c) 小心 Y3 定制字段（fixedModel）不要跟着被删 (d) 旧 store 的 import 若不再使用要清理避免 TS6133 unused",
+    "rule13_user_message_reminder_injection": "6dc8bfa0 引入了向最后一条 user message 末尾注入 reminder 的模式（提高 LLM 遵从率）。合此类改动时检查 ChatMessageContent.Text/isArray/wrapSystemReminder/generateSubagentConstraintText 导入完整。",
+    "rule14_reverted_feat_can_skip_wholesale": "上游同轮中 revert 掉自己刚加的 feat（f293aad4 加 → 843fde01 revert），净差异往往只是注释化+空白行。若该 feat 在 Y3 不需要的 UI 块上（如 SkillSettingModal），整组跳过即可，不用做 diff。用 `git diff commitA^ commitB -- files` 查净差异确认。",
+    "rule15_executor_otel_fixed_path": "subagent/core/executor.ts 的 otel import 在每次上游覆盖后都必须手工改回 Y3 stub 路径（`from '../../../telemetry/otel'`）。这成了固定修改点。",
+    "rule16_backend_only_extension_features_skip": "仅影响 CodeMaker 内置 VSCode webview 的 feature（BackendApplyCode/CodeChat 专用 editApplyProvider 分支等），Y3 走独立 api-server 不走这些 provider，默认也不启用配置，整体跳过。但该 feat 若含附带的通用 bug 修复（如本次 claudeEdit.ts 空值校验），要 cherry-pick 出来合。"
   }
 }

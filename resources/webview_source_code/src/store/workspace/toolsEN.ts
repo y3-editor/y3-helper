@@ -510,14 +510,14 @@ Critical rules:
   // Only inject task tool when:
   // 1. autoApply, autoExecute are enabled AND subagent functionality is enabled
   // 2. NOT in manual trigger mode, OR forceIncludeTask is true (triggered via SLASH command)
-  const subagentEnable = useExtensionStore.getState().subagentEnable;
-  const subagentManualTriggerOnly =
-    useExtensionStore.getState().subagentManualTriggerOnly;
-  const allowedSubagent = subagentEnable && autoApply && autoExecute;
+  const enableSubagent = useChatConfig.getState().enableSubagent;
+  const enableSubagentManualTriggerOnly =
+    useChatConfig.getState().enableSubagentManualTriggerOnly;
+  const allowedSubagent = enableSubagent && autoApply && autoExecute;
 
   if (allowedSubagent) {
     // In manual trigger mode, only include task tool when explicitly forced
-    if (!subagentManualTriggerOnly || forceIncludeTask) {
+    if (!enableSubagentManualTriggerOnly || forceIncludeTask) {
       tools.unshift(getTaskTool());
     }
   }

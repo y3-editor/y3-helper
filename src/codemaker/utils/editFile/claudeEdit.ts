@@ -148,8 +148,12 @@ async function executeSingleWrite(
   filePath: string,
   content: string
 ): Promise<ClaudeEditResult> {
-  let absolutePath = filePath;
+  let absolutePath = filePath || '';
+  let originalContent = '';
   try {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('file_path is required and must be a string');
+    }
     absolutePath = validateAndResolveFilePath(filePath);
     const fileExist = existsSync(absolutePath);
     const isCreateFile = !fileExist;
@@ -158,7 +162,6 @@ async function executeSingleWrite(
       throw new Error(`invalid content`);
     }
 
-    let originalContent = '';
     if (fileExist) {
       const currentDocument = await vscode.workspace.openTextDocument(absolutePath);
       originalContent = currentDocument.getText();
@@ -185,12 +188,12 @@ async function executeSingleWrite(
     return {
       content: `Error writing ${absolutePath}: ${(error as any)?.message || String(error)}`,
       extra: {
-        beforeEdit: '',
-        finalResult: '',
+        beforeEdit: originalContent,
+        finalResult: originalContent,
         taskId: '',
-        editSnippet: '',
+        editSnippet: content,
       },
-      path: filePath,
+      path: filePath || '',
       isError: true,
     };
   }
@@ -401,9 +404,12 @@ async function executeSingleEdit({
   replaceAll?: boolean
 }
 ): Promise<ClaudeEditResult> {
-  let absolutePath = filePath;
+  let absolutePath = filePath || '';
   let originalContent = '';
   try {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('file_path is required and must be a string');
+    }
     absolutePath = validateAndResolveFilePath(filePath);
     const fileExist = existsSync(absolutePath);
     const isCreateFile = !fileExist;
@@ -478,7 +484,7 @@ async function executeSingleEdit({
         taskId: '',
         editSnippet: '',
       },
-      path: filePath,
+      path: filePath || '',
       isError: true,
     };
   }

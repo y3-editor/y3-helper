@@ -29,12 +29,6 @@ interface ExtensionStore {
   // IDE 版本号
   appVersion: string | null;
   setAppVersion: (version: string) => void;
-  // Subagent 功能开关
-  subagentEnable: boolean;
-  setSubagentEnable: (enable: boolean) => void;
-  // Subagent 手动触发模式：true 时仅允许通过 SLASH 命令触发
-  subagentManualTriggerOnly: boolean;
-  setSubagentManualTriggerOnly: (enable: boolean) => void;
   // Y3Helper 定制：固定模型名，用于让自定义模型支持图片上传
   fixedModel: string;
   setFixedModel: (model: string) => void;
@@ -76,16 +70,6 @@ export const useExtensionStore = create<ExtensionStore>()((set) => ({
   appVersion: null,
   setAppVersion: (version) => {
     set(() => ({ appVersion: version }));
-  },
-  // 默认关闭 subagent 功能，由 INIT_DATA 控制
-  subagentEnable: false,
-  setSubagentEnable: (enable: boolean) => {
-    set(() => ({ subagentEnable: enable }));
-  },
-  // 默认允许自动触发，由 INIT_DATA 控制
-  subagentManualTriggerOnly: false,
-  setSubagentManualTriggerOnly: (enable: boolean) => {
-    set(() => ({ subagentManualTriggerOnly: enable }));
   },
   // Y3Helper 定制：固定模型名，用于让自定义模型支持图片上传
   fixedModel: '',

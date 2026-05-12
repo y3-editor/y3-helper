@@ -30,8 +30,6 @@ export interface PromptContext {
     openspecVersion?: string;
     codeMakerVersion?: string;
     codebaseChatMode?: string;
-    /** Subagent 手动触发模式：true 时仅允许通过 CRITICAL INSTRUCTION 触发 */
-    subagentManualTriggerOnly?: boolean;
   };
   /** 自定义变量 */
   variables?: Record<string, string>;

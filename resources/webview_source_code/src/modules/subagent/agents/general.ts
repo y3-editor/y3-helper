@@ -42,8 +42,10 @@ Guidelines:
     'glob_search',
     'retrieve_code',
     'retrieve_knowledge',
-    'edit_file',
-    'replace_in_file',
+    // 文件编辑：write/edit 为规范名，自动映射到当前模式对应的实际工具
+    // ClaudeEdit → write/edit；CodemakerEdit → edit_file/replace_in_file
+    'write',
+    'edit',
     'run_terminal_cmd',
     'make_plan',
     'write_todo',

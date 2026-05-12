@@ -239,6 +239,16 @@ interface ChatConfigStore {
   setEnableSkills: (enable: boolean) => void;
   /** 仓库智聊 特殊工具启用 End */
 
+  /** 用户侧子代理开关：true 为开启，false 为关闭 */
+  enableSubagent: boolean;
+  setEnableSubagent: (enabled: boolean) => void;
+  /** 用户侧子代理手动触发模式：true 为仅手动触发，false 为允许模型自动触发 */
+  enableSubagentManualTriggerOnly: boolean;
+  setEnableSubagentManualTriggerOnly: (enabled: boolean) => void;
+  /** 是否已从 INIT_DATA 初始化过子代理配置，防止重复覆盖用户手动设置 */
+  subagentConfigInitialized: boolean;
+  initSubagentConfig: (enableSubagent: boolean, enableSubagentManualTriggerOnly: boolean) => void;
+
   /** 内置子代理模型配置：key = agent name，value = 模型代码（空字符串表示继承默认） */
   subagentModelConfig: Record<string, string>;
   setSubagentModelConfig: (agentName: string, model: string) => void;
@@ -378,6 +388,21 @@ export const useChatConfig = create<ChatConfigStore>()(
           enableGrepSearch: enable
         }))
       },
+      enableSubagent: true,
+      setEnableSubagent: (enabled: boolean) => {
+        set(() => ({ enableSubagent: enabled }));
+      },
+      enableSubagentManualTriggerOnly: false,
+      setEnableSubagentManualTriggerOnly: (enabled: boolean) => {
+        set(() => ({ enableSubagentManualTriggerOnly: enabled }));
+      },
+      subagentConfigInitialized: false,
+      initSubagentConfig: (enableSubagent: boolean, enableSubagentManualTriggerOnly: boolean) => {
+        set((state) => {
+          if (state.subagentConfigInitialized) return {};
+          return { enableSubagent, enableSubagentManualTriggerOnly, subagentConfigInitialized: true };
+        });
+      },
       subagentModelConfig: {},
       setSubagentModelConfig: (agentName: string, model: string) => {
         set((state) => ({
@@ -408,6 +433,9 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableGlobSearch: state.enableGlobSearch,
         enableGrepSearch: state.enableGrepSearch,
         subagentModelConfig: state.subagentModelConfig,
+        enableSubagent: state.enableSubagent,
+        enableSubagentManualTriggerOnly: state.enableSubagentManualTriggerOnly,
+        subagentConfigInitialized: state.subagentConfigInitialized,
       }),
     },
   ),

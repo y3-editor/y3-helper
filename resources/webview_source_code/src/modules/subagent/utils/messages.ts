@@ -111,10 +111,7 @@ export function buildAgentListingReminder(agents: Agent[]): string {
  * @internal 通常通过 buildAgentTaskDirective 间接调用
  */
 export function generateSubagentConstraintText(agentName: string): string {
-  return `The user has requested to invoke the "${agentName}" agent via slash command.
-YOU MUST invoke the task tool with subagent_type="${agentName}".
-DO NOT use any other tools.
-Pass the user's exact request as the prompt.`;
+  return `The user has explicitly invoked the "${agentName}" subagent via slash command. You MUST immediately call the task tool with subagent_type="${agentName}" and pass the user's full message as the prompt. Do not respond with text, do not call any other tool first. Your only action must be a single task tool call.`;
 }
 
 /**

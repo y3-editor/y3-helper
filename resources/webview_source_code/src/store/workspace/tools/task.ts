@@ -1,6 +1,6 @@
 import type { Tool } from '..';
 import { useSubagentStore } from '../../../modules/subagent';
-import { useExtensionStore } from '../../extension';
+import { useChatConfig } from '../../chat-config';
 import type { Agent } from '../../../modules/subagent';
 
 
@@ -13,8 +13,8 @@ import type { Agent } from '../../../modules/subagent';
  */
 export function buildTaskDescription(): string {
   // 检查 Subagent 功能是否启用
-  const subagentEnable = useExtensionStore.getState().subagentEnable;
-  if (!subagentEnable) {
+  const enableSubagent = useChatConfig.getState().enableSubagent;
+  if (!enableSubagent) {
     return 'Subagent functionality is currently disabled.';
   }
 

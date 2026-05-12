@@ -272,8 +272,8 @@ export async function runSubagent(
   params: TaskParams,
   context: RunSubagentContext,
 ): Promise<TaskResult> {
-  const subagentEnable = useExtensionStore.getState().subagentEnable;
-  if (!subagentEnable) {
+  const enableSubagent = useChatConfig.getState().enableSubagent;
+  if (!enableSubagent) {
     return {
       taskId: '',
       output: 'Subagent functionality is disabled',
@@ -719,14 +719,34 @@ async function runSubagentInner(
             'edit_file',
             'replace_in_file',
             'reapply',
+            'write',
+            'edit',
           ].includes(toolCall.function.name);
           if (isFileEditTool) {
-            const filePath: string =
-              toolParams.target_file || toolParams.path || '';
-            const updateSnippet: string =
-              toolParams.code_edit || toolParams.diff || '';
-            const replaceSnippet: string = toolParams.diff || '';
-            const isCreateFile: boolean = toolParams.is_create_file === true;
+            let filePath: string;
+            let updateSnippet: string;
+            let replaceSnippet: string;
+            let isCreateFile: boolean;
+            if (toolCall.function.name === 'write') {
+              filePath = toolParams.file_path || '';
+              updateSnippet = toolParams.content || '';
+              replaceSnippet = '';
+              // 支持 is_create_file 参数，默认为 true（创建文件）
+              isCreateFile = toolParams.is_create_file !== false;
+            } else if (toolCall.function.name === 'edit') {
+              filePath = toolParams.file_path || '';
+              // 支持多种参数名：new_string（标准）/ code_edit / diff（备用）
+              updateSnippet = toolParams.new_string || toolParams.code_edit || toolParams.diff || '';
+              // 支持多种参数名：old_string（标准）/ diff（备用）
+              replaceSnippet = toolParams.old_string || toolParams.diff || '';
+              // 支持 is_create_file 参数，默认为 false（编辑已存在文件）
+              isCreateFile = toolParams.is_create_file === true;
+            } else {
+              filePath = toolParams.target_file || toolParams.path || '';
+              updateSnippet = toolParams.code_edit || toolParams.diff || '';
+              replaceSnippet = toolParams.diff || '';
+              isCreateFile = toolParams.is_create_file === true;
+            }
             useChatApplyStore.getState().setChatApplyItem(toolCall.id, {
               filePath,
               originalContent: '',

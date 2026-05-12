@@ -45,7 +45,6 @@ import { BroadcastActions, SubscribeActions } from '../PostMessageProvider';
 // import { mutateService } from '../hooks/useService';
 import { Docset, DocsetType, Docsets } from '../services/docsets';
 import { useMaskStore, DEFAULT_MASKS, IS_PROGRAMMING_MODE } from './mask';
-import { useExtensionStore } from './extension';
 import {
   subagentCoordinator,
   useSubagentStore,
@@ -3778,12 +3777,12 @@ export const useChatStreamStore = create(
         const isReAct = false;
 
         // 收集 agent system-reminders（注入到 system prompt tier2）
-        const subagentEnable = useExtensionStore.getState().subagentEnable;
+        const enableSubagent = useChatConfig.getState().enableSubagent;
         const agents = useSubagentStore.getState().agents;
         const systemReminders: string[] = [];
 
-        // Agent listing：subagentEnable 时始终注入（无论手动/自动触发模式）
-        if (subagentEnable && agents.length > 0) {
+        // Agent listing：enableSubagent 时始终注入（无论手动/自动触发模式）
+        if (enableSubagent && agents.length > 0) {
           systemReminders.push(buildAgentListingReminder(agents));
         }
 
@@ -3862,6 +3861,32 @@ export const useChatStreamStore = create(
 
         // 当有 agentTaskDirective 时（用户通过 SLASH 命令触发），强制包含 task 工具
         const forceIncludeTask = !!options.agentTaskDirective;
+
+        // 将约束指令也注入到最后一条 user message 末尾，提高 LLM 遵从率
+        // system prompt 中的 reminder 容易被稀释，user message 末尾权重更高
+        if (options.agentTaskDirective) {
+          const lastMessage = filteredMessages[filteredMessages.length - 1];
+          const constraintReminder = wrapSystemReminder(
+            generateSubagentConstraintText(options.agentTaskDirective.agentName),
+          );
+          if (typeof lastMessage.content === 'string') {
+            lastMessage.content = `${lastMessage.content}\n\n${constraintReminder}`;
+          } else if (isArray(lastMessage.content)) {
+            const blocks = lastMessage.content as Array<{ type: string; text?: string }>;
+            let lastTextBlock: { type: string; text?: string } | undefined;
+            for (let i = blocks.length - 1; i >= 0; i--) {
+              if (blocks[i].type === ChatMessageContent.Text) {
+                lastTextBlock = blocks[i];
+                break;
+              }
+            }
+            if (lastTextBlock) {
+              lastTextBlock.text += `\n\n${constraintReminder}`;
+            } else {
+              blocks.push({ type: ChatMessageContent.Text, text: constraintReminder });
+            }
+          }
+        }
 
         const data: ChatPromptBody = {
           messages: filteredMessages,
@@ -4825,7 +4850,7 @@ export const useChatStreamStore = create(
                 }
                 if (done) {
                   // 检查 Subagent 功能是否启用，如果禁用则过滤掉 task 工具
-                  if (toolCalls?.length && !useExtensionStore.getState().subagentEnable) {
+                  if (toolCalls?.length && !useChatConfig.getState().enableSubagent) {
                     toolCalls = toolCalls.filter(
                       (tc) => tc.function?.name !== 'task',
                     );

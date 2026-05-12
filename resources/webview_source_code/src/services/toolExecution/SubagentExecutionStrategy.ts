@@ -108,7 +108,7 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
    * 是否是文件编辑工具
    */
   private isEditFileTool(toolName: string): boolean {
-    return ['edit_file', 'reapply', 'replace_in_file', 'write_to_file'].includes(toolName);
+    return ['edit_file', 'reapply', 'replace_in_file', 'write_to_file', 'write', 'edit'].includes(toolName);
   }
 
   /**
@@ -184,7 +184,7 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
   }
 
   private getEditTools(): string[] {
-    return ['edit_file', 'reapply', 'replace_in_file', 'write_to_file'];
+    return ['edit_file', 'reapply', 'replace_in_file', 'write_to_file', 'write', 'edit'];
   }
 
   private getMCPTools(): string[] {
