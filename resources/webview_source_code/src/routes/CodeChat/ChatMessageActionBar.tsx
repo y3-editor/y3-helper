@@ -12,11 +12,9 @@ import {
 import { FiCopy } from 'react-icons/fi';
 import { RiDeleteBinLine } from 'react-icons/ri';
 import { TbRefresh } from 'react-icons/tb';
-import { TbDotsVertical, TbThumbUp, TbThumbDown } from 'react-icons/tb';
+import { TbDotsVertical } from 'react-icons/tb';
 import Icon from '../../components/Icon';
 import { SmallScreenWidth } from '../../const';
-import { ChatFeedbackType } from '../../services';
-import { ThemeStyle, useTheme } from '../../ThemeContext';
 import { useChatBillStore } from '../../store/chatBill';
 
 interface ChatMessageActionBarProps {
@@ -24,12 +22,9 @@ interface ChatMessageActionBarProps {
   onNewSessionClick?: () => void;
   onRemoveClick?: () => void;
   onRetryClick?: () => void;
-  onFeedbackClick?: (feedbackType: ChatFeedbackType) => void;
   hideNewSession?: boolean;
   hideRemove?: boolean;
   hideRetry?: boolean; // 隐藏回复按钮
-  feedbackType?: ChatFeedbackType;
-  shouldShowFeedback?: boolean;
   isCompressedMessage?: boolean;
   isCompressionSummary?: boolean;
 }
@@ -39,96 +34,15 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
     // onNewSessionClick,
     onRemoveClick,
     onRetryClick,
-    onFeedbackClick,
     // hideNewSession,
     hideRemove,
     hideRetry,
-    feedbackType,
-    shouldShowFeedback,
     isCompressedMessage,
     isCompressionSummary,
   } = props;
   const [isSmallScreen] = useMediaQuery(SmallScreenWidth);
-  const { activeTheme } = useTheme();
 
   const isExceedCost = useChatBillStore((state) => state.isExceedCost);
-
-  const showFeedbackAction = React.useMemo(() => {
-    if (!feedbackType) {
-      return (
-        <Box display="flex">
-          <Tooltip label="赞">
-            <IconButton
-              variant="ghost"
-              aria-label="赞"
-              size="sm"
-              color="text.default"
-              icon={<Icon as={TbThumbUp} size="sm" />}
-              onClick={() => {
-                if (onFeedbackClick) {
-                  onFeedbackClick(ChatFeedbackType.UpVote);
-                }
-              }}
-            />
-          </Tooltip>
-          <Tooltip label="踩">
-            <IconButton
-              variant="ghost"
-              aria-label="踩"
-              size="sm"
-              color="text.default"
-              icon={<Icon as={TbThumbDown} size="sm" />}
-              onClick={() => {
-                if (onFeedbackClick) {
-                  onFeedbackClick(ChatFeedbackType.DownVote);
-                }
-              }}
-            />
-          </Tooltip>
-        </Box>
-      );
-    }
-    if (feedbackType === ChatFeedbackType.UpVote) {
-      return (
-        <>
-          <Tooltip label="赞">
-            <IconButton
-              variant="ghost"
-              aria-label="赞"
-              size="sm"
-              color="blue.300"
-              icon={<Icon as={TbThumbUp} size="sm" />}
-              disabled
-              _hover={{
-                bg: 'none',
-                cursor: 'not-allowed',
-              }}
-            />
-          </Tooltip>
-        </>
-      );
-    }
-    if (feedbackType === ChatFeedbackType.DownVote) {
-      return (
-        <>
-          <Tooltip label="踩">
-            <IconButton
-              variant="ghost"
-              aria-label="踩"
-              size="sm"
-              color="blue.300"
-              icon={<Icon as={TbThumbDown} size="sm" />}
-              disabled
-              _hover={{
-                bg: 'none',
-                cursor: 'not-allowed',
-              }}
-            />
-          </Tooltip>
-        </>
-      );
-    }
-  }, [feedbackType, onFeedbackClick]);
 
   const shouldHideRemove = React.useMemo(() => {
     if (hideRemove) return true;
@@ -270,16 +184,6 @@ const ChatMessageActionBar = (props: ChatMessageActionBarProps) => {
           )}
         </>
       )}
-      {
-        shouldShowFeedback &&
-        <>
-          <Box mx="2" className='flex justify-center items-center' >
-            <Box height="14px" width="1px" bg={activeTheme === ThemeStyle.Light ? "gray.300" : 'whiteAlpha.400'} />
-          </Box>
-          {showFeedbackAction}
-        </>
-      }
-
     </Box>
   );
 };

@@ -2366,6 +2366,7 @@ export const useChatStreamStore = create(
     ) => {
       const chatStoreState = useChatStore.getState();
       const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
+      const chatType = chatStoreState.chatType;
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
       if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
         userReporter.report({
@@ -2402,8 +2403,6 @@ export const useChatStreamStore = create(
         }
         prompApp.reset();
       };
-      const chatType = useChatStore.getState().chatType;
-
       if (!session || !session.data || !session.data.messages) {
         useChatStore.getState().onNewSession();
         userReporter.report({
@@ -4848,7 +4847,7 @@ export const useChatStreamStore = create(
           convertDeepseekMessages(chatConfig.model, data.messages);
           if ([ChatModel.GPT5, ChatModel.GPT51, ChatModel.GPT51Codex].includes(data.model as ChatModel)) {
             delete data.temperature;
-          } else if ([ChatModel.Gemini3Pro].includes(data.model as ChatModel)) {
+          } else if (data.model.includes('gemini')) {
             data.messages[0].content += `\nNote:Don't repeat yourself`
             data.temperature = 1
           } else if ([ChatModel.Glm47, ChatModel.Glm5].includes(data.model as ChatModel)) {

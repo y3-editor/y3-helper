@@ -99,6 +99,12 @@ export default async function executeFunction(
                 replace_all: toolParams?.replace_all,
             }) as Promise<ExecuteCommandResult>;
         case 'run_terminal_cmd':
+            if (!toolParams.command) {
+                return {
+                    content: "Error: Missing value for required parameter 'command'. Please retry with complete response.",
+                    isError: true,
+                };
+            }
             return runTerminalCmd(toolParams, params.toolId, params.provider);
         case 'make_plan':
         case 'write_todo':

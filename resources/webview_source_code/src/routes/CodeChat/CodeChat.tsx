@@ -119,7 +119,7 @@ import ChatBottomTabs, {
 // import { LuListTodo } from 'react-icons/lu';
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
-import { getReportEventByToolName } from '../../utils/toolCall';
+import { formatMcpToolResult, getReportEventByToolName } from '../../utils/toolCall';
 import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
@@ -1561,20 +1561,7 @@ function CodeChat() {
         }
         // 兼容MCP文本TOKEN限制
         if (['use_mcp_tool'].includes(tool_name)) {
-          if (Array.isArray(tool_result.content)) {
-            // 只有列表才会返回MCP结果内容
-            tool_result.content.forEach(
-              (contentItem: { type: 'text'; text: string }) => {
-                if (contentItem.type === 'text') {
-                  contentItem.text = truncateContent(contentItem.text, 60000);
-                }
-              },
-            );
-          } else if (typeof tool_result.content === 'string') {
-            try {
-              tool_result.content = JSON.parse(tool_result.content);
-            } catch (e) { /* empty */ }
-          }
+          await formatMcpToolResult(tool_result)
         }
         updateCurrentSession((session) => {
           if (session && session.data) {
@@ -3072,18 +3059,6 @@ function CodeChat() {
                         userScrollLock={userScrollLock.current}
                         onResetPrompt={handleResetPrompt}
                         ref={chatMessagesRef}
-                        onFeedback={(feedbackDetail) => {
-                          if (
-                            feedbackDetail.feedback_type ===
-                            ChatFeedbackType.UpVote
-                          ) {
-                            // 点赞的时候，不需要弹出输入框，直接直接提交即可
-                            submitFeedback(feedbackDetail);
-                          } else {
-                            setShowCodebaseFeedBack(true);
-                            setFeedbackDetail(feedbackDetail);
-                          }
-                        }}
                       />
                     </Box>
                     {shouldShowRecommendation ? (

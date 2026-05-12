@@ -1,16 +1,17 @@
 import { terminalCmdFunction } from "../routes/CodeChat/ChatMessagesList/TermialPanel";
 import { RetrieveResult } from "../routes/CodeChat/RetrieveResultBlock";
-import { ChatMessage, ToolCall, ToolResult } from "../services";
+import { ChatMessage, ChatMessageContent, ToolCall, ToolResult } from "../services";
 import { ChatModel } from "../services/chatModel";
 import { ChatSession } from "../store/chat";
 import { useChatConfig } from "../store/chat-config";
 import { processMakePlanDenied, processMakePlanResult } from "../store/workspace/tools/plan";
 import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspace/tools/todo";
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
-import { isImageFileByPath } from ".";
+import { isImageFileByPath, truncateContent } from ".";
 import { onChunkLoadError } from "./chunkErrorHandler";
 import { formatUserDeniedResult } from "./toolResultFormatter";
 import { UserEvent } from "../types/report";
+import { compressBase64Image } from "../components/ImageUpload/ImageResize";
 
 
 export function getToolCallQuery(name: string, args: string) {
@@ -414,4 +415,44 @@ export const getReportEventByToolName = ({
     }
     default: return ''
   }
+}
+
+
+/**
+ * 处理mcp返回的图片结果
+ */
+export const formatMcpToolResult = async (result: ToolResult): Promise<ToolResult> => {
+
+  const presetContent = async (content: any, isTruncate = true) => {
+    if (!Array.isArray(content)) return content
+    for (let i = 0; i < content.length; i++) {
+      const contentItem = content[i] as any;
+
+      // 处理 image_url 结构 (OpenAI format)
+      if (contentItem.type === ChatMessageContent.ImageUrl && contentItem.image_url?.url?.startsWith('data:')) {
+        // 兼容mcp直接返回base64字符串的情况
+        contentItem.image_url.url = await compressBase64Image(contentItem.image_url.url);
+      } else if (contentItem.type === 'text') {
+        // 兼容mcp返回相对路径的情况
+        contentItem.text = isTruncate ? truncateContent(contentItem.text, 60000) : contentItem.text;
+      }
+    }
+    return content
+  }
+
+  if (Array.isArray(result.content)) {
+    result.content = await presetContent(result.content, true)
+  } else if (typeof result.content === 'string') {
+    // 兼容大文本返回
+    try {
+      result.content = JSON.parse(result.content);
+    } catch (e) {
+      /* empty */
+    }
+
+    try {
+      result.content = await presetContent(result.content)
+    } catch (e) { /* empty */ }
+  }
+  return result
 }

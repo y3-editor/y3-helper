@@ -78,7 +78,6 @@ function MergedMessagesRenderer({
   isLatest,
   attachs,
   onNewSession,
-  onFeedback,
   isShare,
   setRecommendFileChanges,
   userMsgId,
@@ -90,7 +89,6 @@ function MergedMessagesRenderer({
   isLatest: boolean | undefined;
   attachs: any[];
   onNewSession: any;
-  onFeedback: any;
   isShare: boolean | undefined;
   setRecommendFileChanges: any;
   userMsgId?: string;
@@ -113,7 +111,6 @@ function MergedMessagesRenderer({
       isLatest={isLatest}
       attachs={attachs}
       onNewSession={onNewSession}
-      onFeedback={onFeedback}
       isShare={isShare}
       setRecommendFileChanges={setRecommendFileChanges}
       userMsgId={userMsgId}
@@ -280,7 +277,6 @@ function OuterCollapseWrapper({
   isLatest,
   attachs,
   onNewSession,
-  onFeedback,
   isShare,
   setRecommendFileChanges,
   userMsgId,
@@ -296,7 +292,6 @@ function OuterCollapseWrapper({
   isLatest: boolean | undefined;
   attachs: any[];
   onNewSession: any;
-  onFeedback: any;
   isShare: boolean | undefined;
   setRecommendFileChanges: any;
   userMsgId?: string;
@@ -428,7 +423,6 @@ function OuterCollapseWrapper({
               isRecent={index === mergedMessages.length - 1 && isLatest}
               attachs={attachs}
               onNewSession={onNewSession}
-              onFeedback={onFeedback}
               isShare={isShare}
               setRecommendFileChanges={setRecommendFileChanges}
               hideToolCalls
@@ -543,7 +537,6 @@ function OuterCollapseWrapper({
                         isRecent={false}
                         attachs={attachs}
                         onNewSession={onNewSession}
-                        onFeedback={onFeedback}
                         isShare={isShare}
                         setRecommendFileChanges={setRecommendFileChanges}
                       />
@@ -569,7 +562,6 @@ function OuterCollapseWrapper({
                     isRecent={index === mergedMessages.length - 1 && isLatest}
                     attachs={attachs}
                     onNewSession={onNewSession}
-                    onFeedback={onFeedback}
                     isShare={isShare}
                     setRecommendFileChanges={setRecommendFileChanges}
                   />
@@ -587,7 +579,6 @@ export function GroupAIMessage({
   messages,
   isLatest,
   attachs = [],
-  onFeedback,
   isShare,
   sentAt,
   completedAt,
@@ -613,7 +604,6 @@ export function GroupAIMessage({
   const isSubagentProcessing = !useTaskCompletionStore((state) =>
     state.isSessionComplete(currentSessionId || ''),
   );
-  const showFeedback = useChatStreamStore((state) => state.showFeedback);
   const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
   const setStreamRetryCount = useChatStreamStore(
     (state) => state.setStreamRetryCount,
@@ -682,8 +672,6 @@ export function GroupAIMessage({
         !isLatest ||
         !enableReply ||
         !!message.revertedFiles;
-      const shouldShowFeedback = !isLatest || (isLatest && !showFeedback);
-      const feedbackType = message.feedback;
 
       const isCompressedMessage = message.isCompressed || false;
       const isCompressionSummary = message.isCompressionSummary || false;
@@ -700,13 +688,10 @@ export function GroupAIMessage({
           onRemoveClick={() => {
             setIsOpenModal(true);
           }}
-          onFeedbackClick={onFeedback}
           onRetryClick={onRetryClick}
           hideNewSession={hideNewSession}
           hideRemove={hideRemove}
           hideRetry={hideRetry}
-          feedbackType={feedbackType}
-          shouldShowFeedback={shouldShowFeedback}
           isCompressedMessage={isCompressedMessage}
           isCompressionSummary={isCompressionSummary}
         />
@@ -723,11 +708,8 @@ export function GroupAIMessage({
     isLatest,
     enableReply,
     message.revertedFiles,
-    message.feedback,
     message.isCompressed,
     message.isCompressionSummary,
-    showFeedback,
-    onFeedback,
     onRetryClick,
     handleCopyToClipboard,
     handleNewSession,
@@ -1041,7 +1023,6 @@ export function GroupAIMessage({
             isLatest={isLatest}
             attachs={attachs}
             onNewSession={onNewSession}
-            onFeedback={onFeedback}
             isShare={isShare}
             setRecommendFileChanges={setRecommendFileChanges}
             userMsgId={userMsgId}

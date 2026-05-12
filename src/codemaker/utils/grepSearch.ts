@@ -192,6 +192,12 @@ export async function grepSearchFiles(options: {
   isPrivateModel?: boolean
 }) {
   const { path: searchPath, regex, filePattern, caseSensitive = false, isPrivateModel } = options
+
+  // 参数校验：searchPath 不能为空
+  if (!searchPath) {
+    return '搜索路径不能为空';
+  }
+
   const cwd = getCwd();
 
   // .y3makerignore 前处理拦截：检查搜索路径本身是否被忽略（私有模型跳过）
@@ -429,16 +435,27 @@ export default async function grepSearch(options: {
   caseSensitive?: boolean,
   isPrivateModel?: boolean
 }) {
-  const { relPath, regex, filePattern, caseSensitive = false, isPrivateModel } = options
+  let displayPath = '';
 
-  // Resolve the absolute path based on multi-workspace configuration
-  const cwd = getCwd();
-  const absolutePath = path.isAbsolute(relPath) ? relPath : path.resolve(cwd, relPath);
-  let displayPath = absolutePath;
-  if (filePattern) {
-    displayPath = path.join(absolutePath, `(${filePattern})`);
-  }
   try {
+    const { relPath, regex, filePattern, caseSensitive = false, isPrivateModel } = options
+
+    // 参数校验：relPath 不能为空（模型调用时遗漏参数）
+    if (!relPath) {
+      return {
+        path: '',
+        content: '搜索缺少必要参数：relPath 为空，请检查调用参数',
+        isError: true
+      };
+    }
+
+    // Resolve the absolute path based on multi-workspace configuration
+    const cwd = getCwd();
+    const absolutePath = path.isAbsolute(relPath) ? relPath : path.resolve(cwd, relPath);
+    displayPath = absolutePath;
+    if (filePattern) {
+      displayPath = path.join(absolutePath, `(${filePattern})`);
+    }
     const result = await grepSearchFiles({
       path: absolutePath,
       regex,

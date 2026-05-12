@@ -17,13 +17,14 @@ export interface ChatMessageProps {
   onResetPrompt?: (prompt: string) => void;
   userScrollLock?: boolean;
   isShare?: boolean;
-  onFeedback?: (feedbackDetail: CodeBaseFeedbackDetail) => void;
   selectedMessageIds?: Set<string>;
   onToggleMessage?: (messageId: string) => void;
   /** 收藏模式下，记录每轮选中了工具调用的 user message id 集合 */
   toolCallRoundIds?: Set<string>;
   /** 收藏模式下，切换某一轮工具调用的选中状态 */
   onToggleToolCallRound?: (userMsgId: string) => void;
+  /** 多选会话模式：点击「多选该组会话」按钮的回调，携带触发的 user message id */
+  onEnterMultiSelect?: (userMsgId: string) => void;
 }
 
 export interface ChatMessageHandle {
@@ -57,7 +58,6 @@ export interface ChatAssistantMessageProps {
   isRecent?: boolean;
   attachs: AttachType[];
   onNewSession: (message?: ChatMessage[] | undefined) => void;
-  onFeedback: (feedbackType: ChatFeedbackType) => void;
   isShare?: boolean;
   setRecommendFileChanges: (recommendFileChanges: IRecommendFileChangeRecord) => void;
   /** 收藏模式下隐藏工具调用 UI，工具调用在外部聚合框单独渲染 */
@@ -74,7 +74,6 @@ export interface GroupAIMessageProps {
   messages: ChatMessage[];
   isLatest?: boolean;
   attachs: AttachType[];
-  onFeedback: (feedbackType: ChatFeedbackType) => void;
   isShare?: boolean;
   /** 用户发送消息的时间戳（ms） */
   sentAt?: number;

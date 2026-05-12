@@ -472,6 +472,20 @@ export async function handleExtendedMessage(
             return true;
         }
 
+        // EXECUTE_HOOK: Y3 无 language-server，直接返回 allow
+        case 'EXECUTE_HOOK': {
+            const { hookId } = message.data || {};
+            provider.sendMessage({
+                type: 'HOOK_RESULT',
+                targetPanelId: message.panelId,
+                data: {
+                    hookId,
+                    result: { decision: 'allow', reason: 'Y3Helper: Hook not supported, auto-allowed' },
+                },
+            });
+            return true;
+        }
+
         default:
             return false;
     }

@@ -1,11 +1,10 @@
 import * as React from 'react';
-import { Button } from '@chakra-ui/react';
+import { Button, Box, useColorModeValue } from '@chakra-ui/react';
 import { useChatStore } from '../../../store/chat';
-import { ChatMessageHandle, ChatMessageProps, ChatRole, ChatFeedbackType, RenderMessage } from './types';
+import { ChatMessageHandle, ChatMessageProps, ChatRole, RenderMessage } from './types';
 import { ChatMessage } from '../../../services';
 import { GroupAIMessage } from './GroupAIMessage';
 import UserMessage from './UserMessage';
-import FeedbackPanel from './FeedbackPanel';
 import StreamingChatMessage from './StreamingChatMessage';
 import { usePanelContextOptional } from '../../../context/PanelContext';
 import { useChatStreamNotification } from '../../../hooks/useChatStreamNotification';
@@ -15,9 +14,10 @@ const PAGE_SIZE = 30;
 
 const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
   (props: ChatMessageProps, ref) => {
-    const { containerRef, userScrollLock, onFeedback, isShare, selectedMessageIds, onToggleMessage, toolCallRoundIds, onToggleToolCallRound } = props;
+    const { containerRef, isShare, selectedMessageIds, onToggleMessage, toolCallRoundIds, onToggleToolCallRound } = props;
     const currentSession = useChatStore((state) => state.currentSession());
-    const isError = useChatStore((state) => state.isError);
+    // 选中会话组的背景色（浅/深色主题自适应）
+    const selectedGroupBg = useColorModeValue('rgba(120, 111, 255, 0.1)', 'rgba(43, 45, 46, 0.5)');
     const prevSessionId = React.useRef<string>();
     const abortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -350,64 +350,6 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
       };
     });
 
-    const findMessageRange = React.useCallback(
-      (messageId: string) => {
-        return getMessageRangeById(messagePool, messageId);
-      },
-      [messagePool],
-    );
-
-    const submitMessageFeedback = React.useCallback(
-      (messageId: string, feedbackType: ChatFeedbackType) => {
-        if (!currentSession?._id) return;
-        const messageRange = findMessageRange(messageId);
-        const feedbackDetail = {
-          topic: currentSession?.topic || '',
-          chat_type: currentSession?.chat_type || '',
-          chat_repo: currentSession?.chat_repo || '',
-          messages: messageRange,
-          message_id: messageId,
-          session_id: currentSession?._id,
-          feedback: '',
-          feedback_type: feedbackType,
-        };
-        onFeedback?.(feedbackDetail);
-      },
-      [
-        onFeedback,
-        currentSession?._id,
-        findMessageRange,
-        currentSession?.topic,
-        currentSession?.chat_type,
-        currentSession?.chat_repo,
-      ],
-    );
-
-    const handleCodeBaseFeedback = React.useCallback(
-      (feedbackType: ChatFeedbackType) => {
-        if (!currentSession?._id) return;
-        const latestMessage =
-          currentSession?.data?.messages[
-          currentSession?.data.messages.length - 1
-          ];
-        if (latestMessage?.id) {
-          const messageRange = findMessageRange(latestMessage?.id);
-          const feedbackDetail = {
-            topic: currentSession?.topic || '',
-            chat_type: currentSession?.chat_type || '',
-            chat_repo: currentSession?.chat_repo || '',
-            messages: messageRange,
-            message_id: latestMessage?.id,
-            session_id: currentSession?._id,
-            feedback: '',
-            feedback_type: feedbackType,
-          };
-          onFeedback?.(feedbackDetail);
-        }
-      },
-      [currentSession, onFeedback, findMessageRange],
-    );
-
     return (
       <div className="chat-message">
         {offset > 0 && (
@@ -430,8 +372,17 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
             )[0]?.attachs || [];
 
             if (isUser && !message.hidden) {
+              const isGroupSelected = !!message.id && !!selectedMessageIds?.has(message.id);
               return (
-                <div key={messageId} id={`user-message-${message.id}`}>
+                <Box
+                  key={messageId}
+                  id={`user-message-${message.id}`}
+                  bg={isGroupSelected ? selectedGroupBg : undefined}
+                  borderRadius="6px"
+                  px={2}
+                  py={1}
+                  transition="background 0.2s, border-color 0.2s"
+                >
                   <UserMessage
                     {...props}
                     message={message}
@@ -439,7 +390,7 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
                     selectedMessageIds={selectedMessageIds}
                     onToggleMessage={onToggleMessage}
                   />
-                </div>
+                </Box>
               );
             }
 
@@ -451,60 +402,40 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
               // AI 完成时间取最后一条 assistant 子消息的 createdAt
               const lastSubMsg = message.messages[message.messages.length - 1];
               const prevUserMsgId = prevUserMsg?.id;
+              const isGroupSelected = !!prevUserMsgId && !!selectedMessageIds?.has(prevUserMsgId);
               return (
-                <div key={messageId} id={messageId}>
+                <Box
+                  key={messageId}
+                  id={messageId}
+                  bg={isGroupSelected ? selectedGroupBg : undefined}
+                  px={2}
+                  py={1}
+                  transition="background 0.2s, border-color 0.2s"
+                >
                   <GroupAIMessage
                     messages={message.messages || []}
                     isLatest={isLatestMessage}
                     attachs={userAttachs}
                     sentAt={prevUserMsg?.createdAt}
                     completedAt={lastSubMsg?.createdAt}
-                    onFeedback={(feedbackType) => {
-                      if (message.messages) {
-                        const lastMessage = message.messages[message.messages.length - 1];
-                        if (lastMessage.id) {
-                          submitMessageFeedback(lastMessage.id, feedbackType);
-                        } else if (message.id) {
-                          submitMessageFeedback(message.id, feedbackType);
-                        }
-                      }
-                    }}
                     isShare={isShare}
                     userMsgId={prevUserMsgId}
                     isToolCallSelected={prevUserMsgId ? toolCallRoundIds?.has(prevUserMsgId) : false}
                     onToggleToolCallRound={onToggleToolCallRound}
                     isUserMsgSelected={prevUserMsgId ? selectedMessageIds?.has(prevUserMsgId) ?? false : false}
                   />
-                </div>
+                </Box>
               );
             }
 
             return null;
           })}
         </div>
-        {!isShare ? (
-          <>
-            {isError ? (
-              null
-            ) : (
-              <FeedbackPanel
-                userScrollLock={userScrollLock ? userScrollLock : false}
-                onCodeBaseFeedback={handleCodeBaseFeedback}
-                submitMessageFeedback={submitMessageFeedback}
-              />
-            )}
-          </>
-        ) : null}
       </div>
     );
   },
 );
 
-const getMessageRangeById = (messages: ChatMessage[], messageId: string) => {
-  const index = messages.findIndex((m) => m.id === messageId);
-  if (index === -1) return [];
-  return messages.slice(0, index + 1);
-};
 
 
 export { StreamingChatMessage }

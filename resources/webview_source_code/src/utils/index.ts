@@ -598,10 +598,10 @@ export const specialErrorPatterns = [
     condition: (msg: string) => msg.includes("anthropic_error_chunk type:overloaded_error message:Overloaded"),
     message: '💰 模型资源不足，请稍后重试或切换其他模型使用'
   },
-  {
-    condition: (msg: string) => checkAIGWError(msg) && msg.includes('dimensions exceed max allowed size for many-image requests: 2000 pixels'),
-    message: '⚠️ 该图片像素大于2000，请删除图片输入，调整后重试'
-  },
+  // {
+  //   condition: (msg: string) => checkAIGWError(msg) && msg.includes('dimensions exceed max allowed size for many-image requests: 2000 pixels'),
+  //   message: '⚠️ 该图片像素大于2000，请删除图片输入，调整后重试'
+  // },
   {
     condition: (msg: string) => checkAIGWError(msg) && msg.includes('sse response first timeout'),
     message: '⚠️ 请求超时，请稍后重试'
