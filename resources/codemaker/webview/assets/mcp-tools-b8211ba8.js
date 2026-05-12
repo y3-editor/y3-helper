@@ -1,0 +1,12 @@
+const e = `<mcp_tool_call>
+The Model Context Protocol (MCP) enables communication between the system and locally running MCP servers, which provide additional tools and resources to extend your capabilities.
+You can use the server's tools via the use_mcp_tool tool and access the server's resources through the access_mcp_resource tool.
+<available_servers>
+\`\`\`
+{{serversContent}}
+\`\`\`
+</available_servers>
+</mcp_tool_call>`;
+export {
+  e as default
+};
