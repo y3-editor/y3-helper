@@ -51,6 +51,7 @@
             ],
             "codemaker-sidebar": [
                 {
+                    "icon": "",
                     "type": "webview",
                     "id": "codemaker.webview",
                     "name": "Y3Maker AI"
@@ -509,7 +510,46 @@
                 "languages": [
                     "lua"
                 ],
-                "type": "y3lua"
+                "type": "y3lua",
+                "configurationAttributes": {
+                    "launch": {
+                        "properties": {}
+                    },
+                    "attach": {
+                        "properties": {
+                            "address": {
+                                "type": "string",
+                                "description": "调试器连接地址",
+                                "default": "127.0.0.1:12399"
+                            },
+                            "outputCapture": {
+                                "type": "array",
+                                "description": "输出捕获配置",
+                                "default": []
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "description": "附加后是否立即暂停",
+                                "default": false
+                            },
+                            "sourceCoding": {
+                                "type": "string",
+                                "description": "源码文件编码",
+                                "default": "utf8"
+                            },
+                            "luaVersion": {
+                                "type": "string",
+                                "description": "Lua 版本",
+                                "default": "lua54"
+                            },
+                            "sourceMaps": {
+                                "type": "array",
+                                "description": "源码路径映射",
+                                "default": []
+                            }
+                        }
+                    }
+                }
             }
         ]
     },
