@@ -554,13 +554,12 @@ export const specialErrorPatterns = [
   },
   {
     condition: (msg: string) => (
-      (msg.includes(StreamError.TokenLimitErrorFromAIGW)
-        || msg.includes(StreamError.RateLimitErrorFromAIGW)
-        || msg.includes(StreamError.PeerClosedConnection)
-      )
-      || (
-        msg.includes(StreamError.AzureaiRateLimitChunk)
-      )
+      msg.includes(StreamError.TokenLimitErrorFromAIGW)
+      || msg.includes(StreamError.RateLimitErrorFromAIGW)
+      || msg.includes(StreamError.PeerClosedConnection)
+      || msg.includes(StreamError.AzureaiRateLimitChunk)
+      || msg.includes(StreamError.BaiChuan2TokenLimit)
+      || msg.includes(StreamError.InvalidModelIdentifier)
     ),
     message: '⚠️ 当前请求触发模型限流，请稍后再试'
   },

@@ -48,6 +48,11 @@ export async function getHistories(
     params,
     signal,
   });
+  data.items.forEach((session) => {
+    if (session.chat_repo) {
+      session.chat_repo = session.chat_repo.trim();
+    }
+  });
   return data;
 }
 
@@ -123,7 +128,7 @@ export async function countTokens(
   model: ChatModel,
   signal?: AbortSignal,
 ) {
-  if (!text) return 0
+  if (!text) return 0;
   let sendModel = getAIGWModel(model);
   switch (model) {
     case ChatModel.DEEPSEEK:
@@ -138,7 +143,7 @@ export async function countTokens(
     case ChatModel.GPT51:
     case ChatModel.GPT51Codex:
       sendModel = ChatModel.GPT4o;
-      break
+      break;
   }
   const params: Record<string, string> = {
     model: sendModel,
@@ -181,7 +186,7 @@ export interface GPTResponse {
       content: string;
     };
   }[];
-  usage?: TokenUsage
+  usage?: TokenUsage;
 }
 export async function fetchGptResponse(event: string, params: ChatPromptBody) {
   const { data } = await codemakderChatGptRequest.post<GPTResponse>(

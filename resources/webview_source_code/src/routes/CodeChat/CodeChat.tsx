@@ -1765,24 +1765,6 @@ function CodeChat() {
                     );
                   }
                 }
-                if (
-                  Object.keys(lastMessage?.tool_result || {}).length ===
-                  lastMessage.tool_calls.length
-                ) {
-                  lastMessage.processing = false;
-                  if (tool_result && tool_result.isError) {
-                    useChatStreamStore.getState().onUserSubmit(
-                      '',
-                      {
-                        event: UserEvent.CODE_CHAT_CODEBASE,
-                      },
-                      undefined,
-                      {
-                        [tool_id]: true,
-                      },
-                    );
-                  }
-                }
               }
             }
           }

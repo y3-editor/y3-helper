@@ -301,13 +301,25 @@ export class RunnerManager {
 
     const pending = runner.pendingToolResults.get(toolId);
     if (!pending) {
-      // 增强日志：显示当前 runner 的所有 pending tools，便于调试并发问题
+      // pending 条目已不存在，有两种预期场景：
+      //   1. 工具调用超时（timeout handler 先于 IDE 响应删除了条目）
+      //   2. subagent 已被 abort（onAbort 监听器删除了条目）
+      // 两种情况下结果都已无法投递，属于正常现象，降级为 warn。
+      const isAborted = runner.abortController.signal.aborted;
       const allPendingIds = Array.from(runner.pendingToolResults.keys());
-      console.error(
-        `[Subagent] CRITICAL: No pending tool result callback for tool_id: ${toolId}, task_id: ${taskId}. ` +
-        `This tool result will be LOST! ` +
-        `Current pending tool_ids: [${allPendingIds.join(', ')}]`
-      );
+      if (isAborted) {
+        console.warn(
+          `[Subagent] Tool result arrived after abort for tool_id: ${toolId}, task_id: ${taskId}. ` +
+          `Result will be ignored (subagent was already aborted). ` +
+          `Remaining pending tool_ids: [${allPendingIds.join(', ')}]`,
+        );
+      } else {
+        console.error(
+          `[Subagent] CRITICAL: No pending tool result callback for tool_id: ${toolId}, task_id: ${taskId}. ` +
+          `This tool result will be LOST! ` +
+          `Current pending tool_ids: [${allPendingIds.join(', ')}]`,
+        );
+      }
       return;
     }
 

@@ -13,7 +13,17 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
     return 'MainAgent';
   }
 
-  shouldAutoExecute(toolCall: ToolCall, context: ExecutionContext): boolean {
+  shouldAutoExecute(
+    toolCall: ToolCall,
+    context: ExecutionContext,
+    toolResult?: { isError?: boolean },
+  ): boolean {
+    // 工具执行出错时，强制自动执行以便 AI 获得错误信息并重试
+    if (toolResult?.isError === true) {
+      console.log('[mcp][strategy] 工具结果 isError=true，强制自动执行');
+      return true;
+    }
+
     const permissions = context.permissions;
     if (!permissions) {
       console.log('[mcp][strategy] 没有权限配置，不自动执行');

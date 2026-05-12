@@ -11,7 +11,7 @@ import { BUILT_IN_PROMPTS } from '../services/builtInPrompts';
 import { CODE_QUALITY_AUTOFIX_PROMPT_APP } from '../routes/CodeChat/ChatTypeAhead/Prompt/useUserPrompt';
 import { parseMentions } from './chatMention';
 import { ChatModelSupplyChannel, getModelSupplyChannel, useChatConfig } from '../store/chat-config';
-import { ChatModel, IChatModelConfig } from '../services/chatModel';
+import { ChatModel, IChatModelConfig, ParseImgType } from '../services/chatModel';
 const { toast } = createStandaloneToast();
 
 
@@ -94,11 +94,19 @@ export const checkThinkingSignatureValid = (messages: ChatMessage[]) => {
  * @name 序列化消息上下文, 用于发送给模型
  * @param message
  */
-export const serializeCodebaseMessages = async (
+export const serializeCodebaseMessages = async ({
+  model,
+  sendMessages,
+  session,
+  isReAct,
+  iterator,
+}: {
   model: ChatModel,
   sendMessages: ChatMessage[],
   session?: ChatSession,
   isReAct?: boolean
+  iterator?: (message: ChatMessage, index: number, isLast: boolean) => void,
+}
 ) => {
   const filteredMessages: ChatMessage[] = [];
 
@@ -243,8 +251,8 @@ export const serializeCodebaseMessages = async (
       delete curMessage.reasoning_content;
       delete curMessage.reasoningContent;
     }
-    // 修复有推理内容没有签名的情况（仅 Claude 模型需要 thinking_signature）
-    if (hasThinking && isClaudeModel && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
+    // 修复有推理内容没有签名的情况
+    if (hasThinking && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
       curMessage.reasoning_content = '';
     }
     if (!nextMessage && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length) {
@@ -355,6 +363,13 @@ export const serializeCodebaseMessages = async (
       });
       webToolsLogger.captureMessage('');
     });
+  }
+
+  if (iterator) {
+    for (let j = 0; j < filteredMessages.length; j++) {
+      const isLast = j === filteredMessages.length - 1
+      iterator(filteredMessages[j], j, isLast)
+    }
   }
   return filteredMessages
 }
@@ -495,6 +510,27 @@ export const clearContextWithUnrelatedProperties = (
     delete message?.rules
     delete message?.attachs
   })
+}
+
+/**
+* @name 模型不支持图片时，将消息中 image_url 类型内容替换为文本占位符
+*/
+export function stripImagesForUnsupportedModel(
+  message: ChatMessage,
+  chatModelConfig?: IChatModelConfig,
+): void {
+  if (![ParseImgType.BASE64, ParseImgType.URL].includes(chatModelConfig?.parseImgType || ParseImgType.NONE)) {
+    if (!Array.isArray(message.content)) return
+    message.content = (message.content as ChatMessageContentUnion[]).map((item) => {
+      if (item.type === ChatMessageContent.ImageUrl) {
+        return {
+          type: ChatMessageContent.Text,
+          text: 'Image not supported, replaced with text'
+        } as ChatMessageContentText;
+      }
+      return item;
+    });
+  }
 }
 
 /**

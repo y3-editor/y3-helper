@@ -5,7 +5,6 @@ import {
   allowedTypes,
   HandleImageUpload,
 } from '../../components/ImageUpload/ImageUpload';
-import { compressImage } from '../../components/ImageUpload/ImageResize';
 import { Prompt } from '../../services/prompt';
 import {
   useChatAttach,
@@ -49,6 +48,7 @@ import {
   AgentTaskDirective,
   buildAgentTaskDirective,
 } from '../../modules/subagent/utils/messages';
+import { compressImage } from '../../components/ImageUpload/ImageResize';
 // import EventBus, { EBusEvent } from '../../utils/eventbus';
 
 interface ChatInputProp {
@@ -644,20 +644,32 @@ function ChatInput(props: ChatInputProp) {
     SpecFramework.SpecKit,
   );
 
+  const currentSessionChatRepo = useMemo(() => {
+    try {
+      if (currentSession?.chat_repo) {
+        return currentSession.chat_repo.trim();
+      } else {
+        return '';
+      }
+    } catch (err) {
+      return '';
+    }
+  }, [currentSession?.chat_repo])
+
   const placeholder = React.useMemo(() => {
     if (currentSession?.is_favorite) {
       // 判断收藏会话类型和仓库匹配情况，生成不同的 __FAVORITE__ 协议字符串
       if (currentSession.chat_type === 'codebase') {
         const repoMatch =
-          currentSession.chat_repo &&
+          currentSessionChatRepo &&
           workspaceInfo.repoName &&
-          currentSession.chat_repo === workspaceInfo.repoName;
+          currentSessionChatRepo === workspaceInfo.repoName;
         if (repoMatch) {
-          return `__FAVORITE__codebase__收藏会话不支持继续对话，点击发起新会话`;
+          return `__FAVORITE__codebase__收藏会话仅支持查看，不支持直接对话。如需继续对话，请点击「发起对话」，将自动携带上下文创建新会话`;
         }
-        return `__FAVORITE__mismatch__${currentSession.chat_repo || ''}__收藏会话不支持继续对话，当前仓库与会话关联仓库不一致`;
+        return `__FAVORITE__mismatch__${currentSessionChatRepo || ''}__该收藏会话关联仓库 ${currentSessionChatRepo}，请先打开对应仓库使用`;
       }
-      return `__FAVORITE__default__收藏会话不支持继续对话，点击发起新会话`;
+      return `__FAVORITE__default__收藏会话仅支持查看，不支持直接对话。如需继续对话，请点击「发起对话」，将自动携带上下文创建新会话`;
     }
     if (pluginApp) {
       return `${pluginApp.app_shortcut?.tip} (${config.submitKey})`;
@@ -665,10 +677,10 @@ function ChatInput(props: ChatInputProp) {
     if (chatType === 'codebase') {
       if (workspaceInfo.repoName) {
         if (
-          currentSession?.chat_repo &&
-          currentSession?.chat_repo !== workspaceInfo.repoName
+          currentSessionChatRepo &&
+          currentSessionChatRepo !== workspaceInfo.repoName
         ) {
-          return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库使用或新建会话`;
+          return `当前会话关联仓库 ${currentSessionChatRepo}，打开该仓库使用或新建会话`;
         } else {
           // 检查是否需要初始化 - 显示可点击的提示，点击后打开初始化弹窗
           if (codebaseChatMode === 'openspec' && !isOpenspecInitialized) {
@@ -680,8 +692,8 @@ function ChatInput(props: ChatInputProp) {
           return `${config.submitKey} 发送`;
         }
       } else {
-        if (currentSession?.chat_repo) {
-          return `当前会话关联仓库 ${currentSession?.chat_repo}，打开该仓库后可继续对话`;
+        if (currentSessionChatRepo) {
+          return `当前会话关联仓库 ${currentSessionChatRepo}，打开该仓库后可继续对话`;
         } else {
           return `未识别到仓库信息，请打开代码仓库后使用本功能`;
         }
@@ -709,8 +721,7 @@ function ChatInput(props: ChatInputProp) {
     isMac,
     isDisabledAttachs,
     workspaceInfo.repoName,
-    workspaceInfo.workspace,
-    currentSession?.chat_repo,
+    currentSession,
     codebaseChatMode,
     isOpenspecInitialized,
     isSpeckitInitialized,
@@ -722,8 +733,8 @@ function ChatInput(props: ChatInputProp) {
       if (!workspaceInfo.repoName) {
         inputDisabled = true;
       } else if (
-        currentSession?.chat_repo &&
-        currentSession?.chat_repo !== workspaceInfo.repoName
+        currentSessionChatRepo &&
+        currentSessionChatRepo !== workspaceInfo.repoName
       ) {
         inputDisabled = true;
       } else if (
@@ -765,7 +776,8 @@ function ChatInput(props: ChatInputProp) {
   }, [
     chatType,
     workspaceInfo.repoName,
-    currentSession?.chat_repo,
+    workspaceInfo.workspace,
+    currentSessionChatRepo,
     codebaseChatMode,
     isOpenspecInitialized,
     isSpeckitInitialized,

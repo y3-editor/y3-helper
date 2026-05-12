@@ -361,14 +361,15 @@ export interface ChatPromptBody {
     mode?: string;
     params: Record<string, unknown>;
   };
+  mode_type?: string,
   // google gemini2.0 模型携带参数
   extra_body?: Record<string, unknown>;
 
   vertexai?: {
     thinking_config?: {
-      "thinking_budget"?: number
-    }
-  }
+      thinking_budget?: number;
+    };
+  };
 
   codebase_chat_mode?: CodebaseChatMode;
 }

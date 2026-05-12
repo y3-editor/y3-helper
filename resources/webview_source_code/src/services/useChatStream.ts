@@ -62,6 +62,7 @@ export enum StreamError {
   FailedToFetch = 'Failed to fetch',
   PeerClosedConnection = 'peer closed connection without sending complete message body',
   AzureaiRateLimitChunk = 'azureai_error_chunk code:rate_limit_exceeded',
+  InvalidModelIdentifier = 'The provided model identifier is invalid'
 }
 
 export enum ChatRole {

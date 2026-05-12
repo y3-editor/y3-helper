@@ -57,6 +57,8 @@ import {
   taskCoordinator,
   pendingEventQueue,
   useTaskCompletionStore,
+  TaskCompletionStatus,
+  useToolConfirmationStore,
 } from '../modules/subagent';
 import { AttachType } from '../store/attaches';
 import { getCodeSearchDataNew, SearchResultNew } from '../services/search';
@@ -118,9 +120,9 @@ import {
   checkThinkingSignatureValid,
   // clearContextWithUnrelatedProperties, // 已导出但暂未在Y3中使用
   convertDeepseekMessages,
-  repairToolIdOfMessages,
   reuseDuplicateFileRead,
-  serializeCodebaseMessages
+  serializeCodebaseMessages,
+  stripImagesForUnsupportedModel
 } from '../utils/validateBeforeChat';
 import { injectTodoListToLastUserMessage, processWriteTodoDenied } from './workspace/tools/todo';
 import { useMCPStore } from './mcp';
@@ -1343,10 +1345,10 @@ export const useChatStore = create<ChatStore>()(
 
           const readyToCompress = session.data.messages.filter(msg => !msg.isCompressed)
           const compressionContext: CompressionContext = {
-            messages: await serializeCodebaseMessages(
-              ChatModel.Gemini3Flash,
-              readyToCompress
-            ),
+            messages: await serializeCodebaseMessages({
+              model: ChatModel.Gemini3Flash,
+              sendMessages: readyToCompress,
+            }),
             sessionId: sessionId,
           };
 
@@ -1750,7 +1752,6 @@ export const useChatStreamStore = create(
           }
 
           if (!lastMessage) {
-            console.warn('[Debug][updateToolCallResults] 未找到包含 tool_calls 的 assistant message');
             return;
           }
 
@@ -2070,7 +2071,8 @@ export const useChatStreamStore = create(
 
       // 检查每个工具是否应该自动执行
       for (const toolCall of lastMessage.tool_calls) {
-        const shouldAuto = strategy.shouldAutoExecute(toolCall, context);
+        const toolResult = lastMessage.tool_result?.[toolCall.id];
+        const shouldAuto = strategy.shouldAutoExecute(toolCall, context, toolResult);
 
         if (shouldAuto) {
           hasAutoExecution = true;
@@ -3870,9 +3872,15 @@ export const useChatStreamStore = create(
         });
         // FIX：修复消息上下文丢失的问题
         // OPTIMIZED: 遍历 messages +2
-        let filteredMessages = await serializeCodebaseMessages(model, sendMessages, session, isReAct);
-        // OPTIMIZED: 遍历 messages +1
-        filteredMessages = repairToolIdOfMessages(filteredMessages, model);
+        const filteredMessages = await serializeCodebaseMessages({
+          model,
+          sendMessages,
+          session,
+          isReAct,
+          iterator: (message) => {
+            stripImagesForUnsupportedModel(message, chatModels[chatConfig.model]);
+          }
+        });
 
         // TODO: 不应该在这里重复处理
         if (chatPromptStoreState.prompt && ![
@@ -3920,6 +3928,7 @@ export const useChatStreamStore = create(
           messages: filteredMessages,
           model: getAIGWModel(chatConfig.model),
           // max_tokens: chatConfig.max_tokens,
+          mode_type: "main.agent",
           stream: true,
           tool_choice: chatConfig.model.startsWith('claude')
             ? undefined
@@ -6753,15 +6762,23 @@ export const useChatStreamStore = create(
             );
 
             unfinishedTaskCalls.forEach((toolCall) => {
+              // 从 subagent store 获取真实的 taskId、描述、agent 名称等信息
+              // 若 subagent 尚未创建 session（例如还在队列中），taskId 为空字符串
+              const statusInfo = useSubagentStore.getState().statuses[toolCall.id];
+              const subagentTaskId = statusInfo?.taskId || '';
+              const taskDescription = statusInfo?.description || 'Task aborted by user';
+              const agentName = statusInfo?.agentName || 'unknown';
+              const currentStep = statusInfo?.step || 0;
+
               // 构造 aborted 状态的 tool result content
               const abortedContent = formatTaskResult({
-                id: 'aborted',
-                description: 'Task aborted by user',
+                id: subagentTaskId,
+                description: taskDescription,
                 status: TaskStatus.Aborted,
                 messages: [],
                 abortReason: 'User stopped the conversation',
-                agent: 'unknown',
-                steps: 0,
+                agent: agentName,
+                steps: currentStep,
               } as any);
 
               // ✅ 直接添加 tool message，不调用 updateTaskToolResult
@@ -6838,6 +6855,28 @@ export const useChatStreamStore = create(
         get().reset();
         ControllerPool.stop(sessionId, isStreamingMessageIndex + 1);
         subagentCoordinator.abortBySession(sessionId);
+        // reset() 已清除 isStreaming/isProcessing，但 taskCompletionTracker 中的任务
+        // 状态仍为 Running，导致 isSessionComplete 返回 false，下次点击 stop 会绕过
+        // early-return 再次执行本段逻辑（叠加"用户中止回答"）。
+        // 在此立即将该 session 所有未完成任务标记为 Cancelled，确保状态同步。
+        const tracker = useTaskCompletionStore.getState();
+        tracker.getSessionTasks(sessionId).forEach((task) => {
+          if (
+            task.status === TaskCompletionStatus.Registered ||
+            task.status === TaskCompletionStatus.Running
+          ) {
+            tracker.updateTaskStatus(
+              sessionId,
+              task.toolCallId,
+              TaskCompletionStatus.Cancelled,
+              { error: 'Cancelled by user stop' },
+            );
+          }
+        });
+        // 清除任何仍在等待用户操作的工具二次确认弹窗。
+        // executor 中的 requestConfirmation 会通过 abort signal 自动解决，
+        // 此处作为兜底保障，确保即使 abort 信号路径出现问题，UI 状态也能及时清除。
+        useToolConfirmationStore.getState().clear();
         get().setStreamRetryCount(0);
       }
     },

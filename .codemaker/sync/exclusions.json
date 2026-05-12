@@ -144,7 +144,10 @@
     "merge_4dec1e54": "MERGED: feat: grep支持检索指定编码 (4dec1e54)。移植grepSearch.ts(ripgrep)+analyzeProject.ts(精简版)+validateAccess.ts。Y3 grep从纯JS fs遍历升级为ripgrep二进制搜索，支持--encoding参数",
     "merge_a313220e": "MERGED: feat: glob支持检索隐藏保护文件 (a313220e)。analyzeProject.ts中PROTECTED_HIDDEN_DIRS常量(.codemaker/.claude/.specify/.opencode)，grepSearch.ts补扫逻辑",
     "merge_614e8c6f": "MERGED: refactor: 优化终端命令访问检查逻辑 (614e8c6f)。移植commandParser.ts(checkTerminalCommandAccess)，集成到webviewProvider.ts的run_terminal_cmd中",
-    "merge_14e597a4": "MERGED: chore: 补充危险命令检测 (14e597a4)。webviewProvider.ts终端spawn添加detached:true+进程组kill(-pid SIGTERM/SIGKILL)，确保子进程树被完整终止"
+    "merge_14e597a4": "MERGED: chore: 补充危险命令检测 (14e597a4)。webviewProvider.ts终端spawn添加detached:true+进程组kill(-pid SIGTERM/SIGKILL)，确保子进程树被完整终止",
+    "merge_c39e4691": "MERGED: feat: 限制非多模态模型访问图片资源 (c39e4691)。2026-04-15 webui 轮。新增 stripImagesForUnsupportedModel 工具在 serializeCodebaseMessages 的 iterator 中过滤图片；影响 subagent/core/{compression,message-preprocessor}.ts、services/compressionService.ts、utils/validateBeforeChat.ts、store/chat.ts。Y3 有多模型，防止向非多模态模型发图片报错",
+    "merge_5ac3e2d6": "MERGED: feat: 增加重试机制 #25836 (5ac3e2d6)。2026-04-15 webui 轮。useChatStream.ts 新增 StreamError.InvalidModelIdentifier 枚举+供应商响应失败时的重试逻辑；utils/index.ts 配套变更",
+    "skip_19b1d7d4": "SKIP: feat: 限制git图片资源上传 #27957 (19b1d7d4)。2026-04-15 webui 轮。仅影响 components/ImageUpload/ImageResize.ts。Y3 无 git 仓库上传/内网资源场景，不适用。需保留 Y3 原 ImageResize.ts，不要覆盖"
   },
 
   "_merge_lessons_learned": {
@@ -152,7 +155,7 @@
     "rule2_always_check_imports_after_overwrite": "即使是 SAFE 文件，覆盖后也要检查 import 是否引用了 Y3 不存在的模块。上游新增的依赖（如 codebaseQualityAutofix、probeModelIdentity）在 Y3 可能不存在。",
     "rule3_jetbrains_code_must_be_removed": "Y3 只有 VSCode IDE。上游 tools.ts/toolsEN.ts 中的 isJetbrains/jetbrainsVersion/IDE.JetBrains 相关代码全部删除。grep 版本判断去掉 isVSCode 条件分支，glob 条件去掉 JetBrains 分支。",
     "rule4_skillhub_entirely_not_needed": "Skill Hub 全部功能 Y3 都不需要。skills.netease.com 是内网地址，Y3 用户无法访问。包括：skillAutoUpdate.ts、CHECK_SKILLS_VERSION、fetchHubSkillsAndCheckUpdates、autoUpdateSkillsWithProgress、SkillUpdateInfo、HubSkillItem、HubSkillListResponse、SKILLS_HUB_BASE_URL、isHubSkillInstalled、handleInstallHubSkill、'更多 Skills' Tab。SkillSettingModal 保持 Y3 原版即可（已有搜索+ZIP导入+display_name）。",
-    "rule5_otel_always_skip": "所有 otel（OpenTelemetry）相关 import 和调用都要注释掉。Y3 没有 OTEL 基础设施。涉及文件：CodeChat.tsx、store/chat.ts、useChatStream.ts。",
+    "rule5_otel_always_skip": "所有 otel（OpenTelemetry）相关 import 和调用都要注释掉或改指向 Y3 stub。Y3 没有 OTEL 基础设施。涉及文件：CodeChat.tsx、store/chat.ts、useChatStream.ts、modules/subagent/core/compression.ts、modules/subagent/core/executor.ts。上游 `from '@opentelemetry/api'` 的 import（含 trace/SpanStatusCode/context/Span 类型）必须改成 `from '../../../telemetry/otel'`（Y3 stub 已 re-export 这些 API 的 noop 实现）。",
     "rule6_store_chat_too_risky_to_overwrite": "store/chat.ts 是 Y3 改动最大的文件之一，绝对不能直接覆盖上游版本。即使注释掉不存在的 import，上游版本的结构性改动（如 onMessage 参数数量变化）也会导致大量类型错误。只合必要的增量逻辑。",
     "rule7_powershell_replace_destroys_code": "不要用 PowerShell 的 -replace 做全局文本替换，会破坏代码结构（字符串中的特殊字符被错误转义）。用 grep_search 找到位置后手动 edit。",
     "rule8_verify_build_after_each_batch": "每批文件合并后立即编译验证，不要等全部合完再编译。早发现早修复。",

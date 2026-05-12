@@ -17,7 +17,6 @@ import { ChatModel } from '../../../services/chatModel';
 import { useChatConfig } from '../../../store/chat-config';
 import {
   serializeCodebaseMessages,
-  repairToolIdOfMessages,
 } from '../../../utils/validateBeforeChat';
 import { pruneToolOutputs } from '../../../services/compressionService';
 import {
@@ -200,10 +199,10 @@ export async function preprocessSubagentMessages(
   // );
 
   // 4. 序列化消息（处理文件内容等）
-  let filteredMessages = await serializeCodebaseMessages(
+  let filteredMessages = await serializeCodebaseMessages({
     model,
     sendMessages,
-  );
+  });
 
   // 4.5 Gemini 模型的 thinking_signature 特殊处理
   // 与主 agent 保持一致的逻辑 (src/store/chat.ts:6002-6007)
@@ -220,7 +219,7 @@ export async function preprocessSubagentMessages(
   }
 
   // 5. 工具ID修复
-  filteredMessages = repairToolIdOfMessages(filteredMessages, model);
+  // filteredMessages = repairToolIdOfMessages(filteredMessages, model);
 
   // 6. 返回未添加缓存标记的消息（与主agent保持一致）
   // 缓存标记将在 buildSubagentChatPromptBody 中添加，避免影响压缩逻辑

@@ -9,8 +9,13 @@ import { ExecutionContext } from '../../types/executionContext';
 export interface ToolExecutionStrategy {
   /**
    * 判断工具是否应该自动执行
+   * @param toolResult 工具执行结果，若 isError 为 true 则强制自动执行
    */
-  shouldAutoExecute(toolCall: ToolCall, context: ExecutionContext): boolean;
+  shouldAutoExecute(
+    toolCall: ToolCall,
+    context: ExecutionContext,
+    toolResult?: { isError?: boolean },
+  ): boolean;
 
   /**
    * 获取策略名称（用于调试）

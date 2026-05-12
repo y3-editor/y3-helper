@@ -165,8 +165,10 @@ export async function checkAndCompress(
     const compressionContext: CompressionContext = {
       messages: await serializeCodebaseMessages(
         // ChatModel.Gemini3Flash,
-        model,
-        readyToCompress,
+        {
+          model,
+          sendMessages: readyToCompress,
+        }
       ),
       model,
       sessionId,
@@ -268,7 +270,7 @@ export async function checkAndCompress(
           compressionSpan.setAttribute(
             'compression.ratio',
             compressionResult.tokensAfterCompression /
-              compressionResult.tokensBeforeCompression,
+            compressionResult.tokensBeforeCompression,
           );
         }
         compressionSpan.setStatus({ code: SpanStatusCode.OK });

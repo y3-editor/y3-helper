@@ -73,6 +73,8 @@ import {
   startSubagentTaskSpan,
   startToolCallSpan,
   stopToolCallSpan,
+} from '../../../telemetry/otel';
+import {
   SpanStatusCode,
   trace,
   context as otelContext,
@@ -516,6 +518,8 @@ async function runSubagentInner(
           },
         );
 
+        promptData.mode_type = `${agent.name || "unknown"}.agent`;
+
         const llmResult = await streamChat(
           promptData,
           abortController,
@@ -641,19 +645,6 @@ async function runSubagentInner(
             ? { ...toolParams, messageId: toolCall.id }
             : toolParams;
 
-          const toolResultPromise = runnerManager.waitForTool(
-            taskId,
-            toolCall.id,
-            abortController.signal,
-            toolCall.function.name,
-          );
-
-          debugLog(MODULE, `Registered waitForTool, sending TOOL_CALL`, {
-            taskId,
-            toolId: toolCall.id,
-            toolName: toolCall.function.name,
-          });
-
           let toolSpan: ReturnType<typeof startToolCallSpan> | undefined;
           if (subagentSpanContext) {
             const agentName =
@@ -693,29 +684,61 @@ async function runSubagentInner(
             const { useToolConfirmationStore } =
               await import('../store/toolConfirmation');
 
-            try {
-              userConfirmed = await useToolConfirmationStore
-                .getState()
-                .requestConfirmation({
+            // 如果在等待动态 import 期间已经 abort，直接跳过
+            if (abortController.signal.aborted) {
+              userConfirmed = false;
+            } else {
+              try {
+                // 将 requestConfirmation 与 abort signal 竞速：
+                // abort 触发时立即 clear() 清除 pendingConfirmation UI 状态，
+                // 并以 false（拒绝）结束 await，executor 不再卡住。
+                // 注意：需要在 Promise.race 完成后清理 abort 监听器，避免内存泄漏
+                const abortCleanup: { current: (() => void) | null } = {
+                  current: null,
+                };
+                try {
+                  userConfirmed = await Promise.race([
+                    useToolConfirmationStore.getState().requestConfirmation({
+                      taskId,
+                      toolId: toolCall.id,
+                      toolName: toolCall.function.name,
+                      toolParams: toolParams,
+                      isDangerous: true,
+                      timestamp: Date.now(),
+                    }),
+                    new Promise<boolean>((resolve) => {
+                      const onAbort = () => {
+                        // clear() 会调用 resolver(false) 解决 requestConfirmation 的 Promise，
+                        // 同时将 pendingConfirmation 置 null，确认对话框立即消失
+                        useToolConfirmationStore.getState().clear();
+                        resolve(false);
+                      };
+                      abortController.signal.addEventListener('abort', onAbort, {
+                        once: true,
+                      });
+                      // 保存清理函数，用于在 race 完成后移除监听器
+                      abortCleanup.current = () => {
+                        abortController.signal.removeEventListener('abort', onAbort);
+                      };
+                    }),
+                  ]);
+                } finally {
+                  // 无论哪个 Promise 先完成，都清理 abort 监听器，防止内存泄漏
+                  abortCleanup.current?.();
+                }
+
+                debugLog(MODULE, `User confirmation result`, {
                   taskId,
                   toolId: toolCall.id,
-                  toolName: toolCall.function.name,
-                  toolParams: toolParams,
-                  isDangerous: true,
-                  timestamp: Date.now(),
+                  confirmed: userConfirmed,
                 });
-
-              debugLog(MODULE, `User confirmation result`, {
-                taskId,
-                toolId: toolCall.id,
-                confirmed: userConfirmed,
-              });
-            } catch (error) {
-              debugLog(MODULE, `Failed to get user confirmation`, {
-                taskId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              userConfirmed = false;
+              } catch (error) {
+                debugLog(MODULE, `Failed to get user confirmation`, {
+                  taskId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+                userConfirmed = false;
+              }
             }
 
             if (!userConfirmed) {
@@ -731,6 +754,23 @@ async function runSubagentInner(
           }
 
           const finalApproval = shouldAutoExecute || userConfirmed;
+
+          // waitForTool 必须在 postMessage 之前注册，确保不会漏接 IDE 的回调。
+          // 但必须在确认决策之后调用，避免：
+          //   1. 用户拒绝时 pending 条目悬空 7 分钟后超时
+          //   2. 计时器将用户确认等待时间计入工具超时预算
+          const toolResultPromise = runnerManager.waitForTool(
+            taskId,
+            toolCall.id,
+            abortController.signal,
+            toolCall.function.name,
+          );
+
+          debugLog(MODULE, `Registered waitForTool, sending TOOL_CALL`, {
+            taskId,
+            toolId: toolCall.id,
+            toolName: toolCall.function.name,
+          });
 
           window.parent.postMessage(
             {
@@ -1378,6 +1418,28 @@ IMPORTANT RULES:
               }
               resolve(false); // 超时默认选择 Stop
             }, USER_ACTION_TIMEOUT_MS);
+          }),
+          // 监听 abort 信号：主界面点"中止生成"时立即响应，不再等待用户在子代理 UI 操作
+          new Promise<boolean>((resolve) => {
+            if (abortController.signal.aborted) {
+              // 信号已终止时，清理已创建的资源后立即返回
+              pendingUserActions.delete(toolCallId);
+              if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              resolve(false);
+              return;
+            }
+            const onAbort = () => {
+              pendingUserActions.delete(toolCallId);
+              if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              resolve(false);
+            };
+            abortController.signal.addEventListener('abort', onAbort, { once: true });
           }),
         ]);
 

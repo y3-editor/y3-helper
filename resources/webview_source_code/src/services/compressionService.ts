@@ -320,10 +320,10 @@ export class CompressionService {
       );
 
       const requestCompression = async (payload: ChatMessage[]) => {
-        const serialized = await serializeCodebaseMessages(
-          model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
-          payload,
-        );
+        const serialized = await serializeCodebaseMessages({
+          model: model || DEFAULT_COMPRESSION_CONFIG.compressionModel,
+          sendMessages: payload,
+        });
         const cleanMessages = serialized.map(({
           redacted_thinking: _redacted_thinking,
           thinking_signature: _thinking_signature,
@@ -528,12 +528,12 @@ ${summaryText}
     } else {
       // 计算实际保留的消息数量，使用 CompressionResult 中的信息
       const actualPreserveCount = compressionResult.preserveRecentCount || 0;
-      
+
       // 如果所有消息都未压缩，需要根据实际的保留数量来分割
-      const effectivePreserveCount = unCompressedCount === originalMessages.length 
-        ? actualPreserveCount 
+      const effectivePreserveCount = unCompressedCount === originalMessages.length
+        ? actualPreserveCount
         : unCompressedCount;
-      
+
       if (effectivePreserveCount === 0) {
         // 没有保留消息，压缩summary放在最后
         return [
