@@ -101,3 +101,71 @@ When making code changes, NEVER output code to the USER as a code block in chat 
 | `codeMakerVersion` | `'26.5.0'` | 配合 versionCompare 恒真 → 不影响 |
 
 如果上游新增了类似的 mode 字段，要同步加进 INIT_DATA。
+
+---
+
+## 7. Subagent (task 工具) 合并的三处坑
+
+合并上游 subagent 大功能后，一次对话可触发三类卡死，全部源于"合并漏 / 路由不全"。按报错顺序排查：
+
+### 7.1 主 agent 调 task → 报 "Tool 'task' is not supported in Y3Helper integration"
+
+**根因**：`resources/webview_source_code/src/store/chat.ts` 有两个 `onMessage`：
+- `~4070`：`isReAct=true` 分支（streaming），合并时加上了 task 分流
+- `~4861`：`isReAct=false` 分支（主路径），**漏改**，仍把所有 toolCalls 直接 `postMessage(TOOL_CALL)` 发 IDE
+
+上游已统一为单一 `onMessage`（`isReAct` 写死 `false`，老分支删除）。下游因为留了 ReAct 路径，必须**两个 onMessage 都补 task 分流**。
+
+**修复**：在 4861 处 onMessage 的 `if (toolCalls.length) / if (!allResponsed)` 内补上：
+- `taskToolCalls = toolCalls.filter(t => t.function.name === 'task')`
+- `nonTaskToolCalls = toolCalls.filter(t => t.function.name !== 'task')`
+- 调 `taskCoordinator.startSessionWatchdog` / `emitTaskRegistered` / `markRegistrationComplete` / `runSubagent` 全套异步执行块（参考上游 `~5006`）
+- 后续 `for (const tool of toolCalls)` → `for (const tool of nonTaskToolCalls)`
+
+### 7.2 Subagent RUNNING 但 Tool Calls=0、Tokens=— → 请求挂死
+
+**根因**：`resources/webview_source_code/src/modules/subagent/core/llm.ts` 写死 `'/proxy/gpt/gpt/codebase_chat_stream'`。Y3 本地 api-server (`resources/codemaker/api-server/routes/chat.mjs`) 只注册了 `/proxy/gpt/u5_chat/...`，未注册 `gpt/gpt/codebase_chat_stream` → 请求无响应、stream 永远不 done。
+
+**修复**：保持 webview URL 与上游一致（不要去改 webview），在 `chat.mjs` 注册同名路由暂复用 `handleStreamChat`：
+
+```js
+routes.set('POST:/proxy/gpt/gpt/codebase_chat_stream', handleStreamChat);
+routes.set('POST:/proxy/gpt/hangyan/gpt/codebase_chat_stream', handleStreamChat);
+```
+
+上游用独立 URL 是为了把 subagent 流量与主 agent 分开（独立 prompt 注入 / tracing 等）。Y3 暂时复用主 handler，后续如需差异化在这条路由上替换 handler 即可，URL 与上游同步。
+
+### 7.3 Subagent 调 run_terminal_cmd / edit_file 后卡 RUNNING（IDE 已回 TOOL_CALL_RESULT）
+
+**根因**：`resources/webview_source_code/src/routes/CodeChat/CodeChat.tsx` 在 `TOOL_CALL_RESULT` 与 `ACCEPT_EDIT_RESULT` 处理上漏了 subagent 路由分支。带 `task_id` 的工具结果走主会话流程，subagent runner 的 `pendingToolResults` 永等。
+
+**修复**（对照上游 `~1453` / `~2198`）：
+
+```ts
+// TOOL_CALL_RESULT 分支
+const { tool_result, tool_id, tool_name, task_id, extra = {} } = eventData?.data || {};
+if (task_id) {
+  const { runnerManager } = await import('../../modules/subagent');
+  runnerManager.resolveToolResult(task_id, eventData?.data);
+  return;
+}
+
+// ACCEPT_EDIT_RESULT 分支
+if (result?.item?.toolCallId) {
+  const { runnerManager } = await import('../../modules/subagent');
+  const handled = runnerManager.resolveAcceptEditResult(result.item.toolCallId, result);
+  if (handled) return;
+}
+```
+
+IDE 端 `_handleToolCall` 已透传 `task_id`（`src/codemaker/webviewProvider.ts`），无需改。
+
+### 7.4 排查顺序
+
+合并 subagent 类大功能后按此查：
+
+1. **task 是否被分流**：webview console 看主 agent toolCall 是否走 IDE TOOL_CALL（不该）。报 "Tool 'task' is not supported" → 7.1
+2. **subagent LLM 是否能发出请求**：api-server log 是否打印 subagent 用的 URL；无打印就是路由没注册 → 7.2
+3. **subagent 工具结果是否回流**：webview console 看 `[Subagent] No active runner / No pending tool result callback`，IDE log 看 TOOL_CALL_RESULT 是否含 `task_id`，CodeChat.tsx 是否拦截路由 → 7.3
+
+---

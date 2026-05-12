@@ -1372,8 +1372,18 @@ function CodeChat() {
           tool_result,
           tool_id,
           tool_name,
+          task_id,
           extra = {},
         } = eventData?.data || {};
+
+        // Subagent 路由：如果 TOOL_CALL_RESULT 携带 task_id，
+        // 则路由到 runnerManager.resolveToolResult，不走主会话处理
+        if (task_id) {
+          const { runnerManager } = await import('../../modules/subagent');
+          runnerManager.resolveToolResult(task_id, eventData?.data);
+          return;
+        }
+
         const toolSpan = otel.startToolCallSpan({
           toolName: tool_name,
           toolId: tool_id,
@@ -2091,6 +2101,24 @@ function CodeChat() {
       }
       if (eventData?.type === SubscribeActions.ACCEPT_EDIT_RESULT) {
         const { result } = eventData?.data || {};
+
+        // Subagent 路由：如果 ACCEPT_EDIT_RESULT 对应的 toolCallId 在 subagent 的等待列表中，
+        // 则路由到 runnerManager.resolveAcceptEditResult，不走主会话处理
+        if (result?.item?.toolCallId) {
+          const { runnerManager } = await import('../../modules/subagent');
+          const handled = runnerManager.resolveAcceptEditResult(
+            result.item.toolCallId,
+            result,
+          );
+          if (handled) {
+            console.log(
+              '[Subagent] ACCEPT_EDIT_RESULT routed to subagent:',
+              result.item.toolCallId,
+            );
+            return;
+          }
+        }
+
         if (result) {
           if (result.success) {
             handleAcceptEditSuccess(result.item);

@@ -81,6 +81,13 @@ export function registerChatRoutes(routes) {
   routes.set('POST:/proxy/gpt/u5_chat/codebase_agent_stream', handleStreamChat);
 
   // =============================================
+  // Subagent 聊天端点（上游用独立 URL，区分主 agent 与子 agent 流量）
+  // POST /proxy/gpt/gpt/codebase_chat_stream
+  // 当前与 codebase_chat_stream 共享处理逻辑，保留独立路由便于以后差异化
+  // =============================================
+  routes.set('POST:/proxy/gpt/gpt/codebase_chat_stream', handleStreamChat);
+
+  // =============================================
   // Codebase agent（非流式）
   // POST /proxy/gpt/u5_chat/codebase_agent_chat
   // =============================================
@@ -94,6 +101,8 @@ export function registerChatRoutes(routes) {
   routes.set('POST:/proxy/gpt/hangyan/u5_chat/codebase_chat_stream', handleStreamChat);
   routes.set('POST:/proxy/gpt/hangyan/u5_chat/codebase_agent_stream', handleStreamChat);
   routes.set('POST:/proxy/gpt/hangyan/u5_chat/codebase_agent_chat', handleNonStreamChat);
+  // Subagent (hangyan)
+  routes.set('POST:/proxy/gpt/hangyan/gpt/codebase_chat_stream', handleStreamChat);
 
   // =============================================
   // 辅助端点 - 返回简单 Mock 响应

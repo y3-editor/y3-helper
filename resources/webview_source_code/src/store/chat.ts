@@ -5069,7 +5069,148 @@ export const useChatStreamStore = create(
                   });
                   if (toolCalls.length) {
                     if (!allResponsed) {
-                      for (const tool of toolCalls) {
+                      // 分离 task 工具和非 task 工具
+                      const taskToolCalls = toolCalls.filter(
+                        (t) => t.function.name === 'task',
+                      );
+                      const nonTaskToolCalls = toolCalls.filter(
+                        (t) => t.function.name !== 'task',
+                      );
+                      // task 工具：并行启动所有（不等待，各自完成后独立更新结果）
+                      if (taskToolCalls.length > 0 && chatStoreState.currentSessionId) {
+                        const parentSessionId = chatStoreState.currentSessionId;
+                        const taskToolCallIds = taskToolCalls.map((t) => t.id);
+
+                        // ✅ 启动 watchdog 定时器
+                        taskCoordinator.startSessionWatchdog(
+                          parentSessionId,
+                          taskToolCallIds,
+                        );
+
+                        // ============ 阶段 1：原子注册所有 task ============
+                        // 使用同步操作，确保所有 task 在任何执行开始前都已注册
+                        taskToolCalls.forEach((taskTool) => {
+                          let task_params: any = {};
+                          try {
+                            task_params = JSON.parse(
+                              taskTool.function.arguments || '{}',
+                            );
+                          } catch (err) {
+                            console.error(err);
+                            task_params = {};
+                          }
+
+                          // ✅ 发射 TASK_REGISTERED 事件（同步）
+                          emitTaskRegistered(
+                            parentSessionId,
+                            taskTool.id,
+                            task_params.subagent_type || 'explore',
+                            task_params.description,
+                          );
+                        });
+
+                        // ============ 阶段 2：标记注册完成 ============
+                        // 通知 TaskCoordinator 所有 task 已注册完成
+                        taskCoordinator.markRegistrationComplete(
+                          parentSessionId,
+                          taskToolCallIds,
+                        );
+
+                        // ============ 阶段 3：异步执行所有 task ============
+                        taskToolCalls.forEach((taskTool) => {
+                          let task_params: any = {};
+                          try {
+                            task_params = JSON.parse(
+                              taskTool.function.arguments || '{}',
+                            );
+                          } catch (err) {
+                            console.error(err);
+                            task_params = {};
+                          }
+
+                          // 异步执行子代理，完成后将结果注入主会话
+                          (async () => {
+                            try {
+                              const { runSubagent } =
+                                await import('../modules/subagent');
+                              const parentController =
+                                ControllerPool.controllers.get(
+                                  ControllerPool.key(sessionId, messageIndex),
+                                );
+                              // 获取当前的 conversationRound（用于 OTEL 追踪，Y3 可能为空）
+                              const round = (get() as any).conversationRound;
+
+                              const taskResult = await runSubagent(
+                                {
+                                  description: task_params.description || '',
+                                  prompt: task_params.prompt || '',
+                                  subagent_type:
+                                    task_params.subagent_type || 'explore',
+                                },
+                                {
+                                  parentSessionId,
+                                  parentAbortSignal: parentController?.signal,
+                                  toolCallId: taskTool.id,
+                                  round,
+                                },
+                              );
+
+                              // ✅ 使用 await 等待锁保护的异步更新完成
+                              await get().updateTaskToolResult({
+                                toolCallId: taskTool.id,
+                                taskResult,
+                                sessionId: parentSessionId,
+                              });
+                            } catch (err) {
+                              const errorMsg =
+                                err instanceof Error ? err.message : String(err);
+
+                              // ✅ 错误恢复：将错误信息作为 tool result 注入主会话
+                              try {
+                                get().updateToolCallResults({
+                                  [taskTool.id]: {
+                                    path: '',
+                                    content: `Subagent execution failed: ${errorMsg}`,
+                                    isError: true,
+                                  },
+                                });
+                              } catch (updateErr) {
+                                console.error(
+                                  `[Debug][subagent] CRITICAL: Failed to update error tool_result for ${taskTool.id}:`,
+                                  updateErr,
+                                );
+                              }
+                            }
+                          })().catch((err) => {
+                            // ========== 最外层兜底：捕获所有未处理的 Promise rejection ==========
+                            console.error(
+                              `[Debug][subagent] CRITICAL: Unhandled promise rejection in task tool ${taskTool.id}:`,
+                              err,
+                            );
+
+                            try {
+                              get().updateToolCallResults({
+                                [taskTool.id]: {
+                                  path: '',
+                                  content: `Critical error: ${err instanceof Error ? err.message : String(err)}`,
+                                  isError: true,
+                                },
+                              });
+                            } catch (finalErr) {
+                              console.error(
+                                `[Debug][subagent] FATAL: Cannot update tool_result even in final catch for ${taskTool.id}:`,
+                                finalErr,
+                              );
+                            }
+                          });
+                        });
+                      }
+
+                      // 非 task 工具：处理全部工具
+                      // 混合场景（task + 其他工具）下不能只取第一个，
+                      // 否则其余工具的 postMessage 永远不发出，tool_result 凑不够，
+                      // 导致 onUserSubmit 永远不被触发，UI 卡在 loading 状态
+                      for (const tool of nonTaskToolCalls) {
                         if (!response[tool.id]) {
                           let tool_params: any = {};
                           if (tool.function.arguments) {
