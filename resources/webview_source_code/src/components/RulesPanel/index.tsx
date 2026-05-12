@@ -13,6 +13,7 @@ import { useWorkspaceStore } from '../../store/workspace';
 import RulesGrid from './RulesGrid';
 import EventBus from '../../utils/eventbus';
 import MiniButton from '../../components/MiniButton';
+import { Z_INDEX_POPOVER_TOOLBAR } from '../../const';
 
 interface IProps {
   disabled: boolean
@@ -111,7 +112,7 @@ function RulesPanel({
             {displayCurrent}
           </MiniButton>
         </PopoverTrigger>
-        <PopoverContent w='450px' maxH="260" maxW="100vw" overflow="hidden" borderColor="customBorder">
+        <PopoverContent w='450px' maxH="260" maxW="100vw" overflow="hidden" borderColor="customBorder" rootProps={{ zIndex: Z_INDEX_POPOVER_TOOLBAR }}>
           <PopoverBody display="flex" gap={0} p={0} h="400px">
             <RulesGrid />
           </PopoverBody>

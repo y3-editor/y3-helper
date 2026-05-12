@@ -132,11 +132,11 @@ const ThemeProvider = (props: { children: React.ReactNode }) => {
             },
           },
         },
-      },
-      Popover: {
-        baseStyle: {
-          popper: {
-            zIndex: 900, // 设置比 Modal 的 zIndex 小一点，避免影响到 Modal 的 zIndex
+        Popover: {
+          baseStyle: {
+            popper: {
+              zIndex: 900, // 设置比 Modal 的 zIndex 小一点，避免影响到 Modal 的 zIndex
+            },
           },
         },
       },

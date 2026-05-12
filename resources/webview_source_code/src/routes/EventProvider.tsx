@@ -9,6 +9,10 @@ import { EventContext } from './eventProviderContext';
 import { addString, checkValueOfPressedKeyboard, isWin } from '../utils';
 
 export const DEBOUNCE_DELAY = 300;
+interface HistoryEntry {
+  value: string;
+  cursorPosition: number;
+}
 interface EventProviderProps {
   children: React.ReactNode;
 }
@@ -21,7 +25,7 @@ export default function EventProvider(props: EventProviderProps) {
   ]);
   const isJetBrains2020 = appVersion?.includes('2020');
   // Key 是 DOM 元素，所以需要使用 WeakMap 来存储，避免内存泄漏
-  const historyStack = React.useRef<WeakMap<HTMLElement, string[]>>(
+  const historyStack = React.useRef<WeakMap<HTMLElement, HistoryEntry[]>>(
     new WeakMap(),
   );
   const pasteEventDebounceRef = React.useRef<number>(Date.now());
@@ -125,6 +129,7 @@ export default function EventProvider(props: EventProviderProps) {
             const element = queryActiveEditableElement();
             if (element) {
               undo(historyStack.current, element);
+              event.preventDefault();
             }
           }
         }
@@ -220,7 +225,9 @@ export default function EventProvider(props: EventProviderProps) {
         const element = event.target as HTMLTextAreaElement | HTMLInputElement;
         if (element && !historyStack.current.has(element)) {
           // 元素获取焦点时，记录初始值
-          historyStack.current.set(element, [element.value]);
+          historyStack.current.set(element, [
+            { value: element.value, cursorPosition: element.selectionStart || 0 },
+          ]);
         }
       }
 
@@ -264,32 +271,37 @@ function queryActiveEditableElement() {
 }
 
 function updateHistory(
-  historyStack: WeakMap<HTMLElement, string[]>,
+  historyStack: WeakMap<HTMLElement, HistoryEntry[]>,
   element: HTMLElement | HTMLInputElement,
   value: string,
 ) {
+  const cursorPosition = (element as HTMLInputElement).selectionStart || 0;
   if (!historyStack.has(element)) {
     // 初始值未被记录，记录初始值
-    historyStack.set(element, [(element as HTMLInputElement)?.value]);
+    const initialValue = (element as HTMLInputElement)?.value;
+    historyStack.set(element, [{ value: initialValue, cursorPosition }]);
   }
   const stack = historyStack.get(element)!;
 
   // 避免重复保存相同的历史记录
-  if (stack[stack.length - 1] !== value) {
-    stack.push(value);
+  if (stack[stack.length - 1].value !== value) {
+    stack.push({ value, cursorPosition });
   }
   historyStack.set(element, stack);
 }
 // 撤销输入框的内容
 function undo(
-  historyStack: WeakMap<HTMLElement, string[]>,
+  historyStack: WeakMap<HTMLElement, HistoryEntry[]>,
   element: HTMLTextAreaElement | HTMLInputElement,
 ) {
   const stack = historyStack.get(element);
   if (stack && stack.length > 1) {
     stack.pop();
-    const previousValue = stack[stack.length - 1]; // 获取上一个值
-    element.value = previousValue;
+    const previous = stack[stack.length - 1]; // 获取上一个历史记录
+    element.value = previous.value;
+    // 恢复光标位置，clamp 到文本长度范围内
+    const cursor = Math.min(previous.cursorPosition, previous.value.length);
+    element.setSelectionRange(cursor, cursor);
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }

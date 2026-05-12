@@ -1,6 +1,6 @@
 import { ChatMessage } from '../../services';
 import { ChatRole } from '../../types/chat';
-import { ChatMessageHandle } from './ChatMessagesList/types';
+import type { ChatMessageHandle } from './ChatMessagesList/types';
 
 /**
  * 计算所有用户消息的索引
@@ -200,4 +200,33 @@ export const scrollToBottom = (params: {
       onUpdateCurrentIdx(userMsgIndexes.length - 1);
     }
   }
+};
+
+/**
+ * 滚动到顶部（展开全部历史分页后滚动到第一条消息）
+ */
+export const scrollToTop = (params: {
+  containerRef: React.RefObject<HTMLDivElement>;
+  chatMessagesRef: React.RefObject<ChatMessageHandle>;
+  onUpdateCurrentIdx: (idx: number) => void;
+}) => {
+  const { containerRef, chatMessagesRef, onUpdateCurrentIdx } = params;
+
+  // 先更新状态，再执行异步操作（与 scrollToUserMessage 保持一致的时序）
+  onUpdateCurrentIdx(0);
+
+  // 展开全部历史分页
+  chatMessagesRef?.current?.expandAllPages();
+
+  // 等待分页展开后 DOM 渲染完成再滚动，与 handleLoadPrevMessages 保持一致的延迟策略
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      if (containerRef?.current) {
+        containerRef.current.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }
+    }, 300);
+  });
 };

@@ -99,12 +99,14 @@ export const serializeCodebaseMessages = async ({
   sendMessages,
   session,
   isReAct,
+  status,
   iterator,
 }: {
   model: ChatModel,
   sendMessages: ChatMessage[],
   session?: ChatSession,
-  isReAct?: boolean
+  status?: number, // 1。提交
+  isReAct?: boolean,
   iterator?: (message: ChatMessage, index: number, isLast: boolean) => void,
 }
 ) => {
@@ -255,7 +257,7 @@ export const serializeCodebaseMessages = async ({
     if (hasThinking && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
       curMessage.reasoning_content = '';
     }
-    if (!nextMessage && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length) {
+    if (!nextMessage && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length && status === 1) {
       // 最后一条消息是 assistant 且有 tool_calls 但没有对应的 tool 结果，清空 tool_calls 避免 API 报错
       curMessage.tool_calls = []
       errorMessages.push('最后一条消息有工具调用信息，但没有tool消息')
@@ -274,6 +276,47 @@ export const serializeCodebaseMessages = async ({
         startIndex--
         errorMessages.push('有工具信息，但工具消息执行的Id对应不上')
         continue
+      }
+      // FIX: tool_calls 与 Tool 消息不一致时修复（数量缺失 + 顺序错乱）
+      // 场景1: 4 个 tool_calls 但只有 3 个 ChatRole.Tool 消息
+      // 场景2: tool_calls 顺序为 [A, B]，但 Tool 消息顺序为 [B, A]
+      if (curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length
+        && nextMessage.role === ChatRole.Tool) {
+        // 收集紧跟在当前 assistant 后面的所有连续 tool 消息，保留原始引用
+        const toolMessageSliceStart = startIndex + 1
+        let toolMessageSliceEnd = toolMessageSliceStart
+        while (toolMessageSliceEnd < filteredMessages.length && filteredMessages[toolMessageSliceEnd].role === ChatRole.Tool) {
+          toolMessageSliceEnd++
+        }
+        const toolMessages = filteredMessages.slice(toolMessageSliceStart, toolMessageSliceEnd)
+        const toolMessageMap = new Map<string, ChatMessage>(
+          toolMessages
+            .filter(m => !!m.tool_call_id)
+            .map(m => [m.tool_call_id as string, m])
+        )
+
+        // 剔除没有 Tool 回执的 tool_call
+        const missingCount = curMessage.tool_calls.filter(
+          (tc: any) => tc.id && !toolMessageMap.has(tc.id)
+        ).length
+        if (missingCount > 0) {
+          curMessage.tool_calls = curMessage.tool_calls.filter(
+            (tc: any) => !tc.id || toolMessageMap.has(tc.id)
+          )
+          errorMessages.push(`tool_calls 数量(${missingCount + toolMessageMap.size})多于实际 Tool 消息(${toolMessageMap.size})，已剔除 ${missingCount} 个无回执的 tool_call`)
+        }
+
+        // 按 tool_calls 的顺序重排 Tool 消息，修复顺序错乱问题
+        const reorderedToolMessages = curMessage.tool_calls
+          .map((tc: any) => toolMessageMap.get(tc.id))
+          .filter(Boolean) as ChatMessage[]
+        const isOutOfOrder = reorderedToolMessages.some(
+          (m, idx) => m !== toolMessages[idx]
+        )
+        if (isOutOfOrder) {
+          filteredMessages.splice(toolMessageSliceStart, reorderedToolMessages.length, ...reorderedToolMessages)
+          errorMessages.push(`Tool 消息顺序与 tool_calls 不一致，已按 tool_calls 顺序重排`)
+        }
       }
       if (nextMessage.role === ChatRole.User && curMessage.role === ChatRole.User) {
         // 合并前一条消息的内容到最新消息

@@ -372,6 +372,8 @@ export interface ChatPromptBody {
   };
 
   codebase_chat_mode?: CodebaseChatMode;
+  active_change_id?: string;
+  active_feature_id?: string;
 }
 
 export const codemakerChatRequest = axios.create({

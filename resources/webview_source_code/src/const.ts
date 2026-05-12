@@ -1,3 +1,6 @@
+/** Popover z-index 分层常量 */
+export const Z_INDEX_POPOVER_BASE = 900;
+export const Z_INDEX_POPOVER_TOOLBAR = 910;
 
 export const SmallScreenWidth = '(max-width: 280px)';
 export const MediumScreenWidth = '(max-width: 340px)';

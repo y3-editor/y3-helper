@@ -31,6 +31,7 @@ export interface ChatMessageHandle {
   scrollToPage: (index: number) => void;
   scrollToMessage: (role: string, id: string, keyword: string) => void;
   removeAllHighlights: () => void;
+  expandAllPages: () => void;
 }
 
 export interface CodeBaseFeedbackDetail {

@@ -393,7 +393,28 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
     }
   }, [inputRef])
 
+  // IME 输入法组合状态追踪
+  // 用于解决 Windows 中文输入法在组合期间触发 onChange 导致内容异常的问题
+  const isComposingRef = useRef(false)
+
+  const handleCompositionStart = useCallback(() => {
+    isComposingRef.current = true
+  }, [])
+
+  const handleCompositionEnd = useCallback(() => {
+    isComposingRef.current = false
+    // 组合结束后，手动触发一次变更处理，确保最终确认的文字被正确同步
+    const value = inputRef.current?.value || ''
+    setInputValue(value)
+    onChange?.()
+    updateHighlights()
+    updateCursorPosition()
+    saveCurrentDraft()
+  }, [onChange, updateCursorPosition, updateHighlights, inputRef, saveCurrentDraft])
+
   const onCustomChange = useCallback(() => {
+    // IME 组合期间跳过状态更新，避免打断输入法组合流程
+    if (isComposingRef.current) return
     const value = inputRef.current?.value || ''
     setInputValue(value)
     onChange?.()
@@ -657,6 +678,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onScroll={handleScroll}
             onKeyDown={handleKeyDown}
             onPaste={onCustomPaste}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onChange={debounce(onCustomChange, 300)}
           />
         </React.Fragment>
@@ -692,7 +715,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
               </Box>
             ) : (
               <Box>
-                <Box as="span">收藏会话不支持继续对话，</Box>
+                <Box as="span">收藏会话仅支持查看，不支持直接对话。如需继续对话，请点击</Box>
                 <Box
                   as="span"
                   color="blue.400"
@@ -701,8 +724,9 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
                   _hover={{ color: 'blue.500' }}
                   onClick={handleFavoriteClick}
                 >
-                  点击发起新会话
+                  「发起对话」
                 </Box>
+                <Box as="span">，将自动携带上下文创建新会话</Box>
               </Box>
             )}
           </Box>
@@ -743,6 +767,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onScroll={handleScroll}
             onKeyDown={handleKeyDown}
             onPaste={onCustomPaste}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onChange={debounce(onCustomChange, 300)}
           />
         </React.Fragment>
@@ -882,6 +908,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onScroll={handleScroll}
             onKeyDown={handleKeyDown}
             onPaste={onCustomPaste}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onChange={debounce(onCustomChange, 300)}
           />
         </React.Fragment>
@@ -924,6 +952,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
             onScroll={handleScroll}
             onKeyDown={handleKeyDown}
             onPaste={onCustomPaste}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onChange={debounce(onCustomChange, 300)}
           />
         </React.Fragment>

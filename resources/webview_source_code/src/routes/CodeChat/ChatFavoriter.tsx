@@ -22,8 +22,8 @@ import { ChatRole } from '../../types/chat';
 import { ChatMessageHandle } from './ChatMessagesList/types';
 import * as ChatNavUtils from './chatNavigationUtils';
 import { cloneDeep } from 'lodash';
-import type { ChatMessage } from '../../services';
 import SessionModalFooter from './SessionModalFooter';
+import type { ChatMessage } from '../../services';
 import { mutateService } from '../../hooks/useService';
 import { requestChatSessions } from '../../store/chat';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
@@ -468,6 +468,15 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
     });
   }, [userMsgIndexes]);
 
+  // 置顶
+  const scrollToTop = React.useCallback(() => {
+    ChatNavUtils.scrollToTop({
+      containerRef: modalBodyRef,
+      chatMessagesRef,
+      onUpdateCurrentIdx: setCurrentUserMsgIdx,
+    });
+  }, []);
+
   return (
     <>
       <Tooltip label="收藏会话">
@@ -538,6 +547,7 @@ const ChatFavoriter = React.forwardRef<ChatFavoriterHandle>((_, ref) => {
                 onPrevMessage={handlePrevUserMessage}
                 onNextMessage={handleNextUserMessage}
                 onScrollToBottom={scrollToBottom}
+                onScrollToTop={scrollToTop}
                 canGoPrev={canGoPrev}
                 canGoNext={canGoNext}
               />

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, Box, useColorModeValue } from '@chakra-ui/react';
+import { Button, Box, Spinner, useColorModeValue } from '@chakra-ui/react';
 import { useChatStore } from '../../../store/chat';
 import { ChatMessageHandle, ChatMessageProps, ChatRole, RenderMessage } from './types';
 import { ChatMessage } from '../../../services';
@@ -78,23 +78,55 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
       [messagePool, start, length],
     );
 
+    const isLoadingMoreRef = React.useRef(false);
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+
     const handleLoadPrevMessages = React.useCallback(() => {
-      if (!messagesRef.current) {
+      if (!messagesRef.current || isLoadingMoreRef.current) {
         return;
       }
+      isLoadingMoreRef.current = true;
       const topOffset = 80;
       const previousScrollHeight = messagesRef.current?.scrollHeight;
       setPage((prev) => (prev += 1));
 
       requestAnimationFrame(() => {
         if (!containerRef?.current) {
+          isLoadingMoreRef.current = false;
           return;
         }
         const newScrollTop =
           containerRef.current?.scrollHeight - previousScrollHeight - topOffset;
         containerRef.current.scrollTo({ top: newScrollTop });
+        // 延迟重置 loading 状态，等待渲染稳定
+        setTimeout(() => {
+          isLoadingMoreRef.current = false;
+        }, 300);
       });
     }, [containerRef]);
+
+    // IntersectionObserver 自动展开历史消息
+    React.useEffect(() => {
+      const sentinel = sentinelRef.current;
+      if (!sentinel || offset <= 0) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
+            handleLoadPrevMessages();
+          }
+        },
+        {
+          root: containerRef?.current || null,
+          threshold: 0.1,
+        },
+      );
+
+      observer.observe(sentinel);
+      return () => {
+        observer.disconnect();
+      };
+    }, [offset, handleLoadPrevMessages, containerRef]);
 
     React.useEffect(
       function resetPage() {
@@ -337,6 +369,14 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
       }
     }, []);
 
+    // 展开全部历史分页
+    const expandAllPages = React.useCallback(() => {
+      const totalPages = Math.ceil(messagePool.length / PAGE_SIZE) - 1;
+      if (totalPages > 0) {
+        setPage(totalPages);
+      }
+    }, [messagePool.length]);
+
     React.useImperativeHandle(ref, () => {
       return {
         scrollToPage: (index: number) => {
@@ -347,19 +387,26 @@ const ChatMessagesList = React.forwardRef<ChatMessageHandle, ChatMessageProps>(
         },
         scrollToMessage,
         removeAllHighlights,
+        expandAllPages,
       };
     });
 
     return (
       <div className="chat-message">
         {offset > 0 && (
-          <Button
-            variant="link"
-            className="w-full mb-4"
-            onClick={handleLoadPrevMessages}
+          <div
+            ref={sentinelRef}
+            className="w-full mb-4 flex justify-center"
           >
-            更多历史消息
-          </Button>
+            <Button
+              variant="link"
+              onClick={handleLoadPrevMessages}
+              isLoading={isLoadingMoreRef.current}
+              spinner={<Spinner size="sm" />}
+            >
+              更多历史消息
+            </Button>
+          </div>
         )}
         <div ref={messagesRef}>
           {renderMessages.map((message, index) => {

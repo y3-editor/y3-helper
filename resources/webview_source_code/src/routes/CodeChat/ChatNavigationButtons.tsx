@@ -8,7 +8,7 @@ export interface ChatNavigationButtonsProps {
   onPrevMessage: () => void;
   onNextMessage: () => void;
   onScrollToBottom: () => void;
-  onScrollToTop?: () => void;
+  onScrollToTop: () => void;
   canGoPrev?: () => boolean;
   canGoNext?: () => boolean;
 }
@@ -46,7 +46,7 @@ const ChatNavigationButtons: React.FC<ChatNavigationButtonsProps> = ({
           display="flex"
           alignItems="center"
           borderRadius="md"
-          // bg="darkerButtonBgColor"
+        // bg="darkerButtonBgColor"
         >
           <Tooltip label="上一组对话">
             <IconButton
@@ -78,10 +78,14 @@ const ChatNavigationButtons: React.FC<ChatNavigationButtonsProps> = ({
       )}
       {!isStreaming && <Divider h="14px" orientation="vertical" />}
       <Box display="flex" alignItems="center" gap="1">
-        {/* 置顶按钮 - 仅当消息数量超过 2 条时显示 */}
-        {!isStreaming && onScrollToTop && (
+        {!isStreaming && (
           <Tooltip label="置顶" placement="top">
-            <Box as="span" display="inline-flex" cursor="pointer" onClick={onScrollToTop}>
+            <Box
+              as="span"
+              display="inline-flex"
+              cursor="pointer"
+              onClick={onScrollToTop}
+            >
               <Icon as={FaAngleDoubleUp} size="xxs" />
             </Box>
           </Tooltip>

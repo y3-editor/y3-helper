@@ -2666,7 +2666,8 @@ export const useChatStreamStore = create(
                 const alreadyExists = session.data?.messages.some(
                   (msg) => msg.role === ChatRole.Tool && msg.tool_call_id === tool.id
                 );
-                if (alreadyExists) {
+                // 修复工具丢失，循环触发工具
+                if (alreadyExists && tool.type === 'task') {
                   return;
                 }
 
@@ -3851,6 +3852,7 @@ export const useChatStreamStore = create(
           sendMessages,
           session,
           isReAct,
+          status: 1,
           iterator: (message) => {
             stripImagesForUnsupportedModel(message, chatModels[chatConfig.model]);
           }
@@ -4822,7 +4824,7 @@ export const useChatStreamStore = create(
           convertDeepseekMessages(chatConfig.model, data.messages);
           if ([ChatModel.GPT5, ChatModel.GPT51, ChatModel.GPT51Codex].includes(data.model as ChatModel)) {
             delete data.temperature;
-          } else if (data.model.includes('gemini')) {
+          } else if (data.model.includes('gemini') || data.model.includes('Gemini')) {
             data.messages[0].content += `\nNote:Don't repeat yourself`
             data.temperature = 1
           } else if ([ChatModel.Glm47, ChatModel.Glm5].includes(data.model as ChatModel)) {
@@ -4834,6 +4836,14 @@ export const useChatStreamStore = create(
           //   tools: data.tools || []
           // })
           data.codebase_chat_mode = codebaseChatMode || 'vibe';
+          const active_change_id = useChatStore.getState().activeChangeId;
+          const active_feature_id = useChatStore.getState().activeFeatureId;
+          if (active_change_id) {
+            data.active_change_id = active_change_id;
+          }
+          if (active_feature_id) {
+            data.active_feature_id = active_feature_id;
+          }
 
           // 这里是真正给LLM发送消息的地方
           requestCodebaseChatStream(

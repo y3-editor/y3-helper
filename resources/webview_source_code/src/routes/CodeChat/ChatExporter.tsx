@@ -581,6 +581,14 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
     });
   }, [userMsgIndexes]);
 
+  // 置顶
+  const scrollToTop = React.useCallback(() => {
+    ChatNavUtils.scrollToTop({
+      containerRef: modalBodyRef,
+      chatMessagesRef,
+      onUpdateCurrentIdx: setCurrentUserMsgIdx,
+    });
+  }, []);
 
   return (
     <>
@@ -651,6 +659,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
                 onPrevMessage={handlePrevUserMessage}
                 onNextMessage={handleNextUserMessage}
                 onScrollToBottom={scrollToBottom}
+                onScrollToTop={scrollToTop}
                 canGoPrev={canGoPrev}
                 canGoNext={canGoNext}
               />

@@ -293,20 +293,34 @@ function ChatInput(props: ChatInputProp) {
         const input = e.target as HTMLTextAreaElement;
         const start = input.selectionStart;
         const end = input.selectionEnd;
-        const beforeText = input.value.substring(0, start);
-        const afterText = input.value.substring(end);
 
-        const newValue = beforeText + text + afterText;
-        input.value = newValue;
+        // 确保 textarea 有焦点且 selection 正确
+        input.focus();
+        input.setSelectionRange(start, end);
 
-        const newCursorPosition = start + text.length;
-        input.setSelectionRange(newCursorPosition, newCursorPosition);
+        // 记录执行前的值，用于判断 execCommand 是否实际生效
+        const valueBefore = input.value;
 
-        updateHistory(input, newValue);
+        // 使用 execCommand('insertText') 插入文本，保持浏览器原生 undo 栈完整
+        // 这样在 PyCharm JCEF 等环境中 Ctrl+Z 可以正常撤销粘贴内容
+        // 注意：execCommand 返回值在现代浏览器中不可靠，需要通过值变化来判断是否生效
+        document.execCommand('insertText', false, text);
+
+        if (input.value === valueBefore && text.length > 0) {
+          // execCommand 未生效，降级方案：直接设置 value（会破坏原生 undo 栈）
+          const beforeText = input.value.substring(0, start);
+          const afterText = input.value.substring(end);
+          const newValue = beforeText + text + afterText;
+          input.value = newValue;
+          input.setSelectionRange(start + text.length, start + text.length);
+        }
+
+        updateHistory(input, input.value);
 
         // 滚动到光标位置,确保粘贴后光标可见
         requestAnimationFrame(() => {
           if (input) {
+            const newCursorPosition = input.selectionStart || 0;
             // 创建一个临时的测量元素来计算光标位置
             const temp = document.createElement('div');
             const style = window.getComputedStyle(input);
@@ -325,7 +339,7 @@ function ChatInput(props: ChatInputProp) {
             `;
 
             // 只包含光标之前的文本
-            temp.textContent = newValue.substring(0, newCursorPosition);
+            temp.textContent = input.value.substring(0, newCursorPosition);
             document.body.appendChild(temp);
 
             // 计算光标的高度位置
@@ -457,9 +471,15 @@ function ChatInput(props: ChatInputProp) {
 
   const handleInputKeyDown = React.useCallback(
     async (event: React.KeyboardEvent) => {
+      // 按 ESC 退出输入框聚焦，让键盘事件能冒泡到 VSCode 层（如 cmd+p）
+      if (event.key === 'Escape') {
+        inputRef.current?.blur();
+        return;
+      }
+
       if (event.metaKey || event.ctrlKey) {
-        // 使用浏览器原生的 Ctrl+Z/Cmd+Z 撤回功能
-        // 不需要自定义处理，让浏览器处理即可
+        // Ctrl+Z/Cmd+Z 撤回功能由 EventProvider 全局处理（自定义 historyStack），
+        // ChatInput 不需要额外处理，让事件正常冒泡即可
 
         if (checkValueOfPressedKeyboard(event, ['KeyA'], ['a', 'A'])) {
           // 模拟 command+A 选中全部

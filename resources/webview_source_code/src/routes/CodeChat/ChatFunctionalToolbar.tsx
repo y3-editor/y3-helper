@@ -23,6 +23,7 @@ import {
   RiToolsLine,
 } from 'react-icons/ri';
 import { FiFileText, FiSearch, FiTarget } from 'react-icons/fi';
+import { Z_INDEX_POPOVER_TOOLBAR } from '../../const';
 import { useChatConfig } from '../../store/chat-config';
 import { LuListTodo } from 'react-icons/lu';
 import { IoTerminalOutline } from 'react-icons/io5';
@@ -385,6 +386,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
           maxH="80vh"
           display="flex"
           flexDirection="column"
+          rootProps={{ zIndex: Z_INDEX_POPOVER_TOOLBAR }}
         >
           <PopoverHeader
             display="flex"

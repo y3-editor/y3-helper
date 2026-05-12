@@ -3175,16 +3175,11 @@ function CodeChat() {
                       }
                     }}
                     onScrollToTop={() => {
-                      if (chatBodyRef.current) {
-                        chatBodyRef.current.scrollTo({
-                          top: 0,
-                        });
-                        userScrollLock.current = false;
-                        // 当用户点击置顶时，更新当前用户消息索引为第一条
-                        if (userMsgIndexes.length > 0) {
-                          setCurrentUserMsgIdx(0);
-                        }
-                      }
+                      ChatNavUtils.scrollToTop({
+                        containerRef: chatBodyRef,
+                        chatMessagesRef,
+                        onUpdateCurrentIdx: setCurrentUserMsgIdx,
+                      });
                     }}
                     canGoPrev={canGoPrev}
                     canGoNext={canGoNext}
