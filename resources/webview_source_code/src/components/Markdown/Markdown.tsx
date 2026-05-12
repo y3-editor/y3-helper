@@ -10,8 +10,6 @@ import { proxyImage } from '../../utils';
 import BrainMakerImage from './BrainMakerImage';
 import ImagePreview from '../ImagePreview';
 import { IRecommendFileChange, IRecommendFileChangeRecord } from '../../routes/CodeChat/FileRecommendApplyPanel';
-import { useAuthStore } from '../../store/auth';
-import { IDE, useExtensionStore } from '../../store/extension';
 
 const MemoizedReactMarkdown: React.FunctionComponent<Options> = React.memo(
   ReactMarkdown,
@@ -47,12 +45,13 @@ interface MarkdownProps<TD, TP> {
   onRecommendFileChange?: (codeMetas: IRecommendFileChangeRecord) => void;
 }
 
+function preprocessMath(text: string): string {
+  return text.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$\n${math}\n$$`);
+}
+
 export default function Markdown<TD, TP>(props: MarkdownProps<TD, TP>) {
   const { isStreaming, CodeRender, startLineNumber, onRecommendFileChange } = props;
   const { postMessage } = usePostMessage();
-  const [ loginFrom ] = useAuthStore((state) => [state.loginFrom]);
-  const isVscodeIDE = useExtensionStore((state) => state.IDE === IDE.VisualStudioCode);
-
   const openUrlInBrowser = (url?: string) => {
     if (url) {
       postMessage({
@@ -112,10 +111,8 @@ export default function Markdown<TD, TP>(props: MarkdownProps<TD, TP>) {
             <a
               href={href}
               onClick={(event) => {
-                if (isVscodeIDE || loginFrom === 'browser') {
-                  event.preventDefault();
-                  openUrlInBrowser(href);
-                }
+                event.preventDefault();
+                openUrlInBrowser(href);
               }}
             >
               {children || href}
@@ -202,7 +199,7 @@ export default function Markdown<TD, TP>(props: MarkdownProps<TD, TP>) {
         },
       }}
     >
-      {props.children}
+      {preprocessMath(props.children)}
     </MemoizedReactMarkdown>
   );
 }

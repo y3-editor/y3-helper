@@ -823,6 +823,7 @@ const PromptsPanel = (
   React.useEffect(() => {
     const element = userInputRef?.current;
     function addEnterEventLinstener(event: KeyboardEvent) {
+      if (event.isComposing || event.keyCode === 229) return;
       if (checkValueOfPressedKeyboard(event, ['Enter'])) {
         const prompt = renderPrompts[currentIndex];
         if (prompt) {

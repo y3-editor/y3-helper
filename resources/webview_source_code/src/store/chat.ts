@@ -1984,14 +1984,8 @@ export const useChatStreamStore = create(
       context: ExecutionContext,
       hasActiveTaskTools: boolean,
     ) {
-      console.log('[mcp][auto-execute] handleAutoExecute 开始');
-      console.log('[mcp][auto-execute] 执行上下文:', context);
-      console.log('[mcp][auto-execute] 权限配置:', context.permissions);
-      console.log('[mcp][auto-execute] 工具调用数量:', lastMessage.tool_calls?.length);
-      console.log('[mcp][auto-execute] 工具调用列表:', lastMessage.tool_calls?.map(tc => tc.function.name));
 
       if (!lastMessage.tool_calls?.length) {
-        console.log('[mcp][auto-execute] 没有工具调用，退出');
         return;
       }
 
@@ -2000,7 +1994,6 @@ export const useChatStreamStore = create(
         .getState()
         .isSessionComplete(currentSessionId || '');
       if (!trackerSessionComplete && !hasActiveTaskTools) {
-        console.log('[mcp][auto-execute] Tracker 显示 session 未完成且无活跃任务工具，退出');
         return;
       }
 
@@ -2063,10 +2056,6 @@ export const useChatStreamStore = create(
 
       // 如果有自动执行且没有活跃的task工具，提交结果
       if (hasAutoExecution && !hasActiveTaskTools) {
-        console.log('[mcp][auto-execute] 进入标准自动执行流程');
-        console.log('[mcp][auto-execute] hasAutoExecution:', hasAutoExecution);
-        console.log('[mcp][auto-execute] hasActiveTaskTools:', hasActiveTaskTools);
-        console.log('[mcp][auto-execute] autoExecuteTools:', autoExecuteTools);
 
         const keysObject = get()
           .buildAutoExecuteResponse(lastMessage);
@@ -2082,10 +2071,6 @@ export const useChatStreamStore = create(
           keysObject,
         );
       } else if (lastMessage.tool_calls?.length) {
-        console.log('[mcp][auto-execute] 进入MCP工具处理流程');
-        console.log('[mcp][auto-execute] hasAutoExecution:', hasAutoExecution);
-        console.log('[mcp][auto-execute] hasActiveTaskTools:', hasActiveTaskTools);
-        console.log('[mcp][auto-execute] tool_calls:', lastMessage.tool_calls?.map(tc => tc.function.name));
 
         // 处理MCP工具的特殊情况
         get().handleMCPTools(lastMessage);
@@ -2116,16 +2101,10 @@ export const useChatStreamStore = create(
      * 处理MCP工具的特殊逻辑
      */
     handleMCPTools(lastMessage: ChatMessage) {
-      console.log(
-        '[mcp][handle] Called with lastMessage tool_calls:',
-        lastMessage.tool_calls?.map((tc) => tc.function.name),
-      );
 
       const isMCPTools = lastMessage.tool_calls?.some((tool) =>
         ['use_mcp_tool', 'access_mcp_resource'].includes(tool.function.name),
       );
-
-      console.log('[mcp][handle] isMCPTools:', isMCPTools);
 
       if (isMCPTools) {
         // 获取 MCP 服务器配置和自动执行检查
@@ -2151,26 +2130,16 @@ export const useChatStreamStore = create(
               return serverName === normalizedServerName;
             });
           }
-          
-          console.log('[mcp][check] MCP服务器名称:', mcpServerUsed);
-          console.log('[mcp][check] 标准化服务器名称:', mcpServerUsed ? mcpServerUsed.replace(/\\/g, '/').split('/').slice(-1)[0] : '');
-          console.log('[mcp][check] 找到的服务器配置:', mcpServerConfig);
-          console.log('[mcp][check] 服务器autoApprove设置:', mcpServerConfig?.config?.autoApprove);
-          console.log('[mcp][check] 服务器disabled状态:', mcpServerConfig?.disabled);
-          console.log('[mcp][check] 服务器状态:', mcpServerConfig?.status);
         } catch (error) {
-          console.log('[mcp][check] 解析工具参数失败:', error);
           mcpServerUsed = '';
         }
 
         // 检查是否应该自动执行
         const shouldAutoExecute = mcpServerConfig?.config?.autoApprove === true || mcpServerConfig?.autoApprove === true;
-        console.log('[mcp][check] 应该自动执行:', shouldAutoExecute);
 
         if (!shouldAutoExecute) {
           // autoApprove=false 说明是手动确认场景，直接继续对话
           // （autoApprove 时序问题已由 Gate2 层的订阅处理，TOOL_CALL_RESULT 到达时 store 必然已更新）
-          console.log('[mcp][run] autoApprove 未开启，手动确认场景，直接继续对话');
           const keysObject = get()
             .buildAutoExecuteResponse(lastMessage);
           useChatStreamStore.getState().setIsMCPProcessing(false);
@@ -2187,13 +2156,8 @@ export const useChatStreamStore = create(
           return;
         }
 
-        console.log(
-          '[mcp][handle] Processing MCP tools, calling onUserSubmit',
-        );
         const keysObject = get()
           .buildAutoExecuteResponse(lastMessage);
-
-        console.log('[mcp][handle] keysObject:', keysObject);
 
         useChatStreamStore.getState().setIsMCPProcessing(false);
         useChatStreamStore.getState().setIsAutoApproved(true);
@@ -2207,7 +2171,6 @@ export const useChatStreamStore = create(
           undefined,
           keysObject,
         );
-        console.log('[mcp][handle] onUserSubmit called successfully');
       }
     },
     clearToolCallResults() {
@@ -4479,7 +4442,10 @@ export const useChatStreamStore = create(
                                   dispatched = true;
                                   clearTimeout(watchTimeoutId);
                                   cleanupMCPWatch();
-                                  console.log('[mcp][gate2] autoApprove 已就绪，派发 TOOL_CALL，服务器:', targetNorm);
+                                  // 用户点击 checkbox 已直接派发过 TOOL_CALL，跳过重复派发
+                                  if (useChatStreamStore.getState().isMCPProcessing) {
+                                    return;
+                                  }
                                   useChatStreamStore.getState().setIsMCPProcessing(true);
                                   window.parent.postMessage(
                                     {
@@ -4625,7 +4591,7 @@ export const useChatStreamStore = create(
                                 originalContent: '',
                                 updateSnippet,
                                 replaceSnippet,
-                                type: tool.function.name as 'edit' | 'replace' | 'write',
+                                type: tool.function.name,
                                 toolCallId: tool.id,
                                 applying: true,
                                 accepted: false,
@@ -5362,7 +5328,10 @@ export const useChatStreamStore = create(
                                   dispatched = true;
                                   clearTimeout(watchTimeoutId);
                                   cleanupMCPWatch();
-                                  console.log('[mcp][gate2] autoApprove 已就绪，派发 TOOL_CALL，服务器:', targetNorm);
+                                  // 用户点击 checkbox 已直接派发过 TOOL_CALL，跳过重复派发
+                                  if (useChatStreamStore.getState().isMCPProcessing) {
+                                    return;
+                                  }
                                   useChatStreamStore.getState().setIsMCPProcessing(true);
                                   window.parent.postMessage(
                                     {
@@ -5480,7 +5449,7 @@ export const useChatStreamStore = create(
                                 originalContent: '',
                                 updateSnippet,
                                 replaceSnippet,
-                                type: tool.function.name as 'edit' | 'replace' | 'write',
+                                type: tool.function.name,
                                 toolCallId: tool.id,
                                 applying: true,
                                 accepted: false,

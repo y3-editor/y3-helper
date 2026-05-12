@@ -120,7 +120,6 @@ export const useMCPStore = create<MCPStore>((set, get) => ({
   disabledSwitches: new Set<string>(),
   showMcpError: false,
   setMCPServers: (servers) => {
-    console.log('[mcp][store] setMCPServers 被调用，服务器数量:', servers?.length);
     
     // 直接保存传入的服务器配置，保留所有字段（包括 disablePrivateModelOnly） servers.map is not a function
     const processedServers = servers?.map?.(server => {
@@ -129,9 +128,6 @@ export const useMCPStore = create<MCPStore>((set, get) => ({
       // 优先级：config.disabled > server.disabled，确保两个位置的值同步
       const disabled = server.config?.disabled ?? server.disabled ?? false;
 
-      console.log(`[mcp][store] 处理服务器: ${server.name}`);
-      console.log(`[mcp][store] 原始 autoApprove: config=${server.config?.autoApprove}, server=${server.autoApprove}`);
-      console.log(`[mcp][store] 最终 autoApprove: ${autoApprove}`);
 
       return {
         ...server,
@@ -148,7 +144,6 @@ export const useMCPStore = create<MCPStore>((set, get) => ({
       };
     });
 
-    console.log('[mcp][store] 处理后的服务器配置:', processedServers);
 
     set(() => ({
       MCPServers: processedServers || [],

@@ -134,7 +134,7 @@ export const generateCodeEditPrompt: PromptGenerator = async (context) => {
   if (!config.enableEditableMode) return null;
 
   const enableReplaceInFile = config.codeMakerVersion &&
-    (versionCompare(config.codeMakerVersion, '2.4.9') > 0);
+    (versionCompare('2.4.9', config.codeMakerVersion) > 0);
 
   const variables = {
     replaceInFileRule: enableReplaceInFile
@@ -223,6 +223,13 @@ export const generateSubagentToolCallingPrompt: PromptGenerator = async () => {
     subagentRule: '9. **NEVER use the "task" tool.** You are a subagent and cannot delegate work to other subagents. Handle all work directly.\n10. **ABSOLUTE LIMIT: Maximum 2 tools per response.** Calling 3 or more tools simultaneously will cause system errors. If you call 3 or more tools, the execution will fail.',
   };
   return await PromptTemplateLoader.renderTemplate('tool-calling', variables);
+};
+
+/**
+ * 生成子代理通信规范 prompt
+ */
+export const generateCommunicationPrompt: PromptGenerator = async () => {
+  return await PromptTemplateLoader.renderTemplate('communication');
 };
 
 /**

@@ -28,10 +28,6 @@ interface EditToolParams {
   replace_all?: boolean;
 }
 
-type ClaudeToolCall =
-  | { toolName: 'write'; toolParams: WriteToolParams }
-  | { toolName: 'edit'; toolParams: EditToolParams };
-
 /**
  * 校验 file_path 是否在工作区路径下
  * @returns 绝对路径
@@ -406,12 +402,12 @@ async function executeSingleEdit({
 }
 ): Promise<ClaudeEditResult> {
   let absolutePath = filePath;
+  let originalContent = '';
   try {
     absolutePath = validateAndResolveFilePath(filePath);
     const fileExist = existsSync(absolutePath);
     const isCreateFile = !fileExist;
 
-    let originalContent = '';
     let beforeEdit = '';
     let lineEndingType = 'LF'; // CRLF 或 LF
     if (fileExist) {
@@ -477,8 +473,8 @@ async function executeSingleEdit({
     return {
       content: `Error editing ${absolutePath}: ${(error as any)?.message || String(error)}`,
       extra: {
-        beforeEdit: '',
-        finalResult: '',
+        beforeEdit: originalContent,
+        finalResult: originalContent,
         taskId: '',
         editSnippet: '',
       },

@@ -3,7 +3,7 @@
  * 为子代理提供 MCP、Skills 等功能支持
  */
 
-import { useWorkspaceStore } from '../../store/workspace';
+import { useWorkspaceStore, getEffectiveRules } from '../../store/workspace';
 import { useMCPStore } from '../../store/mcp';
 import { useSkillsStore } from '../../store/skills';
 import { CACHE_TIER_BREAK } from '../../store/workspace/constructRemixPrompt';
@@ -16,6 +16,7 @@ import {
   generateTerminalPrompt,
   generateCallingExternalApisPrompt,
   generateSubagentToolCallingPrompt,
+  generateCommunicationPrompt,
   generateOpenSpecPrompt,
   createPromptContext
 } from './shared';
@@ -33,19 +34,39 @@ export class EnhancedPromptBuilder {
     const workspaceInfo = useWorkspaceStore.getState().workspaceInfo;
     const mcpStore = useMCPStore.getState();
     const skillsStore = useSkillsStore.getState();
+    const { rules, teamRules, selectedRules, devSpace } = useWorkspaceStore.getState();
 
+    // 从 contextOptions 获取 mentionFiles，如果没有则使用空数组
+    // 子代理场景：通常应用 alwaysApply 规则或基于实际传入的文件路径
+    const mentionPaths = contextOptions.mentionFiles || [];
+
+    const effectiveRules = getEffectiveRules({
+      selectedRules: [
+        ...teamRules,
+        ...rules.filter((rule) => selectedRules.includes(rule.filePath)),
+      ],
+      mentionPaths,
+      codebaseCustomPrompt: workspaceInfo?.codebaseCustomPrompt || '',
+      code_style: devSpace?.code_style || '',
+    });
+
+    // 合并配置：优先使用 store 最新状态，但保留 contextOptions 中的 variables 等字段
     const context: PromptContext = createPromptContext({
+      variables: contextOptions.variables, // 保留调用方的自定义变量
+      ...contextOptions, // 继承其他字段
+      // 核心字段：强制使用 store 最新状态（覆盖 contextOptions 中的同名字段）
       workspace: workspaceInfo,
       mcpServers: mcpStore.MCPServers.filter(s => s.status === 'connected' && !s.disabled),
       skills: skillsStore.skills,
+      rules: effectiveRules,
       isSubagent: true,
+      // 配置字段：合并默认值和调用方配置
       config: {
         enableSkills: true, // 子代理默认启用 skills
         enableTerminal: true, // 子代理默认启用
         enableEditableMode: true, // 子代理需要代码编辑能力
-        ...contextOptions.config
+        ...contextOptions.config // 调用方配置优先
       },
-      ...contextOptions
     });
 
     // Tier 1: Agent 角色定义 + 通用规则 (仅 agent 定义变化时变)
@@ -53,6 +74,9 @@ export class EnhancedPromptBuilder {
 
     const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
+
+    const communicationPrompt = await generateCommunicationPrompt(context);
+    if (communicationPrompt) tier1Parts.push(communicationPrompt);
 
     const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);
@@ -118,21 +142,45 @@ export function useSubagentPromptBuilder() {
     state.MCPServers.filter(s => s.status === 'connected' && !s.disabled)
   );
   const skills = useSkillsStore(state => state.skills);
+  const rules = useWorkspaceStore(state => state.rules);
+  const teamRules = useWorkspaceStore(state => state.teamRules);
+  const selectedRules = useWorkspaceStore(state => state.selectedRules);
+  const devSpace = useWorkspaceStore(state => state.devSpace);
 
   const buildSystemPrompt = async (basePrompt: string, agentType?: string, options: Partial<PromptContext> = {}): Promise<string> => {
     console.log(agentType);
+
+    // 从 options 获取 mentionFiles，如果没有则使用空数组
+    // 子代理场景：通常应用 alwaysApply 规则或基于实际传入的文件路径
+    const mentionPaths = options.mentionFiles || [];
+
+    const effectiveRules = getEffectiveRules({
+      selectedRules: [
+        ...teamRules,
+        ...rules.filter((rule) => selectedRules.includes(rule.filePath)),
+      ],
+      mentionPaths,
+      codebaseCustomPrompt: workspaceInfo?.codebaseCustomPrompt || '',
+      code_style: devSpace?.code_style || '',
+    });
+
+    // 合并配置：优先使用 store 最新状态，但保留 options 中的 variables 等字段
     const context: PromptContext = createPromptContext({
+      variables: options.variables, // 保留调用方的自定义变量
+      ...options, // 继承其他字段
+      // 核心字段：强制使用 store 最新状态（覆盖 options 中的同名字段）
       workspace: workspaceInfo,
       mcpServers,
       skills,
+      rules: effectiveRules,
       isSubagent: true,
+      // 配置字段：合并默认值和调用方配置
       config: {
         enableSkills: true,
         enableTerminal: false, // 子代理一般不直接执行终端命令
         enableEditableMode: true, // 但需要代码编辑能力
-        ...options.config
+        ...options.config // 调用方配置优先
       },
-      ...options
     });
 
     // Tier 1: Agent 角色定义 + 通用规则
@@ -140,6 +188,9 @@ export function useSubagentPromptBuilder() {
 
     const toolCallingPrompt = await generateSubagentToolCallingPrompt(context);
     if (toolCallingPrompt) tier1Parts.push(toolCallingPrompt);
+
+    const communicationPrompt = await generateCommunicationPrompt(context);
+    if (communicationPrompt) tier1Parts.push(communicationPrompt);
 
     const searchAndReadingPrompt = await generateSearchAndReadingPrompt(context);
     if (searchAndReadingPrompt) tier1Parts.push(searchAndReadingPrompt);

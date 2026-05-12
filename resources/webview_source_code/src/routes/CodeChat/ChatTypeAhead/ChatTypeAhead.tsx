@@ -195,7 +195,7 @@ const ChatTypeAhead = React.forwardRef<
     function addKeyDownEventListener(event: KeyboardEvent) {
       // 忽略输入法输入过程中的按键
       // https://developer.mozilla.org/en-US/docs/Web/API/Element/keydown_event
-      // if (event.isComposing || event.keyCode === 229) return;
+      if (event.isComposing || event.keyCode === 229) return;
       if (checkValueOfPressedKeyboard(event, ['ArrowDown', 'ArrowUp'])) {
         if (!isOpen) {
           return;

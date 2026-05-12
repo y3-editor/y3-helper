@@ -53,6 +53,7 @@ export enum UserEvent {
   CODE_CHAT_MERMAID_PREVIEW = 'CodeChat.mermaid_preview',
   CODE_CHAT_PLANTUML_PREVIEW = 'CodeChat.plantuml_preview',
   CODE_CHAT_GRAPHVIZ_PREVIEW = 'CodeChat.graphviz_preview',
+  CODE_CHAT_MARKDOWN_PREVIEW = 'CodeChat.markdown_preview',
   CODE_CHAT_MERMAID_TESTING = 'CodeChat.mermaid_testing',
   CODE_CHAT_PLANTUML_TESTING = 'CodeChat.plantuml_testing',
   CODE_CHAT_GRAPHVIZ_TESTING = 'CodeChat.graphviz_testing',

@@ -6,6 +6,7 @@ import { useMemo, useCallback } from 'react';
 import { ChatMessage } from '../../services';
 import { useMCPStore } from '../../store/mcp';
 import { usePostMessage, BroadcastActions } from '../../PostMessageProvider';
+import { useChatStreamStore } from '../../store/chat';
 import { MCPToolInfo } from './types';
 
 export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolInfo | null {
@@ -63,21 +64,53 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
 
   // MCP switch 的 onChange 处理函数
   const handleMcpSwitchChange = useCallback((checked: boolean) => {
-    console.log('[mcp][switch] 用户切换MCP自动调用开关');
-    console.log('[mcp][switch] 服务器名称:', mcpServerName);
-    console.log('[mcp][switch] 新的autoApprove值:', checked);
-    console.log('[mcp][switch] 当前服务器配置:', mcpServer?.config);
 
     const updateData = {
-      name: mcpServer?.name || mcpServerName,
+      name: mcpServer?.name || mcpServerName,  // Use full store name (the actual config key, not normalized short name)
       ...mcpServer?.config,
       autoApprove: checked,
     };
-    postMessage({
-      type: BroadcastActions.UPDATE_MCP_SERVERS,
-      data: updateData,
-    });
-  }, [mcpServerName, mcpServer?.config, mcpServer?.name, postMessage]);
+
+
+    // 先派发 TOOL_CALL（如果需要），再发 UPDATE_MCP_SERVERS
+    // 原因：UPDATE_MCP_SERVERS 会触发 extension 重启 MCP 连接，
+    // 若先发配置更新再发工具调用，连接重启期间 TOOL_CALL 会收到 "Connection closed"
+    if (checked) {
+      const mcpTool = message.tool_calls?.find(
+        (tool) =>
+          tool.function.name === 'use_mcp_tool' ||
+          tool.function.name === 'access_mcp_resource',
+      );
+      if (mcpTool && !useChatStreamStore.getState().isMCPProcessing) {
+        let toolCallParams: any = {};
+        try {
+          toolCallParams = JSON.parse(mcpTool.function.arguments || '{}');
+        } catch {
+          toolCallParams = {};
+        }
+        useChatStreamStore.getState().setIsMCPProcessing(true);
+        window.parent.postMessage(
+          {
+            type: BroadcastActions.TOOL_CALL,
+            data: {
+              tool_name: mcpTool.function.name,
+              tool_params: toolCallParams,
+              tool_id: mcpTool.id,
+            },
+          },
+          '*',
+        );
+      }
+    }
+
+    // 延迟 5 秒发送配置更新，避免 MCP 连接重启与当前 TOOL_CALL 冲突
+    setTimeout(() => {
+      postMessage({
+        type: BroadcastActions.UPDATE_MCP_SERVERS,
+        data: updateData,
+      });
+    }, 5000);
+  }, [mcpServerName, mcpServer?.name, mcpServer?.config, message.tool_calls, postMessage]);
 
   // MCP 自动调用提示
   const mcpAutoApproveTip = useMemo(() => {

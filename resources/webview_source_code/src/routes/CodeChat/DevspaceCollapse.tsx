@@ -155,7 +155,7 @@ const DevspaceCollapse = () => {
                 e.stopPropagation();
                 postMessage({
                   type: "OPEN_IN_BROWSER",
-                  data: { url: `https://github.com/user/codemaker` },
+                  data: { url: `https://g.126.fm/007AqD7` },
                 });
               }}
               bg="none"

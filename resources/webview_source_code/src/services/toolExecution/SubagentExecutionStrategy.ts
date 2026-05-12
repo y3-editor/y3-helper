@@ -33,7 +33,6 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
   ): boolean {
     // 工具执行出错时，强制自动执行以便 AI 获得错误信息并重试
     if (toolResult?.isError === true) {
-      console.log('[mcp][subagent-strategy] 工具结果 isError=true，强制自动执行');
       return true;
     }
 

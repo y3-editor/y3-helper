@@ -22,6 +22,8 @@ export default function ToolCall(props: ToolCallProps) {
 
   // 还原原版本的 isAuthorizationPathCheck 逻辑
   const [isAuthorizationPathCheck] = useState(false);
+  // MCP 自动调用开关开启后立即隐藏按钮区域
+  const [mcpAutoApproved, setMcpAutoApproved] = useState(false);
 
   // 使用单一入口的工具调用Hook
   const {
@@ -67,6 +69,7 @@ export default function ToolCall(props: ToolCallProps) {
       !isProcessing &&
       !messageProcessing &&
       !isMCPProcessing &&
+      !mcpAutoApproved &&
       !isShare &&
       !hasAskUserQuestionTool &&
       !hasTaskTool &&
@@ -80,7 +83,23 @@ export default function ToolCall(props: ToolCallProps) {
       if (message.tool_calls?.every(tool => chatApplyInfo[tool.id])) return true
     }
     return false
-  }, [chatApplyInfo, hasAskUserQuestionTool, hasClaudeEditTool, hasEditFileTool, hasTaskTool, isMCPProcessing, isProcessing, isShare, message.tool_calls, messageProcessing, toolResponseDisabled])
+  }, [chatApplyInfo, hasAskUserQuestionTool, hasClaudeEditTool, hasEditFileTool, hasTaskTool, isMCPProcessing, mcpAutoApproved, isProcessing, isShare, message.tool_calls, messageProcessing, toolResponseDisabled])
+
+  // MCP 自动调用开关开启时立即关闭按钮区域
+  const processedAutoConfigItems = useMemo(() => {
+    if (mcpAutoApproved) return [];
+    if (!toolTypes.hasMCPTool) return autoConfigItems;
+    return autoConfigItems.map((item) => {
+      const original = item.onChange;
+      return {
+        ...item,
+        onChange: (checked: boolean) => {
+          if (checked) setMcpAutoApproved(true);
+          original(checked);
+        },
+      };
+    });
+  }, [autoConfigItems, mcpAutoApproved, toolTypes.hasMCPTool]);
 
   // 检查是否是启用的命令工具（保持原版本变量名）
   const enableCommandTool = message.tool_calls?.some((tool) => {
@@ -141,7 +160,7 @@ export default function ToolCall(props: ToolCallProps) {
   return (
     <TaskProgressPanel
       headerContent={toolCallTitle}
-      autoConfigItems={!messageProcessing ? autoConfigItems : []}
+      autoConfigItems={!messageProcessing ? processedAutoConfigItems : []}
       showHeader={shouldShowHeader}
       footerContent={
         hasFooterContent &&

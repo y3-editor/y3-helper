@@ -37,7 +37,13 @@ interface MarkdownProps<TD, TP> {
   children: string;
 }
 function preprocessMarkdown(markdown: string): string {
-  return markdown.replace(/\\/g, '\\\\');
+  // Convert \[...\] math delimiters before escaping backslashes
+  let result = markdown.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$\n${math}\n$$`);
+  // Escape backslashes only outside math blocks ($$...$$ and $...$)
+  return result.replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$|\\/g, (match) => {
+    if (match.startsWith('$')) return match;
+    return '\\\\';
+  });
 }
 export default function UserMarkdown<TD, TP>(props: MarkdownProps<TD, TP>) {
   const { isStreaming, CodeRender } = props;

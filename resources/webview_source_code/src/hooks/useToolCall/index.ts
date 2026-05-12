@@ -197,10 +197,22 @@ export function useToolCall(
       mcpToolInfo &&
       !mcpToolInfo.initialMCPAutoApprove
     ) {
+      const wrappedHandleMcpSwitchChange = (checked: boolean) => {
+        if (checked) {
+          // 开启自动调用时同步更新 toolResponse，让确认/取消按钮立即消失
+          const mcpTool = message.tool_calls?.find(
+            (t) => t.function.name === 'use_mcp_tool' || t.function.name === 'access_mcp_resource'
+          );
+          if (mcpTool) {
+            state.setToolResponse((prev) => ({ ...prev, [mcpTool.id]: true }));
+          }
+        }
+        mcpToolInfo.handleMcpSwitchChange(checked);
+      };
       items.push({
         label: `${mcpToolInfo.mcpServerDisplayName} 自动调用`,
         checked: mcpToolInfo.mcpServer?.config?.autoApprove || false,
-        onChange: mcpToolInfo.handleMcpSwitchChange,
+        onChange: wrappedHandleMcpSwitchChange,
         tip: mcpToolInfo.mcpAutoApproveTip,
       });
     }
@@ -214,6 +226,8 @@ export function useToolCall(
     mcpToolInfo,
     tips,
     updateFunctions,
+    message,
+    state,
   ]);
 
   // 返回完整的工具调用结果

@@ -39,6 +39,8 @@ import md5 from 'crypto-js/md5';
 import { RxCheckCircled, RxReset } from 'react-icons/rx';
 import { diffLines } from 'diff'
 import { UserEvent } from '../../types/report';
+import Markdown from '../../components/Markdown';
+import '../../assets/github-markdown-dark.css';
 
 
 interface ChatCodeBlockProps extends CodeBlockProps {
@@ -58,6 +60,7 @@ export interface ICodeBlockMeta {
 const SHELL = ['bash', 'zsh', 'powershell'];
 
 const ChartLanguage = ['mermaid', 'plantuml', 'dot', 'graphviz'];
+const MarkdownLanguage = ['markdown', 'md'];
 
 const btn_xs = {
   height: '24px', // 设置按钮高度
@@ -75,6 +78,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
   const { language, value, data, metaData, onUpdateCodeBlockMeta } = props;
   const [fileChange, setFileChange] = React.useState<ICodeBlockMeta>()
   const [showChart, setshowChart] = React.useState(ChartLanguage.includes(language));
+  const [showMarkdownPreview, setShowMarkdownPreview] = React.useState(true);
   const { message, defaultExpanded } = data;
   const realValue = React.useMemo(() => {
     return value.replace(/__CM__/g, '')
@@ -461,6 +465,46 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                 )}
               </Tooltip>
             )}
+            {MarkdownLanguage.includes(language) && (
+              <Tooltip label={showMarkdownPreview ? '源码' : '预览'}>
+                {!showMarkdownPreview ? (
+                  <Button
+                    variant="ghost"
+                    aria-label="Markdown预览"
+                    size="sm"
+                    sx={btn_xs}
+                    onClick={() => {
+                      setShowMarkdownPreview(true);
+                      userReporter.report({
+                        event: UserEvent.CODE_CHAT_MARKDOWN_PREVIEW,
+                        extends: {
+                          session_id: currentSession?._id,
+                          message_id: message.id,
+                        },
+                      });
+                    }}
+                    color="text.default"
+                  >
+                    <Icon as={MdOutlinePreview} size="sm" mr={1.5} />
+                    预览
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    aria-label="Markdown源码"
+                    size="sm"
+                    sx={btn_xs}
+                    onClick={() => {
+                      setShowMarkdownPreview(false);
+                    }}
+                    color="text.default"
+                  >
+                    <Icon as={FaCode} size="sm" mr={1.5} />
+                    源码
+                  </Button>
+                )}
+              </Tooltip>
+            )}
             {showChart && !isVisualStudioIDE && ((language === 'dot' && isVsCodeIDE) || language !== 'dot') &&  (
               <Tooltip label={'调试'}>
                 <Button
@@ -518,7 +562,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                   调试
                 </Button>
               </Tooltip>
-            )}
+             )}
             {!showChart && (
               <>
                 {hasAppliedCode && (
@@ -850,6 +894,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
     isSmallScreen,
     language,
     showChart,
+    showMarkdownPreview,  // 添加 Markdown 预览状态
     isVisualStudioIDE,
     isVsCodeIDE,
     hasAppliedCode,
@@ -974,16 +1019,98 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
         <div className="flex items-center ml-auto" style={{ flexShrink: 0 }}>{actionButtons}</div>
       </Box>
       {isExpanded && (
-        <MemoCodeBlock
-          language={language}
-          value={displayedValue}
-          collapsable={true}
-          defaultExpanded={defaultExpanded}
-          codeWhiteSpace={configStore.codeWhiteSpace}
-          actionButton={actionButtons}
-          showChart={showChart}
-          metaData={metaData}
-        />
+        <>
+          {/* Markdown 预览模式 */}
+          {showMarkdownPreview && MarkdownLanguage.includes(language) ? (
+            <>
+              <style>
+                {`
+                  .markdown-preview-container h1,
+                  .markdown-preview-container h2,
+                  .markdown-preview-container h3,
+                  .markdown-preview-container h4,
+                  .markdown-preview-container h5,
+                  .markdown-preview-container h6 {
+                    margin-top: 6px !important;
+                    margin-bottom: 3px !important;
+                  }
+                  .markdown-preview-container h1:first-child,
+                  .markdown-preview-container h2:first-child,
+                  .markdown-preview-container h3:first-child,
+                  .markdown-preview-container h4:first-child,
+                  .markdown-preview-container h5:first-child,
+                  .markdown-preview-container h6:first-child {
+                    margin-top: 0 !important;
+                  }
+                  .markdown-preview-container p {
+                    margin-top: 0 !important;
+                    margin-bottom: 3px !important;
+                  }
+                  .markdown-preview-container p:last-child {
+                    margin-bottom: 0 !important;
+                  }
+                  .markdown-preview-container ul,
+                  .markdown-preview-container ol {
+                    margin-top: 2px !important;
+                    margin-bottom: 3px !important;
+                    padding-left: 20px !important;
+                  }
+                  .markdown-preview-container li {
+                    margin-bottom: 1px !important;
+                    line-height: 1.4 !important;
+                  }
+                  .markdown-preview-container li + li {
+                    margin-top: 1px !important;
+                  }
+                  .markdown-preview-container li > p {
+                    margin-top: 0 !important;
+                    margin-bottom: 1px !important;
+                  }
+                  .markdown-preview-container blockquote {
+                    margin-top: 3px !important;
+                    margin-bottom: 3px !important;
+                    padding-top: 2px !important;
+                    padding-bottom: 2px !important;
+                  }
+                  .markdown-preview-container pre {
+                    margin-top: 3px !important;
+                    margin-bottom: 3px !important;
+                  }
+                  .markdown-preview-container code {
+                    font-size: 0.9em !important;
+                  }
+                `}
+              </style>
+              <Box 
+                className="markdown-body markdown-preview-container"
+                fontSize="14px"
+                lineHeight="1.5"
+                p={3}
+                borderLeft="1px solid"
+                borderRight="1px solid"
+                borderBottom="1px solid"
+                borderRadius="0 0 md md"
+                sx={{
+                  borderColor: 'var(--chakra-colors-chakra-border-color)'
+                }}
+              >
+                <Markdown data={data}>{displayedValue}</Markdown>
+              </Box>
+            </>
+          ) : (
+            /* 普通代码块模式 */
+            <MemoCodeBlock
+              language={language}
+              value={displayedValue}
+              collapsable={true}
+              defaultExpanded={defaultExpanded}
+              codeWhiteSpace={configStore.codeWhiteSpace}
+              actionButton={actionButtons}
+              showChart={showChart}
+              metaData={metaData}
+            />
+          )}
+        </>
       )}
     </Box>
   );

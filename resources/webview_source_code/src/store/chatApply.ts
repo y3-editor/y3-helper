@@ -35,7 +35,7 @@ export interface ChatApplyItem {
   accepted?: boolean;        // apply 已应用
   rejected?: boolean;        // apply 已拒绝
   reverted?: boolean;        // apply 已回退
-  type: 'edit' | 'replace' | 'write';   // 编辑类型
+  type: string; // 'edit' | 'replace' | 'write' | 'edit_file' | 'replace_in_file';   // 编辑类型
 }
 
 export interface ChatFileItem {
@@ -51,7 +51,7 @@ export interface ChatFileItem {
   };
   // 用于关联到具体的某次 toolCall
   applyItems: {
-    type: 'edit' | 'replace' | 'write' | 'edit';
+    type: string // 'edit' | 'replace' | 'write' | 'edit';
     toolCallId: string;
     taskId: string;
   }[];

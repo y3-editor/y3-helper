@@ -474,6 +474,7 @@ async function runSubagentInner(
   // ✅ 发射 TASK_STARTED 事件
   emitTaskStarted(parentSessionId, toolCallId, taskId, agent.name);
 
+  const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || undefined;
   // 获取 OpenSpec 相关配置
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
   const openspecVersion = useWorkspaceStore
@@ -485,6 +486,7 @@ async function runSubagentInner(
     agent.name,
     {
       config: {
+        codeMakerVersion,
         codebaseChatMode,
         openspecVersion,
       },
@@ -730,10 +732,7 @@ async function runSubagentInner(
               originalContent: '',
               updateSnippet,
               replaceSnippet,
-              type:
-                toolCall.function.name === 'replace_in_file'
-                  ? 'replace'
-                  : 'edit',
+              type: toolCall.function.name,
               toolCallId: toolCall.id,
               applying: true,
               accepted: false,

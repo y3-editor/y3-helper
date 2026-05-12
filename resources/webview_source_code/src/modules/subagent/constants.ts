@@ -18,13 +18,13 @@
 export const TOOL_TIMEOUT_MS = 7 * 60 * 1000;
 // export const TOOL_TIMEOUT_MS = 10 * 1000;
 
-/** LLM 调用超时时间（5 分钟）
+/** LLM 调用超时时间（8 分钟）
  *
  * 每次 LLM 调用的最大等待时间，包括流式响应的完整过程。
  * - 避免 LLM API 响应卡住导致 subagent 永久等待
  * - 配合 withRetry 机制，瞬态错误会自动重试
  */
-export const LLM_CALL_TIMEOUT_MS = 5 * 60 * 1000;
+export const LLM_CALL_TIMEOUT_MS = 8 * 60 * 1000;
 
 /** Subagent 总执行超时时间（10 分钟）
  *
@@ -33,6 +33,7 @@ export const LLM_CALL_TIMEOUT_MS = 5 * 60 * 1000;
  * - 超时后会自动终止，释放资源
  * - 应大于单个 LLM 调用超时 × 预期步数
  */
+// export const SUBAGENT_TOTAL_TIMEOUT_MS = 20 * 1000;
 export const SUBAGENT_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** 用户操作等待超时时间（5 分钟）

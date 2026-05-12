@@ -30,7 +30,7 @@ const MCPToolCall = memo(function MCPToolCall(props: {
       }
     }
     return params;
-  }, [message.tool_calls]);
+  }, [message.tool_calls?.[0]?.function.arguments]);
 
   const mcpParams = useMemo(() => {
     let params: any = {};

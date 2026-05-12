@@ -186,7 +186,7 @@ const ToolCallResult = ({
 
   const { postMessage } = usePostMessage();
 
-  // MCP 工具和 Terminal 工具在等待时展开，其他工具都收起
+  // MCP 工具和 Terminal 工具在等待时展开，plan 工具始终展开，其他工具都收起
   const initialIndex =
     !toolResponseDisabled && (isMCPTool || isTerminalTool || isPlan)
       ? 0
@@ -270,7 +270,7 @@ const ToolCallResult = ({
       }
     }
     return content;
-  }, [isPlan, tool]);
+  }, [isPlan, tool.function.arguments]);
 
   const renderError = () => {
     return (
@@ -297,7 +297,7 @@ const ToolCallResult = ({
       }
     }
     return [];
-  }, [tool, result.content]);
+  }, [tool.function.arguments, result.content]);
 
   if (isPreviewCodewikiStructure) {
     return (
