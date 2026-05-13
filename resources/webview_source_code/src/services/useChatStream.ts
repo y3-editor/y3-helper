@@ -2997,6 +2997,7 @@ export const toolCallNames = [
   'read_file',
   'retrieve_code',
   'retrieve_knowledge',
+  'search_tool',
   'use_mcp_tool',
   'access_mcp_resource',
   'edit_file',
@@ -3008,6 +3009,8 @@ export const toolCallNames = [
 const toolParamNames = [
   'path',
   'search_query',
+  'query',
+  'limit',
   'diff',
   'target_file',
   'code_edit',
@@ -3113,5 +3116,136 @@ export function parseAssistantMessage(assistantMessage: string) {
     streamingToolCall: streamingToolCall,
     parsedContent: currentTextContent,
     toolCallBreak: toolCalls.length && currentToolCall
+  }
+}
+
+/**
+ * 模型身份探测：双请求对照实验，用于排查 codebase_chat 后端默认模型。
+ * 请求 A：带完整 system_prompt + tools（与主流程配置一致）
+ * 请求 B：纯净请求，只有 user message
+ */
+const PROBE_VERSION = 'v1';
+const PROBE_STORAGE_KEY = 'probe_model_identity_version';
+const PROBE_RATE = 0.1;
+
+export async function probeModelIdentity(
+  data: ChatPromptBody,
+  meta: { model: string; ntesTraceId?: string; chatRequestUrl?: string },
+) {
+  // 同版本号只上报一次
+  try {
+    if (localStorage.getItem(PROBE_STORAGE_KEY) === PROBE_VERSION) return;
+  } catch {
+    // localStorage 不可用时跳过
+  }
+
+  // 10% 概率触发
+  if (Math.random() > PROBE_RATE) return;
+
+  // 命中后立即标记，防止二次发送
+  try {
+    localStorage.setItem(PROBE_STORAGE_KEY, PROBE_VERSION);
+  } catch {
+    // localStorage 不可用时继续执行，但不阻止上报
+  }
+
+  const probeMessage = '你是什么模型？';
+  const baseUrl = meta.chatRequestUrl || '/proxy/gpt/gpt/codebase_chat_stream';
+  const url = `${baseUrl}/${UserEvent.CODE_CHAT_CODEBASE}`;
+  const headers = setRequestHeaders();
+
+  // 收集 SSE 流式响应的完整文本
+  async function collectStreamText(body: ChatPromptBody): Promise<string> {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return `[error] status=${res.status}`;
+    const reader = res.body?.getReader();
+    if (!reader) return '[error] no reader';
+    const decoder = new TextDecoder();
+    let text = '';
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      // 解析 SSE data 行，提取 content
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
+        try {
+          const json = JSON.parse(line.slice(6));
+          const delta = json?.choices?.[0]?.delta;
+          if (delta?.content) text += delta.content;
+        } catch {
+          // 忽略解析失败的行
+        }
+      }
+    }
+    return text;
+  }
+
+  // 提取 data 中的 system message（messages[0]）
+  const systemMessage = data.messages.find(
+    (msg) => msg.role === ChatRole.System,
+  );
+  const probeUserMessage = {
+    role: ChatRole.User,
+    content: `<user_query>${probeMessage}</user_query>`,
+  };
+
+  // 请求 A：带完整 system_prompt + tools
+  const probeWithTools: ChatPromptBody = {
+    messages: systemMessage
+      ? [systemMessage, probeUserMessage]
+      : [probeUserMessage],
+    model: data.model,
+    stream: true,
+    temperature: data.temperature,
+    max_tokens: data.max_tokens,
+    tools: data.tools,
+    tool_choice: data.tool_choice,
+    codebase_chat_mode: data.codebase_chat_mode,
+  };
+
+  // 请求 B：纯净请求，不带 system_prompt 和 tools
+  const probeClean: ChatPromptBody = {
+    messages: [{ role: ChatRole.User, content: probeMessage }],
+    model: data.model,
+    stream: true,
+    temperature: data.temperature,
+    max_tokens: data.max_tokens,
+  };
+
+  try {
+    const [responseA, responseB] = await Promise.all([
+      collectStreamText(probeWithTools),
+      collectStreamText(probeClean),
+    ]);
+
+    userReporter.report({
+      event: 'CodeChat.probe_model_with_tools' as unknown as string,
+      extends: {
+        model: meta.model,
+        ntes_trace_id: meta.ntesTraceId,
+        probe_question: probeMessage,
+        response: responseA.slice(0, 1000),
+        response_length: responseA.length,
+      },
+    });
+
+    userReporter.report({
+      event: 'CodeChat.probe_model_clean' as unknown as string,
+      extends: {
+        model: meta.model,
+        ntes_trace_id: meta.ntesTraceId,
+        probe_question: probeMessage,
+        response: responseB.slice(0, 1000),
+        response_length: responseB.length,
+      },
+    });
+  } catch (e) {
+    console.warn('[ProbeModel] failed:', e);
   }
 }

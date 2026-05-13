@@ -4,12 +4,13 @@ import { useChatStore } from '../chat';
 import { useChatConfig } from '../chat-config';
 import { MCPServer, useMCPStore } from '../mcp';
 import { SkillIndexItem } from '../skills';
-import { generateSkillsPromptSection } from '../skills/prompt';
+import { generateCavemanPromptSection, generateSkillsPromptSection } from '../skills/prompt';
 import { OPENSPEC_RULES } from './openSpecRules';
 import { PromptLinkMgr } from './pomptLinkMgr';
 import { OPENSPEC_1X_MODE_CONTEXT } from './openspecModeContext';
 import { ChatApplyType, useChatApplyStore } from '../chatApply';
 import { MAX_READ_ONLY_TOOLS, MAX_TASK_TOOLS } from '../../utils/toolCallFilter';
+import { useExtensionStore } from '../extension';
 
 /** Cache tier 分隔符，cache 路径下按此标记 split 为多个 content block */
 export const CACHE_TIER_BREAK = '\n\n<!--CACHE_TIER_BREAK-->\n\n';
@@ -18,6 +19,7 @@ export default function constructRemixPrompt(options: {
   info: Partial<WorkspaceInfo>;
   MCPServers: MCPServer[];
   enableTerminal?: boolean;
+  enableRtk?: boolean;
   codeMakerVersion?: string;
   effectiveRules: Rule[];
   mentionFiles?: string[];
@@ -30,20 +32,23 @@ export default function constructRemixPrompt(options: {
    * Injected here (instead of user message) to maintain cache stability.
    */
   agentReminders?: string;
+  isOnDemandMode?: boolean;
 }) {
   const {
     info,
     MCPServers,
     enableTerminal,
+    enableRtk = useExtensionStore.getState().codebaseChatRtk,
     codeMakerVersion,
     effectiveRules,
     skills = [],
     openspecVersion,
     promptLink,
     agentReminders,
+    isOnDemandMode = false,
   } = options;
   const { workspace, osName, shell } = info;
-  const { enableEditableMode, enableSkills, autoApply, autoExecute } =
+  const { enableEditableMode, enableSkills, autoApply, autoExecute, cavemanMode } =
     useChatConfig.getState();
   const enableReplaceInFile =
     codeMakerVersion && versionCompare('2.4.9', codeMakerVersion) > 0;
@@ -74,7 +79,13 @@ ${rule.content}
     mcpToolsPrompt = `
 <mcp_tool_call>
 The Model Context Protocol (MCP) enables communication between the system and locally running MCP servers, which provide additional tools and resources to extend your capabilities.
-You can use the server's tools via the use_mcp_tool tool and access the server's resources through the access_mcp_resource tool.
+${isOnDemandMode
+      ? `The tools below are in on-demand mode and shown by name only. You MUST call search_tool to activate a tool before calling use_mcp_tool.
+Do not guess tool capabilities or parameters. If you know the tool name, server name, or alias, pass it directly as \`query\`.
+## search_tool
+Find and activate MCP tools for this session. Returns matched tool descriptions and parameter info.
+Args: \`query\` (required), \`limit\` (optional, default 4, max 10)`
+      : 'You can use the server\'s tools via the use_mcp_tool tool and access the server\'s resources through the access_mcp_resource tool.'}
 <available_servers>
 \`\`\`
 ${MCPServers.filter(
@@ -83,10 +94,13 @@ ${MCPServers.filter(
         .map((server) => {
           const tools = server.tools
             ?.map((tool) => {
-              const schemaStr = tool.inputSchema
-                ? `    Input Schema: ${JSON.stringify(tool.inputSchema)}`
-                : '';
+              if (!tool.inputSchema) {
+                return `- ${tool.name}`;
+              }
 
+              const schemaStr = `    Input Schema: ${JSON.stringify(
+                tool.inputSchema,
+              )}`;
               return `- ${tool.name}: ${tool.description}\n${schemaStr}`;
             })
             .join('\n\n');
@@ -299,6 +313,78 @@ When executing terminal commands, please follow these rules:
   b. The actual command will NOT execute until the user approves it. The user may not approve it immediately. Do NOT assume the command has started running.
 </run_terminal_cmd>` : ''}
 
+${enableTerminal && enableRtk ? (osName?.toLowerCase().includes('windows') ? `<rtk_token_optimization>
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+Your environment has RTK installed. You MUST prefix commands with \`rtk\` to reduce token consumption.
+RTK filters command output to show only essential information (60-90% token savings).
+
+**Important**: The output you see from rtk-prefixed commands is filtered/compressed, not raw output.
+If you need complete unfiltered output for debugging, use \`rtk proxy <cmd>\` instead.
+If output contains \`[full output: <path>]\`, you can read that file for the full log.
+
+## Golden Rule
+
+Always prefix commands with \`rtk\`. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged — so it is always safe to add the prefix.
+
+For command chains (&&), prefix EACH segment independently:
+  rtk git add . && rtk git commit -m "msg" && rtk git push
+
+## Commands by Category
+
+### Build & Compile (80-90% savings)
+  rtk cargo build / rtk cargo check / rtk cargo clippy
+  rtk tsc                 # TypeScript errors grouped by file/code (83%)
+  rtk lint                # ESLint/Biome violations grouped (84%)
+  rtk prettier --check    # Files needing format only (70%)
+  rtk next build          # Next.js build with route metrics (87%)
+
+### Test (90-99% savings)
+  rtk cargo test          # Cargo test failures only (90%)
+  rtk vitest run          # Vitest failures only (99.5%)
+  rtk playwright test     # Playwright failures only (94%)
+  rtk test <cmd>          # Generic test wrapper - failures only
+
+### Git (59-80% savings)
+  rtk git status / rtk git log / rtk git show
+  rtk git add / rtk git commit / rtk git push / rtk git pull
+  rtk git branch / rtk git fetch / rtk git stash
+
+### GitHub (26-87% savings)
+  rtk gh pr view <num>    # Compact PR view (87%)
+  rtk gh pr checks        # Compact PR checks (79%)
+  rtk gh run list         # Compact workflow runs (82%)
+  rtk gh issue list       # Compact issue list (80%)
+
+### JavaScript/TypeScript Tooling (70-90% savings)
+  rtk pnpm list / rtk pnpm outdated / rtk pnpm install
+  rtk npm run <script> / rtk npx <cmd>
+  rtk prisma              # Prisma without ASCII art (88%)
+
+### Infrastructure (85% savings)
+  rtk docker ps / rtk docker images / rtk docker logs <c>
+
+### Network (65-70% savings)
+  rtk curl <url>          # Compact HTTP responses (70%)
+  rtk wget <url>          # Compact download output (65%)
+
+## Meta Commands
+  rtk gain              # View token savings statistics
+  rtk gain --history    # View command history with savings
+  rtk proxy <cmd>       # Run command WITHOUT filtering (for debugging)
+</rtk_token_optimization>` : `<rtk_awareness>
+Your environment has RTK (Rust Token Killer) installed. Terminal command output may be filtered and compressed for token optimization.
+
+Important:
+- Command output you see may have details omitted (e.g., only errors shown, verbose info removed).
+- If output appears insufficient for your task, use \`rtk proxy <cmd>\` to get the complete unfiltered output.
+- If output contains \`[full output: <path>]\`, you can read that file for the full unfiltered log.
+
+Available meta commands:
+  rtk proxy <cmd>       # Run command without filtering (for debugging)
+  rtk gain              # Show token savings statistics
+</rtk_awareness>`) : ''}
+
 <calling_external_apis>
 1. Unless explicitly requested by the USER, use the best suited external APIs and packages to solve the task. There is no need to ask the USER for permission.
 2. When selecting which version of an API or package to use, choose one that is compatible with the USER's dependency management file. If no such file exists or if the package is not present, use the latest version that is in your training data.
@@ -314,6 +400,7 @@ ${rulesPrompt}
 
 ${openspecPrompt}
 ${skillPrompt}
+${generateCavemanPromptSection(cavemanMode)}
 
 <user_info>
 The user's OS version is ${osName ?? 'unknown'}. The absolute path is ${workspace ?? 'not specified'}.

@@ -17,6 +17,7 @@ import { useTheme } from '../../ThemeContext';
 
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
+import { normalizeMcpServerName } from '../../utils/mcpToolSearch';
 
 const MCP_STATUS: any = {
   'connected': '已连接',
@@ -142,9 +143,7 @@ const MCPStatus = () => {
             {
               MCPServers.length
               ? MCPServers.map((server, index) => {
-                let serverName = server.name || '';
-                serverName = serverName.replace(/\\/g, '/');
-                serverName = serverName.split('/').slice(-1)[0];
+                const serverName = normalizeMcpServerName(server.name);
 
                 // 查找中文名称的优先级：
                 // 1. server.config.chinese_name (本地配置)

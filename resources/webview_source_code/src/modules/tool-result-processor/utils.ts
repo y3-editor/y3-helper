@@ -4,7 +4,7 @@
 
 import { isImageFileByPath, truncateContent, getErrorMessage } from '../../utils';
 import { EParsedDocsStatus } from '../../utils/chatAttachParseHandler';
-import { getFilePrompt, maxTruncatedLine, getDiffPatchOfContent } from '../../store/workspace/tools/read';
+import { getFilePrompt, maxTruncatedLine, getDiffPatchOfContent } from './../../services/harness/tools/read';
 import { ChatMessageContent } from '../../services';
 import type { ToolResultInput, ToolResultOutput } from './types';
 import { compressImage } from '../../components/ImageUpload/ImageResize';

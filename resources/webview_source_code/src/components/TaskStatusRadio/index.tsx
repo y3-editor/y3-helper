@@ -1,7 +1,7 @@
 import { Box, Icon } from '@chakra-ui/react';
 import { FiCircle } from 'react-icons/fi';
 import { SVGProps } from 'react';
-import { TodoItem } from '../../store/workspace/tools/todo';
+import { TodoItem } from '../../services/harness/tools/todo';
 
 interface TaskStatusRadioProps {
   status: TodoItem['status'];
@@ -23,9 +23,9 @@ const QuarterCircleIcon = (props: SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <circle cx="12" cy="12" r="10" fill="none" />
-    <path 
-      d="M12 12 L12 2 A10 10 0 0 1 22 12 Z" 
-      fill="currentColor" 
+    <path
+      d="M12 12 L12 2 A10 10 0 0 1 22 12 Z"
+      fill="currentColor"
       stroke="none"
     />
   </svg>
@@ -45,8 +45,8 @@ const CheckCircleIcon = (props: SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <circle cx="12" cy="12" r="10" fill="none" />
-    <path 
-      d="M8 12l3 3l5-6" 
+    <path
+      d="M8 12l3 3l5-6"
       strokeWidth="2.5"
     />
   </svg>

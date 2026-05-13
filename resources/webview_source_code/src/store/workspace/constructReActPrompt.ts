@@ -33,38 +33,40 @@ You can use the server's tools via the use_mcp_tool tool and access the server's
 <available_servers>
 \`\`\`
 ${MCPServers.filter((server) => server.status === "connected" && !server.disabled)
-  .map((server) => {
-    const tools = server.tools
-      ?.map((tool) => {
-        const schemaStr = tool.inputSchema
-          ? `    Input Schema:
+        .map((server) => {
+          const tools = server.tools
+            ?.map((tool) => {
+              if (!tool.inputSchema) {
+                return `- ${tool.name}`
+              }
+
+              const schemaStr = `    Input Schema:
   ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-          : ""
 
-        return `- ${tool.name}: ${tool.description}\n${schemaStr}`
-      })
-      .join("\n\n")
+              return `- ${tool.name}: ${tool.description}\n${schemaStr}`
+            })
+            .join("\n\n")
 
-    const templates = server.resourceTemplates
-      ?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)
-      .join("\n")
+          const templates = server.resourceTemplates
+            ?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)
+            .join("\n")
 
-    const resources = server.resources
-      ?.map((resource) => `- ${resource.uri} (${resource.name}): ${resource.description}`)
-      .join("\n")
+          const resources = server.resources
+            ?.map((resource) => `- ${resource.uri} (${resource.name}): ${resource.description}`)
+            .join("\n")
 
-    // 获取中文名称
-    const chineseName = server.config?.chinese_name || getChineseNameByServerName(server.name);
-    const serverTitle = chineseName ? `## ${server.name} (alias: ${chineseName})` : `## ${server.name}`;
+          // 获取中文名称
+          const chineseName = server.config?.chinese_name || getChineseNameByServerName(server.name);
+          const serverTitle = chineseName ? `## ${server.name} (alias: ${chineseName})` : `## ${server.name}`;
 
-    return (
-      serverTitle +
-      (tools ? `\n\n### Available Tools\n${tools}` : "") +
-      (templates ? `\n\n### Resource Templates\n${templates}` : "") +
-      (resources ? `\n\n### Direct Resources\n${resources}` : "")
-    )
-  })
-  .join("\n\n")}
+          return (
+            serverTitle +
+            (tools ? `\n\n### Available Tools\n${tools}` : "") +
+            (templates ? `\n\n### Resource Templates\n${templates}` : "") +
+            (resources ? `\n\n### Direct Resources\n${resources}` : "")
+          )
+        })
+        .join("\n\n")}
 \`\`\`
 </available_servers>
 </mcp_tool_call>`
@@ -79,7 +81,7 @@ ${MCPServers.filter((server) => server.status === "connected" && !server.disable
     codeMakerVersion,
     isVSCode
   })
-    return `You are a powerful agentic AI coding assistant. You operate exclusively in Y3Maker, the best AI Assistant.
+  return `You are a powerful agentic AI coding assistant. You operate exclusively in CodeMaker, the best AI Assistant.
 
 You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question. Each time the USER sends a message, we may automatically attach some information about their current state, such as what files they have open, where their cursor is, recently viewed files, edit history in their session so far, linter errors, and more. This information may or may not be relevant to the coding task, it is up for you to decide.
 
@@ -222,7 +224,7 @@ It is *EXTREMELY* important that your generated code can be run immediately by t
 7. If you've suggested a reasonable code_edit that wasn't followed by the apply model, you should try reapplying the edit using reapply tool. And DO NOT reapply or re-edit on the same file for more than once until you received another user_query.
 8. If Apply fail because of network errors, you should tell the user to apply change manually or try to use "ReApply" later.
 9. NEVER read file you have just edited until received user's reaction or user's next query.
-${enableReplaceInFile ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.': ''}
+${enableReplaceInFile ? '10. You MUST use replace_in_file when you need to make change for a large file of MORE THAN 300 lines. If you need to make change for a small file, use edit_file.' : ''}
 </making_code_changes>
 
 ${enableTerminal ? `<run_terminal_cmd>
@@ -280,8 +282,8 @@ function convertToolsToString(tools: Tool[]) {
     if (parameters && parameters.properties) {
       Object.keys(parameters.properties).forEach(paramName => {
         result += `<${paramName}>${paramName === 'path' ? 'File path here' :
-                   paramName === 'command' ? 'Your command here' :
-                   `${paramName} value here`}</${paramName}>\n`;
+          paramName === 'command' ? 'Your command here' :
+            `${paramName} value here`}</${paramName}>\n`;
       });
     }
 

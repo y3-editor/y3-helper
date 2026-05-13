@@ -93,7 +93,7 @@ function App() {
   );
   const [loginLoading, setLoginLoading] = React.useState(true);
   const authStore = useAuthStore();
-  const { setSystemTheme } = useTheme();
+  const { setSystemTheme, switchTheme, themePreference } = useTheme();
   const setMCPServers = useMCPStore((state) => state.setMCPServers);
   const setShowMcpError = useMCPStore((state) => state.setShowMcpError);
   const setBuiltInServers = useMCPStore((state) => state.setBuiltInServers);
@@ -402,6 +402,7 @@ function App() {
           subagentEnable,
           subagentManualTriggerOnly,
           chatApplyMode,
+          codebaseChatRtk,
         } = event.data.data as any;
         setCodeCoverageApiUrl(CODE_COVERAGE_API_URL);
         authStore.setAccessToken(accessToken);
@@ -480,6 +481,7 @@ function App() {
           !!(subagentEnable && versionSupported),
           !!subagentManualTriggerOnly,
         );
+        extensionStore.setCodebaseChatRtk(!!codebaseChatRtk);
 
         // Y3Helper: 当 fixedModel 存在时，自动注入到 chatModels 中，使自定义模型支持图片上传
         extensionStore.setFixedModel(fixedModel || '');
@@ -688,6 +690,29 @@ function App() {
         if (themeStyle) {
           setSystemTheme(themeStyle as ThemeStyle);
         }
+      } else if (event.data.type === SubscribeActions.THEME_SELECT_CHANGED) {
+        // 主题色改变（用户手动选择）
+        const { themeColor } = event.data.data as any;
+        if (themeColor) {
+          // 调用 switchTheme 方法切换主题（内部会自动保存到 localStorage）
+          switchTheme(themeColor as ThemeStyle);
+        }
+      } else if (event.data.type === SubscribeActions.TABS_SELECT_CHANGED) {
+        // 页面改变（用户手动选择）
+        const { Tabs } = event.data.data as any;
+        if (Tabs) {
+          updateConfig((config) => {
+            config.tabs = Tabs;
+          });
+        }
+      } else if (event.data.type === SubscribeActions.ONCLICK_SETTINGS) {
+        postMessage({
+          type: 'OPEN_NEW_SETTING',
+          data: {
+            ThemeColor: themePreference,
+            Tabs: tabs,
+          },
+        });
       }
     }
     // 监听 postMessage 消息

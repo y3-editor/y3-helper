@@ -25,6 +25,7 @@ export interface PromptContext {
     enableTerminal?: boolean;
     enableEditableMode?: boolean;
     enableSkills?: boolean;
+    enableRtk?: boolean;
     autoApply?: boolean;
     autoExecute?: boolean;
     openspecVersion?: string;

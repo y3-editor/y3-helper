@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { McpPrompt } from '../services/mcp';
 
+export const PENDING_MCP_ACTIVATION_SCOPE = '__pending__';
+
+function resolveActivationScopeKey(sessionId?: string | null) {
+  return sessionId || PENDING_MCP_ACTIVATION_SCOPE;
+}
+
 // Built-in server interface from API
 export interface BuiltInServer {
   id: number;
@@ -57,9 +63,9 @@ export type MCPTools = {
   name: string;
   description: string;
   autoApprove?: boolean;
-  inputSchema: {
+  inputSchema?: {
     properties: {
-      [propName: string]: string;
+      [propName: string]: any;
     },
     type: "object"
   }
@@ -88,10 +94,16 @@ export type MCPStore = {
   enabled: boolean;
   // 新增：存储哪些服务器的 Switch 应该被禁用（key 是服务器名称）
   disabledSwitches: Set<string>;
+  activatedToolKeysBySession: Record<string, string[]>;
   showMcpError: boolean;
   setMCPServers: (servers: MCPServer[]) => void;
   setBuiltInServers: (servers: BuiltInServer[]) => void;
   getAvailableMCPServers: () => MCPServer[];
+  getVisibleMCPServers: () => MCPServer[];
+  getActivatedToolKeys: (sessionId?: string | null) => string[];
+  activateToolKeys: (sessionId: string | null | undefined, toolKeys: string[]) => void;
+  clearActivatedToolKeys: (sessionId: string | null | undefined) => void;
+  adoptPendingToolKeys: (sessionId: string | null | undefined) => void;
   // 新增方法：根据服务器名称获取服务器配置
   getMCPServerByName: (name: string) => MCPServer | undefined;
   // 新增方法：检查服务器是否已存在
@@ -118,9 +130,10 @@ export const useMCPStore = create<MCPStore>((set, get) => ({
   nameMappingsByName: {},
   enabled: true,
   disabledSwitches: new Set<string>(),
+  activatedToolKeysBySession: {},
   showMcpError: false,
   setMCPServers: (servers) => {
-    
+
     // 直接保存传入的服务器配置，保留所有字段（包括 disablePrivateModelOnly） servers.map is not a function
     const processedServers = servers?.map?.(server => {
       // 优先级：config.autoApprove > server.autoApprove，确保两个位置的值同步
@@ -161,6 +174,70 @@ export const useMCPStore = create<MCPStore>((set, get) => ({
   },
   getAvailableMCPServers: () => {
     return get().MCPServers.filter((server) => server.status === "connected" && !server.disabled);
+  },
+  getVisibleMCPServers: () => {
+    const disabledSwitches = get().disabledSwitches;
+    return get()
+      .getAvailableMCPServers()
+      .filter((server) => !disabledSwitches.has(server.name));
+  },
+  getActivatedToolKeys: (sessionId?: string | null) => {
+    const scopeKey = resolveActivationScopeKey(sessionId);
+    return get().activatedToolKeysBySession[scopeKey] || [];
+  },
+  activateToolKeys: (sessionId: string | null | undefined, toolKeys: string[]) => {
+    if (!toolKeys.length) {
+      return;
+    }
+    const scopeKey = resolveActivationScopeKey(sessionId);
+
+    set((state) => {
+      const currentKeys = state.activatedToolKeysBySession[scopeKey] || [];
+      const nextKeys = Array.from(new Set([...currentKeys, ...toolKeys]));
+      return {
+        activatedToolKeysBySession: {
+          ...state.activatedToolKeysBySession,
+          [scopeKey]: nextKeys,
+        },
+      };
+    });
+  },
+  clearActivatedToolKeys: (sessionId: string | null | undefined) => {
+    const scopeKey = resolveActivationScopeKey(sessionId);
+
+    set((state) => {
+      const nextActivatedToolKeysBySession = {
+        ...state.activatedToolKeysBySession,
+      };
+      delete nextActivatedToolKeysBySession[scopeKey];
+      return {
+        activatedToolKeysBySession: nextActivatedToolKeysBySession,
+      };
+    });
+  },
+  adoptPendingToolKeys: (sessionId: string | null | undefined) => {
+    if (!sessionId) {
+      return;
+    }
+    const pendingKeys =
+      get().activatedToolKeysBySession[PENDING_MCP_ACTIVATION_SCOPE] || [];
+    if (!pendingKeys.length) {
+      return;
+    }
+
+    set((state) => {
+      const sessionKeys = state.activatedToolKeysBySession[sessionId] || [];
+      const mergedKeys = Array.from(new Set([...sessionKeys, ...pendingKeys]));
+      const nextActivatedToolKeysBySession = {
+        ...state.activatedToolKeysBySession,
+        [sessionId]: mergedKeys,
+      };
+      delete nextActivatedToolKeysBySession[PENDING_MCP_ACTIVATION_SCOPE];
+
+      return {
+        activatedToolKeysBySession: nextActivatedToolKeysBySession,
+      };
+    });
   },
   getMCPServerByName: (name: string) => {
     return get().MCPServers.find(server => server.name === name);

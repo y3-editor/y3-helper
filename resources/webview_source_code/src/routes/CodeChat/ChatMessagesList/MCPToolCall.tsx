@@ -8,6 +8,7 @@ import ImagePreview from "../../../components/ImagePreview";
 import { truncateContent } from "../../../utils";
 import ChatCodeBlock from "../ChatCodeBlock";
 import { useMCPStore } from "../../../store/mcp";
+import { normalizeMcpServerName, findMcpServerByName } from "../../../utils/mcpToolSearch";
 
 const MCPToolCall = memo(function MCPToolCall(props: {
   message: ChatMessage;
@@ -44,21 +45,13 @@ const MCPToolCall = memo(function MCPToolCall(props: {
   }, [toolCallParams]);
 
   const serverName = useMemo(() => {
-    let name = toolCallParams.server_name || '';
-    name = name.replace(/\\/g, '/');
-    name = name.split('/').slice(-1)[0];
-    return name;
+    return normalizeMcpServerName(toolCallParams.server_name || '');
   }, [toolCallParams]);
 
   // 查找对应的 MCP 服务器配置
   const mcpServer = useMemo(() => {
     if (!serverName) return null;
-    return MCPServers.find(s => {
-      let serverName_ = s.name || '';
-      serverName_ = serverName_.replace(/\\/g, '/');
-      serverName_ = serverName_.split('/').slice(-1)[0];
-      return serverName_ === serverName;
-    });
+    return findMcpServerByName(serverName, MCPServers) ?? null;
   }, [serverName, MCPServers]);
 
   // 获取服务器显示名称（优先显示中文名）

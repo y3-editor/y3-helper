@@ -202,6 +202,7 @@ export async function preprocessSubagentMessages(
   let filteredMessages = await serializeCodebaseMessages({
     model,
     sendMessages,
+    status: 1,
   });
 
   // 4.5 Gemini 模型的 thinking_signature 特殊处理

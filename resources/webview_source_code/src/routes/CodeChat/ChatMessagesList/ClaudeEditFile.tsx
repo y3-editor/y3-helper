@@ -2,13 +2,14 @@ import {
   Box,
   Icon,
   IconButton,
+  Spinner,
   Tag,
   Tooltip,
 } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
 import { usePostMessage } from '../../../PostMessageProvider';
 import { RxCheckCircled, RxCircleBackslash, RxCrossCircled } from 'react-icons/rx';
-import { MdExpandLess, MdExpandMore } from 'react-icons/md';
+import { MdExpandLess } from 'react-icons/md';
 import { useChatApplyStore } from '../../../store/chatApply';
 import MemoCodeBlock from '../../../components/Markdown/CodeBlock';
 import MemoDiffCodeBlock from '../../../components/Markdown/DiffCodeBlock';
@@ -29,12 +30,13 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
     // messageId is reserved for future reporting use
     toolCallId,
     filePath,
+    isLatest = false,
   } = props;
 
   const { postMessage } = usePostMessage();
   const chatApplyInfo = useChatApplyStore((state) => state.chatApplyInfo);
   const codeWhiteSpace = useConfigStore((state) => state.config.codeWhiteSpace);
-  // const onUserResubmit = useChatStreamStore((state) => state.onUserResubmit);
+
 
   const targetApplyItem = chatApplyInfo[toolCallId];
   const [isExpanded, setIsExpanded] = useState(!!targetApplyItem);
@@ -106,7 +108,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
               aria-label="展开/折叠"
               size="md"
               variant="link"
-              icon={isExpanded ? <MdExpandLess /> : <MdExpandMore />}
+              icon={<MdExpandLess className={`${isExpanded ? 'rotate-180' : 'rotate-90'} transition-all duration-200 ease-in-out`} />}
               onClick={() => setIsExpanded(!isExpanded)}
               minW="18px"
               h="24px"
@@ -162,7 +164,27 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
         </Box>
       </Box>
       <pre>
-        {isExpanded && diffInfo && (
+        {
+          isLatest && targetApplyItem?.applying && (
+            <Box
+              display="flex"
+              alignItems="center"
+              px="2"
+              py="3"
+              borderX="1px"
+              borderBottom="1px"
+              borderColor="customBorder"
+              borderBottomRadius="8px"
+              bg="answerBgColor"
+              color="text.default"
+              fontSize="12px"
+            >
+              <Spinner size="xs" mr="6px" />
+              代码生成中，请稍候... (文件较大或内容复杂时，生成速度可能会慢一些，感谢您的耐心等待 🙏)
+            </Box>
+          )
+        }
+        {isExpanded && diffInfo && !targetApplyItem?.applying && (
           <MemoDiffCodeBlock
             language={language}
             value={diffInfo.content || ''}
@@ -174,7 +196,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
             codeWhiteSpace={codeWhiteSpace}
           />
         )}
-        {isExpanded && !diffInfo && displayedCode && (
+        {isExpanded && !diffInfo && displayedCode && !targetApplyItem?.applying && (
           <MemoCodeBlock
             language={language}
             value={displayedCode}

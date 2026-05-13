@@ -31,7 +31,7 @@ import { BsTerminal } from 'react-icons/bs';
 import { useConfigStore, CodeWhiteSpace } from '../../store/config';
 import * as React from 'react';
 import { SmallScreenWidth } from '../../const';
-import { MdOutlinePreview, MdOutlineTerminal, MdExpandMore, MdExpandLess } from 'react-icons/md';
+import { MdOutlinePreview, MdOutlineTerminal, MdExpandLess } from 'react-icons/md';
 import { FaCode } from 'react-icons/fa6';
 import { LuDownload } from 'react-icons/lu';
 import { useWorkspaceStore } from '../../store/workspace';
@@ -89,7 +89,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
     if (language !== 'html') return false;
     const trimmedValue = realValue.trim();
     return (trimmedValue.startsWith('<!DOCTYPE html>') || trimmedValue.startsWith('<html>')) &&
-           trimmedValue.endsWith('</html>');
+      trimmedValue.endsWith('</html>');
   }, [language, realValue]);
   // console.log('isCompleteHtml', isCompleteHtml, realValue);
 
@@ -138,7 +138,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
 
   const hasAppliedCode = React.useMemo(() => {
     if (chatType === 'codebase' && defaultExpanded) {
-      return (appliedCodeBlocks[data?.message?.id||'']||[]).includes(codeBlockId)
+      return (appliedCodeBlocks[data?.message?.id || ''] || []).includes(codeBlockId)
     }
     return false
   }, [chatType, defaultExpanded, appliedCodeBlocks, data?.message?.id, codeBlockId])
@@ -317,15 +317,17 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
           type: 'apply',
           diffId: codeBlockId,
           codeBlockIds: [codeBlockId],
-          fileChange: {[codeBlockId]: {
-            searchCodes: searchCodes,
-            replacedCodes: replacedCodes,
-            createdFilePaths: createdFilePaths[message.id||''] || [],
-            language: language,
-            filePath: metaData.filePath,
-            codeBlockId: codeBlockId,
-            messageId: message?.id,
-          }}
+          fileChange: {
+            [codeBlockId]: {
+              searchCodes: searchCodes,
+              replacedCodes: replacedCodes,
+              createdFilePaths: createdFilePaths[message.id || ''] || [],
+              language: language,
+              filePath: metaData.filePath,
+              codeBlockId: codeBlockId,
+              messageId: message?.id,
+            }
+          }
         },
       });
     }
@@ -340,16 +342,18 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
           diffId: codeBlockId,
           searchCodes: searchCodes,
           replacedCodes: replacedCodes,
-          createdFilePaths: createdFilePaths[message.id||''] || [],
+          createdFilePaths: createdFilePaths[message.id || ''] || [],
           language: language,
           messageId: message?.id || '',
           filePath: metaData.filePath,
           codeBlockId: codeBlockId,
-          fileChange: {[codeBlockId]: {
-            ...fileChange,
-            messageId: message?.id,
-            createdFilePaths: createdFilePaths[message?.id||''],
-          }}
+          fileChange: {
+            [codeBlockId]: {
+              ...fileChange,
+              messageId: message?.id,
+              createdFilePaths: createdFilePaths[message?.id || ''],
+            }
+          }
         },
       });
     }
@@ -505,7 +509,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                 )}
               </Tooltip>
             )}
-            {showChart && !isVisualStudioIDE && ((language === 'dot' && isVsCodeIDE) || language !== 'dot') &&  (
+            {showChart && !isVisualStudioIDE && ((language === 'dot' && isVsCodeIDE) || language !== 'dot') && (
               <Tooltip label={'调试'}>
                 <Button
                   variant="ghost"
@@ -562,7 +566,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                   调试
                 </Button>
               </Tooltip>
-             )}
+            )}
             {!showChart && (
               <>
                 {hasAppliedCode && (
@@ -577,16 +581,18 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                           data: {
                             type: 'revert',
                             codeBlockIds: [codeBlockId],
-                            fileChange: {[codeBlockId]: {
-                              ...fileChange,
-                              messageId: message?.id,
-                              createdFilePaths: createdFilePaths[message?.id||''],
-                            }}
+                            fileChange: {
+                              [codeBlockId]: {
+                                ...fileChange,
+                                messageId: message?.id,
+                                createdFilePaths: createdFilePaths[message?.id || ''],
+                              }
+                            }
                           },
                         });
                       }}
                     >
-                      <Icon as={RxReset} sx={icon_xs} size="sm" mr={1.5}  color="red.400"/>
+                      <Icon as={RxReset} sx={icon_xs} size="sm" mr={1.5} color="red.400" />
                       撤销修改
                     </Button>
                   </>
@@ -789,7 +795,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                       )}
                     </>
                   )}
-                  {showChart && !isVisualStudioIDE && ((language === 'dot' && isVsCodeIDE) || language !== 'dot') &&  (
+                  {showChart && !isVisualStudioIDE && ((language === 'dot' && isVsCodeIDE) || language !== 'dot') && (
                     <MenuItem
                       onClick={() => {
                         if (language === 'mermaid') {
@@ -957,25 +963,24 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
         bg="answerBgColor"
         border="1px"
         borderColor="customBorder"
-        borderTopRadius="8px"
         color="text.default"
         fontSize="12px"
       >
-      <Box display="flex" alignItems="center" minW="0" flex="1" overflow="hidden">
-        <IconButton
-          aria-label="展开/折叠"
-          size="md"
-          variant="link"
-          icon={isExpanded ? <MdExpandLess /> : <MdExpandMore />}
-          onClick={() => setIsExpanded(!isExpanded)}
-          minW="18px"
-          h="24px"
-          p={0}
-          flexShrink={0}
-        />
-        {
-          metaData?.filePath
-            ? <Tooltip label={metaData.filePath}>
+        <Box display="flex" alignItems="center" minW="0" flex="1" overflow="hidden">
+          <IconButton
+            aria-label="展开/折叠"
+            size="md"
+            variant="link"
+            icon={<MdExpandLess className={`${isExpanded ? 'rotate-180' : 'rotate-90'} transition-all duration-200 ease-in-out`} />}
+            onClick={() => setIsExpanded(!isExpanded)}
+            minW="18px"
+            h="24px"
+            p={0}
+            flexShrink={0}
+          />
+          {
+            metaData?.filePath
+              ? <Tooltip label={metaData.filePath}>
                 <Box
                   className="inline-block cursor-pointer truncate"
                   color="blue.300"
@@ -996,25 +1001,25 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                 >
                   {filename}
                 </Box>
-            </Tooltip>
-            : <span className="text-sm truncate" title={language}>{language}</span>
-        }
-        {
-          hasApplyScene && !hasAppliedCode && (
-            <Box marginLeft={2} display={'flex'} flexShrink={0}>
-              <Box color={'green.500'} hidden={!changedLines.add} fontWeight={700} fontSize={12}>+{changedLines.add}</Box>
-              <Box color={'red.600'} hidden={!changedLines.delete} marginLeft={1} fontWeight={700} fontSize={12}>-{changedLines.delete}</Box>
-            </Box>
-          )
-        }
-        {
-          hasApplyScene && hasAppliedCode && (
-            <Box color={'green.500'} display={'flex'} alignItems={'center'} ml={2} flexShrink={0}>
-              <Icon as={RxCheckCircled} />
-              <Box fontSize={12} ml={1}>已应用</Box>
-            </Box>
-          )
-        }
+              </Tooltip>
+              : <span className="text-sm truncate" title={language}>{language}</span>
+          }
+          {
+            hasApplyScene && !hasAppliedCode && (
+              <Box marginLeft={2} display={'flex'} flexShrink={0}>
+                <Box color={'green.500'} hidden={!changedLines.add} fontWeight={700} fontSize={12}>+{changedLines.add}</Box>
+                <Box color={'red.600'} hidden={!changedLines.delete} marginLeft={1} fontWeight={700} fontSize={12}>-{changedLines.delete}</Box>
+              </Box>
+            )
+          }
+          {
+            hasApplyScene && hasAppliedCode && (
+              <Box color={'green.500'} display={'flex'} alignItems={'center'} ml={2} flexShrink={0}>
+                <Icon as={RxCheckCircled} />
+                <Box fontSize={12} ml={1}>已应用</Box>
+              </Box>
+            )
+          }
         </Box>
         <div className="flex items-center ml-auto" style={{ flexShrink: 0 }}>{actionButtons}</div>
       </Box>
@@ -1081,7 +1086,7 @@ export default function ChatCodeBlock(props: ChatCodeBlockProps) {
                   }
                 `}
               </style>
-              <Box 
+              <Box
                 className="markdown-body markdown-preview-container"
                 fontSize="14px"
                 lineHeight="1.5"

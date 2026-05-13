@@ -15,7 +15,7 @@
 import {
   maxTruncatedLine,
   getDiffPatchOfContent,
-} from '../../../store/workspace/tools/read';
+} from './../../../services/harness/tools/read';
 import type {
   RawToolCallResult,
   ProcessedToolResult,

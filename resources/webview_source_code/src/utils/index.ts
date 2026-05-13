@@ -800,14 +800,44 @@ export const checkValueOfPressedKeyboard = (
 }
 
 /**
+ * 转义正则特殊字符，避免危险命令本身含有正则元字符时被错误解析
+ */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * @name 检查命令是否安全
- * @param dangerousCommands 危险命令列表
- * @param command 要检查的命令
+ * @description
+ * 仅当危险命令出现在「命令位置」时才判定为危险，避免把路径 / 文件名 / 参数子串中
+ * 包含的同名片段误判为命令本身。
+ *
+ * 命令位置指：
+ * 1. 整条命令行的开头
+ * 2. 或紧跟在命令分隔符（;、&、&&、|、||、反引号、$(、换行、( 等）之后
+ *
+ * 命令名右侧必须是「空白 / 命令结束符 / 行尾」，不能是会构成
+ * 路径或标识符的字符（如 /、\、-、.、字母数字、下划线等），
+ * 这样可以避免如 `cat xx/dd/c.ts` 中的 dd 被命中。
+ *
+ * @param dangerousCommands 危险命令列表（如 ['rm', 'dd', 'mv']）
+ * @param command 要检查的完整命令行
+ * @returns 安全返回 true，命中危险命令返回 false
  */
 export function isCommandSafe(dangerousCommands: string[], command: string): boolean {
-  const lowerCommand = command?.toLowerCase?.();
+  const lowerCommand = command?.toLowerCase?.()?.trim();
+  if (!lowerCommand?.length) return false;
+  // 命令左侧的合法前缀：行首、空白、或常见的 shell 命令分隔符
+  // 包含： ; & | ` ( { 以及组合形式 && ||  $(  等（这些字符自身已能涵盖）
+  const leftBoundary = '(?:^|[\\s;&|`(){}])';
+  // 命令右侧的合法后缀：空白、行尾，或上述命令终止符
+  // 关键：必须排除 /、\、-、.、字母数字、下划线 等（防止把 path/dd/x 中的 dd 误判）
+  const rightBoundary = '(?=$|[\\s;&|`)<>])';
+
   return !dangerousCommands.some(dangerousCmd => {
-    const regex = new RegExp(`\\b${dangerousCmd?.toLowerCase?.()}\\b`, 'ig');
+    const cmd = dangerousCmd?.toLowerCase?.();
+    if (!cmd) return false;
+    const regex = new RegExp(`${leftBoundary}${escapeRegExp(cmd)}${rightBoundary}`, 'i');
     return regex.test(lowerCommand);
   });
 }

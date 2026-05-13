@@ -462,9 +462,9 @@ function calculateCompressionUpdate(
 
   return shouldResetCompression
     ? {
-        pendingSavedTokens: 0,
-        messagesCountAtCompression: 0,
-      }
+      pendingSavedTokens: 0,
+      messagesCountAtCompression: 0,
+    }
     : undefined;
 }
 

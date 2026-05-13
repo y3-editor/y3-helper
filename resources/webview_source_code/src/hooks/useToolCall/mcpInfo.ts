@@ -8,6 +8,7 @@ import { useMCPStore } from '../../store/mcp';
 import { usePostMessage, BroadcastActions } from '../../PostMessageProvider';
 import { useChatStreamStore } from '../../store/chat';
 import { MCPToolInfo } from './types';
+import { normalizeMcpServerName, findMcpServerByName } from '../../utils/mcpToolSearch';
 
 export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolInfo | null {
   const MCPServers = useMCPStore((state) => state.MCPServers);
@@ -25,10 +26,7 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
     if (!mcpTool) return null;
     try {
       const params = JSON.parse(mcpTool.function.arguments || '{}');
-      let name = params.server_name || '';
-      name = name.replace(/\\/g, '/');
-      name = name.split('/').slice(-1)[0];
-      return name;
+      return normalizeMcpServerName(params.server_name || '') || null;
     } catch {
       return null;
     }
@@ -37,12 +35,7 @@ export function useMCPInfo(message: ChatMessage, hasMCPTool: boolean): MCPToolIn
   // 查找 MCP 服务器
   const mcpServer = useMemo(() => {
     if (!mcpServerName) return null;
-    return MCPServers.find(s => {
-      let serverName = s.name || '';
-      serverName = serverName.replace(/\\/g, '/');
-      serverName = serverName.split('/').slice(-1)[0];
-      return serverName === mcpServerName;
-    });
+    return findMcpServerByName(mcpServerName, MCPServers) ?? null;
   }, [mcpServerName, MCPServers]);
 
   // MCP 服务器显示名称

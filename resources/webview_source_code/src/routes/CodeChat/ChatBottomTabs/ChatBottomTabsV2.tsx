@@ -7,6 +7,7 @@ import {
   IconButton,
   Text,
   Tooltip,
+  useMediaQuery,
 } from '@chakra-ui/react';
 import {
   useMemo,
@@ -36,6 +37,10 @@ import useCustomToast from '../../../hooks/useCustomToastWithUseCallback';
 import { RiCalendarTodoLine } from 'react-icons/ri';
 import { GrTransaction } from "react-icons/gr";
 import RevertConfirmDialog from './RevertConfirmDialog';
+// Y3: BackendApplyToggle 后端 Apply 模式 (361c16ac) 在 Y3 不需要，Y3 走 claudeEdit.ts
+// import BackendApplyToggle from '../../../components/BackendApplyToggle';
+import { IDE, useExtensionStore } from '../../../store/extension';
+import { MediumScreenWidth } from '../../../const';
 
 // 高度持久化相关常量
 const HEIGHT_STORAGE_KEY = 'chat-bottom-tabs-height';
@@ -296,7 +301,7 @@ function ChangesListContent({ contentHeight }: { contentHeight: number }) {
           />
         ))}
       </Box>
-      
+
       <RevertConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={handleCloseConfirmDialog}
@@ -317,6 +322,10 @@ function ChangesHeaderActions() {
   const clearChatFileInfo = useChatApplyStore(
     (state) => state.clearChatFileInfo,
   );
+  const ide = useExtensionStore((state) => state.IDE);
+  // Y3: isVscode 之前用于 BackendApplyToggle，现已 SKIP
+  // @ts-expect-error TS6133 unused
+  const isVscode = useMemo(() => ide === IDE.VisualStudioCode, [ide]);
   const { postMessage } = usePostMessage();
   const { toast } = useCustomToast();
 
@@ -384,6 +393,8 @@ function ChangesHeaderActions() {
   return (
     <>
       <Flex alignItems="center" gap={1}>
+        {/* Y3: SKIP BackendApplyToggle */}
+        {/* {isVscode && (<BackendApplyToggle />)} */}
         <Tooltip label="全部保留">
           <IconButton
             aria-label="全部保留"
@@ -415,7 +426,7 @@ function ChangesHeaderActions() {
           />
         </Tooltip>
       </Flex>
-      
+
       <RevertConfirmDialog
         isOpen={batchRevertDialog}
         onClose={() => setBatchRevertDialog(false)}
@@ -562,6 +573,7 @@ function ChatBottomTabsV2Component<TApi = unknown>(
 
   const isChangesTab = activeKey === 'Changes';
   const hasChanges = Object.keys(chatFileInfo).length > 0;
+  const [isMediumScreen] = useMediaQuery(MediumScreenWidth);
 
   if (!visibleItems.length) {
     return null;
@@ -654,7 +666,7 @@ function ChatBottomTabsV2Component<TApi = unknown>(
         </Text>
 
         {/* 提示文字 */}
-        {isChangesTab && hasChanges && (
+        {isChangesTab && hasChanges && !isMediumScreen && (
           <Box className="text-xs" color="gray.500">
             建议及时
             <Box

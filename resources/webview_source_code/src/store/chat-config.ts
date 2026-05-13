@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CHAT_MODELS_MAP, ChatModel, IChatModelConfig } from '../services/chatModel';
+import { CavemanMode, CAVEMAN_MODES } from './skills/prompt';
 
 export const CHAT_MAX_TOKENS = 8192;
 export const CHAT_MIN_TOKENS = 4096;
@@ -33,7 +34,9 @@ const modelCacheMap = new Map<ChatModel, IChatModelConfig>();
 /**
  * 获取有效的模型配置
  * - 优先从 modelCacheMap 查找（缓存中均为 enabled=true 的模型）
- * - 若不在缓存中（模型已下线），从缓存里找同 supplyChannel 中 displayOrder 最高的模型
+ * - 若不在缓存中（模型已下线），按以下优先级查找备选模型：
+ *   1. 同 supplyChannel 中 displayOrder 最高的模型
+ *   2. 如果没有同系列模型，选择同商业/私有类型中 displayOrder 最大的模型
  */
 export const getValidChatModel = (model: ChatModel): IChatModelConfig | null => {
   // 优先从缓存获取，命中即为有效模型
@@ -52,16 +55,38 @@ export const getValidChatModel = (model: ChatModel): IChatModelConfig | null => 
   }
 
   const modelList = Object.values(chatModels)
+  let fallbackModel: IChatModelConfig | null = null;
   let maxDisplayOrder = -1;
+
+  // Step 1: 尝试找同 supplyChannel 的模型
   for (const modelItem of modelList) {
     if (modelItem.supplyChannel === modelConfig.supplyChannel && modelItem.enabled && modelItem.chatType === modelConfig.chatType) {
       if (modelItem.displayOrder > maxDisplayOrder) {
         maxDisplayOrder = modelItem.displayOrder;
-        modelCacheMap.set(model, modelItem)
+        fallbackModel = modelItem;
       }
     }
   }
-  return modelCacheMap.get(model) || null;
+
+  // Step 2: 如果没有同系列模型，选择同商业/私有类型中 displayOrder 最大的模型
+  if (!fallbackModel) {
+    maxDisplayOrder = -1;
+    for (const modelItem of modelList) {
+      if (modelItem.isPrivate === modelConfig.isPrivate && modelItem.enabled && modelItem.chatType === modelConfig.chatType) {
+        if (modelItem.displayOrder > maxDisplayOrder) {
+          maxDisplayOrder = modelItem.displayOrder;
+          fallbackModel = modelItem;
+        }
+      }
+    }
+  }
+
+  // 缓存找到的备选模型
+  if (fallbackModel) {
+    modelCacheMap.set(model, fallbackModel);
+  }
+
+  return fallbackModel;
 }
 
 
@@ -237,6 +262,10 @@ interface ChatConfigStore {
 
   enableSkills: boolean;
   setEnableSkills: (enable: boolean) => void;
+
+  /** Caveman 简洁模式：省略冗余词汇，精简回复 */
+  cavemanMode: CavemanMode;
+  setCavemanMode: (mode: CavemanMode) => void;
   /** 仓库智聊 特殊工具启用 End */
 
   /** 用户侧子代理开关：true 为开启，false 为关闭 */
@@ -252,6 +281,10 @@ interface ChatConfigStore {
   /** 内置子代理模型配置：key = agent name，value = 模型代码（空字符串表示继承默认） */
   subagentModelConfig: Record<string, string>;
   setSubagentModelConfig: (agentName: string, model: string) => void;
+
+  /** 各模型的 effort 配置，key 为模型 code，value 为 effort 级别 */
+  selectedModelEffort: Record<string, string>;
+  setSelectedModelEffort: (model: string, effort: string) => void;
 }
 
 export const useChatConfig = create<ChatConfigStore>()(
@@ -370,6 +403,12 @@ export const useChatConfig = create<ChatConfigStore>()(
           enableSkills: enable
         }))
       },
+      cavemanMode: 'off',
+      setCavemanMode: (mode: CavemanMode) => {
+        set(() => ({
+          cavemanMode: mode,
+        }))
+      },
       enableDevspaceConfig: true,
       setEnableDevspaceConfig: (enable: boolean) => {
         set(() => ({
@@ -412,6 +451,15 @@ export const useChatConfig = create<ChatConfigStore>()(
           },
         }));
       },
+      selectedModelEffort: {},
+      setSelectedModelEffort: (model: string, effort: string) => {
+        set((state) => ({
+          selectedModelEffort: {
+            ...state.selectedModelEffort,
+            [model]: effort,
+          },
+        }));
+      },
     }),
     {
       name: 'codechat-config',
@@ -428,6 +476,7 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableEditableMode: state.enableEditableMode,
         compressConfig: state.compressConfig,
         enableSkills: state.enableSkills,
+        cavemanMode: state.cavemanMode,
         enableUserQuestion: state.enableUserQuestion,
         enableDevspaceConfig: state.enableDevspaceConfig,
         enableGlobSearch: state.enableGlobSearch,
@@ -436,7 +485,21 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableSubagent: state.enableSubagent,
         enableSubagentManualTriggerOnly: state.enableSubagentManualTriggerOnly,
         subagentConfigInitialized: state.subagentConfigInitialized,
+        selectedModelEffort: state.selectedModelEffort,
       }),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as object) };
+        const p = persisted as Record<string, unknown> | null;
+        // 兼容旧版 cavemanModeEnabled: boolean → cavemanMode: CavemanMode
+        if (p && 'cavemanModeEnabled' in p && !('cavemanMode' in p)) {
+          (merged as any).cavemanMode = p.cavemanModeEnabled ? 'full' : 'off';
+        }
+        // 校验 cavemanMode 合法性，非法值回退到 'off'
+        if (!CAVEMAN_MODES.includes((merged as any).cavemanMode)) {
+          (merged as any).cavemanMode = 'off';
+        }
+        return merged as typeof current;
+      },
     },
   ),
 );

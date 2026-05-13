@@ -5,10 +5,12 @@
 
 import { useChatConfig } from '../../store/chat-config';
 import { useChatStore } from '../../store/chat';
+import { useExtensionStore } from '../../store/extension';
 import { PromptLinkMgr } from '../../store/workspace/pomptLinkMgr';
 import {
   generateMCPPrompt,
   generateSkillsPrompt,
+  generateCavemanPrompt,
   generateRulesPrompt,
   generateTaskDelegationPrompt,
   generateCodeEditPrompt,
@@ -54,6 +56,7 @@ export async function constructMainPrompt(options: MainPromptOptions): Promise<s
       enableTerminal,
       enableEditableMode,
       enableSkills,
+      enableRtk: useExtensionStore.getState().codebaseChatRtk,
       autoApply,
       autoExecute,
       codeMakerVersion,
@@ -63,9 +66,10 @@ export async function constructMainPrompt(options: MainPromptOptions): Promise<s
   });
 
   // 生成各个部分（并行处理）
-  const [mcpPrompt, skillPrompt, rulesPrompt, taskDelegationPrompt, codeEditPrompt, terminalPrompt, openSpecPrompt, userInfoPrompt] = await Promise.all([
+  const [mcpPrompt, skillPrompt, cavemanPrompt, rulesPrompt, taskDelegationPrompt, codeEditPrompt, terminalPrompt, openSpecPrompt, userInfoPrompt] = await Promise.all([
     generateMCPPrompt(context),
     generateSkillsPrompt(context),
+    generateCavemanPrompt(context),
     generateRulesPrompt(context),
     generateTaskDelegationPrompt(context),
     generateCodeEditPrompt(context),
@@ -146,6 +150,7 @@ ${terminalPrompt || ''}
 ${rulesPrompt || ''}
 ${openSpecPrompt || ''}
 ${skillPrompt || ''}
+${cavemanPrompt || ''}
 
 ${userInfoPrompt || ''}
 

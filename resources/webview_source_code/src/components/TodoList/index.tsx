@@ -1,7 +1,7 @@
 import { Box, Text, Tooltip, VStack, IconButton } from '@chakra-ui/react';
 import { FiMinus } from 'react-icons/fi';
 import TaskStatusRadio from '../TaskStatusRadio';
-import { TodoItem } from '../../store/workspace/tools/todo';
+import { TodoItem } from './../../services/harness/tools/todo';
 
 export default function TodoList(props: {
   todos: ReadonlyArray<TodoItem>;
@@ -83,17 +83,17 @@ export default function TodoList(props: {
                   _hover={
                     isClickable
                       ? {
-                          bg: 'gray.50',
-                          borderColor: 'gray.200',
-                        }
+                        bg: 'gray.50',
+                        borderColor: 'gray.200',
+                      }
                       : {}
                   }
                   _dark={{
                     _hover: isClickable
                       ? {
-                          bg: 'gray.700',
-                          borderColor: 'gray.600',
-                        }
+                        bg: 'gray.700',
+                        borderColor: 'gray.600',
+                      }
                       : {},
                   }}
                 >

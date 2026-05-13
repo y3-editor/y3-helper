@@ -1,5 +1,4 @@
 import { cloneDeep } from "lodash";
-import ParseNoneCodeFileStream from "../services/Agents/Stream/ParseNoneCodeFile";
 import { AttachType } from "../store/attaches";
 import { FileItem, IMultiAttachment, useChatAttach, useChatStore, useChatStreamStore } from "../store/chat";
 import { toastError } from "../services/error";
@@ -9,8 +8,9 @@ import EventBus, { EBusEvent } from "./eventbus";
 import { uploadImg } from "../services/chat";
 import { useChatConfig } from "../store/chat-config";
 import { ParseImgType } from "../services/chatModel";
-import { getDocsetPrompt } from "../store/workspace/tools/read";
+import { getDocsetPrompt } from "../services/harness/tools/read";
 import { compressImage } from "../components/ImageUpload/ImageResize";
+import ParserDocumentStream from "../services/harness/stream/parserDocument";
 
 
 
@@ -63,7 +63,7 @@ export const checkFileTypeValid = (fileName: string) => {
 export const convertTextByAddress = (address: string, filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     let content = ''
-    new ParseNoneCodeFileStream(address, {
+    new ParserDocumentStream(address, {
       onMessage: (message: string) => {
         content += message
       },

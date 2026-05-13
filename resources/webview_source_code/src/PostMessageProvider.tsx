@@ -164,6 +164,10 @@ export enum BroadcastActions {
   // 检查更新
   OPEN_CHECK_UPDATE = 'OPEN_CHECK_UPDATE', // 检查插件更新
   RELOAD_WINDOW = 'RELOAD_WINDOW', // 重载窗口
+
+  // 更新设置配置
+  UPDATE_SETTINGS = 'UPDATE_SETTINGS', // 更新 VS Code 配置项
+
 }
 
 // 订阅的事件，IDE -> webview

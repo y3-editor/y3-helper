@@ -1,20 +1,20 @@
 import { ParsedEvent } from "eventsource-parser";
-import { IParseNoneCodeFileContext, IParseNoneCodeFileStream } from "./Interface";
-import BaseStream from "../Base";
+import { IParserDocumentContext, IParserDocumentStream } from "./interface";
+import BaseStream from "../base";
 import userReporter from "../../../../utils/report";
 import { UserEvent } from "../../../../types/report";
-import { IStreamOption } from "../Base/Interface";
+import { IStreamOption } from "../base/interface";
 
-
-export default class ParseNoneCodeFileStream extends BaseStream implements IParseNoneCodeFileStream {
+// 解析文档流
+export default class ParserDocumentStream extends BaseStream implements IParserDocumentStream {
   public requestParmas: Record<string, any> = {}
-  public convesationContext: IParseNoneCodeFileContext = {
+  public conversationContext: IParserDocumentContext = {
     content: ''
   } // 记录回流的上下文
 
   public get getUrl() {
     // return `/proxy/bm/apps/d163153e-9724-424e-80f9-a375af37cb26/chat` // 测试环境
-    return `/proxy/bm/apps/00000000-0000-0000-0000-000000000004/chat`
+    return `/proxy/bm/apps/50fdff4c-391a-4efd-af85-dbdf101c611f/chat`
   }
 
   public get getMaxTimeout() {
@@ -24,7 +24,7 @@ export default class ParseNoneCodeFileStream extends BaseStream implements IPars
   constructor(fileUrl: string, options: IStreamOption) {
     super({
       // flowId: "d163153e-9724-424e-80f9-a375af37cb26",
-      flowId: "00000000-0000-0000-0000-000000000004",
+      flowId: "50fdff4c-391a-4efd-af85-dbdf101c611f",
       inputs: {},
       mode: "workflow",
       input_files: {
@@ -60,12 +60,12 @@ export default class ParseNoneCodeFileStream extends BaseStream implements IPars
           break
         }
         case 'workflow_started': {
-          this.options?.onMessage(this.convesationContext['content'])
+          this.options?.onMessage(this.conversationContext['content'])
           break
         }
         case 'workflow_finished': {
-          this.convesationContext['content'] += (parsedData?.data?.outputs?.result || '')
-          this.options?.onMessage(this.convesationContext['content'])
+          this.conversationContext['content'] += (parsedData?.data?.outputs?.result || '')
+          this.options?.onMessage(this.conversationContext['content'])
           requestAnimationFrame(() => {
             this.options?.onFinish?.('')
           })

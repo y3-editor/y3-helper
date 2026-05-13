@@ -115,14 +115,13 @@ import { generateTraceId } from '../utils/trace';
 import { logger as webToolsLogger, hub as webToolsHub } from '@dep305/codemaker-web-tools';
 import { parseMentions } from '../utils/chatMention';
 import {
-  checkThinkingSignatureValid,
   // clearContextWithUnrelatedProperties, // 已导出但暂未在Y3中使用
   convertDeepseekMessages,
   reuseDuplicateFileRead,
   serializeCodebaseMessages,
   stripImagesForUnsupportedModel
 } from '../utils/validateBeforeChat';
-import { injectTodoListToLastUserMessage, processWriteTodoDenied } from './workspace/tools/todo';
+import { injectTodoListToLastUserMessage, processWriteTodoDenied } from './../services/harness/tools/todo';
 import { useMCPStore } from './mcp';
 import { useMcpPromptApp } from './mcp-prompt';
 import { useSkillPromptApp } from './skills/skill-prompt';
@@ -132,14 +131,14 @@ import { getLocalStorage } from '../utils/storage';
 import { formatUserDeniedResult } from '../utils/toolResultFormatter';
 import { formatResultContent, getReportEventByToolName } from '../utils/toolCall';
 import type { ExtendedPlanData, PlanStatus } from '../types/plan';
-import type { TodoList } from './workspace/tools/todo';
+import type { TodoList } from './../services/harness/tools/todo';
 import { onMessageToolCallResponse } from '../utils/chatToolCallHandler';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import { getPlanContextTruncationInstruction } from './workspace/planModePrompts';
 // import mockMessages from './mockMessages.json';
-import { Tool as PlanTool, processMakePlanDenied, report as planReport } from '../store/workspace/tools/plan'
-import { Tool as TodoTool } from '../store/workspace/tools/todo'
+import { Tool as PlanTool, processMakePlanDenied, report as planReport } from './../services/harness/tools/plan'
+import { Tool as TodoTool } from './../services/harness/tools/todo'
 import addCacheMarksToMessages, { addCacheMarksToTools } from '../utils/addCacheMarksToMessages';
 import EventBus, { EBusEvent } from '../utils/eventbus';
 import { debugSuccess } from '../utils/debugLog';
@@ -164,6 +163,8 @@ import { ChatModel } from '../services/chatModel';
 import { BAI_CHUAN, ParseImgType } from '../services/chatModel';
 import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
 import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
+import { useHookStore } from './hooks';
+import { configureThinkingSignature } from '../utils/chatThinkingHandler';
 
 import {
   calculateConsumedTokensUpdate,
@@ -593,6 +594,8 @@ export const useChatStore = create<ChatStore>()(
           currentSessionId: newSession._id,
           sessions: nextSessions,
         }));
+        // 将 PENDING 范围内的 MCP 激活工具键迁移到新会话
+        useMCPStore.getState().adoptPendingToolKeys(newSession._id);
 
         // 新建 codebase 会话时触发引导
         if (chatType === 'codebase') {
@@ -648,6 +651,9 @@ export const useChatStore = create<ChatStore>()(
           sessions: nextSessions,
           currentSessionId: newSession._id,
         });
+        // fork 后的新会话沿用源会话的 MCP 工具激活状态需要重置（避免污染）
+        useMCPStore.getState().clearActivatedToolKeys(newSession._id);
+        useMCPStore.getState().adoptPendingToolKeys(newSession._id);
       },
 
       loadSessionData: async (
@@ -832,6 +838,8 @@ export const useChatStore = create<ChatStore>()(
 
         // 清理被删除 session 的 subagent 状态
         useSubagentStore.getState().clearSessionStatuses(id);
+        // 清理被删除 session 的 MCP 激活工具键
+        useMCPStore.getState().clearActivatedToolKeys(id);
 
         try {
           await removeSession(id);
@@ -1344,9 +1352,15 @@ export const useChatStore = create<ChatStore>()(
           }
 
           const readyToCompress = session.data.messages.filter(msg => !msg.isCompressed)
+          // 私有化模型 (isPrivate) 不能走默认的 Gemini3Flash，必须沿用当前模型压缩
+          const sessionModel = session.data?.model;
+          const isPrivateModel = (sessionModel as unknown as { isPrivate?: boolean })?.isPrivate === true;
+          const compressionModel = isPrivateModel && sessionModel
+            ? sessionModel
+            : ChatModel.Gemini3Flash;
           const compressionContext: CompressionContext = {
             messages: await serializeCodebaseMessages({
-              model: ChatModel.Gemini3Flash,
+              model: compressionModel,
               sendMessages: readyToCompress,
             }),
             sessionId: sessionId,
@@ -1833,6 +1847,58 @@ export const useChatStreamStore = create(
           '[Debug][updateToolCallResults] → skip set isProcessing (task still running), current store isProcessing:',
           currentStoreIsProcessing,
         );
+      }
+
+      // 触发 lifecycle hooks（tool.afterExecute / file.afterEdit / terminal.afterExecute）
+      try {
+        const session = useChatStore.getState().currentSession();
+        const sessionId = session?._id || '';
+        const messages = session?.data?.messages || [];
+        let lastAssistantWithTools: ChatMessage | undefined;
+        for (let i = messages.length - 1; i >= 0; i--) {
+          if (messages[i].role === ChatRole.Assistant && messages[i].tool_calls) {
+            lastAssistantWithTools = messages[i];
+            break;
+          }
+        }
+        const toolCalls = lastAssistantWithTools?.tool_calls || [];
+        Object.keys(result).forEach((toolId) => {
+          const toolCall = toolCalls.find((tc) => tc.id === toolId);
+          const toolName = toolCall?.function?.name || '';
+          let toolArgs: Record<string, unknown> = {};
+          try {
+            toolArgs = JSON.parse(toolCall?.function?.arguments || '{}');
+          } catch {
+            toolArgs = {};
+          }
+          useHookStore.getState().emit('tool.afterExecute', {
+            sessionId,
+            toolName,
+            toolCallId: toolId,
+            args: toolArgs,
+            result: result[toolId],
+          });
+          if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(toolName)) {
+            useHookStore.getState().emit('file.afterEdit', {
+              sessionId,
+              toolName,
+              toolCallId: toolId,
+              filePath: (toolArgs.target_file as string) || '',
+              result: result[toolId],
+            });
+          }
+          if (toolName === terminalCmdFunction) {
+            useHookStore.getState().emit('terminal.afterExecute', {
+              sessionId,
+              toolName,
+              toolCallId: toolId,
+              command: (toolArgs.command as string) || '',
+              result: result[toolId],
+            });
+          }
+        });
+      } catch (e) {
+        void e;
       }
     },
 
@@ -3944,23 +4010,13 @@ export const useChatStreamStore = create(
         });
 
         useChatConfig.getState().chatModels
-        if (chatModels[chatConfig.model]?.hasThinking && getAIGWModel(chatConfig.model)?.toLocaleLowerCase?.()?.includes?.('claude')) {
-          // const { maxToken, budgetToken } = calculateTokenBudget(data?.max_tokens || 4096)
-          data.max_tokens = 48000;
-          const budgetToken = Math.max(
-            (data?.max_tokens || CHAT_MIN_TOKENS) / 2,
-            1024,
-          );
-
-          // OPTIMZIED: 遍历 messages +1
-          if (checkThinkingSignatureValid(data.messages)) {
-            data.extra_body = {
-              thinking: {
-                type: 'enabled',
-                budget_tokens: budgetToken,
-              },
-            };
+        // 通过 configureThinkingSignature 统一处理 thinking 参数 (Claude/GLM/Kimi)
+        const thinkingModelConfig = chatModels[chatConfig.model];
+        if (thinkingModelConfig) {
+          if (thinkingModelConfig.hasThinking && getAIGWModel(chatConfig.model)?.toLocaleLowerCase?.()?.includes?.('claude')) {
+            data.max_tokens = 48000;
           }
+          configureThinkingSignature(thinkingModelConfig, data);
         }
 
         if (cacheEnable) {
@@ -4415,17 +4471,26 @@ export const useChatStreamStore = create(
                             }
                             if (autoApprove) {
                               useChatStreamStore.getState().setIsMCPProcessing(true);
-                              window.parent.postMessage(
-                                {
-                                  type: BroadcastActions.TOOL_CALL,
-                                  data: {
-                                    tool_name: tool.function.name,
-                                    tool_params: params,
-                                    tool_id: tool.id,
+                              (async () => {
+                                const allowed = await runToolBeforeExecuteHook(
+                                  sessionId,
+                                  tool,
+                                  params,
+                                  get().updateToolCallResults,
+                                );
+                                if (!allowed) return;
+                                window.parent.postMessage(
+                                  {
+                                    type: BroadcastActions.TOOL_CALL,
+                                    data: {
+                                      tool_name: tool.function.name,
+                                      tool_params: params,
+                                      tool_id: tool.id,
+                                    },
                                   },
-                                },
-                                '*',
-                              );
+                                  '*',
+                                );
+                              })();
                             } else {
                               // autoApprove 当前为 false，可能是 SYNC_MCP_SERVERS 还未到达
                               // 订阅 MCPStore 变化，一旦 autoApprove 变为 true 立即补发 TOOL_CALL
@@ -4501,45 +4566,63 @@ export const useChatStreamStore = create(
                               });
                             }
                           } else if (tool.function.name === 'retrieve_code') {
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params: {
-                                    question: tool_params.search_query,
-                                    collection: parseAtMentionedCodeBaseByAttach(),
+                            (async () => {
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params: {
+                                      question: tool_params.search_query,
+                                      collection: parseAtMentionedCodeBaseByAttach(),
+                                    },
+                                    tool_id: tool.id,
                                   },
-                                  tool_id: tool.id,
                                 },
-                              },
-                              '*',
-                            );
+                                '*',
+                              );
+                            })();
                           } else if (
                             tool.function.name === 'retrieve_knowledge'
                           ) {
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params: {
-                                    // messages: data.messages,
-                                    messages: [
-                                      {
-                                        role: 'user',
-                                        content: tool_params.search_query,
-                                      },
-                                    ],
-                                    input: tool_params.search_query,
-                                    docset: tool_params.docset_id,
-                                    model: data.model,
+                            (async () => {
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params: {
+                                      // messages: data.messages,
+                                      messages: [
+                                        {
+                                          role: 'user',
+                                          content: tool_params.search_query,
+                                        },
+                                      ],
+                                      input: tool_params.search_query,
+                                      docset: tool_params.docset_id,
+                                      model: data.model,
+                                    },
+                                    tool_id: tool.id,
                                   },
-                                  tool_id: tool.id,
                                 },
-                              },
-                              '*',
-                            );
+                                '*',
+                              );
+                            })();
                           } else if (tool.function.name === 'read_file') {
                             try {
                               const toolCallParams = JSON.parse(tool.function.arguments || '{}');
@@ -4566,17 +4649,26 @@ export const useChatStreamStore = create(
                                   );
                                 }
                               } else {
-                                window.parent.postMessage(
-                                  {
-                                    type: BroadcastActions.TOOL_CALL,
-                                    data: {
-                                      tool_name: tool.function.name,
-                                      tool_params,
-                                      tool_id: tool.id,
+                                (async () => {
+                                  const allowed = await runToolBeforeExecuteHook(
+                                    sessionId,
+                                    tool,
+                                    tool_params,
+                                    get().updateToolCallResults,
+                                  );
+                                  if (!allowed) return;
+                                  window.parent.postMessage(
+                                    {
+                                      type: BroadcastActions.TOOL_CALL,
+                                      data: {
+                                        tool_name: tool.function.name,
+                                        tool_params,
+                                        tool_id: tool.id,
+                                      },
                                     },
-                                  },
-                                  '*',
-                                );
+                                    '*',
+                                  );
+                                })();
                               }
                             } catch (err) {
                               console.error(getErrorMessage(err));
@@ -4585,28 +4677,43 @@ export const useChatStreamStore = create(
                             if (useChatConfig.getState().autoExecute &&
                               isCommandSafe(useConfigStore.getState().config.codeBaseCheckCommands, tool_params.command)
                             ) {
-                              window.parent.postMessage(
-                                {
-                                  type: BroadcastActions.TOOL_CALL,
-                                  data: {
-                                    tool_name: tool.function.name,
-                                    tool_params: {
-                                      ...tool_params,
-                                      messageId: id,
-                                      is_approve: true,
-                                    },
-                                    tool_id: tool.id,
+                              (async () => {
+                                const hookArgs = {
+                                  ...tool_params,
+                                  messageId: id,
+                                  is_approve: true,
+                                };
+                                const allowed = await runToolBeforeExecuteHook(
+                                  sessionId,
+                                  tool,
+                                  hookArgs,
+                                  get().updateToolCallResults,
+                                  {
+                                    event: 'terminal.beforeExecute',
+                                    payload: { command: tool_params?.command || '' },
                                   },
-                                },
-                                '*',
-                              )
+                                );
+                                if (!allowed) return;
+                                window.parent.postMessage(
+                                  {
+                                    type: BroadcastActions.TOOL_CALL,
+                                    data: {
+                                      tool_name: tool.function.name,
+                                      tool_params: hookArgs,
+                                      tool_id: tool.id,
+                                    },
+                                  },
+                                  '*',
+                                );
+                              })();
                             }
                           } else if (tool.function.name === 'ask_user_question') {
                             // ask_user_question 工具在 WebView 中本地处理，不发送 TOOL_CALL 到 IDE
                             // 用户在界面上交互后，通过 AskUserQuestion 组件提交结果
                             console.log('[Debug] ask_user_question tool intercepted, waiting for user response');
                           } else {
-                            if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name)) {
+                            const isFileEditTool = ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name);
+                            if (isFileEditTool) {
                               const filePath = tool_params.target_file;
                               const updateSnippet = tool_params.code_edit;
                               const replaceSnippet = tool_params.diff;
@@ -4632,17 +4739,35 @@ export const useChatStreamStore = create(
                                 },
                               })
                             }
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params,
-                                  tool_id: tool.id,
+                            (async () => {
+                              const extraEvent = isFileEditTool
+                                ? {
+                                    event: 'file.beforeEdit' as const,
+                                    payload: {
+                                      filePath: tool_params.target_file || '',
+                                    },
+                                  }
+                                : undefined;
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                                extraEvent,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params,
+                                    tool_id: tool.id,
+                                  },
                                 },
-                              },
-                              '*',
-                            );
+                                '*',
+                              );
+                            })();
                           }
                         }
                       }
@@ -5301,17 +5426,26 @@ export const useChatStreamStore = create(
                             }
                             if (autoApprove) {
                               useChatStreamStore.getState().setIsMCPProcessing(true);
-                              window.parent.postMessage(
-                                {
-                                  type: BroadcastActions.TOOL_CALL,
-                                  data: {
-                                    tool_name: tool.function.name,
-                                    tool_params: params,
-                                    tool_id: tool.id,
+                              (async () => {
+                                const allowed = await runToolBeforeExecuteHook(
+                                  sessionId,
+                                  tool,
+                                  params,
+                                  get().updateToolCallResults,
+                                );
+                                if (!allowed) return;
+                                window.parent.postMessage(
+                                  {
+                                    type: BroadcastActions.TOOL_CALL,
+                                    data: {
+                                      tool_name: tool.function.name,
+                                      tool_params: params,
+                                      tool_id: tool.id,
+                                    },
                                   },
-                                },
-                                '*',
-                              );
+                                  '*',
+                                );
+                              })();
                             } else {
                               // autoApprove 当前为 false，可能是 SYNC_MCP_SERVERS 还未到达
                               // 订阅 MCPStore 变化，一旦 autoApprove 变为 true 立即补发 TOOL_CALL
@@ -5387,84 +5521,126 @@ export const useChatStreamStore = create(
                               });
                             }
                           } else if (tool.function.name === 'retrieve_code') {
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params: {
-                                    question: tool_params.search_query,
-                                    collection: parseAtMentionedCodeBaseByAttach(),
-                                  },
-                                  tool_id: tool.id,
-                                },
-                              },
-                              '*',
-                            );
-                          } else if (
-                            tool.function.name === 'retrieve_knowledge'
-                          ) {
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params: {
-                                    // messages: data.messages,
-                                    messages: [
-                                      {
-                                        role: 'user',
-                                        content: tool_params.search_query,
-                                      },
-                                    ],
-                                    input: tool_params.search_query,
-                                    docset: tool_params.docset_id,
-                                    model: data.model,
-                                  },
-                                  tool_id: tool.id,
-                                },
-                              },
-                              '*',
-                            );
-                          } else if (tool.function.name === 'read_file') {
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params,
-                                  tool_id: tool.id,
-                                },
-                              },
-                              '*',
-                            );
-                          } else if (tool.function.name === terminalCmdFunction) {
-                            if (useChatConfig.getState().autoExecute &&
-                              isCommandSafe(useConfigStore.getState().config.codeBaseCheckCommands, tool_params.command)
-                            ) {
-                              useChatStreamStore.getState().setIsTerminalProcessing(true)
+                            (async () => {
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                              );
+                              if (!allowed) return;
                               window.parent.postMessage(
                                 {
                                   type: BroadcastActions.TOOL_CALL,
                                   data: {
                                     tool_name: tool.function.name,
                                     tool_params: {
-                                      ...tool_params,
-                                      messageId: id,
-                                      is_approve: true,
+                                      question: tool_params.search_query,
+                                      collection: parseAtMentionedCodeBaseByAttach(),
                                     },
                                     tool_id: tool.id,
                                   },
                                 },
                                 '*',
-                              )
+                              );
+                            })();
+                          } else if (
+                            tool.function.name === 'retrieve_knowledge'
+                          ) {
+                            (async () => {
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params: {
+                                      // messages: data.messages,
+                                      messages: [
+                                        {
+                                          role: 'user',
+                                          content: tool_params.search_query,
+                                        },
+                                      ],
+                                      input: tool_params.search_query,
+                                      docset: tool_params.docset_id,
+                                      model: data.model,
+                                    },
+                                    tool_id: tool.id,
+                                  },
+                                },
+                                '*',
+                              );
+                            })();
+                          } else if (tool.function.name === 'read_file') {
+                            (async () => {
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params,
+                                    tool_id: tool.id,
+                                  },
+                                },
+                                '*',
+                              );
+                            })();
+                          } else if (tool.function.name === terminalCmdFunction) {
+                            if (useChatConfig.getState().autoExecute &&
+                              isCommandSafe(useConfigStore.getState().config.codeBaseCheckCommands, tool_params.command)
+                            ) {
+                              useChatStreamStore.getState().setIsTerminalProcessing(true);
+                              (async () => {
+                                const hookArgs = {
+                                  ...tool_params,
+                                  messageId: id,
+                                  is_approve: true,
+                                };
+                                const allowed = await runToolBeforeExecuteHook(
+                                  sessionId,
+                                  tool,
+                                  hookArgs,
+                                  get().updateToolCallResults,
+                                  {
+                                    event: 'terminal.beforeExecute',
+                                    payload: { command: tool_params?.command || '' },
+                                  },
+                                );
+                                if (!allowed) return;
+                                window.parent.postMessage(
+                                  {
+                                    type: BroadcastActions.TOOL_CALL,
+                                    data: {
+                                      tool_name: tool.function.name,
+                                      tool_params: hookArgs,
+                                      tool_id: tool.id,
+                                    },
+                                  },
+                                  '*',
+                                );
+                              })();
                             }
                           } else if (tool.function.name === 'ask_user_question') {
                             // ask_user_question 工具在 WebView 中本地处理，不发送 TOOL_CALL 到 IDE
                             // 用户在界面上交互后，通过 AskUserQuestion 组件提交结果
                             console.log('[Debug] ask_user_question tool intercepted (codebase), waiting for user response');
                           } else {
-                            if (['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name)) {
+                            const isFileEditTool = ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(tool.function.name);
+                            if (isFileEditTool) {
                               const filePath = tool_params.target_file;
                               const updateSnippet = tool_params.code_edit;
                               const replaceSnippet = tool_params.diff;
@@ -5490,17 +5666,35 @@ export const useChatStreamStore = create(
                                 },
                               })
                             }
-                            window.parent.postMessage(
-                              {
-                                type: BroadcastActions.TOOL_CALL,
-                                data: {
-                                  tool_name: tool.function.name,
-                                  tool_params,
-                                  tool_id: tool.id,
+                            (async () => {
+                              const extraEvent = isFileEditTool
+                                ? {
+                                    event: 'file.beforeEdit' as const,
+                                    payload: {
+                                      filePath: tool_params.target_file || '',
+                                    },
+                                  }
+                                : undefined;
+                              const allowed = await runToolBeforeExecuteHook(
+                                sessionId,
+                                tool,
+                                tool_params,
+                                get().updateToolCallResults,
+                                extraEvent,
+                              );
+                              if (!allowed) return;
+                              window.parent.postMessage(
+                                {
+                                  type: BroadcastActions.TOOL_CALL,
+                                  data: {
+                                    tool_name: tool.function.name,
+                                    tool_params,
+                                    tool_id: tool.id,
+                                  },
                                 },
-                              },
-                              '*',
-                            );
+                                '*',
+                              );
+                            })();
                           }
                         }
                       }
@@ -7148,6 +7342,67 @@ export const useChatAttach = create<ChatAttachStore>()((set) => ({
     set(() => ({ attachs: attach }));
   },
 }));
+
+/**
+ * 触发 tool.beforeExecute Hook 并根据决策决定是否继续。
+ * 若被 deny，则写入错误结果到 toolCallResults 并返回 false，调用方应 return。
+ */
+async function runToolBeforeExecuteHook(
+  sessionId: string,
+  tool: { id: string; function: { name: string } },
+  args: Record<string, unknown>,
+  updateToolCallResults: (results: Record<string, { path: string; content: string; isError?: boolean }>) => void,
+  extraHookEvent?: { event: 'terminal.beforeExecute' | 'file.beforeEdit'; payload: Record<string, unknown> },
+): Promise<boolean> {
+  try {
+    const hookData = {
+      sessionId,
+      toolName: tool.function.name,
+      toolCallId: tool.id,
+      args,
+    };
+    if (extraHookEvent) {
+      const extraResult = await useHookStore
+        .getState()
+        .emitBlockable(extraHookEvent.event, {
+          ...hookData,
+          ...extraHookEvent.payload,
+        });
+      if (extraResult.decision === 'deny') {
+        updateToolCallResults({
+          [tool.id]: {
+            path: '',
+            content: JSON.stringify({
+              error: true,
+              message: `Hook denied: ${extraResult.reason || 'blocked by hook'}`,
+            }),
+            isError: true,
+          },
+        });
+        return false;
+      }
+    }
+    const toolResult = await useHookStore
+      .getState()
+      .emitBlockable('tool.beforeExecute', hookData);
+    if (toolResult.decision === 'deny') {
+      updateToolCallResults({
+        [tool.id]: {
+          path: '',
+          content: JSON.stringify({
+            error: true,
+            message: `Hook denied: ${toolResult.reason || 'blocked by hook'}`,
+          }),
+          isError: true,
+        },
+      });
+      return false;
+    }
+  } catch (e) {
+    void e;
+  }
+  return true;
+}
 
 function checkCodeBlockIsClose(content: string) {
   const flags = content.match(new RegExp(CODE_BACKTICKS, 'gm'));

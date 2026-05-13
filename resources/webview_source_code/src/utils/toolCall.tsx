@@ -4,8 +4,8 @@ import { ChatMessage, ChatMessageContent, ToolCall, ToolResult } from "../servic
 import { ChatModel } from "../services/chatModel";
 import { ChatSession } from "../store/chat";
 import { useChatConfig } from "../store/chat-config";
-import { processMakePlanDenied, processMakePlanResult } from "../store/workspace/tools/plan";
-import { processWriteTodoDenied, processWriteTodoResult } from "../store/workspace/tools/todo";
+import { processMakePlanDenied, processMakePlanResult } from "../services/harness/tools/plan";
+import { processWriteTodoDenied, processWriteTodoResult } from "../services/harness/tools/todo";
 import { formatSkillContent, parseSkillToolResult } from "../store/skills";
 import { isImageFileByPath, truncateContent } from ".";
 import { onChunkLoadError } from "./chunkErrorHandler";
@@ -41,6 +41,8 @@ export function getToolCallQuery(name: string, args: string) {
       return '读取下列相关知识片段';
     case 'use_mcp_tool':
       return '调用MCP工具';
+    case 'search_tool':
+      return '检索 MCP 工具';
     case 'access_mcp_resource':
       return '获取MCP资源';
     case 'edit_file':
@@ -99,6 +101,8 @@ export function getToolName(tool: ToolCall) {
       return '检索知识库';
     case 'use_mcp_tool':
       return '调用MCP工具';
+    case 'search_tool':
+      return '检索结果';
     case 'access_mcp_resource':
       return '获取MCP资源';
     case 'edit_file':
@@ -111,10 +115,37 @@ export function getToolName(tool: ToolCall) {
       return '执行终端命令';
     case 'make_plan':
       return '制定计划';
+    case 'write_todo':
+      return '写入待办事项';
     case 'generate_codewiki_structure':
       return '生成Codewiki结构';
     case 'glob_search':
       return 'Glob搜索';
+   case 'grep_search': {
+      try {
+        const args = JSON.parse(tool.function.arguments || '{}');
+        return args.regex ? `grep搜索: ${args.regex}` : 'grep搜索';
+      } catch {
+        return 'grep搜索';
+      }
+    }
+    case 'use_skill': {
+      try {
+        const args = JSON.parse(tool.function.arguments || '{}');
+        const skillNames = Array.isArray(args.skill_name)
+          ? args.skill_name
+          : (args.skill_name ? [args.skill_name] : []);
+        return skillNames.length ? `加载Skill: ${skillNames.join(', ')}` : '加载Skill';
+      } catch {
+        return '加载Skill';
+      }
+    }
+    case 'task':
+      return '运行Subagent';
+    case 'write':
+      return '写入文件';
+    case 'edit':
+      return '编辑文件';
     case 'ask_user_question':
       return '向用户提问';
     default:

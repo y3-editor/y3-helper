@@ -4,7 +4,8 @@
  */
 
 import { useMCPStore } from '../../store/mcp';
-import { generateSkillsPromptSection } from '../../store/skills/prompt';
+import { generateCavemanPromptSection, generateSkillsPromptSection } from '../../store/skills/prompt';
+import { useChatConfig } from '../../store/chat-config';
 import { OPENSPEC_RULES } from '../../store/workspace/openSpecRules';
 import { ChatApplyType, useChatApplyStore } from '../../store/chatApply';
 import { versionCompare } from '../../utils/common';
@@ -22,15 +23,19 @@ export const generateMCPPrompt: PromptGenerator = async (context) => {
   const getChineseNameByServerName = useMCPStore.getState().getChineseNameByServerName;
 
   // 在代码中组装好完整的内容，模板只负责插入变量
-  const serversContent = mcpServers
+  const serversContent = [...mcpServers]
     .filter((server) => server.status === "connected" && !server.disabled)
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((server) => {
-      const tools = server.tools
-        ?.map((tool) => {
-          const schemaStr = tool.inputSchema
-            ? `    Input Schema:
-  ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-            : ""
+      const tools = [...(server.tools || [])]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((tool) => {
+          if (!tool.inputSchema) {
+            return `- ${tool.name}`;
+          }
+
+          const schemaStr = `    Input Schema:
+  ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`;
 
           return `- ${tool.name}: ${tool.description}\n${schemaStr}`
         })
@@ -70,6 +75,14 @@ export const generateSkillsPrompt: PromptGenerator = (context) => {
   if (!config.enableSkills || !skills.length) return null;
 
   return generateSkillsPromptSection(skills);
+};
+
+/**
+ * 生成 Caveman 简洁模式 prompt
+ */
+export const generateCavemanPrompt: PromptGenerator = () => {
+  const { cavemanMode } = useChatConfig.getState();
+  return generateCavemanPromptSection(cavemanMode);
 };
 
 /**
@@ -167,7 +180,26 @@ export const generateTerminalPrompt: PromptGenerator = async (context) => {
     osName: workspace?.osName || 'Unknown',
   };
 
-  return await PromptTemplateLoader.renderTemplate('terminal', variables);
+  let prompt = '';
+  try {
+    prompt = (await PromptTemplateLoader.renderTemplate('terminal', variables)) || '';
+  } catch (error) {
+    console.warn('terminal 模板加载失败:', error);
+  }
+
+  if (config.enableRtk) {
+    const rtkTemplate = workspace?.osName?.toLowerCase().includes('windows')
+      ? 'terminal-rtk'
+      : 'terminal-rtk-slim';
+    try {
+      const rtkPrompt = (await PromptTemplateLoader.renderTemplate(rtkTemplate)) || '';
+      if (rtkPrompt) prompt += '\n' + rtkPrompt;
+    } catch (error) {
+      console.warn(`${rtkTemplate} 模板加载失败，跳过 RTK 增强:`, error);
+    }
+  }
+
+  return prompt;
 };
 
 /**

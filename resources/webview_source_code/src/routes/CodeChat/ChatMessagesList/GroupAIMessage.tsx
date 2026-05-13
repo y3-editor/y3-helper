@@ -177,6 +177,11 @@ function ShareToolCallItem({
       {/* 内层内容区 */}
       {!isCollapsed && (
         <Box>
+          {typeof message.content === 'string' && message.content && message.content !== '-' && (
+            <Box px={2} py={1.5} fontSize="13px" color="text.primary">
+              {message.content}
+            </Box>
+          )}
           <ToolCall message={message} isShare isLatest={isLatest} />
         </Box>
       )}
@@ -191,7 +196,7 @@ function ShareToolCallPanel({
   isToolCallSelected,
   onToggleToolCallRound,
   userMsgId,
-  toolCallMessages,
+  allMessages,
   isLatest,
   isUserMsgSelected,
 }: {
@@ -200,7 +205,7 @@ function ShareToolCallPanel({
   isToolCallSelected?: boolean;
   onToggleToolCallRound?: (userMsgId: string) => void;
   userMsgId: string;
-  toolCallMessages: ChatMessage[];
+  allMessages: ChatMessage[];
   isLatest: boolean | undefined;
   isUserMsgSelected?: boolean;
 }) {
@@ -253,16 +258,18 @@ function ShareToolCallPanel({
               color="text.secondary"
             />
           </Flex>
-          {/* 展开后的内层工具列表 */}
+          {/* 展开后：只渲染含 tool_calls 的消息，文字+工具按顺序显示 */}
           {!isToolCallCollapsed && (
             <Box px={2} pb={2}>
-              {toolCallMessages.map((msg, idx) => (
-                <ShareToolCallItem
-                  key={`${msg.id || ''}-${idx}`}
-                  message={msg}
-                  isLatest={isLatest}
-                />
-              ))}
+              {allMessages
+                .filter((msg) => msg.tool_calls?.length)
+                .map((msg, idx) => (
+                  <ShareToolCallItem
+                    key={`${msg.id || ''}-${idx}`}
+                    message={msg}
+                    isLatest={isLatest}
+                  />
+                ))}
             </Box>
           )}
         </Box>
@@ -390,45 +397,43 @@ function OuterCollapseWrapper({
   // 收藏模式：工具调用折叠状态
   const [isToolCallCollapsed, setIsToolCallCollapsed] = React.useState(true);
 
-  // ===== 收藏模式下的渲染：工具调用 UI 聚合到折叠框，消息保持原始顺序但隐藏工具调用 =====
+  // ===== 收藏模式下的渲染：工具调用 UI 聚合到折叠框，内部按原始顺序混排 =====
   if (isShare && hasToolCalls && userMsgId) {
-    // 收集所有含 tool_calls 的消息，用于在折叠框中渲染 ToolCall 组件
-    const toolCallMessages = mergedMessages
-      .filter((g) => isToolCallGroup(g))
-      .map((g) => g.messages[0]);
+    // 所有消息按原始顺序传入
+    const allMessages = mergedMessages.map((g) => g.messages[0]);
 
     return (
       <>
-        {/* 工具调用聚合框 */}
         <ShareToolCallPanel
           isToolCallCollapsed={isToolCallCollapsed}
           setIsToolCallCollapsed={setIsToolCallCollapsed}
           isToolCallSelected={isToolCallSelected}
           onToggleToolCallRound={onToggleToolCallRound}
           userMsgId={userMsgId}
-          toolCallMessages={toolCallMessages}
+          allMessages={allMessages}
           isLatest={isLatest}
           isUserMsgSelected={isUserMsgSelected}
         />
-        {/* 所有消息保持原始顺序渲染，但隐藏工具调用 UI */}
-        {mergedMessages.map((group) => {
-          const message = group.messages[0];
-          const index = group.indices[0];
-          return (
-            <ChatAssistantMessage
-              key={(message?.id || '') + index}
-              index={index}
-              message={message}
-              isLatest={isLatest}
-              isRecent={index === mergedMessages.length - 1 && isLatest}
-              attachs={attachs}
-              onNewSession={onNewSession}
-              isShare={isShare}
-              setRecommendFileChanges={setRecommendFileChanges}
-              hideToolCalls
-            />
-          );
-        })}
+        {/* 纯文字消息（无 tool_calls）在大盒子外部按顺序渲染 */}
+        {mergedMessages
+          .filter((group) => !group.messages[0].tool_calls?.length)
+          .map((group) => {
+            const message = group.messages[0];
+            const index = group.indices[0];
+            return (
+              <ChatAssistantMessage
+                key={(message?.id || '') + index}
+                index={index}
+                message={message}
+                isLatest={isLatest}
+                isRecent={index === mergedMessages.length - 1 && isLatest}
+                attachs={attachs}
+                onNewSession={onNewSession}
+                isShare={isShare}
+                setRecommendFileChanges={setRecommendFileChanges}
+              />
+            );
+          })}
       </>
     );
   }
