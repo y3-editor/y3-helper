@@ -96,9 +96,6 @@ const PromptsPanel = (
   const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion);
   const { postMessage, message } = usePostMessage();
   const { toast } = useCustomToast();
-  const setCodebaseChatMode = useChatStore(
-    (state) => state.setCodebaseChatMode,
-  );
   const { panelId: currentPanelId } = usePanelContext();
 
   const isVscode = ide === 'vscode';
@@ -363,28 +360,7 @@ const PromptsPanel = (
           type: PromptCategoryType._CodeMaker,
         },
       });
-      unionData.push({
-        name: 'set-openspec',
-        description: '将当前会话模式设置为 openspec',
-        type: UnionType.Prompt,
-        meta: {
-          name: 'set-openspec',
-          prompt: '会话切换到 openspec',
-          _id: '/set-openspec',
-          type: PromptCategoryType._CodeMaker,
-        },
-      });
-      unionData.push({
-        name: 'set-speckit',
-        description: '将当前会话模式设置为 speckit',
-        type: UnionType.Prompt,
-        meta: {
-          name: 'set-speckit',
-          prompt: '会话切换到 speckit',
-          _id: '/set-speckit',
-          type: PromptCategoryType._CodeMaker,
-        },
-      });
+      // Y3不需要OpenSpec/Speckit模式切换：移除 set-openspec / set-speckit 入口
       if (chatType === 'codebase' && !chatModels[chatConfig.model]?.isPrivate)
         unionData.push({
           name: 'Compress',
@@ -680,16 +656,6 @@ const PromptsPanel = (
             if (userInputRef.current) {
               userInputRef.current.value = '';
             }
-          } else if (prompt.name === 'set-openspec') {
-            if (userInputRef.current) {
-              userInputRef.current.value = '';
-            }
-            setCodebaseChatMode('openspec');
-          } else if (prompt.name === 'set-speckit') {
-            if (userInputRef.current) {
-              userInputRef.current.value = '';
-            }
-            setCodebaseChatMode('speckit');
           } else if (prompt.name === 'Compress') {
             const currentSessionId = useChatStore.getState().currentSessionId;
             if (currentSessionId) {
@@ -803,7 +769,6 @@ const PromptsPanel = (
       setOpenspecUpdateModalVisible,
       handleNewSessionCommand,
       clearSession,
-      setCodebaseChatMode,
       MCPServers,
       setPendingRunner,
       postMessage,
