@@ -769,13 +769,38 @@ export class McpHub {
 
     // ─── 自动重试 ────────────────────────────────────
 
+    /**
+     * 判断错误是否属于「会话已失效、重建连接可恢复」的类型。
+     * SSE transport 在服务端重启后，EventSource 会自动重连 SSE 流，但 SDK
+     * 不会重新读取新的 endpoint，client 仍往旧 sessionId POST，服务端通常
+     * 回 -32602 Invalid request parameters / Session not found。
+     */
+    private isSessionExpiredError(error: unknown, connection: McpConnection): boolean {
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        if (errorMessage.includes("SessionExpired") || errorMessage.includes("HTTP 401")) {
+            return true;
+        }
+        if (connection.transport instanceof SSEClientTransport && (
+            errorMessage.includes("-32602") ||
+            errorMessage.includes("Invalid request parameters") ||
+            errorMessage.includes("Session not found") ||
+            errorMessage.includes("Bad Request")
+        )) {
+            return true;
+        }
+        return false;
+    }
+
     private async executeWithRetry<T>(
         serverName: string,
         operation: (connection: McpConnection) => Promise<T>,
+        options?: {
+            noConnectionErrorMessage?: string;
+        },
     ): Promise<T> {
         let connection = this.connections.find((conn) => conn.server.name === serverName);
         if (!connection) {
-            throw new Error(`No connection found for server: ${serverName}`);
+            throw new Error(options?.noConnectionErrorMessage || `No connection found for server: ${serverName}`);
         }
         if (connection.server.disabled) {
             throw new Error(`Server "${serverName}" is disabled`);
@@ -784,13 +809,12 @@ export class McpHub {
         try {
             return await operation(connection);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-            if (errorMessage.includes("SessionExpired") || errorMessage.includes("HTTP 401")) {
+            if (this.isSessionExpiredError(error, connection)) {
                 console.log(`[McpHub] Session expired for ${serverName}, reconnecting...`);
                 await this.restartConnection(serverName);
-                connection = this.connections.find((conn) => conn.server.name === serverName);
-                if (connection && !connection.server.disabled) {
-                    return await operation(connection);
+                const retriedConnection = this.connections.find((conn) => conn.server.name === serverName);
+                if (retriedConnection && !retriedConnection.server.disabled && retriedConnection.server.status === 'connected') {
+                    return await operation(retriedConnection);
                 }
             }
             if (connection) {
@@ -803,35 +827,30 @@ export class McpHub {
     // ─── 公共 API: 工具调用 / 资源读取 / Prompt ─────
 
     async callTool(serverName: string, toolName: string, toolArguments?: Record<string, unknown>): Promise<any> {
-        const connection = this.connections.find((conn) => conn.server.name === serverName);
-        if (!connection) {
-            throw new Error(`No connection found for server: ${serverName}. Available: ${this.connections.map(c => c.server.name).join(", ")}`);
-        }
-        if (connection.server.disabled) {
-            throw new Error(`Server "${serverName}" is disabled`);
-        }
+        return this.executeWithRetry(
+            serverName,
+            async (connection) => {
+                let timeout = secondsToMs(DEFAULT_MCP_TIMEOUT_SECONDS);
+                try {
+                    const config = JSON.parse(connection.server.config);
+                    const parsedConfig = ServerConfigSchema.parse(config);
+                    timeout = secondsToMs(parsedConfig.timeout);
+                } catch { /* use default */ }
 
-        let timeout = secondsToMs(DEFAULT_MCP_TIMEOUT_SECONDS);
-        try {
-            const config = JSON.parse(connection.server.config);
-            const parsedConfig = ServerConfigSchema.parse(config);
-            timeout = secondsToMs(parsedConfig.timeout);
-        } catch { /* use default */ }
+                console.log(`[McpHub] Calling ${serverName}.${toolName} (timeout: ${msToSeconds(timeout)}s)`);
 
-        console.log(`[McpHub] Calling ${serverName}.${toolName} (timeout: ${msToSeconds(timeout)}s)`);
+                const result = await connection.client.request(
+                    { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
+                    CallToolResultSchema,
+                    { timeout },
+                );
 
-        try {
-            const result = await connection.client.request(
-                { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
-                CallToolResultSchema,
-                { timeout },
-            );
-
-            return { ...result, content: result.content ?? [] };
-        } catch (error) {
-            this.handleTransportError(connection, error);
-            throw error;
-        }
+                return { ...result, content: result.content ?? [] };
+            },
+            {
+                noConnectionErrorMessage: `No connection found for server: ${serverName}. Available: ${this.connections.map(c => c.server.name).join(", ")}`,
+            },
+        );
     }
 
     async readResource(serverName: string, uri: string): Promise<McpResourceResponse> {
