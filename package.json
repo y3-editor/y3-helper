@@ -462,15 +462,17 @@
                 },
                 "Y3Maker.CodeChatWireApi": {
                     "title": "Y3Maker API 协议",
-                    "description": "选择 API 通信协议。chat-completions: 标准 OpenAI Chat Completions API（默认，兼容大多数服务商）；responses: OpenAI Responses API（适用于 RightCode 等服务商）。",
+                    "description": "选择 API 通信协议。chat-completions: 标准 OpenAI Chat Completions API（默认，兼容大多数服务商）；responses: OpenAI Responses API（适用于 RightCode 等服务商）；anthropic-messages: Anthropic Messages API（适用于 Anthropic、Kimi 等 Anthropic 兼容服务商）。",
                     "type": "string",
                     "enum": [
                         "chat-completions",
-                        "responses"
+                        "responses",
+                        "anthropic-messages"
                     ],
                     "enumDescriptions": [
                         "Chat Completions API (POST /v1/chat/completions) - 兼容 LinkAPI、OneAPI 等大多数服务商",
-                        "Responses API (POST /v1/responses) - 适用于 RightCode 等使用新协议的服务商"
+                        "Responses API (POST /v1/responses) - 适用于 RightCode 等使用新协议的服务商",
+                        "Anthropic Messages API (POST /v1/messages) - 适用于 Anthropic、Kimi 等 Anthropic 兼容服务商"
                     ],
                     "default": "chat-completions",
                     "scope": "resource"
@@ -571,6 +573,7 @@
         "sync:verify": "npx tsx sync_scripts/sync-upstream.ts verify"
     },
     "dependencies": {
+        "@anthropic-ai/sdk": "^0.96.0",
         "@modelcontextprotocol/sdk": "^1.13.1",
         "@msgpack/msgpack": "^3.1.3",
         "@vscode/l10n": "^0.0.18",

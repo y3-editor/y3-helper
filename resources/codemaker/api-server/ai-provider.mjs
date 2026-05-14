@@ -6,6 +6,14 @@
  */
 
 import { config } from './config.mjs';
+import {
+  buildAnthropicClient,
+  buildAnthropicMessagesRequest,
+  convertAnthropicMessageToOpenAI,
+  convertAnthropicStreamEventToOpenAISSE,
+  createAnthropicStreamState,
+  normalizeProviderError,
+} from './anthropic-messages-adapter.mjs';
 
 // 请求超时时间（60秒）
 const REQUEST_TIMEOUT = 60000;
@@ -548,6 +556,81 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
  * @param {Object} requestBody - 完整的请求体（包含 messages, model 等）
  * @param {import('http').ServerResponse} res - HTTP 响应对象
  */
+/**
+ * Stream with the Anthropic Messages protocol and keep Chat Completions SSE for the frontend.
+ */
+async function streamAnthropicMessagesApi(requestBody, res, apiKey, baseUrl) {
+  const client = buildAnthropicClient({
+    apiKey,
+    baseUrl,
+    timeout: REQUEST_TIMEOUT,
+  });
+  const apiRequestBody = buildAnthropicMessagesRequest(requestBody, {
+    model: config.model || requestBody.model,
+    baseUrl,
+  });
+  apiRequestBody.stream = true;
+
+  console.log(`[AI Provider] [Anthropic Messages] Request ${baseUrl} using model ${apiRequestBody.model}`);
+
+  try {
+    const stream = await client.messages.create(apiRequestBody);
+    if (!res.headersSent) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+    }
+
+    const streamState = createAnthropicStreamState();
+    for await (const event of stream) {
+      const converted = convertAnthropicStreamEventToOpenAISSE(event, streamState);
+      if (converted) {
+        res.write(converted);
+      }
+    }
+    if (!res.writableEnded) {
+      res.end();
+    }
+  } catch (error) {
+    console.error('[AI Provider] [Anthropic Messages] request error:', error);
+    const normalized = normalizeProviderError(error, { baseUrl });
+    sendErrorSSE(res, `API request failed (${normalized.status})\n\n${normalized.message}`);
+  }
+}
+
+/**
+ * Send a non-streaming Anthropic Messages request and convert it to Chat Completions JSON.
+ */
+async function chatCompletionAnthropicMessages(requestBody, res, apiKey, baseUrl) {
+  const client = buildAnthropicClient({
+    apiKey,
+    baseUrl,
+    timeout: REQUEST_TIMEOUT,
+  });
+  const apiRequestBody = buildAnthropicMessagesRequest(requestBody, {
+    model: config.model || requestBody.model,
+    baseUrl,
+  });
+  delete apiRequestBody.stream;
+
+  console.log(`[AI Provider] [Anthropic Messages non-streaming] Request ${baseUrl} using model ${apiRequestBody.model}`);
+
+  try {
+    const message = await client.messages.create(apiRequestBody);
+    const data = convertAnthropicMessageToOpenAI(message);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+  } catch (error) {
+    console.error('[AI Provider] [Anthropic Messages non-streaming] request error:', error);
+    const normalized = normalizeProviderError(error, { baseUrl });
+    res.writeHead(normalized.status || 500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: normalized.message, detail: normalized.raw }));
+  }
+}
+
 export async function chatCompletion(requestBody, res) {
   const apiKey = extractApiKey(requestBody);
   const baseUrl = extractBaseUrl(requestBody);
@@ -556,6 +639,10 @@ export async function chatCompletion(requestBody, res) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Missing API Key or Base URL' }));
     return;
+  }
+
+  if (config.wireApi === 'anthropic-messages') {
+    return chatCompletionAnthropicMessages(requestBody, res, apiKey, baseUrl);
   }
 
   const url = buildChatCompletionsUrl(baseUrl);
@@ -646,6 +733,11 @@ export async function streamChatCompletion(requestBody, res) {
   }
 
   // 根据 wireApi 配置选择协议
+  if (config.wireApi === 'anthropic-messages') {
+    console.log('[AI Provider] 使用 Anthropic Messages API 协议');
+    return streamAnthropicMessagesApi(requestBody, res, apiKey, baseUrl);
+  }
+
   if (config.wireApi === 'responses') {
     console.log('[AI Provider] 使用 Responses API 协议');
     return streamResponsesApi(requestBody, res, apiKey, baseUrl);

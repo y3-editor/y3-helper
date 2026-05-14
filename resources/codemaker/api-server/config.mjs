@@ -18,7 +18,7 @@ export const config = {
   // API 基础地址（可选，客户端必须提供）
   baseUrl: process.env.AI_API_BASE_URL || process.env.LINKAPI_BASE_URL || '',
   
-  // API 协议类型：'chat-completions' (默认) 或 'responses'
+  // API 协议类型：'chat-completions' (默认)、'responses' 或 'anthropic-messages'
   wireApi: process.env.AI_WIRE_API || 'chat-completions',
 
   // 模型名称（由 VSCode 设置 Y3Maker.CodeChatModel 提供）
