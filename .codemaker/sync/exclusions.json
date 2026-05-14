@@ -193,7 +193,10 @@
     "merge_e545978e": "MERGED: fix: deepseek 路径幻觉 (e545978e)。2026-04-30 webui 轮。仅 store/chat.ts 部分需手合（ChatModelSelector/ChatEffotSelect.tsx 部分因目录已 SKIP 自然丢弃）",
     "merge_7df7f892": "MERGED: chore: 流式请求时增加 ntes-trace-id 追踪 (7df7f892)。2026-04-30 webui 轮。harness/stream/{aigwCodebase,azureOpenAI,base/interface,cmCodebase} 直接覆盖。ntes-trace-id 是网易内部追踪头",
     "merge_b2fe1971": "MERGED: chore: 调整 read_file 读取路径说明 (b2fe1971)。2026-04-30 webui 轮。harness/tools/read.ts 直接覆盖（提示文案）",
-    "merge_cb3577a4": "MERGED: style: 调整限额展示文案 (cb3577a4)。2026-04-30 webui 轮。ChatMentionAreatext.tsx 直接覆盖（UI 文案）"
+    "merge_cb3577a4": "MERGED: style: 调整限额展示文案 (cb3577a4)。2026-04-30 webui 轮。ChatMentionAreatext.tsx 直接覆盖（UI 文案）",
+    "merge_32e9b7f7": "MERGED: feat: 支持动态配置技能目录加载 .claude/.codemaker/.agent (32e9b7f7)。2026-04-30 extension 轮。手合至 src/codemaker/skillsHandler.ts：加 SkillSourcesConfig + loadSkillSourcesConfig + getActiveSkillSources + registerConfigurationListener；3 处 SKILL_SOURCES 循环改 getActiveSkillSources()。命名空间从上游 CodeMaker.SkillSources 改为 Y3Maker.SkillSources，package.json 字段从 codemakerSkillSources 改为 y3makerSkillSources。SkillSourcesConfig 扩展 y3maker 字段（Y3 专属来源）。未在 package.json contributes.configuration 注册 schema（保持 Y3 不引入新设置项的惯例，默认全开），后续如需图形化配置加 schema 即可",
+    "skip_3212d1fb": "SKIP: chore: 发布 v26.4.10 版本 (3212d1fb)。2026-04-30 extension 轮。版本号 bump + CHANGELOG，Y3 不跟",
+    "skip_4ee76a4b": "SKIP: docs: 更新 CHANGELOG 并同步 agent 资源包 (4ee76a4b)。2026-04-30 extension 轮。agent 资源包是 codemaker 自带的 .agent/ 内置技能，Y3 不带"
   },
 
   "_merge_lessons_learned": {

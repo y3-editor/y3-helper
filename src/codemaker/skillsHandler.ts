@@ -78,6 +78,103 @@ const SKILL_SOURCES: SkillSourceConfig[] = [
 ];
 
 // ─────────────────────────────────────────────
+//  技能源动态配置（合自上游 32e9b7f7）
+// ─────────────────────────────────────────────
+
+/**
+ * 技能源开关配置接口。
+ * 控制哪些类型的技能目录应被加载，未设置或为 true 时默认加载。
+ *
+ * 来源：上游 codestream-vscode-extension 32e9b7f7 feat 引入。
+ * Y3 扩展：新增 y3maker 字段控制 .y3maker/ 来源（Y3 专属）。
+ */
+interface SkillSourcesConfig {
+  /** 是否加载 y3maker 相关技能源（y3maker-user, y3maker-project），默认 true。Y3 专属 */
+  y3maker?: boolean;
+  /** 是否加载 codemaker 相关技能源（codemaker-user, codemaker-project），默认 true */
+  codemaker?: boolean;
+  /** 是否加载 claude 相关技能源（claude-user, claude-project），默认 true */
+  claude?: boolean;
+  /** 是否加载 agents 相关技能源（agents-user, agents-project），默认 true */
+  agents?: boolean;
+}
+
+/**
+ * 加载技能源配置。
+ *
+ * 优先从 VSCode 配置读取 `Y3Maker.SkillSources`，回退到 workspace package.json
+ * 的 `y3makerSkillSources` 字段，再回退到默认（全开）。
+ *
+ * 注：当前 Y3 未在 package.json `contributes.configuration` 注册
+ * `Y3Maker.SkillSources` schema，因此用户在 Settings UI 中看不到此项；
+ * 默认全开即可满足绝大多数场景。如未来需要图形化配置，加 schema 即可。
+ */
+function loadSkillSourcesConfig(): SkillSourcesConfig {
+  try {
+    // 1. 优先读 VSCode 配置（Y3Maker.SkillSources）
+    const vsCodeConfig = vscode.workspace.getConfiguration('Y3Maker');
+    const skillSourcesConfig = vsCodeConfig.get<any>('SkillSources');
+
+    if (skillSourcesConfig && typeof skillSourcesConfig === 'object') {
+      const result: SkillSourcesConfig = {
+        y3maker: skillSourcesConfig.y3maker !== false,
+        codemaker: skillSourcesConfig.codemaker !== false,
+        claude: skillSourcesConfig.claude !== false,
+        agents: skillSourcesConfig.agents !== false,
+      };
+      console.log(`[SkillsHandler] Loaded skill sources config from VSCode settings: y3maker=${result.y3maker}, codemaker=${result.codemaker}, claude=${result.claude}, agents=${result.agents}`);
+      return result;
+    }
+
+    // 2. 回退到 workspace package.json 的 y3makerSkillSources
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      console.log('[SkillsHandler] No workspace folder, using default config (all enabled)');
+      return { y3maker: true, codemaker: true, claude: true, agents: true };
+    }
+
+    const packageJsonPath = path.join(workspaceFolders[0].uri.fsPath, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+      return { y3maker: true, codemaker: true, claude: true, agents: true };
+    }
+
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const config = packageJson.y3makerSkillSources;
+    if (!config || typeof config !== 'object') {
+      return { y3maker: true, codemaker: true, claude: true, agents: true };
+    }
+
+    const result: SkillSourcesConfig = {
+      y3maker: config.y3maker !== false,
+      codemaker: config.codemaker !== false,
+      claude: config.claude !== false,
+      agents: config.agents !== false,
+    };
+    console.log(`[SkillsHandler] Loaded skill sources config from package.json: y3maker=${result.y3maker}, codemaker=${result.codemaker}, claude=${result.claude}, agents=${result.agents}`);
+    return result;
+  } catch (err: any) {
+    console.log(`[SkillsHandler] Config error: ${err?.message}, using default sources (all enabled)`);
+    return { y3maker: true, codemaker: true, claude: true, agents: true };
+  }
+}
+
+/**
+ * 按当前配置过滤 SKILL_SOURCES，返回应被加载的技能源列表。
+ */
+function getActiveSkillSources(): SkillSourceConfig[] {
+  const config = loadSkillSourcesConfig();
+  const activeSources = SKILL_SOURCES.filter((source) => {
+    if (source.source.startsWith('y3maker-')) return config.y3maker !== false;
+    if (source.source.startsWith('codemaker-')) return config.codemaker !== false;
+    if (source.source.startsWith('claude-')) return config.claude !== false;
+    if (source.source.startsWith('agents-')) return config.agents !== false;
+    return true;
+  });
+  console.log(`[SkillsHandler] Active skill sources: ${activeSources.map(s => s.source).join(', ')} (${activeSources.length}/${SKILL_SOURCES.length})`);
+  return activeSources;
+}
+
+// ─────────────────────────────────────────────
 //  内联 MdcParser
 // ─────────────────────────────────────────────
 
@@ -217,6 +314,9 @@ export class SkillsHandler {
       this.syncSkills();
       await this.initializeFileWatcher();
 
+      // 注册 Y3Maker.SkillSources 配置变更监听（合自上游 32e9b7f7）
+      this.registerConfigurationListener();
+
       this.isInitialized = true;
       console.log('[SkillsHandler] Initialization completed - skillsCount:', this.skills.size);
     } catch (error: any) {
@@ -257,7 +357,7 @@ export class SkillsHandler {
     const result: { skills: Skill[]; errors: { path: string; error: string }[] } = { skills: [], errors: [] };
     this.skills.clear();
 
-    for (const sourceConfig of SKILL_SOURCES) {
+    for (const sourceConfig of getActiveSkillSources()) {
       try {
         const basePaths = this.getSourceBasePaths(sourceConfig);
         if (basePaths.length === 0 && !sourceConfig.isUserLevel) {
@@ -434,7 +534,7 @@ export class SkillsHandler {
     // 轮询兜底
     this.disposables.push(this.startDirectoryPolling(scheduleReload));
 
-    for (const sourceConfig of SKILL_SOURCES) {
+    for (const sourceConfig of getActiveSkillSources()) {
       const basePaths = this.getSourceBasePaths(sourceConfig);
       if (basePaths.length === 0 && !sourceConfig.isUserLevel) {
         continue;
@@ -531,7 +631,7 @@ export class SkillsHandler {
       if (polling) { return; }
       polling = true;
       try {
-        for (const sourceConfig of SKILL_SOURCES) {
+        for (const sourceConfig of getActiveSkillSources()) {
           const basePaths = this.getSourceBasePaths(sourceConfig);
           for (const basePath of basePaths) {
             const skillsPath = path.join(basePath, sourceConfig.directory);
@@ -953,6 +1053,33 @@ export class SkillsHandler {
       req.on('error', reject);
       req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
     });
+  }
+
+  // ── registerConfigurationListener ──
+
+  /**
+   * 监听 Y3Maker.SkillSources 配置变更，热重载技能。
+   * 合自上游 codestream-vscode-extension 32e9b7f7（命名空间从 CodeMaker 改为 Y3Maker）。
+   * 注：当前 Y3 未注册此 schema，VSCode Settings UI 无入口；用户可通过手动编辑
+   * settings.json 或 workspace package.json 的 y3makerSkillSources 字段触发。
+   */
+  private registerConfigurationListener(): void {
+    const configListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (!e.affectsConfiguration('Y3Maker.SkillSources')) { return; }
+
+      console.log('[SkillsHandler] Y3Maker.SkillSources changed, reloading skills...');
+      try {
+        await this.loadSkills();
+        this.syncSkills();
+        // 文件监听器需重新初始化以匹配新的激活源集合
+        // Y3 file watcher 由 disposables 统一管理，此处直接重建
+        await this.initializeFileWatcher();
+        console.log(`[SkillsHandler] Skills reloaded after config change - count: ${this.skills.size}`);
+      } catch (error: any) {
+        console.log(`[SkillsHandler] Failed to reload skills after config change: ${error?.message}`);
+      }
+    });
+    this.disposables.push(configListener);
   }
 
   // ── dispose ──
