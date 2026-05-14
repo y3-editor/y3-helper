@@ -43,7 +43,6 @@ export interface SkillIndexItem {
   path: string;
   userInvocable?: boolean;
   disabled?: boolean;
-  autoRun?: boolean;
 }
 
 export interface UseSkillResult {
@@ -61,7 +60,6 @@ export interface UseSkillResult {
 export interface SkillConfig {
   name: string;
   disabled: boolean;
-  autoRun?: boolean;
 }
 
 // ─────────────────────────────────────────────
@@ -583,7 +581,7 @@ export class SkillsHandler {
         source: skill.source,
         path: skill.path,
         userInvocable: skill.metaData.userInvocable,
-        ...(cfg ? { disabled: cfg.disabled, autoRun: cfg.autoRun } : {}),
+        ...(cfg ? { disabled: cfg.disabled } : {}),
       };
     });
   }
@@ -698,17 +696,16 @@ export class SkillsHandler {
   public handleUpdateSkillConfig(data: any, context?: vscode.ExtensionContext): void {
     if (context) { this.context = context; }
     try {
-      const { name, disabled, autoRun } = data || {};
+      const { name, disabled } = data || {};
       if (!name) { return; }
 
       const existing = this.skillConfigs.get(name);
       this.skillConfigs.set(name, {
         name,
         disabled: !!disabled,
-        autoRun: autoRun !== undefined ? !!autoRun : existing?.autoRun,
       });
       this.persistSkillConfigs();
-      console.log(`[SkillsHandler] Updated skillConfig: ${name} disabled=${disabled} autoRun=${autoRun}`);
+      console.log(`[SkillsHandler] Updated skillConfig: ${name} disabled=${disabled}`);
 
       // 推送通知到 Webview
       const statusText = disabled ? '已关闭' : '已启用';

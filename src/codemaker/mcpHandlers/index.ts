@@ -162,9 +162,29 @@ export class McpHub {
     connections: McpConnection[] = [];
     isConnecting: boolean = false;
     private notifyCallback: McpNotifyCallback;
+    // 配置文件写入锁，防止并发读写竞态
+    private configLock: Promise<void> = Promise.resolve();
 
     constructor(notifyCallback: McpNotifyCallback) {
         this.notifyCallback = notifyCallback;
+    }
+
+    /**
+     * 使用 Promise 链实现简易互斥锁，确保配置文件读写操作串行执行
+     * @param fn 需要串行执行的异步操作
+     */
+    private async withConfigLock<T>(fn: () => Promise<T>): Promise<T> {
+        let release: () => void;
+        const waitForLock = this.configLock;
+        this.configLock = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        await waitForLock;
+        try {
+            return await fn();
+        } finally {
+            release!();
+        }
     }
 
     /**
@@ -818,7 +838,7 @@ export class McpHub {
                 }
             }
             if (connection) {
-                this.handleTransportError(connection, error);
+                await this.handleTransportError(connection, error);
             }
             throw error;
         }
@@ -868,7 +888,7 @@ export class McpHub {
                 ReadResourceResultSchema,
             );
         } catch (error) {
-            this.handleTransportError(connection, error);
+            await this.handleTransportError(connection, error);
             throw error;
         }
     }
@@ -897,15 +917,20 @@ export class McpHub {
 
     async addMcpServer(serverData: { name: string; [key: string]: any }): Promise<void> {
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const config = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            const config = await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const config = JSON.parse(content);
 
-            if (!config.mcpServers) { config.mcpServers = {}; }
-            const { name, ...serverConfig } = serverData;
-            config.mcpServers[name] = { ...serverConfig };
-            await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                if (!config.mcpServers) { config.mcpServers = {}; }
+                const { name, ...serverConfig } = serverData;
+                config.mcpServers[name] = { ...serverConfig };
+                await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                return config;
+            });
 
+            const { name } = serverData;
             this.notifyCallback({
                 type: "NOTIFY_MCP_SERVER_SUCCESS",
                 data: { message: `MCP 服务器 "${name}" 已成功添加` },
@@ -926,36 +951,40 @@ export class McpHub {
     }
 
     async upDataMcpConfig(serverData: any): Promise<void> {
+        const serverName = serverData.name;
+        const originalName = serverData.originalName;
+        if (!serverName) {
+            throw new Error("Server name is required");
+        }
+
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const currentConfig = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            const currentConfig = await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const currentConfig = JSON.parse(content);
 
-            const serverName = serverData.name;
-            const originalName = serverData.originalName;
-            if (!serverName) {
-                throw new Error("Server name is required");
-            }
+                if (!currentConfig.mcpServers) { currentConfig.mcpServers = {}; }
 
-            if (!currentConfig.mcpServers) { currentConfig.mcpServers = {}; }
-
-            if (originalName && originalName !== serverName) {
-                if (currentConfig.mcpServers[originalName]) {
-                    delete currentConfig.mcpServers[originalName];
+                if (originalName && originalName !== serverName) {
+                    if (currentConfig.mcpServers[originalName]) {
+                        delete currentConfig.mcpServers[originalName];
+                    }
                 }
-            }
 
-            if (serverData.mcpServers) {
-                currentConfig.mcpServers = { ...currentConfig.mcpServers, ...serverData.mcpServers };
-            } else {
-                const { name, originalName: _, status, error, tools, resources, resourceTemplates, prompts, ...serverConfig } = serverData;
-                currentConfig.mcpServers[serverName] = {
-                    ...currentConfig.mcpServers[serverName],
-                    ...serverConfig,
-                };
-            }
+                if (serverData.mcpServers) {
+                    currentConfig.mcpServers = { ...currentConfig.mcpServers, ...serverData.mcpServers };
+                } else {
+                    const { name, originalName: _, status, error, tools, resources, resourceTemplates, prompts, ...serverConfig } = serverData;
+                    currentConfig.mcpServers[serverName] = {
+                        ...currentConfig.mcpServers[serverName],
+                        ...serverConfig,
+                    };
+                }
 
-            await fs.writeFile(settingsPath, JSON.stringify(currentConfig, null, 2));
+                await fs.writeFile(settingsPath, JSON.stringify(currentConfig, null, 2));
+                return currentConfig;
+            });
 
             const successMessage = originalName && originalName !== serverName
                 ? `MCP 服务器 "${originalName}" 已重命名为 "${serverName}"`
@@ -983,16 +1012,20 @@ export class McpHub {
 
     async removeMcpServer(serverName: string): Promise<void> {
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const config = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const config = JSON.parse(content);
 
-            if (!config.mcpServers || !config.mcpServers[serverName]) {
-                throw new Error(`MCP 服务器 "${serverName}" 不存在`);
-            }
+                if (!config.mcpServers || !config.mcpServers[serverName]) {
+                    throw new Error(`MCP 服务器 "${serverName}" 不存在`);
+                }
 
-            delete config.mcpServers[serverName];
-            await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                delete config.mcpServers[serverName];
+                await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+            });
+
             await this.deleteConnection(serverName);
 
             this.notifyCallback({

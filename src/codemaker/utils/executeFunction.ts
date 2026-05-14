@@ -5,7 +5,6 @@
  * 避免 tools 反过来依赖 CodeMakerWebviewProvider 类实体。
  */
 import SkillsHandler from '../skillsHandler';
-import { AgentsHandler } from '../handlers/agentsHandler/index';
 import { getMcpHub } from '../mcpHandlers/index';
 import { readFile, listFiles, viewSourceCodeDefinitionsTopLevel } from './analyzeProject/index';
 import grepSearch from './grepSearch';
@@ -146,10 +145,6 @@ export default async function executeFunction(
             return toolUseMcp(toolParams);
         case 'access_mcp_resource':
             return toolAccessMcpResource(toolParams);
-        case 'get_agents':
-            return toolGetAgents();
-        case 'get_agent':
-            return toolGetAgent(toolParams);
         default:
             return {
                 content: `Tool "${toolName}" is not supported in Y3Helper integration.`,
@@ -340,22 +335,5 @@ async function toolAccessMcpResource(params: any): Promise<ExecuteCommandResult>
 }
 
 // ─────────────────────────────────────────────
-//  Agents
+//  Agents (get_agents/get_agent 已上游迁移至 LSP，删除)
 // ─────────────────────────────────────────────
-
-async function toolGetAgents(): Promise<ExecuteCommandResult> {
-    const agentsHandler = AgentsHandler.getInstance();
-    await agentsHandler.initialize();
-    const agents = agentsHandler.getAgentIndex();
-    return { content: JSON.stringify(agents), isError: false };
-}
-
-async function toolGetAgent(params: any): Promise<ExecuteCommandResult> {
-    const agentsHandler = AgentsHandler.getInstance();
-    await agentsHandler.initialize();
-    const agentResult = agentsHandler.getAgent(params.agent_name);
-    if (agentResult.success && agentResult.agent) {
-        return { content: JSON.stringify(agentResult.agent), isError: false };
-    }
-    return { content: agentResult.error || 'Agent not found', isError: true };
-}

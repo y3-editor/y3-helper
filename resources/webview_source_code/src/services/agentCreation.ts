@@ -175,12 +175,11 @@ export function formatAgentAsMarkdown(config: GeneratedAgent): string {
   if (config.agentMetadata) {
     for (const [key, value] of Object.entries(config.agentMetadata)) {
       if (value === undefined || value === null || value === '') continue;
-      let serialized =
+      // ⚠️ Y3 定制 (sync): 上游会给 model 字段拼 `netease-codemaker/` 前缀，
+      // Y3 直接使用裸 model 名（避免敏感词 + 不走 CodeMaker 模型代理）。
+      // 同步上游时若看到此处出现 `netease-codemaker/` 前缀，请删除拼接逻辑。
+      const serialized =
         typeof value === 'object' ? JSON.stringify(value) : String(value);
-      // model 字段需要加上 netease-codemaker/ 前缀
-      if (key === 'model') {
-        serialized = `netease-codemaker/${serialized}`;
-      }
       extraMeta += `\n${key}: ${serialized}`;
     }
   }

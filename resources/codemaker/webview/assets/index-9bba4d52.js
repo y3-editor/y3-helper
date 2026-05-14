@@ -19927,7 +19927,7 @@ ${s.content}` : c = fP(s.path, s.content, !!((_b3 = s == null ? void 0 : s.extra
   }
   function mP(e) {
     const t = Vh(e.content);
-    return t ? (Fn(() => import("./skillUsage-4f53a9b2.js"), ["assets/skillUsage-4f53a9b2.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: n }) => {
+    return t ? (Fn(() => import("./skillUsage-f615b833.js"), ["assets/skillUsage-f615b833.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: n }) => {
       Fn(() => Promise.resolve().then(() => Wg), void 0).then(({ getSkillDescription: s }) => {
         const o = s(t.name);
         n(t.name, {
@@ -27369,7 +27369,7 @@ ${we.content[0].text.replace(((_d4 = (_c4 = f == null ? void 0 : f.runner) == nu
         skillName: z.skillName,
         title: z.title,
         source: z.source
-      }, Fn(() => import("./skillUsage-4f53a9b2.js"), ["assets/skillUsage-4f53a9b2.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: de }) => {
+      }, Fn(() => import("./skillUsage-f615b833.js"), ["assets/skillUsage-f615b833.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInvoke: de }) => {
         Fn(() => Promise.resolve().then(() => Wg), void 0).then(({ getSkillDescription: we }) => {
           const Ye = we(z.skillName);
           de(z.skillName, {
@@ -88673,8 +88673,8 @@ Remember: The agents you create should be autonomous experts capable of handling
       for (const [s, o] of Object.entries(e.agentMetadata)) {
         if (o == null || o === "")
           continue;
-        let a = typeof o == "object" ? JSON.stringify(o) : String(o);
-        s === "model" && (a = `netease-codemaker/${a}`), n += `
+        const a = typeof o == "object" ? JSON.stringify(o) : String(o);
+        n += `
 ${s}: ${a}`;
       }
     return `---
@@ -98988,7 +98988,7 @@ ${tn}
           if (De.isUpdate)
             return;
           if (De.success && De.skillName) {
-            Fn(() => import("./skillUsage-4f53a9b2.js"), ["assets/skillUsage-4f53a9b2.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInstall: lt }) => {
+            Fn(() => import("./skillUsage-f615b833.js"), ["assets/skillUsage-f615b833.js","assets/react-vendor-3a568fed.js","assets/utils-vendor-473588ae.js","assets/react-vendor-385c74cf.css"]).then(({ reportSkillInstall: lt }) => {
               lt(De.skillName, {
                 source: "codemaker-command"
               });
