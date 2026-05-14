@@ -7,6 +7,22 @@
 
 import { config } from './config.mjs';
 
+const nonEmptyImageDataUrlPattern = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+function getImageUrl(part) {
+  return typeof part.image_url === 'object' ? part.image_url?.url : part.image_url;
+}
+
+function hasNonEmptyImageDataUrl(value) {
+  return typeof value === 'string' && nonEmptyImageDataUrlPattern.test(value.trim());
+}
+
+function isValidImageUrl(value) {
+  return typeof value === 'string'
+    && value.trim()
+    && (!value.trim().startsWith('data:image/') || hasNonEmptyImageDataUrl(value));
+}
+
 // 请求超时时间（60秒）
 const REQUEST_TIMEOUT = 60000;
 
@@ -206,7 +222,10 @@ function buildResponsesRequestBody(requestBody) {
           return { type: newType, text: part.text };
         }
         if (part.type === 'image_url') {
-          return { type: 'input_image', image_url: part.image_url };
+          const imageUrl = getImageUrl(part);
+          return isValidImageUrl(imageUrl)
+            ? { type: 'input_image', image_url: imageUrl }
+            : { type: 'input_text', text: 'Unable to read image file or image is empty.' };
         }
         return part;
       });

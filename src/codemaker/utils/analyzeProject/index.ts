@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ExecuteCommandResult } from '../executeFunction';
+import { isImageFile } from '../file';
 
 /**
  * read_file 工具
@@ -33,6 +34,23 @@ export async function readFile(params: any): Promise<ExecuteCommandResult> {
         const stat = await fs.promises.stat(filePath);
         if (stat.isDirectory()) {
             return { content: `Error: "${filePath}" is a directory, not a file.`, path: filePath, isError: true };
+        }
+
+        if (isImageFile(filePath)) {
+            if (stat.size <= 0) {
+                return { content: `Error reading image "${filePath}": image file is empty.`, path: filePath, isError: true };
+            }
+
+            const imageBuffer = await fs.promises.readFile(filePath);
+            if (!imageBuffer.length) {
+                return { content: `Error reading image "${filePath}": no image bytes were read.`, path: filePath, isError: true };
+            }
+
+            return {
+                content: imageBuffer as any,
+                path: filePath,
+                isError: false,
+            };
         }
 
         const buffer = await fs.promises.readFile(filePath, 'utf-8');

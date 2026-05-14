@@ -19,6 +19,7 @@ import { rewriteCommandViaRtk } from './rtk/rtkRewriter';
 import { rewriteCommandWithRtk } from './rtk/rtkCommandRewriter';
 import * as vscode from 'vscode';
 import * as os from 'os';
+import { buildImageDataUrl } from './imageData';
 
 /**
  * 工具执行所需的 provider 能力（由 CodeMakerWebviewProvider 实现）
@@ -272,10 +273,17 @@ async function toolUseMcp(params: any): Promise<ExecuteCommandResult> {
             if (item.type === 'text') {
                 return { type: 'text', text: item.text };
             } else if (item.type === 'image') {
+                const imageUrl = buildImageDataUrl(item.mimeType || '', item.data);
+                if (!imageUrl) {
+                    return {
+                        type: 'text',
+                        text: 'Error: MCP tool returned an unreadable or empty image.',
+                    };
+                }
                 return {
                     type: 'image_url',
                     image_url: {
-                        url: `data:${item.mimeType};base64,${item.data}`,
+                        url: imageUrl,
                     },
                 };
             } else if (item.type === 'resource') {

@@ -9,6 +9,7 @@ import { ChatRole } from "../../../../types/chat";
 import { ConversationRoundState } from "../../../../telemetry/otel";
 import { useChatStreamStore } from "../../../../store/chat";
 import { UserEvent } from "../../../../types/report";
+import { hasNonEmptyImageDataUrl, sanitizeMessagesImages } from "../../../../utils/imageDataValidation";
 
 
 export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOption> implements IAzureOpenAIStream {
@@ -66,7 +67,7 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
     let instructions: string | undefined;
     const input: Record<string, any>[] = [];
 
-    for (const msg of data.messages) {
+    for (const msg of sanitizeMessagesImages(data.messages)) {
       // system 消息提取为顶层 instructions，不放入 input
       if (msg.role === 'system') {
         instructions = typeof msg.content === 'string' ? msg.content : undefined;
@@ -105,7 +106,12 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
           c.type === 'text' || c.type === 'input_text' || c.type === 'output_text'
             ? { type: contentType, text: c.text }
             : c.type === 'image_url'
-              ? { type: 'input_image', image_url: typeof c.image_url === 'object' ? c.image_url.url : c.image_url }
+              ? (() => {
+                const imageUrl = typeof c.image_url === 'object' ? c.image_url.url : c.image_url;
+                return typeof imageUrl === 'string' && imageUrl.trim() && (!imageUrl.trim().startsWith('data:image/') || hasNonEmptyImageDataUrl(imageUrl))
+                  ? { type: 'input_image', image_url: imageUrl }
+                  : { type: contentType, text: 'Unable to read image file or image is empty.' };
+              })()
               : c
         );
 
