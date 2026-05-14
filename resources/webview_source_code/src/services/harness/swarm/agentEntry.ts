@@ -1,6 +1,6 @@
 import { ChatPromptBody } from '../../index';
 import {
-  ABORT_ERROR_NAME,
+  ABORT_REASON_USER_CANCELLED,
   createAbortReason,
 } from '../../../utils/abort';
 import { ChatModelSupplyChannel } from '../../../store/chat-config';
@@ -56,16 +56,8 @@ export class AgentEntry {
         this.status = AgentStatus.IDLE;
       }
     }
-    // Y3 真实链路说明（2026-04-27 同步时确认）：
-    //   1. Y3 在 App.tsx 注入 fixedModel 到 chatModels 时未设 supplyChannel，
-    //      所以即使用户填 GPT-5/Codex，supplyChannel 依旧是 undefined
-    //   2. 因此实际永远走 default 分支（CmCodebaseStream）→ /proxy/gpt/u5_chat/codebase_chat_stream
-    //      → api-server (streamChatCompletion) → 用户配置的上游（Chat Completions 或 Responses 协议）
-    //   3. AzureOpenAIStream 通路在 Y3 是 dead code（前端发往 /proxy/cm/openai/v1/responses
-    //      的请求 api-server 没注册路由），但保留代码以便未来同步上游不冲突
     switch (supplyChannel) {
       case ChatModelSupplyChannel.GPT:
-        // Y3 不会走到这里（见上方说明）
         this.stream = new AzureOpenAIStream(data, commonOptions);
         break;
       default: {
@@ -81,9 +73,9 @@ export class AgentEntry {
   public abort(): void {
     this.status = AgentStatus.ABORTED;
     if (this.abortController) {
-      this.abortController.abort(createAbortReason(ABORT_ERROR_NAME, 'AgentEntry.abort'));
+      this.abortController.abort(createAbortReason(ABORT_REASON_USER_CANCELLED, __ABORT_LOC__));
     }
-    this.stream?.close?.()
+    this.stream?.close?.(ABORT_REASON_USER_CANCELLED)
   }
 
 }

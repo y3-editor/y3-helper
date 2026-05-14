@@ -185,18 +185,25 @@ const SkillConfigCollapse = (props: IProps) => {
                               tooltipTitle: '启用 Skill',
                               tooltip: '在智聊过程中启用此 Skill',
                             },
+                            {
+                              value: 'auto',
+                              label: '启用(Auto)',
+                              tooltipTitle: '启用 Skill (自动运行)',
+                              tooltip: '启用该 Skill，AI 调用时无需确认直接执行',
+                            },
                           ] as SelectOption[]
                         }
-                        value={isDisabled ? 'off' : 'on'}
+                        value={isDisabled ? 'off' : (config?.autoRun ? 'auto' : 'on')}
                         onChange={(e) => {
                           const value = e.target.value;
                           const disabled = value === 'off';
+                          const autoRun = value === 'auto';
                           // 状态未变化时不执行后续逻辑
-                          if (disabled === isDisabled) return;
-                          setSkillConfig(skill.name, { disabled });
+                          if (disabled === isDisabled && autoRun === (config?.autoRun ?? false)) return;
+                          setSkillConfig(skill.name, { disabled, autoRun });
                           postMessage({
                             type: BroadcastActions.UPDATE_SKILL_CONFIG,
-                            data: { name: skill.name, disabled },
+                            data: { name: skill.name, disabled, autoRun },
                           });
                         }}
                       />

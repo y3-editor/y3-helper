@@ -16,6 +16,7 @@ import { useChatTerminalStore } from '../../store/chatTerminal';
 import { useExtensionStore, IDE } from '../../store/extension';
 import { useChatTerminal } from '../../routes/CodeChat/ChatMessagesList/TermialPanel';
 import { ToolClassificationResult, ToolTypeChecks, EnvironmentChecks } from './types';
+import { useSkillsStore } from '../../store/skills';
 
 export function useToolClassification(message: ChatMessage): ToolClassificationResult {
   const currentSessionId = useChatStore(state => state.currentSessionId);
@@ -24,6 +25,7 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
   const autoApply = useChatConfig(state => state.autoApply);
   const autoExecute = useChatConfig(state => state.autoExecute);
   const autoTodo = useChatConfig(state => state.autoTodo);
+const skillConfigs = useSkillsStore(state => state.skillConfigs);
 
   // 环境相关状态
   const workspaceInfo = useWorkspaceStore(state => state.workspaceInfo);
@@ -35,6 +37,20 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
 
   return useMemo(() => {
     const toolGroups = new Map<string, ToolCall[]>();
+
+    const hasSkillAutoRun = message.tool_calls
+      ?.filter(t => t.function.name === 'use_skill')
+      .every(t => {
+        try {
+          const params = JSON.parse(t.function.arguments || '{}');
+          const names: string[] = Array.isArray(params.skill_name)
+            ? params.skill_name
+            : [params.skill_name];
+          return names.every(name => skillConfigs[name]?.autoRun === true);
+        } catch {
+          return false;
+        }
+      }) ?? false;
 
     // 分组工具调用
     message.tool_calls?.forEach(tool => {
@@ -91,6 +107,11 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
         ['edit', 'write'].includes(tool.function.name)
       ) || false,
 
+      hasSkillTool: message.tool_calls?.some((tool) =>
+        tool.function.name === 'use_skill'
+      ) || false,
+
+      hasSkillAutoRun,
       hasTerminalTool,
       hasDangerousCommand,
 
@@ -155,6 +176,7 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
     ide,
     enableTerminal,
     hasTerminalTool,
+    skillConfigs,
     hasDangerousCommand
   ]);
 }

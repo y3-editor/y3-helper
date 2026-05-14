@@ -31,12 +31,6 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
   private firstTokenReceived = false
 
   public get getUrl() {
-    // Y3 注意：此 URL Y3 api-server 未注册路由，调用会 404。
-    // 但 AzureOpenAIStream 在 Y3 是 dead code（agentEntry 不会实例化它，
-    //   因为 fixedModel 注入时未设 supplyChannel='gpt'），保留代码避免与上游同步冲突。
-    // 若未来需要启用 Responses API 协议，需：
-    //   1. App.tsx 注入 fixedModel 时设 supplyChannel = ChatModelSupplyChannel.GPT
-    //   2. api-server/routes/chat.mjs 注册 /proxy/cm/openai/v1/responses 路由 → 直通 streamResponsesApi
     return `/proxy/cm/openai/v1/responses`
   }
 
@@ -157,6 +151,10 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
 
     const eData = event.data;
 
+    if (!eData?.trim?.()) {
+      return;
+    }
+
     try {
       const parsedData = JSON.parse(eData);
       const eventType: string = parsedData?.type ?? '';
@@ -273,6 +271,11 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
   }
 
   private emitMessage(done: boolean) {
+    // Skip emit if stream was manually aborted by user
+    if (this.isUserAborted) {
+      this.options?.onFinish?.(this.conversationContext)
+      return;
+    }
     requestAnimationFrame(() => {
       this.options?.onMessage(
         this.conversationContext.content,
@@ -361,7 +364,7 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
         parser.feed(chunk);
       }
     } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      if (!this.isUserAborted) {
         this.options?.onError?.(error as Error);
       }
     } finally {

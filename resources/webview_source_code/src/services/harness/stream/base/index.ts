@@ -5,7 +5,7 @@ import { UserEvent } from "../../../../types/report";
 import { useAuthStore } from "../../../../store/auth";
 import { useExtensionStore } from "../../../../store/extension";
 import userReporter from "../../../../utils/report";
-import { ABORT_REASON_CLEANUP, createAbortReason, REQUEST_TIMEOUT_NAME } from "../../../../utils/abort";
+import { ABORT_REASON_CLEANUP, ABORT_REASON_USER_CANCELLED, createAbortReason, REQUEST_TIMEOUT_NAME } from "../../../../utils/abort";
 import { useChatStore } from "../../../../store/chat";
 import { useChatConfig } from "../../../../store/chat-config";
 import { StreamError } from "../../../useChatStream";
@@ -25,6 +25,18 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
   }
 
   private abortController: AbortController | undefined
+
+  /** 当前 abort signal 的 reason，子类用于区分用户取消、清理、超时等场景 */
+  protected get abortReason(): { name?: string; message?: string } | undefined {
+    return this.abortController?.signal?.reason as { name?: string; message?: string } | undefined;
+  }
+
+  /** 是否被用户主动取消 */
+  protected get isUserAborted(): boolean {
+    return [
+      ABORT_REASON_USER_CANCELLED,
+    ].includes(this.abortReason?.name || '')
+  }
 
 
   public requestParmas: Record<string, any> = {}
@@ -249,10 +261,10 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
   }
 
 
-  public close() {
+  public close(abortName?: string) {
     try {
       this._needContinue = false; // 停止流读取
-      this.abortController?.abort?.(createAbortReason(ABORT_REASON_CLEANUP, __ABORT_LOC__));
+      this.abortController?.abort?.(createAbortReason(abortName || ABORT_REASON_CLEANUP, __ABORT_LOC__));
       if (this.pingpongTimer) {
         clearTimeout(this.pingpongTimer);
         this.pingpongTimer = undefined;

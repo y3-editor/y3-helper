@@ -145,7 +145,11 @@ export interface TokenCalculationResult {
  */
 function checkCacheModel(model?: ChatModel | string): boolean {
   if (typeof model !== 'string') return false
-  return Boolean(['claude', 'gpt'].includes(model?.toLowerCase?.()));
+  const modelName = model.toLowerCase()
+  return [
+    'claude',
+    'gpt',
+  ].some(i => modelName.includes(i))
 }
 
 /**

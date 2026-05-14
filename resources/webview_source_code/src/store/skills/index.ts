@@ -10,6 +10,7 @@ export interface SkillIndexItem {
   source: SkillSource;
   userInvocable?: boolean;
   disabled?: boolean;
+  autoRun?: boolean;
   hubSkillId?: string;
   installedVersion?: string;
   latestVersion?: string;
@@ -95,6 +96,7 @@ ${skill.content}
 export interface SkillConfig {
   name: string;
   disabled: boolean;
+  autoRun?: boolean;
   hubSkillId?: string;
 }
 
@@ -124,6 +126,7 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
         updatedConfigs[skill.name] = {
           name: skill.name,
           disabled: skill.disabled ?? existing?.disabled ?? false,
+          autoRun: skill.autoRun ?? existing?.autoRun,
         };
       });
 
@@ -131,8 +134,9 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
       Object.keys(state.skillConfigs).forEach((name) => {
         if (activeNames.has(name) && updatedConfigs[name]) {
           updatedConfigs[name] = {
-            ...state.skillConfigs[name],
             ...updatedConfigs[name],
+            ...state.skillConfigs[name],
+            disabled: updatedConfigs[name].disabled,
           };
         }
       });

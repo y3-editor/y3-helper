@@ -22,6 +22,7 @@ interface ClaudeEditFileProps {
   toolCallId: string;
   filePath: string;
   isLatest?: boolean;
+  toolArgs?: string;
   /** 工具调用是否已收到结果（已返回 result 即认为执行完成） */
   hasResponse?: boolean;
 }
@@ -34,6 +35,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
     filePath,
     isLatest = false,
     hasResponse = false,
+    toolArgs,
   } = props;
 
   const { postMessage } = usePostMessage();
@@ -92,6 +94,40 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
 
   // 收到 tool 结果后即视为非 applying，避免 store 中 applying 状态未及时清空导致多个 spinner 同时显示
   const isApplying = !!targetApplyItem?.applying && !hasResponse;
+
+
+  const renderOriginalCode = useMemo(() => {
+    if (!isExpanded || diffInfo || displayedCode || isApplying) {
+      return null
+    }
+
+    let code = ''
+    try {
+      const params = JSON.parse(toolArgs as any)
+      if (toolName === 'write') {
+        code = params.content
+      } else {
+        code = params.new_string
+      }
+    } catch (e) { /* empty */ }
+
+    if (code) {
+      const commonProps = {
+        language: language,
+        metaData: metaData,
+        codeWhiteSpace: codeWhiteSpace,
+        collapsable: true,
+      }
+      return (
+        <MemoCodeBlock
+          value={code}
+          {...commonProps}
+        />
+      )
+
+    }
+    return null
+  }, [codeWhiteSpace, diffInfo, displayedCode, isApplying, isExpanded, language, metaData, toolArgs, toolName])
 
   return (
     <div className="markdown-body">
@@ -211,6 +247,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
             codeWhiteSpace={codeWhiteSpace}
           />
         )}
+        {renderOriginalCode}
       </pre>
     </div>
   );

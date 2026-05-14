@@ -2056,7 +2056,10 @@ export const useChatStreamStore = create(
       const trackerSessionComplete = useTaskCompletionStore
         .getState()
         .isSessionComplete(currentSessionId || '');
-      if (!trackerSessionComplete && !hasActiveTaskTools) {
+
+      const isOnlySkillTools = lastMessage.tool_calls.every(tc => tc.function.name === 'use_skill');
+
+      if (!trackerSessionComplete && !hasActiveTaskTools && !isOnlySkillTools) {
         return;
       }
 

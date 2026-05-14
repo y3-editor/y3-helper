@@ -375,6 +375,7 @@ const ToolCallResult = ({
           messageId={message.id}
           toolCallId={tool.id}
           filePath={result.path || toolParams.file_path || ''}
+          toolArgs={tool?.function?.arguments || ''}
           isLatest={isLatest}
           hasResponse={toolResponse[tool.id] !== undefined}
         />

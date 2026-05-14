@@ -82,6 +82,11 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       return
     }
 
+    // 跳过空字符串或纯空白内容，避免 JSON.parse 抛出 "Expecting value" 错误
+    if (!eData?.trim?.()) {
+      return;
+    }
+
     try {
       const parsedData = JSON.parse(eData);
       // 自定义错误信息处理
@@ -177,6 +182,12 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
   }
 
   private emitMessage(done: boolean) {
+    // Skip emit if stream was manually aborted by user
+    if (this.isUserAborted) {
+      this.options?.onFinish?.(this.conversationContext)
+      return;
+    }
+
     const { responseText, toolCalls, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId } = this.streamContext;
     this.options.onMessage(
       responseText,
@@ -265,7 +276,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       }
     } catch (error) {
       // AbortError is expected when close() is called mid-stream
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      if (!this.isUserAborted) {
         this.options?.onError?.(error as Error);
       }
     } finally {

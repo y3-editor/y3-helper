@@ -424,7 +424,9 @@ function App() {
 
         setCurrentFileAutoAttach(!!currentFileAutoAttach);
         setDisableNewApply(!!disableNewApply);
-        setChatApplyMode(chatApplyMode);
+        if (chatApplyMode) {
+          setChatApplyMode(chatApplyMode);
+        }
         setPlanModeButtonEnabled(IDE === 'vscode' || IDE === 'JetBrains');
         setTerminalTimeout(codeChatTerminalTimeout)
         // 设置系统主题
