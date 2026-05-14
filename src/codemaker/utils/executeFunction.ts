@@ -14,6 +14,12 @@ import editFile, { writeToFile } from './editFile/index';
 import { executeClaudeEdit, executeClaudeWrite } from './editFile/claudeEdit';
 import replaceInFile from './replaceInFile/index';
 import runTerminalCmd from './terminal/index';
+import { getCodeMakerConfig } from '../configProvider';
+import { ensureRtkBinary } from './rtk/rtkBinaryManager';
+import { rewriteCommandViaRtk } from './rtk/rtkRewriter';
+import { rewriteCommandWithRtk } from './rtk/rtkCommandRewriter';
+import * as vscode from 'vscode';
+import * as os from 'os';
 
 /**
  * 工具执行所需的 provider 能力（由 CodeMakerWebviewProvider 实现）
@@ -89,6 +95,8 @@ export default async function executeFunction(
             return executeClaudeWrite({
                 file_path: toolParams?.file_path,
                 content: toolParams?.content ?? '',
+                toolId: params.toolId,
+                autoApply: toolParams?.autoApply ?? false,
             }) as Promise<ExecuteCommandResult>;
         case 'edit':
             // Claude 原生 edit 工具：old_string → new_string 精确替换
@@ -97,6 +105,8 @@ export default async function executeFunction(
                 old_string: toolParams?.old_string ?? '',
                 new_string: toolParams?.new_string ?? '',
                 replace_all: toolParams?.replace_all,
+                toolId: params.toolId,
+                autoApply: toolParams?.autoApply ?? false,
             }) as Promise<ExecuteCommandResult>;
         case 'run_terminal_cmd':
             if (!toolParams.command) {
@@ -105,7 +115,26 @@ export default async function executeFunction(
                     isError: true,
                 };
             }
-            return runTerminalCmd(toolParams, params.toolId, params.provider);
+            // RTK command interception
+            let command = toolParams.command;
+            let isRtk = false;
+            const rtkEnabled = vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk') || false;
+            if (rtkEnabled) {
+                const rtkPath = await ensureRtkBinary();
+                if (rtkPath) {
+                    if (os.platform() !== 'win32') {
+                        const rewritten = await rewriteCommandViaRtk(command, rtkPath);
+                        isRtk = rewritten !== command;
+                        command = rewritten;
+                    } else {
+                        const rewritten = rewriteCommandWithRtk(command, rtkPath);
+                        isRtk = rewritten !== command;
+                        command = rewritten;
+                    }
+                }
+            }
+            toolParams.command = command;
+            return runTerminalCmd(toolParams, params.toolId, params.provider, isRtk);
         case 'make_plan':
         case 'write_todo':
             return toolMakePlan();

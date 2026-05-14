@@ -11,6 +11,7 @@ import { readFileSync, statSync } from 'fs';
 import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
 import SkillsHandler from './skillsHandler';
 import executeFunction from './utils/executeFunction';
+import { isRtkBinaryAvailable } from './utils/rtk/rtkBinaryManager';
 
 /**
  * CodeMaker WebView 视图提供者
@@ -260,6 +261,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 // - AI 走 write / edit 原生工具（配合 autoApply=true 可静默落盘）
                 // - 避免回答里出现「文件变更」推荐面板（FileRecommendApplyPanel）
                 chatApplyMode: 'claudeedit',
+                codebaseChatRtk: (vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk') || false) && isRtkBinaryAvailable(),
             },
         };
 

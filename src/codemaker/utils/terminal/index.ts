@@ -38,6 +38,7 @@ export default async function runTerminalCmd(
     params: RunTerminalCmdParams,
     toolId: string,
     provider: ToolProvider,
+    isRtk: boolean = false,
 ): Promise<ExecuteCommandResult> {
     const command = params?.command;
     const messageId = params?.messageId || '';
@@ -58,6 +59,7 @@ export default async function runTerminalCmd(
             terminalStatus: ETS.START as string,
             hasShellIntegration: false,
             status: ETS.START as string,
+            isRtk: !!isRtk,
         },
     };
 
@@ -73,6 +75,7 @@ export default async function runTerminalCmd(
                     terminalStatus: status,
                     hasShellIntegration: isHot,
                     status: isHot ? ETS.RUNNING : ETS.START,
+                    isRtk: !!isRtk,
                 },
             },
         });
@@ -151,6 +154,8 @@ export default async function runTerminalCmd(
             // 2. stdout 实时推送
             childProcess.stdout?.on('data', (data: Buffer) => {
                 const output = decodeBuffer(data);
+                // Filter RTK hook warning noise
+                if (isRtk && output.includes('[rtk]') && (output.includes('No hook installed') || output.includes('Hook outdated'))) return;
                 lines.push(output);
                 sendTerminalLog(output, ETS.RUNNING, true);
 
