@@ -13,6 +13,7 @@ import { globSearch } from './globSearch';
 import editFile, { writeToFile } from './editFile/index';
 import { executeClaudeEdit, executeClaudeWrite } from './editFile/claudeEdit';
 import replaceInFile from './replaceInFile/index';
+import { normalizeMcpToolArguments } from './mcpToolArguments';
 import runTerminalCmd from './terminal/index';
 
 /**
@@ -228,14 +229,14 @@ async function toolUseMcp(params: any): Promise<ExecuteCommandResult> {
     }
     try {
         // 前端传来的 arguments 可能是 JSON 字符串，需要解析
-        let toolArguments = params?.arguments;
-        if (typeof toolArguments === 'string') {
-            try {
-                toolArguments = JSON.parse(toolArguments);
-            } catch {
-                // 如果解析失败，保持原样
-            }
+        const normalizedArguments = normalizeMcpToolArguments(params?.arguments);
+        if (!normalizedArguments.ok) {
+            return {
+                content: normalizedArguments.message,
+                isError: true,
+            };
         }
+        const toolArguments = normalizedArguments.value;
         console.log(`[Y3Maker] use_mcp_tool: server=${serverName}, tool=${toolName}, args=`, JSON.stringify(toolArguments));
         const response = await hub.callTool(serverName, toolName, toolArguments);
         // 对齐上游 extension 格式：把 MCP 返回的 content 数组映射为
