@@ -47,9 +47,16 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
 
   public getRequestHeader() {
     const baseHeaders = super.getRequestHeader()
+    const injectHeaders: Record<string, string> = {
+      'downstream-client': 'codebase-chat',
+      'X-Aigw-Meta': `first_tag=codebase`,
+    }
+    if (this.options?.ntesTraceId) {
+      injectHeaders['ntes-trace-id'] = this.options.ntesTraceId
+    }
     return {
       ...baseHeaders,
-      'downstream-client': 'codebase-chat'
+      ...injectHeaders,
     }
   }
 

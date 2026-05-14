@@ -2,7 +2,10 @@ import * as React from 'react';
 import { useChatConfig } from '../../../../store/chat-config';
 import { useAuthStore } from '../../../../store/auth';
 import { useConfigStore } from '../../../../store/config';
-import { ChatModelType, IChatModelConfig } from '../../../../services/chatModel';
+import {
+  ChatModelType,
+  IChatModelConfig,
+} from '../../../../services/chatModel';
 import ModelPicker, { resolveModelCodeByUseModel } from '../ModelPicker';
 
 export const INHERIT_VALUE = '';
@@ -63,7 +66,9 @@ const AgentModelPicker: React.FC<AgentModelPickerProps> = ({
   isDark,
 }) => {
   const chatModels = useChatConfig((state) => state.chatModels);
-  const subagentModelConfig = useChatConfig((state) => state.subagentModelConfig);
+  const subagentModelConfig = useChatConfig(
+    (state) => state.subagentModelConfig,
+  );
   const setSubagentModelConfig = useChatConfig(
     (state) => state.setSubagentModelConfig,
   );
@@ -86,9 +91,7 @@ const AgentModelPicker: React.FC<AgentModelPickerProps> = ({
         if (authInfo?.allowAll) return true;
         if (authInfo?.allowedUsers?.includes(username || '')) return true;
         if (
-          authInfo?.allowedDepartments?.includes(
-            authExtends.department || '',
-          )
+          authInfo?.allowedDepartments?.includes(authExtends.department || '')
         )
           return true;
         return false;
@@ -101,8 +104,12 @@ const AgentModelPicker: React.FC<AgentModelPickerProps> = ({
       });
 
     // explore 与 general 统一：只过滤 Thinking 模型，不再用白名单限制
+    // 例外：supplyChannel 为 Deepseek 的 thinking 模型仍可显示
     if (agentName === 'explore' || agentName === 'general') {
-      filtered = filtered.filter((config) => !isThinkingModel(config));
+      filtered = filtered.filter(
+        (config) =>
+          !isThinkingModel(config) || config.supplyChannel === 'Deepseek',
+      );
     }
 
     // explore 黑名单过滤：移除不允许选择的模型
@@ -120,20 +127,24 @@ const AgentModelPicker: React.FC<AgentModelPickerProps> = ({
 
   const notRecommendedWarning = React.useMemo<string | undefined>(() => {
     if (!selectedModel) return undefined;
-    const selectedModelCode = resolveModelCodeByUseModel(selectedModel, chatModels);
-    const modelTitle =
-      chatModels[selectedModelCode]?.title || selectedModel;
+    const selectedModelCode = resolveModelCodeByUseModel(
+      selectedModel,
+      chatModels,
+    );
+    const modelTitle = chatModels[selectedModelCode]?.title || selectedModel;
 
-    // explore 和 general 统一：所选为 Thinking 模型时警告
+    // explore 和 general 统一：所选为 Thinking 模型时警告（Deepseek 除外）
     if (
       agentName === 'explore' &&
-      isThinkingModel(chatModels[selectedModelCode])
+      isThinkingModel(chatModels[selectedModelCode]) &&
+      chatModels[selectedModelCode]?.supplyChannel !== 'Deepseek'
     ) {
       return `所选模型 ${modelTitle} 不再推荐用于此 agent`;
     }
     if (
       agentName === 'general' &&
-      isThinkingModel(chatModels[selectedModelCode])
+      isThinkingModel(chatModels[selectedModelCode]) &&
+      chatModels[selectedModelCode]?.supplyChannel !== 'Deepseek'
     ) {
       return `所选模型 ${modelTitle} 不再推荐用于此 agent`;
     }
@@ -153,6 +164,16 @@ const AgentModelPicker: React.FC<AgentModelPickerProps> = ({
         agentName === 'explore' ? EXPLORE_RECOMMENDED_MODELS : undefined
       }
       notRecommendedWarning={notRecommendedWarning}
+      inheritLabel={
+        agentName === 'explore'
+          ? '默认（Claude 4.5 Haiku）'
+          : '默认（跟随全局）'
+      }
+      inheritButtonText={
+        agentName === 'explore'
+          ? '默认（Claude 4.5 Haiku）'
+          : '默认（跟随全局）'
+      }
     />
   );
 };

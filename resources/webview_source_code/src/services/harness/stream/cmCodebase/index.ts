@@ -74,6 +74,20 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
     this.round = (useChatStreamStore.getState() as any).conversationRound;
   }
 
+  public getRequestHeader() {
+    const baseHeaders = super.getRequestHeader()
+    const injectHeaders: Record<string, string> = {
+      'X-Aigw-Meta': `first_tag=codebase`,
+    }
+    if (this.options?.ntesTraceId) {
+      injectHeaders['ntes-trace-id'] = this.options.ntesTraceId
+    }
+    return {
+      ...baseHeaders,
+      ...injectHeaders,
+    }
+  }
+
   public onParse(event: ParsedEvent) {
     if (event.type !== 'event') return;
     const eData = event.data;

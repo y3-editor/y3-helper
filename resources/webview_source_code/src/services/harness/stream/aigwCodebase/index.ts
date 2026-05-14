@@ -24,6 +24,20 @@ export default class AigwCodebase extends BaseStream implements IAigwCodebaseStr
     super(data, options)
   }
 
+  public getRequestHeader() {
+    const baseHeaders = super.getRequestHeader()
+    const injectHeaders: Record<string, string> = {
+      'X-Aigw-Meta': `first_tag=codebase`,
+    }
+    if (this.options?.ntesTraceId) {
+      injectHeaders['ntes-trace-id'] = this.options.ntesTraceId
+    }
+    return {
+      ...baseHeaders,
+      ...injectHeaders,
+    }
+  }
+
   /**
    * @name 解析流
    * @param event

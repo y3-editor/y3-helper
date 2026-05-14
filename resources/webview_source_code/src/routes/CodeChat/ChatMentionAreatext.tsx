@@ -148,7 +148,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   // 抽取条件判断，避免重复代码
   const shouldEnableComplexFeatures = useCallback(() => {
     return isVscode && (
-      placeholder?.includes('打开该仓库使用或新建会话') || 
+      placeholder?.includes('打开该仓库使用或新建会话') ||
       placeholder?.includes('打开该仓库后可继续对话')
     );
   }, [isVscode, placeholder]);
@@ -519,8 +519,8 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
           zIndex={2}
           pointerEvents="auto"
         >
-          本月 {maxCostPerMonth * 100} 积分（等值于{maxCostPerMonth} 元 Token）额度已用完。因 3.0 版本上线后需求激增，系统已暂时限制使用权限以兼顾稳定性和成本控制。
-          恢复使用请查阅
+          本月 {maxCostPerMonth * 100} 积分（等值于{maxCostPerMonth} 元 Token）额度已用完。
+          从 5 月起，个人 Token 额度将通过 AIGW 平台统一分配，
           <Button
             size="sm"
             variant="link"
@@ -530,14 +530,32 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
               e.stopPropagation();
               postMessage({
                 type: "OPEN_IN_BROWSER",
-                data: { url: `https://g.126.fm/01ePpyp` },
+                data: { url: `https://km.netease.com/v4/detail/blog/268321` },
               });
             }}
             _hover={{ textDecoration: 'none', opacity: 0.8 }}
           >
-            《积分申请》。
+            查阅详细规范
           </Button>
-          审批通过后：点击
+          。若因工作需要申请提升额度，请参考
+          <Button
+            size="sm"
+            variant="link"
+            color="blue.400"
+            fontWeight="600"
+            mx={1}
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation();
+              postMessage({
+                type: "OPEN_IN_BROWSER",
+                data: { url: `https://g.126.fm/016Bgyt` },
+              });
+            }}
+            _hover={{ textDecoration: 'none', opacity: 0.8 }}
+          >
+            申请指引
+          </Button>
+          提交申请。审批通过后，点击
           <Button
             size="sm"
             variant="link"
@@ -551,7 +569,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
           >
             「刷新限额」
           </Button>
-          ，即可恢复。
+          即可恢复使用
         </Box>
       </Box>
     )

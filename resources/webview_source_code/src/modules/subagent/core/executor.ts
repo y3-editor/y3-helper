@@ -7,10 +7,7 @@ import type {
   Agent,
   SubagentStatus,
 } from '../types';
-import {
-  convertAgentMCPServers,
-  waitForMCPServers,
-} from '../utils/mcp';
+import { convertAgentMCPServers, waitForMCPServers } from '../utils/mcp';
 import { BroadcastActions } from '../../../PostMessageProvider';
 import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
 import {
@@ -27,8 +24,6 @@ import type {
   HookContext,
   StepHookContext,
   CompleteHookContext,
-  ToolCallHookContext,
-  ToolResultHookContext,
 } from '../lifecycle/hooks';
 import { useExtensionStore } from '../../../store/extension';
 import {
@@ -64,12 +59,9 @@ import { useAuthStore } from '../../../store/auth';
 import { useWorkspaceStore, SpecFramework } from '../../../store/workspace';
 import { useMCPStore } from '../../../store/mcp';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
-import { useChatApplyStore } from '../../../store/chatApply';
 import { ChatModel, IChatModelConfig } from '../../../services/chatModel';
 import {
   createSubagentProcessor,
-  type ToolResultInput,
-  type ToolResultProcessContext,
   type TerminalUpdateCallbacks,
 } from '../../tool-result-processor';
 import {
@@ -77,22 +69,19 @@ import {
   buildSubagentChatPromptBody,
   type MessagePreprocessOptions,
 } from './message-preprocessor';
-import userReporter from '../../../utils/report';
 import {
   getAIGWModelWithFallback,
   getAIGWModel,
 } from './../../../store/chat-config';
 import { promptBuilder } from './prompt-builder';
 import type { SubagentSpanContext } from '../types';
+import { startSubagentTaskSpan } from '../../../telemetry/otel';
+import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
 import {
-  startSubagentTaskSpan,
-  startToolCallSpan,
-  stopToolCallSpan,
   SpanStatusCode,
   trace,
   context as otelContext,
 } from '../../../telemetry/otel';
-import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
 import {
   AGENT_TASK_ID,
   AGENT_PARENT_SESSION_ID,
@@ -114,7 +103,13 @@ import {
   ERROR_TYPE,
 } from '../../../telemetry/attributes';
 import { ChatRole } from '../../../types/chat';
-import { getReportEventByToolName } from '../../../utils/toolCall';
+import {
+  isMcpFailureRetryExceeded,
+  shouldUseOnDemandMCPTools,
+  getVisibleMCPToolCount,
+  SEARCH_TOOL_NAME,
+} from '../../../utils/mcpToolSearch';
+import { handleToolCall } from './toolCallHandler';
 
 import {
   emitTaskStarted,
@@ -122,6 +117,51 @@ import {
   emitTaskFailed,
 } from '../events/taskEventBus';
 import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
+
+/**
+ * 将 Subagent 消息格式（工具结果为独立 role:'tool' 消息）转换为
+ * isMcpFailureRetryExceeded 期望的格式（tool_result 附在 assistant message 上），
+ * 然后执行失败重试上限判定。
+ */
+function isMcpFailureRetryExceededForSubagent(
+  messages: ChatMessage[],
+): boolean {
+  // 构建 tool_call_id → tool 消息内容 的映射
+  const toolResultMap = new Map<
+    string,
+    { isError?: boolean; content?: unknown }
+  >();
+  for (const msg of messages) {
+    if (msg.role === ChatRole.Tool && msg.tool_call_id) {
+      toolResultMap.set(msg.tool_call_id, { isError: msg.isError, content: msg.content });
+    }
+  }
+
+  // 将 assistant 消息转换为 isMcpFailureRetryExceeded 期望的格式
+  const adapted = messages
+    .filter(
+      (msg) =>
+        msg.role === ChatRole.Assistant ||
+        msg.role === ChatRole.Tool ||
+        msg.role === 'system',
+    )
+    .map((msg) => {
+      if (msg.role !== ChatRole.Assistant || !msg.tool_calls?.length)
+        return msg;
+      const tool_result: Record<
+        string,
+        { isError?: boolean; content?: unknown }
+      > = {};
+      for (const tc of msg.tool_calls) {
+        if (tc.id && toolResultMap.has(tc.id)) {
+          tool_result[tc.id] = toolResultMap.get(tc.id)!;
+        }
+      }
+      return { ...msg, tool_result };
+    });
+
+  return isMcpFailureRetryExceeded(adapted as any);
+}
 
 /**
  * 等待用户对 failed subagent 的操作（retry 或 stop）。
@@ -200,12 +240,17 @@ async function wrapSyncSessionSpan<T>(
     return fn();
   }
   const tracer = trace.getTracer(TRACING_DEFAULT_TRACER);
-  const syncSpan = tracer.startSpan('agent.sync_session', undefined, spanContext.taskContext);
+  const syncSpan = tracer.startSpan(
+    'agent.sync_session',
+    undefined,
+    spanContext.taskContext,
+  );
   syncSpan.setAttribute(AGENT_TASK_ID, taskId);
   syncSpan.setAttribute(AGENT_SYNC_STEP, step);
   syncSpan.setAttribute(AGENT_SYNC_MESSAGE_COUNT, messageCount);
   if (options.isFinal) syncSpan.setAttribute(AGENT_SYNC_IS_FINAL, true);
-  if (options.isErrorSync) syncSpan.setAttribute(AGENT_SYNC_IS_ERROR_SYNC, true);
+  if (options.isErrorSync)
+    syncSpan.setAttribute(AGENT_SYNC_IS_ERROR_SYNC, true);
 
   // 将 syncSpan 设置为活跃上下文，确保 fn() 内部产生的子 span 能正确关联到该父 span
   const ctx = trace.setSpan(otelContext.active(), syncSpan);
@@ -283,7 +328,9 @@ export async function runSubagent(
   const subagentStore = useSubagentStore.getState();
   const agent = subagentStore.getAgent(params.subagent_type);
   if (!agent) {
-    const availableAgents = subagentStore.agents.map((a) => a.name).join(', ');
+    const availableAgents = subagentStore.validAgents
+      .map((a) => a.name)
+      .join(', ');
     return {
       taskId: '',
       output: `Error: Agent "${params.subagent_type}" not found. Available agents: ${availableAgents}`,
@@ -390,7 +437,7 @@ async function runSubagentInner(
     }
     if (model.useModel === llmModel) {
       // chatModelConfig = model;
-      chatModelConfig = model
+      chatModelConfig = model;
     }
   }
 
@@ -410,6 +457,10 @@ async function runSubagentInner(
     llmModel,
   );
 
+  // 将 __pending__ scope 中的激活工具迁移到 subagent 会话，确保 on-demand 模式下
+  // resolveOnDemandUseMcpToolCall 能从 taskId scope 查到已激活的工具 keys
+  useMCPStore.getState().adoptPendingToolKeys(taskId);
+
   if (subagentSpanContext) {
     // @deprecated - use agent.task_id (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute('subagent.task_id', taskId);
@@ -419,12 +470,21 @@ async function runSubagentInner(
       'subagent.parent_session_id',
       parentSessionId,
     );
-    subagentSpanContext.taskSpan.setAttribute(AGENT_PARENT_SESSION_ID, parentSessionId);
-    subagentSpanContext.taskSpan.setAttribute(GEN_AI_CONVERSATION_ID, parentSessionId);
+    subagentSpanContext.taskSpan.setAttribute(
+      AGENT_PARENT_SESSION_ID,
+      parentSessionId,
+    );
+    subagentSpanContext.taskSpan.setAttribute(
+      GEN_AI_CONVERSATION_ID,
+      parentSessionId,
+    );
     // @deprecated - use gen_ai.request.model (will be removed in next major cleanup)
     subagentSpanContext.taskSpan.setAttribute('subagent.model', llmModel);
     subagentSpanContext.taskSpan.setAttribute(GEN_AI_REQUEST_MODEL, llmModel);
-    subagentSpanContext.taskSpan.setAttribute(GEN_AI_OPERATION_NAME, GenAiOperationName.InvokeAgent);
+    subagentSpanContext.taskSpan.setAttribute(
+      GEN_AI_OPERATION_NAME,
+      GenAiOperationName.InvokeAgent,
+    );
   }
 
   let localConsumedTokens: ConsumedTokens = createInitialConsumedTokens();
@@ -476,20 +536,18 @@ async function runSubagentInner(
   let agentMCPServerNames: string[] = [];
   const instanceId = nanoid(8);
 
-  const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || undefined;
+  const codeMakerVersion =
+    useExtensionStore.getState().codeMakerVersion || undefined;
   // 获取 OpenSpec 相关配置
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
   const openspecVersion = useWorkspaceStore
     .getState()
     .getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
 
-  // enhancedAgent / messages 在 do-loop 内、MCP 注册就绪后构建，此处仅占位
+  // enhancedAgent / messages / subagentTools 在 do-loop 内、MCP 注册就绪后构建，此处仅占位
   let enhancedAgent: Agent = agent;
   let messages: ChatMessage[] = [];
-
-  const allTools = useWorkspaceStore.getState().getCodebaseChatTools() || [];
-
-  const subagentTools = getToolsForAgent(allTools, agent);
+  let subagentTools: ReturnType<typeof getToolsForAgent> = [];
 
   const compressionState: SessionCompressionState = {
     enabled: true,
@@ -629,10 +687,7 @@ async function runSubagentInner(
         }
 
         // 等待所有专属 server 连接就绪（超时后降级继续执行）
-        await waitForMCPServers(
-          agentMCPServerNames,
-          abortManager.signal,
-        );
+        await waitForMCPServers(agentMCPServerNames, abortManager.signal);
       }
     }
 
@@ -654,6 +709,28 @@ async function runSubagentInner(
               )
           : []
         : undefined;
+
+    // MCP 注册就绪后构建 tools：
+    // - visibleMCPServers 与 agentMCPServersOverride 使用同一时刻的 MCPStore 状态
+    // - 自定义 Agent 用其专属 servers，内置 Agent 用全局 visibleMCPServers
+    const visibleMCPServersForTools =
+      agentMCPServersOverride !== undefined
+        ? agentMCPServersOverride
+        : useMCPStore
+            .getState()
+            .MCPServers.filter((s) => s.status === 'connected' && !s.disabled);
+
+    const isOnDemandModeForTools = shouldUseOnDemandMCPTools({
+      totalToolCount: getVisibleMCPToolCount(visibleMCPServersForTools),
+    });
+    const allTools =
+      useWorkspaceStore.getState().getCodebaseChatTools({
+        mcpSnapshot: {
+          visibleMCPServers: visibleMCPServersForTools,
+          isOnDemandMode: isOnDemandModeForTools,
+        },
+      }) || [];
+    subagentTools = getToolsForAgent(allTools, agent);
 
     const enhancedPrompt = await promptBuilder.buildSystemPrompt(
       agent.prompt,
@@ -715,10 +792,10 @@ async function runSubagentInner(
         );
 
         if (chatModelConfig) {
-          configureThinkingSignature(chatModelConfig, promptData)
+          configureThinkingSignature(chatModelConfig, promptData);
         }
 
-        promptData.mode_type = `${agent.name || "unknown"}.agent`;
+        promptData.mode_type = `${agent.name || 'unknown'}.agent`;
 
         const llmResult = await streamChat(
           promptData,
@@ -758,7 +835,8 @@ async function runSubagentInner(
             id: nanoid(),
             role: ChatRole.Assistant,
             content: llmResult.text,
-            tool_calls: llmResult.toolCalls?.length > 0 ? llmResult.toolCalls : undefined,
+            tool_calls:
+              llmResult.toolCalls?.length > 0 ? llmResult.toolCalls : undefined,
             createdAt: Date.now(),
           } as ChatMessage;
           // Gemini 模型需要保留 thinking_signature
@@ -772,434 +850,52 @@ async function runSubagentInner(
           break;
         }
 
-        for (const toolCall of llmResult.toolCalls) {
+        // MCP 失败重试上限判定：连续 4 次 MCP 工具失败则终止主循环。
+        // Subagent 消息格式：工具结果为独立的 role:'tool' 消息，需先转换为
+        // isMcpFailureRetryExceeded 期望的格式（tool_result 附在 assistant message 上）
+        if (isMcpFailureRetryExceededForSubagent(messages)) {
+          debugLog(MODULE, 'MCP failure retry exceeded, stopping loop', {
+            taskId,
+          });
+          break;
+        }
+
+        // search_tool 优先排序：同轮 tool_calls 中 search_tool 必须在 use_mcp_tool 之前执行
+        const sortedToolCalls = [...(llmResult.toolCalls || [])].sort((a, b) => {
+          const aIsSearch = a.function.name === SEARCH_TOOL_NAME ? 0 : 1;
+          const bIsSearch = b.function.name === SEARCH_TOOL_NAME ? 0 : 1;
+          return aIsSearch - bIsSearch;
+        });
+
+        // 复用 do-loop 顶部已计算的 visibleMCPServersForTools：
+        // - 自定义 Agent 只路由到其专属 servers（agentMCPServersOverride），保持隔离
+        // - 内置 Agent 使用全局 connected servers
+        // - 与构建 subagentTools / prompt 时保持同一快照，避免不一致
+
+        for (const toolCall of sortedToolCalls) {
           // ✅ 每个工具执行前检查是否中止
           abortManager.checkAbort('tool-execution-start');
 
-          let toolParams: Record<string, any>;
-          try {
-            toolParams = JSON.parse(toolCall.function.arguments || '{}');
-          } catch {
-            toolParams = {};
-          }
-
-          const toolCallCtx: ToolCallHookContext = {
-            ...hookCtx,
-            toolId: toolCall.id,
-            toolName: toolCall.function.name,
-            toolArguments: toolCall.function.arguments || '',
-          };
-
-          const toolStartTime = Date.now();
-          await lifecycleManager.trigger('onBeforeToolCall', toolCallCtx);
-
-          const isFileEditTool = [
-            'edit_file',
-            'replace_in_file',
-            'reapply',
-            'write',
-            'edit',
-          ].includes(toolCall.function.name);
-          if (isFileEditTool) {
-            let filePath: string;
-            let updateSnippet: string;
-            let replaceSnippet: string;
-            let isCreateFile: boolean;
-            if (toolCall.function.name === 'write') {
-              filePath = toolParams.file_path || '';
-              updateSnippet = toolParams.content || '';
-              replaceSnippet = '';
-              // 支持 is_create_file 参数，默认为 true（创建文件）
-              isCreateFile = toolParams.is_create_file !== false;
-            } else if (toolCall.function.name === 'edit') {
-              filePath = toolParams.file_path || '';
-              // 支持多种参数名：new_string（标准）/ code_edit / diff（备用）
-              updateSnippet = toolParams.new_string || toolParams.code_edit || toolParams.diff || '';
-              // 支持多种参数名：old_string（标准）/ diff（备用）
-              replaceSnippet = toolParams.old_string || toolParams.diff || '';
-              // 支持 is_create_file 参数，默认为 false（编辑已存在文件）
-              isCreateFile = toolParams.is_create_file === true;
-            } else {
-              filePath = toolParams.target_file || toolParams.path || '';
-              updateSnippet = toolParams.code_edit || toolParams.diff || '';
-              replaceSnippet = toolParams.diff || '';
-              isCreateFile = toolParams.is_create_file === true;
-            }
-            useChatApplyStore.getState().setChatApplyItem(toolCall.id, {
-              filePath,
-              originalContent: '',
-              updateSnippet,
-              replaceSnippet,
-              type: toolCall.function.name,
-              toolCallId: toolCall.id,
-              applying: true,
-              accepted: false,
-              isCreateFile,
-            });
-          }
-
-          const isTerminalTool = toolCall.function.name === 'run_terminal_cmd';
-          const extraToolParams = isTerminalTool
-            ? { ...toolParams, messageId: toolCall.id }
-            : toolParams;
-
-          let toolSpan: ReturnType<typeof startToolCallSpan> | undefined;
-          if (subagentSpanContext) {
-            const agentName =
-              subagentSpanContext.association?.agentName || 'unknown';
-            toolSpan = startToolCallSpan({
-              toolName: toolCall.function.name,
-              toolId: toolCall.id,
-              toolArgs: toolCall.function.arguments || '',
-              agentName,
-              parentContext: subagentSpanContext.taskContext,
-              association: subagentSpanContext.association,
-              useSavedContext: false, // subagent 不使用 toolContextDataMap
-            });
-            toolSpan.setAttribute('subagent.tool.parent_task_id', taskId);
-          }
-
-          const { getExecutionStrategy } =
-            await import('../../../services/toolExecution/ToolExecutionStrategy');
-          const { createSubagentContext } =
-            await import('../../../types/executionContext');
-
-          const executionContext = createSubagentContext(toolCall.id, taskId);
-          const strategy = getExecutionStrategy(executionContext);
-          const shouldAutoExecute = strategy.shouldAutoExecute(
-            toolCall,
-            executionContext,
-          );
-
-          let userConfirmed = true;
-          if (!shouldAutoExecute) {
-            debugLog(MODULE, `Requesting user confirmation`, {
-              taskId,
-              toolId: toolCall.id,
-              toolName: toolCall.function.name,
-            });
-
-            const { useToolConfirmationStore } =
-              await import('../store/toolConfirmation');
-
-            // 如果在等待动态 import 期间已经 abort，直接跳过
-            if (abortManager.signal.aborted) {
-              userConfirmed = false;
-            } else {
-              try {
-                // 将 requestConfirmation 与 abort signal 竞速：
-                // abort 触发时立即 clear() 清除 pendingConfirmation UI 状态，
-                // 并以 false（拒绝）结束 await，executor 不再卡住。
-                // 注意：需要在 Promise.race 完成后清理 abort 监听器，避免内存泄漏
-                const abortCleanup: { current: (() => void) | null } = {
-                  current: null,
-                };
-                try {
-                  userConfirmed = await Promise.race([
-                    useToolConfirmationStore.getState().requestConfirmation({
-                      taskId,
-                      toolId: toolCall.id,
-                      toolName: toolCall.function.name,
-                      toolParams: toolParams,
-                      isDangerous: true,
-                      timestamp: Date.now(),
-                    }),
-                    new Promise<boolean>((resolve) => {
-                      const onAbort = () => {
-                        // clear() 会调用 resolver(false) 解决 requestConfirmation 的 Promise，
-                        // 同时将 pendingConfirmation 置 null，确认对话框立即消失
-                        useToolConfirmationStore.getState().clear();
-                        resolve(false);
-                      };
-                      abortManager.signal.addEventListener('abort', onAbort, {
-                        once: true,
-                      });
-                      // 保存清理函数，用于在 race 完成后移除监听器
-                      abortCleanup.current = () => {
-                        abortManager.signal.removeEventListener('abort', onAbort);
-                      };
-                    }),
-                  ]);
-                } finally {
-                  // 无论哪个 Promise 先完成，都清理 abort 监听器，防止内存泄漏
-                  abortCleanup.current?.();
-                }
-
-                debugLog(MODULE, `User confirmation result`, {
-                  taskId,
-                  toolId: toolCall.id,
-                  confirmed: userConfirmed,
-                });
-              } catch (error) {
-                debugLog(MODULE, `Failed to get user confirmation`, {
-                  taskId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-                userConfirmed = false;
-              }
-            }
-
-            if (!userConfirmed) {
-              const rejectionMessage: ChatMessage = {
-                role: ChatRole.Tool,
-                tool_call_id: toolCall.id,
-                content: 'User rejected the tool call',
-              };
-              messages.push(rejectionMessage);
-
-              continue;
-            }
-          }
-
-          const finalApproval = shouldAutoExecute || userConfirmed;
-
-          // waitForTool 必须在 postMessage 之前注册，确保不会漏接 IDE 的回调。
-          // 但必须在确认决策之后调用，避免：
-          //   1. 用户拒绝时 pending 条目悬空 7 分钟后超时
-          //   2. 计时器将用户确认等待时间计入工具超时预算
-          const toolResultPromise = runnerManager.waitForTool(
+          const result = await handleToolCall(toolCall, {
             taskId,
-            toolCall.id,
-            abortManager.signal,
-            toolCall.function.name,
-          );
-
-          debugLog(MODULE, `Registered waitForTool, sending TOOL_CALL`, {
-            taskId,
-            toolId: toolCall.id,
-            toolName: toolCall.function.name,
+            agent,
+            hookCtx,
+            messages,
+            abortManager,
+            visibleMCPServers: visibleMCPServersForTools,
+            isOnDemandMode: isOnDemandModeForTools,
+            llmModel,
+            isPrivateModel,
+            subagentAuthExtends,
+            enhancedProcessor,
+            subagentSpanContext,
           });
 
-          window.parent.postMessage(
-            {
-              type: 'TOOL_CALL',
-              data: {
-                tool_name: toolCall.function.name,
-                tool_params: {
-                  ...extraToolParams,
-                  is_approve: finalApproval,
-                },
-                tool_id: toolCall.id,
-                task_id: taskId,
-              },
-            },
-            '*',
-          );
-
-          if (!shouldAutoExecute && userConfirmed) {
-            debugLog(MODULE, `User confirmed tool execution`, {
-              taskId,
-              toolId: toolCall.id,
-              toolName: toolCall.function.name,
-            });
+          if (result.shouldContinue) continue;
+          if (!result.success) {
+            success = false;
+            break;
           }
-
-          const toolResult = await toolResultPromise;
-
-          if (toolSpan) {
-            const resultContent =
-              toolResult?.tool_result?.content || String(toolResult);
-            stopToolCallSpan(toolSpan, {
-              content: resultContent,
-              isError: toolResult?.tool_result?.isError,
-              errorMessage: toolResult?.tool_result?.isError
-                ? 'Tool execution failed'
-                : undefined,
-            });
-          }
-
-          if (isFileEditTool) {
-            const toolResultData = toolResult?.tool_result;
-            const extra = toolResult?.extra;
-            if (!toolResultData?.isError) {
-              useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                filePath: toolResultData?.path,
-                finalResult: extra?.finalResult || '',
-                beforeEdit: extra?.beforeEdit,
-                diffPatch: extra?.diffPatch || '',
-                taskId: extra?.taskId,
-                applying: false,
-                autoApply: useChatConfig.getState().autoApply,
-              });
-              const acceptPromise = runnerManager.waitForAcceptEdit(
-                toolCall.id,
-                abortManager.signal,
-              );
-              useChatApplyStore.getState().acceptEdit(toolCall.id);
-
-              try {
-                const acceptResult = await acceptPromise;
-
-                if (!acceptResult?.success) {
-                  debugLog(MODULE, 'Accept edit failed', {
-                    message: acceptResult?.message,
-                  });
-                  useChatApplyStore
-                    .getState()
-                    .updateChatApplyItem(toolCall.id, {
-                      applying: false,
-                    });
-                  userReporter.report({
-                    event: getReportEventByToolName({
-                      toolName: toolCall.function.name,
-                      status: 1,
-                    }),
-                    extends: {
-                      filePath: toolResultData?.path,
-                      beforeEdit: extra?.beforeEdit,
-                      editSnippet: extra?.editSnippet,
-                      replaceSnippet: extra?.replaceSnippet,
-                      taskId: extra?.taskId,
-                      tool_id: toolCall.id,
-                      tool_name: toolCall.function.name,
-                      source: 'subagent',
-                      agent_name: agent.name,
-                      error: acceptResult?.message,
-                    },
-                  });
-                } else {
-                  const applyItem = useChatApplyStore
-                    .getState()
-                    .getChatApplyItem(toolCall.id);
-                  if (applyItem) {
-                    useChatApplyStore
-                      .getState()
-                      .handleAcceptEditSuccess(applyItem);
-                  }
-                }
-              } catch (acceptError) {
-                debugLog(MODULE, 'Accept edit error', {
-                  error:
-                    acceptError instanceof Error
-                      ? acceptError.message
-                      : String(acceptError),
-                });
-                useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                  applying: false,
-                });
-                // ✅ 检查是否因 abort 导致的错误
-                abortManager.checkAbort('after-accept-edit-error');
-              }
-
-              userReporter.report({
-                event: getReportEventByToolName({
-                  toolName: toolCall.function.name,
-                  status: 1,
-                }),
-                extends: {
-                  filePath: toolResultData?.path,
-                  finalResult: extra?.finalResult || '',
-                  beforeEdit: extra?.beforeEdit,
-                  editSnippet: extra?.editSnippet,
-                  replaceSnippet: extra?.replaceSnippet,
-                  taskId: extra?.taskId,
-                  tool_id: toolCall.id,
-                  tool_name: toolCall.function.name,
-                  source: 'subagent',
-                  agent_name: agent.name,
-                },
-              });
-            } else {
-              useChatApplyStore.getState().updateChatApplyItem(toolCall.id, {
-                applying: false,
-              });
-
-              userReporter.report({
-                event: getReportEventByToolName({
-                  toolName: toolCall.function.name,
-                  status: 1,
-                }),
-                extends: {
-                  filePath: toolResult?.tool_result?.path,
-                  beforeEdit: toolResult?.extra?.beforeEdit,
-                  editSnippet: toolResult?.extra?.editSnippet,
-                  replaceSnippet: toolResult?.extra?.replaceSnippet,
-                  taskId: toolResult?.extra?.taskId,
-                  tool_id: toolCall.id,
-                  tool_name: toolCall.function.name,
-                  source: 'subagent',
-                  agent_name: agent.name,
-                },
-              });
-            }
-          }
-
-          const toolResultCtx: ToolResultHookContext = {
-            ...toolCallCtx,
-            duration: Date.now() - toolStartTime,
-          };
-          await lifecycleManager.trigger('onAfterToolCall', toolResultCtx);
-
-          let processedContent: string;
-
-          try {
-            const toolResultInput: ToolResultInput = {
-              tool_id: toolCall.id,
-              tool_name: toolCall.function.name,
-              tool_result: {
-                content: toolResult?.tool_result?.content,
-                path: toolResult?.tool_result?.path,
-                isError: toolResult?.tool_result?.isError,
-              },
-              extra: toolResult?.extra,
-              task_id: taskId,
-            };
-
-            const processContext: ToolResultProcessContext = {
-              session: {
-                _id: taskId,
-                data: {
-                  enablePlanMode: false,
-                  messages,
-                },
-              } as any,
-              model: llmModel,
-              source: 'subagent',
-              cUnrestrict: subagentAuthExtends?.c_unrestrict || false,
-              isPrivateModel,
-              allowPublicModelAccess:
-                useWorkspaceStore.getState().devSpace.allow_public_model_access,
-              authExtends: subagentAuthExtends,
-            };
-
-            const processed = await enhancedProcessor.process(
-              toolResultInput,
-              processContext,
-            );
-            processedContent = processed?.content || '';
-          } catch (processingError) {
-            debugLog(MODULE, 'Tool result processing error', {
-              error:
-                processingError instanceof Error
-                  ? processingError.message
-                  : String(processingError),
-            });
-
-            const fallbackContent =
-              toolResult?.tool_result?.content ?? JSON.stringify(toolResult);
-            processedContent =
-              typeof fallbackContent === 'string'
-                ? fallbackContent
-                : JSON.stringify(fallbackContent);
-          }
-
-          const toolMessage: ChatMessage = {
-            role: ChatRole.Tool,
-            content: processedContent,
-            tool_call_id: toolCall.id,
-          };
-          messages.push(toolMessage);
-
-          // 实时更新 store: 追加工具调用结果 message
-          useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
-            draft.messages.push({
-              id: nanoid(),
-              role: ChatRole.Tool,
-              content: processedContent,
-              tool_call_id: toolCall.id,
-              createdAt: Date.now(),
-            } as ChatMessage);
-          });
         }
 
         if (!success) break;
@@ -1315,7 +1011,7 @@ async function runSubagentInner(
             tokensSaved,
             compressionRatio: compressionCheck.tokensBefore
               ? (compressionCheck.tokensAfter ?? 0) /
-              compressionCheck.tokensBefore
+                compressionCheck.tokensBefore
               : 1,
           });
         }
@@ -1372,7 +1068,17 @@ async function runSubagentInner(
           step,
           messages.length,
           {},
-          () => syncSession(taskId, agent.name, params.description, messages, llmModel, enhancedUsage, createInitialConsumedTokens(), compressionState),
+          () =>
+            syncSession(
+              taskId,
+              agent.name,
+              params.description,
+              messages,
+              llmModel,
+              enhancedUsage,
+              createInitialConsumedTokens(),
+              compressionState,
+            ),
         );
 
         // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计
@@ -1564,7 +1270,17 @@ IMPORTANT RULES:
           step,
           messages.length,
           { isErrorSync: true },
-          () => syncSession(taskId, agent.name, params.description, messages, llmModel, totalUsage, localConsumedTokens, compressionState),
+          () =>
+            syncSession(
+              taskId,
+              agent.name,
+              params.description,
+              messages,
+              llmModel,
+              totalUsage,
+              localConsumedTokens,
+              compressionState,
+            ),
         );
       } catch (syncErr) {
         console.warn(
@@ -1574,7 +1290,10 @@ IMPORTANT RULES:
       }
 
       if (subagentSpanContext) {
-        subagentSpanContext.taskSpan.setStatus(SpanStatusCode.ERROR, finalErrorMsg);
+        subagentSpanContext.taskSpan.setStatus(
+          SpanStatusCode.ERROR,
+          finalErrorMsg,
+        );
       }
 
       await lifecycleManager.trigger(
@@ -1643,7 +1362,8 @@ IMPORTANT RULES:
             currentSignal.addEventListener('abort', onAbort, { once: true });
             // 保存清理函数，使用捕获时的 signal 引用，
             // 防止 retry 重置 abortManager 后 signal 引用变化导致 removeEventListener 失效
-            abortCleanup = () => currentSignal.removeEventListener('abort', onAbort);
+            abortCleanup = () =>
+              currentSignal.removeEventListener('abort', onAbort);
           }),
         ]).finally(() => {
           // 无论哪个 Promise 先决议，都清理 abort 监听器，防止内存泄漏
@@ -1654,7 +1374,10 @@ IMPORTANT RULES:
           // 用户选择 Retry，清除错误状态和错误消息
           retryCount++;
           if (subagentSpanContext) {
-            subagentSpanContext.taskSpan.setAttribute(AGENT_RETRY_COUNT, retryCount);
+            subagentSpanContext.taskSpan.setAttribute(
+              AGENT_RETRY_COUNT,
+              retryCount,
+            );
           }
 
           debugLog(MODULE, 'User chose to retry, cleaning up error state', {
@@ -1699,7 +1422,8 @@ IMPORTANT RULES:
 
           // ✅ 5. 使用 AbortManager 重置（一行代码完成）
           abortManager = abortManager.reset(parentAbortSignal);
-          runnerState.abortController = createAbortControllerAdapter(abortManager);
+          runnerState.abortController =
+            createAbortControllerAdapter(abortManager);
           runnerManager.register(taskId, runnerState);
 
           debugLog(MODULE, 'Retry setup complete', {
@@ -1745,7 +1469,10 @@ IMPORTANT RULES:
           });
 
           if (subagentSpanContext) {
-            subagentSpanContext.taskSpan.setAttribute(AGENT_RESULT_SYNCED_TO_PARENT, true);
+            subagentSpanContext.taskSpan.setAttribute(
+              AGENT_RESULT_SYNCED_TO_PARENT,
+              true,
+            );
             subagentSpanContext.taskSpan.setAttribute(AGENT_FINAL_STEPS, step);
           }
           useChatStreamStore.getState().updateToolCallResults({
@@ -1776,7 +1503,10 @@ IMPORTANT RULES:
         });
 
         if (subagentSpanContext) {
-          subagentSpanContext.taskSpan.setAttribute(AGENT_RESULT_SYNCED_TO_PARENT, true);
+          subagentSpanContext.taskSpan.setAttribute(
+            AGENT_RESULT_SYNCED_TO_PARENT,
+            true,
+          );
           subagentSpanContext.taskSpan.setAttribute(AGENT_FINAL_STEPS, step);
         }
         useChatStreamStore.getState().updateToolCallResults({
@@ -1803,7 +1533,10 @@ IMPORTANT RULES:
           'subagent.is_truncated',
           isTruncated,
         );
-        subagentSpanContext.taskSpan.setAttribute(AGENT_IS_TRUNCATED, isTruncated);
+        subagentSpanContext.taskSpan.setAttribute(
+          AGENT_IS_TRUNCATED,
+          isTruncated,
+        );
         if (!error) {
           subagentSpanContext.taskSpan.setStatus(SpanStatusCode.OK);
         }
@@ -1855,7 +1588,17 @@ IMPORTANT RULES:
           step,
           messages.length,
           { isFinal: true },
-          () => syncSession(taskId, agent.name, params.description, messages, llmModel, finalEnhancedUsage, createInitialConsumedTokens(), compressionState),
+          () =>
+            syncSession(
+              taskId,
+              agent.name,
+              params.description,
+              messages,
+              llmModel,
+              finalEnhancedUsage,
+              createInitialConsumedTokens(),
+              compressionState,
+            ),
         );
 
         // 同步 consumedTokens 到 store，使 UI 能实时显示 token 统计

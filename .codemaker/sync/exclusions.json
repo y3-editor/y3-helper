@@ -79,6 +79,7 @@
     "src/components/FeatureTour/": "[多会话/引导] 功能引导系统，所有tour都不适用于Y3",
     "src/components/Icon/ParallelSessionIcon.tsx": "[多会话] 并行会话图标，Y3不需要",
     "src/routes/CodeChat/ChatModelSelector.tsx": "Y3不需要模型选择功能，固定使用VSCode Settings中的模型配置",
+    "src/routes/CodeChat/ChatModelSelector/": "Y3不需要模型选择器UI整套（含 fa651de9 折扣/分档 token 费用 + 拆分后的 ChatEffotSelect/chatModelTokenCost/index）。Y3 仍用单文件 ChatModelSelector.tsx（已 SKIP），固定使用 VSCode Settings 中的模型配置",
     "src/utils/initInsideServer.ts": "CodeMaker内置服务端初始化，Y3用自己写的api-server，不需要",
     "src/utils/serverRoutes.ts": "CodeMaker内置服务端路由定义，Y3用自己写的api-server，不需要",
     "src/routes/CodeChat/ChatSessionPicker.tsx": "[多会话] 多选会话发起新对话功能，Y3没有多会话功能",
@@ -186,7 +187,13 @@
     "skip_be7a0ab5_claudeEdit_cross_workspace": "SKIP: refactor: 支持跨工作区修改 (be7a0ab5)。2026-04-28 extension 轮。上游把 src/utils/editFile/claudeEdit.ts validateAndResolveFilePath 中的工作区检查 throw 收窄为 if (!path.isAbsolute(absolutePath)) throw ...，意图是绝对路径放行以支持跨工作区。但 absolutePath = path.resolve(workspaceRoot, filePath) 永远是绝对路径，等于工作区检查完全失效，path.normalize/../outside.txt 也能通过。Y3 单工作区场景，保留严格校验更安全。已在 src/codemaker/utils/editFile/claudeEdit.ts 加注释，避免下次同步看到懵。",
     "merge_96919a61_extension": "MERGED: feat: Skill 配置支持 autoRun 自动执行参数 (96919a61)。2026-04-28 extension 轮。Y3 src/codemaker/skillsHandler.ts: SkillConfig/SkillIndexItem 增 autoRun?: boolean 字段；handleUpdateSkillConfig 解构 autoRun 并合并到 skillConfigs（!== undefined 时才覆盖，防止覆盖已有值）；getSkillIndex 透传 autoRun 给 webview。webviewProvider/index.ts hunk1 (UPDATE_SKILL_CONFIG) 因 Y3 messageHandlers.ts 走 handleUpdateSkillConfig(data) 直传 data，autoRun 自动通过，无需 cherry-pick",
     "skip_ade8ae9e_extension": "SKIP: feat: 新增隐藏内置 OpenSpec 命令的配置项 (ade8ae9e)。2026-04-28 extension 轮。同 webui 251cd5dc，Y3 stub 永久隐藏 OpenSpec。涉及 package.json/.nls.json/extension.ts/configures.ts/CodebaseChatPanelManager.ts (auto SKIP) + webviewProvider hunk2/3 (HideBuiltInOpenSpecCommands 配置注入) + sendWebviewInitData.ts 全部跳过",
-    "skip_0b707841_extension": "SKIP: chore: 调整ChatApplyMode 默认值为 claudeedit (0b707841)。2026-04-28 extension 轮。仅改 package.json default 值（auto SKIP）。Y3 自有 ChatApplyMode 默认值策略，不跟"
+    "skip_0b707841_extension": "SKIP: chore: 调整ChatApplyMode 默认值为 claudeedit (0b707841)。2026-04-28 extension 轮。仅改 package.json default 值（auto SKIP）。Y3 自有 ChatApplyMode 默认值策略，不跟",
+    "skip_fa651de9_04597c7e": "SKIP: feat: 模型添加折扣信息&分档token费用展示 (fa651de9) + style: 调整模型价格标样式 (04597c7e)。2026-04-30 webui 轮。Y3 不展示官方折扣/分档计费 UI，模型从 VSCode Settings 固定配置。整个 ChatModelSelector/ 目录（拆分后的 ChatEffotSelect/chatModelTokenCost/index）已加入 excluded_upstream + excluded_upstream_dirs。chatModel.ts (REVIEW) 中关联的 discount/tieredPricing/getModelDiscountInfo 字段不合，仅 cherry-pick 通用类型补充（如有）",
+    "merge_69c0f470": "MERGED: feat(subagent): 补齐 MCP on-demand 完整执行语义，支持 Agent 专属 MCP Servers 生命周期管理 (69c0f470)。2026-04-30 webui 轮。Y3 已用 subagent + MCP，需同步上游 lifecycle 逻辑。涉及 modules/subagent/* + prompts/subagent.ts + services/agentCreation.ts + harness/tools/task.ts + AgentSettingModal/* + PromptsPanel.tsx 直接覆盖",
+    "merge_e545978e": "MERGED: fix: deepseek 路径幻觉 (e545978e)。2026-04-30 webui 轮。仅 store/chat.ts 部分需手合（ChatModelSelector/ChatEffotSelect.tsx 部分因目录已 SKIP 自然丢弃）",
+    "merge_7df7f892": "MERGED: chore: 流式请求时增加 ntes-trace-id 追踪 (7df7f892)。2026-04-30 webui 轮。harness/stream/{aigwCodebase,azureOpenAI,base/interface,cmCodebase} 直接覆盖。ntes-trace-id 是网易内部追踪头",
+    "merge_b2fe1971": "MERGED: chore: 调整 read_file 读取路径说明 (b2fe1971)。2026-04-30 webui 轮。harness/tools/read.ts 直接覆盖（提示文案）",
+    "merge_cb3577a4": "MERGED: style: 调整限额展示文案 (cb3577a4)。2026-04-30 webui 轮。ChatMentionAreatext.tsx 直接覆盖（UI 文案）"
   },
 
   "_merge_lessons_learned": {

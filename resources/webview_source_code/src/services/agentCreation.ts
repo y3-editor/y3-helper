@@ -1,10 +1,11 @@
 import { ChatRole } from '../types/chat';
 import { UserEvent } from '../types/report';
 import { handleStreamError } from '../utils';
-import { DEFAULT_USAGE_MODEL } from '../store/chat-config';
+import { DEFAULT_USAGE_MODEL, useChatConfig } from '../store/chat-config';
 import { ChatMessage, ChatMessageContent, ChatMessageContentText } from './index';
 import { requestChatStream } from './useChatStream';
 import type { Rule } from '../store/workspace';
+import { ChatModel } from './chatModel';
 
 // ---- Types ----
 
@@ -175,11 +176,12 @@ export function formatAgentAsMarkdown(config: GeneratedAgent): string {
   if (config.agentMetadata) {
     for (const [key, value] of Object.entries(config.agentMetadata)) {
       if (value === undefined || value === null || value === '') continue;
-      // ⚠️ Y3 定制 (sync): 上游会给 model 字段拼 `netease-codemaker/` 前缀，
-      // Y3 直接使用裸 model 名（避免敏感词 + 不走 CodeMaker 模型代理）。
-      // 同步上游时若看到此处出现 `netease-codemaker/` 前缀，请删除拼接逻辑。
-      const serialized =
+      let serialized =
         typeof value === 'object' ? JSON.stringify(value) : String(value);
+      // model 字段需要加上 netease-codemaker/ 前缀
+      if (key === 'model') {
+        serialized = `netease-codemaker/${serialized}`;
+      }
       extraMeta += `\n${key}: ${serialized}`;
     }
   }
@@ -272,11 +274,26 @@ Return ONLY the JSON object, no other text.`;
       reject(err);
     };
 
+    // 与 buildCodebaseChatPayload / buildSubagentChatPromptBody 保持一致
+    const chatModels = useChatConfig.getState().chatModels;
+    let DEFAULT_MAX_TOKENS = 10240;
+    if ([ChatModel.Gemini25, ChatModel.Gemini3Pro].includes(model as ChatModel)) {
+      DEFAULT_MAX_TOKENS = 32000;
+    }
+    const maxTokens = Math.max(
+      DEFAULT_MAX_TOKENS,
+      chatModels[model]?.tokenInfo?.maxOutputTokens || 10240,
+    );
+
     requestChatStream(
       UserEvent.CODE_CHAT_CREATE_AGENT,
       {
         messages: [systemMessage, userMessage],
         model,
+        stream: true,
+        tool_choice: 'auto',
+        temperature: 0,
+        max_tokens: maxTokens,
       },
       undefined,
       {

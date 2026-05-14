@@ -57,7 +57,7 @@ export const getV2ReadFileTool = (data: IReadFileToolParams) => {
     `Reads a file from the local filesystem. You can access any file directly by using this tool.
 Assume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
 Usage:
-- The file_path parameter must be an absolute path, not a relative path
+- The path parameter must be an absolute path, not a relative path
 - By default, it reads up to ${maxTruncatedLine} lines starting from the beginning of the file
 - You can optionally specify a line offset and limit (especially handy for long files)
 - Any lines longer than ${maxTruncatedChar} characters will be truncated
@@ -70,7 +70,7 @@ Usage:
     `Reads a file from the local filesystem. You can access any file directly by using this tool.
 Assume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
 Usage:
-- The file_path parameter must be an absolute path, not a relative path
+- The path parameter must be an absolute path, not a relative path
 - By default, it reads up to ${maxTruncatedLine} lines starting from the beginning of the file
 - You can optionally specify a line offset and limit (especially handy for long files)
 - Any lines longer than ${maxTruncatedChar} characters will be truncated\n- Results are returned using cat -n format, with line numbers starting at 1
@@ -212,8 +212,8 @@ export const getV2ReadFileToolZHTool = (data: IReadFileToolParams) => {
   const selectedModel = useChatConfig.getState().config.model
 
   let description = hasCodeTable
-    ? "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- file_path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告\n- 如果经过聚焦的本地读取后仍未找到相关代码，请使用 retrieve_code 工具"
-    : "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- file_path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告"
+    ? "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告\n- 如果经过聚焦的本地读取后仍未找到相关代码，请使用 retrieve_code 工具"
+    : "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告"
 
   const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
   const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;

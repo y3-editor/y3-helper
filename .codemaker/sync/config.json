@@ -48,6 +48,7 @@
       "src/patchSetup.ts",
       "src/telemetry/",
       "src/routes/CodeChat/ChatEffotSelect.tsx",
+      "src/routes/CodeChat/ChatModelSelector/",
       ".github/",
       ".gitlab-ci.yml",
       "Dockerfile",

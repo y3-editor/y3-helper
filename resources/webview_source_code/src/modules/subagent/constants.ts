@@ -28,7 +28,7 @@ export const TOOL_TIMEOUT_MS = 7 * 60 * 1000;
  */
 export const LLM_CALL_TIMEOUT_MS = 8 * 60 * 1000;
 
-/** Subagent 总执行超时时间（10 分钟）
+/** Subagent 总执行超时时间（20 分钟）
  *
  * 整个 subagent 从启动到结束的最大时间限制。
  * - 防止 subagent 因各种原因（循环、多步骤累积）无限执行
@@ -36,7 +36,7 @@ export const LLM_CALL_TIMEOUT_MS = 8 * 60 * 1000;
  * - 应大于单个 LLM 调用超时 × 预期步数
  */
 // export const SUBAGENT_TOTAL_TIMEOUT_MS = 20 * 1000;
-export const SUBAGENT_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
+export const SUBAGENT_TOTAL_TIMEOUT_MS = 20 * 60 * 1000;
 
 /** 用户操作等待超时时间（5 分钟）
  *

@@ -5,7 +5,9 @@
  */
 
 import { ToolCall } from '../../services';
-import type { AssociationProperties, ConversationRoundState, Context, SafeSpan } from '../../telemetry/otel';
+import type { AssociationProperties, ConversationRoundState } from '../../telemetry/otel';
+import type { Context } from '../../telemetry/otel';
+import type { SafeSpan } from '../../telemetry/otel';
 
 // ============================================================
 // Agent 定义
@@ -64,6 +66,13 @@ export interface Agent {
    * 实际注册到 IDE 时会自动添加隔离前缀，避免并发冲突。
    */
   mcpServers?: Record<string, AgentMCPServerConfig>;
+  /**
+   * 运行时加载状态 — 不持久化到文件。
+   * IDE 解析 agent.md 失败时置为 "error"，webview 据此禁用该 agent。
+   */
+  _status?: 'success' | 'error';
+  /** 解析失败时的错误信息，仅 _status === "error" 时有效 */
+  _msg?: string;
 }
 
 // ============================================================

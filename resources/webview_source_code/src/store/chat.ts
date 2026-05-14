@@ -3840,7 +3840,7 @@ export const useChatStreamStore = create(
 
         // 收集 agent system-reminders（注入到 system prompt tier2）
         const enableSubagent = useChatConfig.getState().enableSubagent;
-        const agents = useSubagentStore.getState().agents;
+        const agents = useSubagentStore.getState().validAgents;
         const systemReminders: string[] = [];
 
         // Agent listing：enableSubagent 时始终注入（无论手动/自动触发模式）
@@ -4622,6 +4622,10 @@ export const useChatStreamStore = create(
                           } else if (tool.function.name === 'read_file') {
                             try {
                               const toolCallParams = JSON.parse(tool.function.arguments || '{}');
+                              // [Y3] e545978e fix: 兼容 deepseek 路径幻觉～
+                              if (!toolCallParams.path && toolCallParams.file_path) {
+                                toolCallParams.path = toolCallParams.file_path;
+                              }
                               // TODO: 需要先给路径做规范化之后再对比
                               const readFilePath = toolCallParams.path.replace(/\\\\/g, '/');
                               if (readFilePath) {
@@ -5575,6 +5579,10 @@ export const useChatStreamStore = create(
                               );
                             })();
                           } else if (tool.function.name === 'read_file') {
+                            // [Y3] e545978e fix: 兼容 deepseek 路径幻觉～，初步怀疑是其他工具的 file_path 参数被 deepseek 认为是 read_file 的 path 参数
+                            if (typeof tool_params === 'object' && !tool_params?.path && tool_params?.file_path) {
+                              tool_params.path = tool_params.file_path;
+                            }
                             (async () => {
                               const allowed = await runToolBeforeExecuteHook(
                                 sessionId,

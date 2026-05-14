@@ -6,6 +6,7 @@ export interface IStreamOption {
   onError?: (error: Error) => void;
   onController?: (controller: AbortController) => void;
   onFinish?: (extra: any) => void;
+  ntesTraceId?: string;
 }
 
 

@@ -16,7 +16,7 @@ export function buildTaskDescription(): string {
     return 'Subagent functionality is currently disabled.';
   }
 
-  const agents: Agent[] = useSubagentStore.getState().agents;
+  const agents: Agent[] = useSubagentStore.getState().validAgents;
   const stepLimitLines = agents.length
     ? agents
       .map(
