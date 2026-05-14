@@ -10,6 +10,11 @@ import {
   Divider,
   HStack,
   Icon,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -28,11 +33,17 @@ import {
   TbX,
   TbCircleDot,
   TbBrain,
+  TbShare3,
+  // TbLink,
+  TbCopy,
 } from 'react-icons/tb';
 import { RiRobot2Line } from 'react-icons/ri';
 
 import { ChatMessage, ToolCall, ToolResult } from '../../../../services';
 import { useSubagentStore } from '../../../../modules/subagent';
+import { BroadcastActions, usePostMessage } from '../../../../PostMessageProvider';
+import useCustomToast from '../../../../hooks/useCustomToast';
+// import { CODEMAKER_UI } from '../../../CodeCoverage/const';
 import TaskCompressionSummary from './TaskCompressionSummary';
 
 const pulse = keyframes`
@@ -592,6 +603,101 @@ export function TaskDetailModal({
   loading,
   error,
 }: TaskDetailModalProps) {
+  const { postMessage } = usePostMessage();
+  const { toast } = useCustomToast();
+
+  const messages = useSubagentStore(
+    (s) => s.getSubagentSession(taskId)?.messages || [],
+  );
+  const hasMessages = messages.length > 0;
+
+  /** Task 6.3：复制链接 */
+  // const handleShareLink = React.useCallback(async () => {
+  //   try {
+  //     const response = await codemakerApiRequest.post<any>(
+  //       `/chat/chat_histories/${taskId}/share`,
+  //       { origin_history_id: taskId },
+  //     );
+  //     const shareId = response.data._id;
+  //     const url = `${CODEMAKER_UI}/share/${shareId}`;
+  //     postMessage({ type: BroadcastActions.COPY_TO_CLIPBOARD, data: url });
+
+  //     toast({
+  //       title: isActive
+  //         ? '分享链接已复制到剪贴板（任务进行中，内容可能不完整）'
+  //         : '分享链接已复制到剪贴板',
+  //       status: 'success',
+  //       duration: 3000,
+  //       position: 'top',
+  //       isClosable: true,
+  //     });
+  //   } catch {
+  //     toast({
+  //       title: '分享链接失败，请重试',
+  //       status: 'error',
+  //       duration: 3000,
+  //       position: 'top',
+  //       isClosable: true,
+  //     });
+  //   }
+  // }, [taskId, isActive, postMessage, toast]);
+
+  /** Task 6.4：全部复制 */
+  const handleCopyAll = React.useCallback(() => {
+    const lines: string[] = [];
+    for (const msg of messages) {
+      if (msg.role === 'assistant') {
+        const textContent =
+          typeof msg.content === 'string'
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content
+                  .filter((c: any) => c.type === 'text')
+                  .map((c: any) => c.text || '')
+                  .join('\n')
+              : '';
+        if (textContent) {
+          lines.push(`## 来自 Agent 的消息\n\n${textContent}`);
+        }
+      } else if (msg.role === 'user') {
+        const textContent =
+          typeof msg.content === 'string'
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content
+                  .filter((c: any) => c.type === 'text')
+                  .map((c: any) => c.text || '')
+                  .join('\n')
+              : '';
+        if (textContent) {
+          lines.push(`## 来自你的消息\n\n${textContent}`);
+        }
+      } else if (msg.role === 'tool') {
+        const textContent =
+          typeof msg.content === 'string'
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content
+                  .filter((c: any) => c.type === 'text')
+                  .map((c: any) => c.text || '')
+                  .join('\n')
+              : '';
+        if (textContent) {
+          lines.push(`## 工具调用结果\n\n${textContent}`);
+        }
+      }
+    }
+    const fullText = lines.join('\n\n---\n\n');
+    postMessage({ type: BroadcastActions.COPY_TO_CLIPBOARD, data: fullText });
+    toast({
+      title: '复制成功',
+      status: 'success',
+      duration: 2000,
+      position: 'top',
+      isClosable: true,
+    });
+  }, [messages, postMessage, toast]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="full">
       <ModalOverlay bg="blackAlpha.800" backdropFilter="blur(4px)" />
@@ -612,7 +718,7 @@ export function TaskDetailModal({
           py={4}
           bg="gray.900"
         >
-          <HStack spacing={3} pr={8}>
+          <HStack spacing={3} pr={16}>
             <Box
               w="36px"
               h="36px"
@@ -665,6 +771,48 @@ export function TaskDetailModal({
                 </Text>
               )}
             </VStack>
+
+            {/* Task 6.2：分享 Menu（TbShare3 按钮 + 下拉菜单） */}
+            <Menu placement="bottom-end">
+              <MenuButton
+                as={IconButton}
+                aria-label="分享"
+                icon={<Icon as={TbShare3} boxSize={4} />}
+                size="sm"
+                variant="ghost"
+                color="whiteAlpha.600"
+                _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                flexShrink={0}
+              />
+              <MenuList
+                bg="gray.800"
+                borderColor="whiteAlpha.200"
+                minW="140px"
+                py={1}
+              >
+                {/* <MenuItem
+                  icon={<Icon as={TbLink} boxSize={4} />}
+                  fontSize="sm"
+                  bg="transparent"
+                  color="whiteAlpha.800"
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  onClick={handleShareLink}
+                >
+                  复制链接
+                </MenuItem> */}
+                <MenuItem
+                  icon={<Icon as={TbCopy} boxSize={4} />}
+                  fontSize="sm"
+                  bg="transparent"
+                  color="whiteAlpha.800"
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  isDisabled={!hasMessages}
+                  onClick={handleCopyAll}
+                >
+                  全部复制
+                </MenuItem>
+              </MenuList>
+            </Menu>
           </HStack>
         </ModalHeader>
 

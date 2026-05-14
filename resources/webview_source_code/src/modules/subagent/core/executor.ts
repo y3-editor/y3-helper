@@ -7,11 +7,17 @@ import type {
   Agent,
   SubagentStatus,
 } from '../types';
+import {
+  convertAgentMCPServers,
+  waitForMCPServers,
+} from '../utils/mcp';
+import { BroadcastActions } from '../../../PostMessageProvider';
 import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
 import {
   DEFAULT_MAX_STEPS,
   SUBAGENT_TOTAL_TIMEOUT_MS,
   USER_ACTION_TIMEOUT_MS,
+  CLAUDE_ALIAS_MAP,
 } from '../constants';
 import { useSubagentStore } from '../state/store';
 import { runnerManager } from '../lifecycle/manager';
@@ -56,6 +62,7 @@ import { estimateTokens } from '../../../utils/tokenEstimate';
 import { useChatConfig } from '../../../store/chat-config';
 import { useAuthStore } from '../../../store/auth';
 import { useWorkspaceStore, SpecFramework } from '../../../store/workspace';
+import { useMCPStore } from '../../../store/mcp';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
 import { useChatApplyStore } from '../../../store/chatApply';
 import { ChatModel, IChatModelConfig } from '../../../services/chatModel';
@@ -81,13 +88,11 @@ import {
   startSubagentTaskSpan,
   startToolCallSpan,
   stopToolCallSpan,
-} from '../../../telemetry/otel';
-import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
-import {
   SpanStatusCode,
   trace,
   context as otelContext,
 } from '../../../telemetry/otel';
+import { TRACING_DEFAULT_TRACER } from '../../../telemetry/const';
 import {
   AGENT_TASK_ID,
   AGENT_PARENT_SESSION_ID,
@@ -217,13 +222,6 @@ async function wrapSyncSessionSpan<T>(
     syncSpan.end();
   }
 }
-
-/** Claude 简化别名 → 完整模型代码 */
-const CLAUDE_ALIAS_MAP: Record<string, ChatModel> = {
-  sonnet: ChatModel.Claude45Sonnet20250929,
-  opus: ChatModel.Claude45Opus20251101,
-  haiku: ChatModel.Claude45Haiku20251001,
-};
 
 /** 魔法值：表示"继承主 agent 模型" */
 const INHERIT_SENTINEL = 'inherit';
@@ -474,6 +472,10 @@ async function runSubagentInner(
   // ✅ 发射 TASK_STARTED 事件
   emitTaskStarted(parentSessionId, toolCallId, taskId, agent.name);
 
+  // MCP server 注册列表：在循环外声明，供循环内注册和最终清理使用
+  let agentMCPServerNames: string[] = [];
+  const instanceId = nanoid(8);
+
   const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || undefined;
   // 获取 OpenSpec 相关配置
   const codebaseChatMode = useChatStore.getState().codebaseChatMode;
@@ -481,27 +483,10 @@ async function runSubagentInner(
     .getState()
     .getFrameworkSpecInfo(SpecFramework.OpenSpec)?.version;
 
-  const enhancedPrompt = await promptBuilder.buildSystemPrompt(
-    agent.prompt,
-    agent.name,
-    {
-      config: {
-        codeMakerVersion,
-        codebaseChatMode,
-        openspecVersion,
-      },
-    },
-  );
-  const enhancedAgent: Agent = {
-    ...agent,
-    prompt: enhancedPrompt,
-  };
+  // enhancedAgent / messages 在 do-loop 内、MCP 注册就绪后构建，此处仅占位
+  let enhancedAgent: Agent = agent;
+  let messages: ChatMessage[] = [];
 
-  const messages: ChatMessage[] = buildInitialMessages(
-    enhancedAgent,
-    params,
-    cacheEnable,
-  );
   const allTools = useWorkspaceStore.getState().getCodebaseChatTools() || [];
 
   const subagentTools = getToolsForAgent(allTools, agent);
@@ -594,6 +579,99 @@ async function runSubagentInner(
   let retrying = false;
   do {
     retrying = false;
+
+    // ============================================================
+    // 每次（含重试）重新注册 Agent 专属 MCP servers
+    // 注意：重试前需先清理上一轮已注册的 servers，防止重复注册和资源泄漏
+    // ============================================================
+    if (agentMCPServerNames.length > 0) {
+      debugLog(MODULE, 'Cleaning up MCP servers at loop start', {
+        agentName: agent.name,
+        instanceId,
+        servers: agentMCPServerNames,
+      });
+      for (const serverName of agentMCPServerNames) {
+        window.parent.postMessage(
+          {
+            type: BroadcastActions.REMOVE_MCP_SERVERS,
+            data: { name: serverName },
+          },
+          '*',
+        );
+      }
+    }
+    agentMCPServerNames = [];
+
+    if (agent.mcpServers && Object.keys(agent.mcpServers).length > 0) {
+      const agentServers = convertAgentMCPServers(
+        agent.name,
+        instanceId,
+        agent.mcpServers,
+      );
+
+      if (agentServers.length > 0) {
+        agentMCPServerNames.push(...agentServers.map((s) => s.name));
+
+        debugLog(MODULE, 'Registering agent-specific MCP servers', {
+          agentName: agent.name,
+          instanceId,
+          servers: agentMCPServerNames,
+        });
+
+        for (const mcpServer of agentServers) {
+          window.parent.postMessage(
+            {
+              type: BroadcastActions.ADD_MCP_SERVERS,
+              data: { ...mcpServer },
+            },
+            '*',
+          );
+        }
+
+        // 等待所有专属 server 连接就绪（超时后降级继续执行）
+        await waitForMCPServers(
+          agentMCPServerNames,
+          abortManager.signal,
+        );
+      }
+    }
+
+    // MCP 注册就绪后构建 prompt，确保自定义 Agent 的专属 MCP servers 已在 MCPStore 中
+    // 自定义 Agent 只注入其 .md 声明的 MCP servers（按隔离名称匹配），内置 Agent 注入全局 MCPStore
+    // 自定义 Agent：始终覆盖 mcpServers，避免注入全局 MCP servers
+    //   - 若声明了 mcpServers，则仅注入已注册且已连接的专属 servers
+    //   - 若未声明 mcpServers（为空），则传空数组，不注入任何 server
+    const agentMCPServersOverride =
+      agent.source === 'custom'
+        ? agent.mcpServers && Object.keys(agent.mcpServers).length > 0
+          ? useMCPStore
+              .getState()
+              .MCPServers.filter(
+                (s) =>
+                  s.status === 'connected' &&
+                  !s.disabled &&
+                  agentMCPServerNames.includes(s.name),
+              )
+          : []
+        : undefined;
+
+    const enhancedPrompt = await promptBuilder.buildSystemPrompt(
+      agent.prompt,
+      agent.name,
+      {
+        config: {
+          codeMakerVersion,
+          codebaseChatMode,
+          openspecVersion,
+        },
+        ...(agentMCPServersOverride !== undefined && {
+          mcpServers: agentMCPServersOverride,
+        }),
+      },
+    );
+    enhancedAgent = { ...agent, prompt: enhancedPrompt };
+    messages = buildInitialMessages(enhancedAgent, params, cacheEnable);
+
     try {
       // 主循环
       while (step < maxSteps) {
@@ -1631,6 +1709,26 @@ IMPORTANT RULES:
             willContinueFromStep: step + 1,
           });
 
+          // ✅ 6. 清理本轮已注册的 MCP servers，防止重试时重复注册导致资源泄漏
+          // 下一次循环迭代会在顶部重新注册
+          if (agentMCPServerNames.length > 0) {
+            debugLog(MODULE, 'Cleaning up MCP servers before retry', {
+              agentName: agent.name,
+              instanceId,
+              servers: agentMCPServerNames,
+            });
+            for (const serverName of agentMCPServerNames) {
+              window.parent.postMessage(
+                {
+                  type: BroadcastActions.REMOVE_MCP_SERVERS,
+                  data: { name: serverName },
+                },
+                '*',
+              );
+            }
+            agentMCPServerNames = [];
+          }
+
           retrying = true;
         } else {
           // 用户选择 Stop，更新主 agent 的 tool_result
@@ -1915,6 +2013,29 @@ IMPORTANT RULES:
         undefined,
         error || 'Unexpected execution termination',
       );
+    }
+
+    // ============================================================
+    // 清理 Agent 专属 MCP servers
+    // ============================================================
+    // 无论执行成功、失败还是被取消，都清理本次注册的专属 server，
+    // 避免污染全局 MCP server 状态。
+    if (agentMCPServerNames.length > 0) {
+      debugLog(MODULE, 'Cleaning up agent-specific MCP servers', {
+        agentName: agent.name,
+        instanceId,
+        servers: agentMCPServerNames,
+      });
+
+      for (const serverName of agentMCPServerNames) {
+        window.parent.postMessage(
+          {
+            type: BroadcastActions.REMOVE_MCP_SERVERS,
+            data: { name: serverName },
+          },
+          '*',
+        );
+      }
     }
   }
 }

@@ -61,17 +61,13 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
     }
 
     if (this.isSkillTool(toolName)) {
-      // use_skill 工具：根据对应 skill 的 autoRun 配置决定是否自动执行
+      // use_skill 工具：启用（未禁用）即自动执行
       try {
         const skillsStore = useSkillsStore.getState();
         const params = JSON.parse(toolCall.function.arguments || '{}');
         const skillNames: string | string[] = params.skill_name;
         const names = Array.isArray(skillNames) ? skillNames : [skillNames];
-        // 只要有一个 skill 没有开启 autoRun，就需要确认
-        return names.every((name: string) => {
-          const config = skillsStore.skillConfigs[name];
-          return config?.autoRun === true;
-        });
+        return names.every((name: string) => !skillsStore.skillConfigs[name]?.disabled);
       } catch {
         return false;
       }

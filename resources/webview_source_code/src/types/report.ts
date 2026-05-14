@@ -194,4 +194,6 @@ export enum UserEvent {
   TOOLCALL_STOP_BY_LENGTH = 'CodeChat.toolcall_stop_by_length',
 
   CHAT_SUBMIT_ERROR = 'CodeChat.chat_submit_error',
+
+  CODE_CHAT_CREATE_AGENT = 'CodeChat.create_agent',
 }

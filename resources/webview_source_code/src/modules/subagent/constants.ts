@@ -4,6 +4,8 @@
  * 集中管理所有 subagent 相关常量，消除魔法数字。
  */
 
+import { ChatModel } from '../../services/chatModel';
+
 // ============================================================
 // 超时与时间相关
 // ============================================================
@@ -68,7 +70,7 @@ export const MAX_QUEUE_SIZE = 15;
 // ============================================================
 
 /** 默认最大执行步数（Agent 未指定时的回退值） */
-export const DEFAULT_MAX_STEPS = 10;
+export const DEFAULT_MAX_STEPS = 50;
 
 // ============================================================
 // 事件与日志
@@ -83,3 +85,19 @@ export const MAX_EVENTS = 200;
 
 /** 上下文压缩触发阈值（已用 token 比例） */
 export const COMPRESSION_THRESHOLD = 0.7;
+
+// ============================================================
+// 模型别名映射
+// ============================================================
+
+/**
+ * Claude 简化别名 → 完整模型代码
+ *
+ * 集中管理 Claude 短别名映射，供 executor.ts 和 AgentSettingModal 共同使用。
+ * 遵循 DRY 原则，避免多处维护导致不同步。
+ */
+export const CLAUDE_ALIAS_MAP: Record<string, ChatModel> = {
+  sonnet: ChatModel.Claude45Sonnet20250929,
+  opus: ChatModel.Claude45Opus20251101,
+  haiku: ChatModel.Claude45Haiku20251001,
+};

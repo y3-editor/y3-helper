@@ -36,7 +36,6 @@ import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
 import SkillSettingModal from './SkillSettingModal';
 import AgentConfigCollapse from './AgentConfigCollapse';
-import AgentSettingModal from './AgentSettingModal';
 import { IDE, useExtensionStore } from '../../store/extension';
 import { versionCompare } from '../../utils/common';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
@@ -54,6 +53,7 @@ import { UserEvent } from '../../types/report';
 import MiniButton from '../../components/MiniButton';
 // Y3不需要研发知识集
 // import DevspaceCollapse from './DevspaceCollapse';
+import AgentSettingModal from './components/AgentSettingModal';
 
 enum EAutoConfig {
   AutoApprove = 'autoApprove',

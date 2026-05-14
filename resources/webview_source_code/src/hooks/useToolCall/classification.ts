@@ -25,7 +25,7 @@ export function useToolClassification(message: ChatMessage): ToolClassificationR
   const autoApply = useChatConfig(state => state.autoApply);
   const autoExecute = useChatConfig(state => state.autoExecute);
   const autoTodo = useChatConfig(state => state.autoTodo);
-const skillConfigs = useSkillsStore(state => state.skillConfigs);
+  const skillConfigs = useSkillsStore(state => state.skillConfigs);
 
   // 环境相关状态
   const workspaceInfo = useWorkspaceStore(state => state.workspaceInfo);
@@ -38,6 +38,7 @@ const skillConfigs = useSkillsStore(state => state.skillConfigs);
   return useMemo(() => {
     const toolGroups = new Map<string, ToolCall[]>();
 
+    // skill 启用即自动执行：只有当本次调用涉及的所有 skill 都未禁用，才视为自动
     const hasSkillAutoRun = message.tool_calls
       ?.filter(t => t.function.name === 'use_skill')
       .every(t => {
@@ -46,7 +47,7 @@ const skillConfigs = useSkillsStore(state => state.skillConfigs);
           const names: string[] = Array.isArray(params.skill_name)
             ? params.skill_name
             : [params.skill_name];
-          return names.every(name => skillConfigs[name]?.autoRun === true);
+          return names.every(name => !skillConfigs[name]?.disabled);
         } catch {
           return false;
         }

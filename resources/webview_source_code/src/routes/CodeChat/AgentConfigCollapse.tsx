@@ -78,8 +78,19 @@ const AgentConfigCollapse = ({ setAgentSettingOpen }: IProps) => {
   };
 
   const applyMode = (val: 'off' | 'on' | 'auto') => {
-    setEnableSubagent(val !== 'off');
-    setEnableSubagentManualTriggerOnly(val === 'on');
+    // 确保三态与布尔值完全同步映射
+    if (val === 'off') {
+      setEnableSubagent(false);
+      // 关闭时重置为默认值 false，避免隐藏状态不一致
+      setEnableSubagentManualTriggerOnly(false);
+    } else if (val === 'on') {
+      setEnableSubagent(true);
+      setEnableSubagentManualTriggerOnly(true);
+    } else {
+      // val === 'auto'
+      setEnableSubagent(true);
+      setEnableSubagentManualTriggerOnly(false);
+    }
   };
 
   const handleConfirm = () => {

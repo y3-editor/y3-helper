@@ -51,7 +51,7 @@ When NOT to use the Task tool:
 Avoid vague phrases like "investigate thoroughly" unless breadth is truly required; subagents have a **per-run step budget** (see below).
 
 Usage notes:
-1. **CRITICAL**: The task tool must be called **alone** in a separate response. Do **NOT** batch it with other tool calls in the same turn.
+1. **CRITICAL**: Do **NOT** mix task calls with other tool types (read_file, grep, etc.) in the same response. You MAY batch multiple independent task calls together in a single response when subtasks are non-overlapping.
 2. Run **multiple** agents in parallel only when subtasks are **independent** and **non-overlapping** (different modules/questions). Do not parallelize duplicate exploration of the same area.
 3. When the agent is done, it returns a single message to you. That text is **not** visible to the user — summarize for the user yourself.
 4. Each invocation starts with a **fresh** context. Put all needed detail in \`prompt\`.

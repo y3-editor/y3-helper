@@ -18,6 +18,8 @@ import {
   generateSubagentToolCallingPrompt,
   generateCommunicationPrompt,
   generateOpenSpecPrompt,
+  generateCavemanPrompt,
+  generateMCPPrompt,
   createPromptContext
 } from './shared';
 import { PromptTemplateLoader } from './template-loader';
@@ -50,13 +52,20 @@ export class EnhancedPromptBuilder {
       code_style: devSpace?.code_style || '',
     });
 
+    // 调用方若已通过 contextOptions.mcpServers 指定 MCP 列表（如自定义 Agent 按需过滤），
+    // 则直接使用；否则回退到全局已连接的 MCPStore 列表。
+    const mcpServers =
+      contextOptions.mcpServers !== undefined
+        ? contextOptions.mcpServers
+        : mcpStore.MCPServers.filter((s) => s.status === 'connected' && !s.disabled);
+
     // 合并配置：优先使用 store 最新状态，但保留 contextOptions 中的 variables 等字段
     const context: PromptContext = createPromptContext({
       variables: contextOptions.variables, // 保留调用方的自定义变量
       ...contextOptions, // 继承其他字段
       // 核心字段：强制使用 store 最新状态（覆盖 contextOptions 中的同名字段）
       workspace: workspaceInfo,
-      mcpServers: mcpStore.MCPServers.filter(s => s.status === 'connected' && !s.disabled),
+      mcpServers,
       skills: skillsStore.skills,
       rules: effectiveRules,
       isSubagent: true,
@@ -95,6 +104,9 @@ export class EnhancedPromptBuilder {
     const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
+    const mcpPrompt = await generateMCPPrompt(context);
+    if (mcpPrompt) tier2Parts.push(mcpPrompt);
+
     const skillsPrompt = await generateSkillsPrompt(context);
     if (skillsPrompt) tier2Parts.push(skillsPrompt);
 
@@ -103,6 +115,9 @@ export class EnhancedPromptBuilder {
 
     const openspecPrompt = await generateOpenSpecPrompt(context);
     if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
+    const cavemanPrompt = await generateCavemanPrompt(context);
+    if (cavemanPrompt) tier2Parts.push(cavemanPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 
@@ -220,6 +235,9 @@ export function useSubagentPromptBuilder() {
 
     const openspecPrompt = await generateOpenSpecPrompt(context);
     if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
+    const cavemanPrompt = await generateCavemanPrompt(context);
+    if (cavemanPrompt) tier2Parts.push(cavemanPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 

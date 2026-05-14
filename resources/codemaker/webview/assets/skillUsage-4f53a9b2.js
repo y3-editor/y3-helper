@@ -1,6 +1,6 @@
-import { p as o, S as l } from "./index-abfa09a7.js";
-import "./react-vendor-4842806d.js";
-import "./utils-vendor-06217184.js";
+import { p as o, S as l } from "./index-6bd325d0.js";
+import "./react-vendor-3a568fed.js";
+import "./utils-vendor-473588ae.js";
 async function t(r) {
   try {
     const e = await o({ requestUrl: `${l}/api/usage/report`, method: "post", requestData: r }, 1e4, true, void 0, { errorToast: false });

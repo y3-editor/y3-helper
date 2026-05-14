@@ -78,7 +78,7 @@ export function wrapSystemReminder(content: string): string {
  */
 export function formatAgentLine(agent: Agent): string {
   const toolList =
-    agent.tools && agent.tools.length > 0
+    agent.tools && Array.isArray(agent.tools) && agent.tools.length > 0
       ? agent.tools.join(', ')
       : 'all available tools';
   return `- **${agent.name}**: ${agent.description} (tools: ${toolList})`;

@@ -48,8 +48,13 @@ function normalizeToolName(toolName: string): string {
 export function getToolsForAgent(allTools: Tool[], agent: Agent): Tool[] {
   const disallowedSet = new Set(agent.disallowedTools || []);
 
-  // 子代理自动禁用 task 工具，避免无限递归
+  // 子代理自动禁用的工具：
+  // - task：避免无限递归
+  // - ask_user_question：子代理不应直接打断用户流程
   disallowedSet.add('task');
+  disallowedSet.add('ask_user_question');
+  // TODO: 暂时屏蔽
+  disallowedSet.add('search_tool');
 
   // tools 未指定时表示允许所有工具（不做白名单过滤），仅走黑名单
   if (!agent.tools) {
