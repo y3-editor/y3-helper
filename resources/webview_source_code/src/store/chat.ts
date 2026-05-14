@@ -1147,7 +1147,7 @@ export const useChatStore = create<ChatStore>()(
           }
 
           const data = await fetchGptResponse(
-            UserEvent.CODE_CHAT_PROMPT_CUSTOM,
+            UserEvent.CODE_CHAT_TOPIC,
             params,
           );
           const topic =

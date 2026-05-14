@@ -46,6 +46,7 @@ export enum UserEvent {
   CODE_CHAT_CODEBASE = 'CodeChat.codebase',
   CODE_CHAT_SUBAGENT = 'CodeChat.subagent',
   CHAT_TOOL_CALL_ERROR = 'CodeChat.tool_call_error',
+  CODE_CHAT_TOPIC = 'CodeChat.topic',
 
   CODE_CHAT_DEFINE_PROMPT = 'CodeChat.define_prompt',
   CODE_CHAT_TRIGGER_TOKEN_LIMIT = 'CodeChat.trigger_token_limit',

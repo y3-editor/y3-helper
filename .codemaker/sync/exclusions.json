@@ -197,7 +197,8 @@
     "merge_32e9b7f7": "MERGED: feat: 支持动态配置技能目录加载 .claude/.codemaker/.agent (32e9b7f7)。2026-04-30 extension 轮。手合至 src/codemaker/skillsHandler.ts：加 SkillSourcesConfig + loadSkillSourcesConfig + getActiveSkillSources + registerConfigurationListener；3 处 SKILL_SOURCES 循环改 getActiveSkillSources()。命名空间从上游 CodeMaker.SkillSources 改为 Y3Maker.SkillSources，package.json 字段从 codemakerSkillSources 改为 y3makerSkillSources。SkillSourcesConfig 扩展 y3maker 字段（Y3 专属来源）。未在 package.json contributes.configuration 注册 schema（保持 Y3 不引入新设置项的惯例，默认全开），后续如需图形化配置加 schema 即可",
     "skip_3212d1fb": "SKIP: chore: 发布 v26.4.10 版本 (3212d1fb)。2026-04-30 extension 轮。版本号 bump + CHANGELOG，Y3 不跟",
     "skip_4ee76a4b": "SKIP: docs: 更新 CHANGELOG 并同步 agent 资源包 (4ee76a4b)。2026-04-30 extension 轮。agent 资源包是 codemaker 自带的 .agent/ 内置技能，Y3 不带",
-    "skip_326cb318": "SKIP: style: 去掉聊天 token 价格边框色 (326cb318)。2026-05-02 webui 轮。属上轮 fa651de9 折扣 UI 同系列样式调整，唯一文件 ChatModelSelector/chatModelTokenCost.tsx 已在永久排除目录 ChatModelSelector/ 内，无需任何改动"
+    "skip_326cb318": "SKIP: style: 去掉聊天 token 价格边框色 (326cb318)。2026-05-02 webui 轮。属上轮 fa651de9 折扣 UI 同系列样式调整，唯一文件 ChatModelSelector/chatModelTokenCost.tsx 已在永久排除目录 ChatModelSelector/ 内，无需任何改动",
+    "merge_2473031a": "MERGED: refactor: 更新会话标题生成的事件类型 (2473031a)。2026-05-06 webui 轮。chat.ts 的 fetchGptResponse 调用 UserEvent.CODE_CHAT_PROMPT_CUSTOM → CODE_CHAT_TOPIC（专用 topic 生成事件，与普通 prompt_custom 区分）；types/report.ts 新增 CODE_CHAT_TOPIC enum（旧 CODE_CHAT_PROMPT_CUSTOM 仍保留）"
   },
 
   "_merge_lessons_learned": {
