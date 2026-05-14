@@ -10,5 +10,8 @@ export function getCodeMakerConfig() {
         apiBaseUrl: config.get<string>('CodeChatApiBaseUrl', ''),
         model: config.get<string>('CodeChatModel', ''),
         wireApi: config.get<string>('CodeChatWireApi', 'chat-completions'),
+        requestTimeoutMs: config.get<number>('CodeChatRequestTimeoutMs', 60000),
+        maxOutputTokens: config.get<number>('CodeChatMaxOutputTokens', 0),
+        contextWindowSize: config.get<number>('CodeChatContextWindowSize', 0),
     };
 }

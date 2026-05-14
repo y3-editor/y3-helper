@@ -14,9 +14,14 @@ import {
   createAnthropicStreamState,
   normalizeProviderError,
 } from './anthropic-messages-adapter.mjs';
+import {
+  applyRequestPolicy,
+  formatRequestSummary,
+  getRequestTimeoutMs,
+} from './request-policy.mjs';
 
 // 请求超时时间（60秒）
-const REQUEST_TIMEOUT = 60000;
+const REQUEST_TIMEOUT = getRequestTimeoutMs();
 
 // ⚠️ TLS 证书验证说明：
 // Windows 环境下，某些网络（代理/防火墙）会导致 SSL 证书吊销检查失败
@@ -249,7 +254,7 @@ function buildResponsesRequestBody(requestBody) {
       }
       return tool; // 非 function 类型保持原样
     });
-    console.log(`[AI Provider] [Responses API] 转换了 ${body.tools.length} 个 tools`);
+    console.log(`[AI Provider] [Responses API] ??? ${body.tools.length} ? tools`);
   }
 
   return body;
@@ -433,7 +438,7 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   // 构建 Responses API 请求体
-  const apiRequestBody = buildResponsesRequestBody(requestBody);
+  let apiRequestBody = buildResponsesRequestBody(requestBody);
   
   // 设置模型：优先使用 VSCode 设置的 Y3Maker.CodeChatModel（env AI_MODEL）
   // 否则 fallback 到客户端请求体中的 model
@@ -443,7 +448,13 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
     apiRequestBody.model = requestBody.model;
   }
 
-  console.log(`[AI Provider] [Responses API] 请求 ${url} 使用模型 ${apiRequestBody.model}`);
+  const responsesPolicy = applyRequestPolicy(apiRequestBody, { maxTokenField: 'max_output_tokens' });
+  apiRequestBody = responsesPolicy.body;
+  const requestBodyJson = JSON.stringify(apiRequestBody);
+  console.log(`[AI Provider] [Responses API] ${formatRequestSummary({ model: apiRequestBody.model, timeoutMs: REQUEST_TIMEOUT, stream: apiRequestBody.stream, metrics: responsesPolicy.metrics })}`);
+  if (responsesPolicy.metrics.largePayload || responsesPolicy.metrics.trimmedMessages) {
+    console.warn(`[AI Provider] large/trimmed request: payload=${responsesPolicy.metrics.payloadBytes} bytes approx_tokens=${responsesPolicy.metrics.approxTokens} model=${apiRequestBody.model || 'unknown'} timeout=${REQUEST_TIMEOUT}ms stream=${apiRequestBody.stream} ${responsesPolicy.metrics.maxTokenField}=${responsesPolicy.metrics.appliedMaxTokens ?? 'unchanged'} trimmed_messages=${responsesPolicy.metrics.trimmedMessages || 0}`);
+  }
 
   try {
     const response = await fetch(url, {
@@ -452,7 +463,7 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(apiRequestBody),
+      body: requestBodyJson,
       signal: controller.signal,
     });
 
@@ -519,7 +530,7 @@ async function streamResponsesApi(requestBody, res, apiKey, baseUrl) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
-      sendErrorSSE(res, '⏱️ **请求超时**\n\n请求 60 秒未响应，请稍后重试。');
+      sendErrorSSE(res, `Request timed out after ${Math.round(REQUEST_TIMEOUT / 1000)} seconds. You can raise Y3Maker.CodeChatRequestTimeoutMs if this provider is slower.`);
     } else {
       console.error('[AI Provider] [Responses API] 请求错误:', error);
       let errorDetail = error.message;
@@ -657,7 +668,7 @@ export async function chatCompletion(requestBody, res) {
     ...restBody
   } = requestBody;
 
-  const apiRequestBody = {
+  let apiRequestBody = {
     ...restBody,
     stream: false,
   };
@@ -669,7 +680,10 @@ export async function chatCompletion(requestBody, res) {
     apiRequestBody.model = requestBody.model;
   }
 
-  console.log(`[AI Provider] [非流式] 请求 ${baseUrl} 使用模型 ${apiRequestBody.model}`);
+  const nonStreamingPolicy = applyRequestPolicy(apiRequestBody);
+  apiRequestBody = nonStreamingPolicy.body;
+  const requestBodyJson = JSON.stringify(apiRequestBody);
+  console.log(`[AI Provider] [Non-stream Chat Completions] ${formatRequestSummary({ model: apiRequestBody.model, timeoutMs: REQUEST_TIMEOUT, stream: apiRequestBody.stream, metrics: nonStreamingPolicy.metrics })}`);
 
   try {
     const response = await fetch(url, {
@@ -678,7 +692,7 @@ export async function chatCompletion(requestBody, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(apiRequestBody),
+      body: requestBodyJson,
       signal: controller.signal,
     });
 
@@ -765,7 +779,7 @@ export async function streamChatCompletion(requestBody, res) {
   } = requestBody;
   
   // 构建请求体
-  const apiRequestBody = {
+  let apiRequestBody = {
     ...restBody,
     stream: true,
   };
@@ -786,8 +800,13 @@ export async function streamChatCompletion(requestBody, res) {
     apiRequestBody.model = requestBody.model;
   }
 
-  console.log(`[AI Provider] 请求 ${baseUrl} 使用模型 ${apiRequestBody.model}`);
-  console.log(`[AI Provider] 请求体:`, JSON.stringify(apiRequestBody, null, 2).slice(0, 500));
+  const streamPolicy = applyRequestPolicy(apiRequestBody);
+  apiRequestBody = streamPolicy.body;
+  const requestBodyJson = JSON.stringify(apiRequestBody);
+  console.log(`[AI Provider] [Chat Completions] ${formatRequestSummary({ model: apiRequestBody.model, timeoutMs: REQUEST_TIMEOUT, stream: apiRequestBody.stream, metrics: streamPolicy.metrics })}`);
+  if (streamPolicy.metrics.largePayload || streamPolicy.metrics.trimmedMessages) {
+    console.warn(`[AI Provider] large/trimmed request: payload=${streamPolicy.metrics.payloadBytes} bytes approx_tokens=${streamPolicy.metrics.approxTokens} model=${apiRequestBody.model || 'unknown'} timeout=${REQUEST_TIMEOUT}ms stream=${apiRequestBody.stream} max_tokens=${apiRequestBody.max_tokens ?? 'unchanged'} trimmed_messages=${streamPolicy.metrics.trimmedMessages || 0}`);
+  }
 
   try {
     const response = await fetch(url, {
@@ -796,7 +815,7 @@ export async function streamChatCompletion(requestBody, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(apiRequestBody),
+      body: requestBodyJson,
       signal: controller.signal,
     });
 
@@ -840,7 +859,7 @@ export async function streamChatCompletion(requestBody, res) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
-      sendErrorSSE(res, '⏱️ **请求超时**\n\n请求 60 秒未响应，请稍后重试。');
+      sendErrorSSE(res, `Request timed out after ${Math.round(REQUEST_TIMEOUT / 1000)} seconds. You can raise Y3Maker.CodeChatRequestTimeoutMs if this provider is slower.`);
     } else {
       console.error('AI API 请求错误:', error);
       // 提供更详细的网络错误信息

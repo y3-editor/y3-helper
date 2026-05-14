@@ -48,7 +48,10 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
                 e.affectsConfiguration('Y3Maker.CodeChatApiKey') ||
                 e.affectsConfiguration('Y3Maker.CodeChatApiBaseUrl') ||
                 e.affectsConfiguration('Y3Maker.CodeChatModel') ||
-                e.affectsConfiguration('Y3Maker.CodeChatWireApi')
+                e.affectsConfiguration('Y3Maker.CodeChatWireApi') ||
+                e.affectsConfiguration('Y3Maker.CodeChatRequestTimeoutMs') ||
+                e.affectsConfiguration('Y3Maker.CodeChatMaxOutputTokens') ||
+                e.affectsConfiguration('Y3Maker.CodeChatContextWindowSize')
             ) {
                 // 向 webview 重新发送 INIT_DATA，刷新前端配置
                 if (webviewProvider) {

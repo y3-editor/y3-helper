@@ -57,6 +57,15 @@ export class CodeMakerApiServer {
         if (config.model) {
             env['AI_MODEL'] = config.model;
         }
+        if (config.requestTimeoutMs) {
+            env['AI_REQUEST_TIMEOUT_MS'] = String(config.requestTimeoutMs);
+        }
+        if (config.maxOutputTokens) {
+            env['AI_MAX_OUTPUT_TOKENS'] = String(config.maxOutputTokens);
+        }
+        if (config.contextWindowSize) {
+            env['AI_CONTEXT_WINDOW_SIZE'] = String(config.contextWindowSize);
+        }
 
         return this._tryStartOnPort(serverEntryPath, env, this._port, MAX_PORT_ATTEMPTS);
     }

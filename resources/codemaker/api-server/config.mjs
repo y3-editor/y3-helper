@@ -25,6 +25,13 @@ export const config = {
   // 若为空，则使用客户端请求体中的 model 字段
   model: process.env.AI_MODEL || '',
 
+  // Chat completion request timeout. Default keeps previous 60s behavior unless configured.
+  requestTimeoutMs: process.env.AI_REQUEST_TIMEOUT_MS || '',
+
+  // Optional request shaping. 0/empty means keep client request unchanged.
+  maxOutputTokens: process.env.AI_MAX_OUTPUT_TOKENS || '',
+  contextWindowSize: process.env.AI_CONTEXT_WINDOW_SIZE || '',
+
   // 服务端口（默认 3001）
   port: parseInt(process.env.PORT || '3001', 10),
 

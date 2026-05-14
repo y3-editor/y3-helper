@@ -491,6 +491,30 @@
                     ],
                     "default": "webview",
                     "scope": "resource"
+                },
+                "Y3Maker.CodeChatRequestTimeoutMs": {
+                    "title": "Y3Maker Chat Request Timeout (ms)",
+                    "description": "OpenAI-compatible chat completion timeout. Default keeps the previous behavior: 60000 ms. Increase to 300000-600000 ms for slow local providers such as CLIProxyAPI.",
+                    "type": "number",
+                    "default": 60000,
+                    "minimum": 1000,
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatMaxOutputTokens": {
+                    "title": "Y3Maker Chat Max Output Tokens",
+                    "description": "Optional cap for max_tokens/max_output_tokens sent to OpenAI-compatible providers. 0 leaves the request value unchanged.",
+                    "type": "number",
+                    "default": 0,
+                    "minimum": 0,
+                    "scope": "resource"
+                },
+                "Y3Maker.CodeChatContextWindowSize": {
+                    "title": "Y3Maker Chat Context Window Size",
+                    "description": "Optional approximate context window in tokens. 0 disables automatic message trimming. When enabled, oldest non-system history messages are dropped before sending oversized requests.",
+                    "type": "number",
+                    "default": 0,
+                    "minimum": 0,
+                    "scope": "resource"
                 }
             }
         },
