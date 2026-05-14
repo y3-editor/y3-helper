@@ -22,6 +22,8 @@ interface ClaudeEditFileProps {
   toolCallId: string;
   filePath: string;
   isLatest?: boolean;
+  /** 工具调用是否已收到结果（已返回 result 即认为执行完成） */
+  hasResponse?: boolean;
 }
 
 export function ClaudeEditFile(props: ClaudeEditFileProps) {
@@ -31,6 +33,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
     toolCallId,
     filePath,
     isLatest = false,
+    hasResponse = false,
   } = props;
 
   const { postMessage } = usePostMessage();
@@ -86,6 +89,9 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
     if (toolName === 'write') return '写入';
     return '编辑';
   }, [isCreateFile, toolName]);
+
+  // 收到 tool 结果后即视为非 applying，避免 store 中 applying 状态未及时清空导致多个 spinner 同时显示
+  const isApplying = !!targetApplyItem?.applying && !hasResponse;
 
   return (
     <div className="markdown-body">
@@ -165,7 +171,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
       </Box>
       <pre>
         {
-          isLatest && targetApplyItem?.applying && (
+          isLatest && isApplying && (
             <Box
               display="flex"
               alignItems="center"
@@ -184,7 +190,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
             </Box>
           )
         }
-        {isExpanded && diffInfo && !targetApplyItem?.applying && (
+        {isExpanded && diffInfo && !isApplying && (
           <MemoDiffCodeBlock
             language={language}
             value={diffInfo.content || ''}
@@ -196,7 +202,7 @@ export function ClaudeEditFile(props: ClaudeEditFileProps) {
             codeWhiteSpace={codeWhiteSpace}
           />
         )}
-        {isExpanded && !diffInfo && displayedCode && !targetApplyItem?.applying && (
+        {isExpanded && !diffInfo && displayedCode && !isApplying && (
           <MemoCodeBlock
             language={language}
             value={displayedCode}

@@ -268,3 +268,18 @@ Y3Helper 的前端 webui 通过 axios 请求本地 API Server（`localhost:3001`
 > ⚠️ **踩坑记录（2026-04-30）**：上游在 2026-03-20 将 `codemakerChatHistoryRequest` 的 baseURL 从 `/proxy/gpt/u5_chat` 改为 `/proxy/gpt/chat`（同时 `uploadImg` 也从 `u5_chat` 改到了 `codemakderChatGptRequest` 即 `gpt/gpt/`），但 `api-server/routes/history.mjs` 和 `chat.mjs` 中的路由注册路径没有同步更新，导致前端请求全部 fallback 到 SPA 的 `index.html`，`data.items` 为 `undefined`，触发 `revalidateChatSessions` 中 `.filter()` 崩溃。
 >
 > **教训**：`api-server/routes/` 下的文件是 Y3 自建的后端，不在上游仓库中，合并时不会自动冲突。每次合并上游 webui 时，**必须检查 `services/chat.ts` 中的 `baseURL` 和硬编码 URL 是否有变更**，如有变更须手动对齐后端路由。
+
+### Y3 GPT 模型链路说明
+
+> 用户填 GPT 模型时实际链路（**不是** AzureOpenAIStream / Responses API）：
+> 1. `App.tsx` 注入 fixedModel 到 chatModels 时**有意不设 `supplyChannel`**
+> 2. `agentEntry.execute` 因此走 default 分支 → `CmCodebaseStream`
+> 3. 请求 `/proxy/gpt/u5_chat/codebase_chat_stream` → Y3 api-server `streamChatCompletion`
+> 4. api-server 拼成 `<用户配置的 baseURL>/v1/chat/completions` 直连用户上游
+> 5. 若用户配 `wireApi=responses`，api-server 会走 `streamResponsesApi` 拼 `/responses` 并把 SSE 转成 Chat Completions 格式回前端
+
+**`AzureOpenAIStream` 通路在 Y3 是 dead code**：
+- 上游 `harness/stream/azureOpenAI/index.ts` 改动同步合进来即可（不影响 Y3 运行）
+- 该 stream 的 URL 是 `/proxy/cm/openai/v1/responses`，Y3 api-server **没注册**该路由
+- 想启用：见 `azureOpenAI/index.ts::getUrl` 的注释
+

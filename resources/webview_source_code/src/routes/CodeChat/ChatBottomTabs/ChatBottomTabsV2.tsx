@@ -39,8 +39,11 @@ import { GrTransaction } from "react-icons/gr";
 import RevertConfirmDialog from './RevertConfirmDialog';
 // Y3: BackendApplyToggle 后端 Apply 模式 (361c16ac) 在 Y3 不需要，Y3 走 claudeEdit.ts
 // import BackendApplyToggle from '../../../components/BackendApplyToggle';
-import { IDE, useExtensionStore } from '../../../store/extension';
+// Y3: useExtensionStore 之前用于 IDE/codeMakerVersion，已 SKIP
+// import { useExtensionStore } from '../../../store/extension';
 import { MediumScreenWidth } from '../../../const';
+// Y3: 无版本门控，不需 versionCompare
+// import { versionCompare } from '../../../utils/common';
 
 // 高度持久化相关常量
 const HEIGHT_STORAGE_KEY = 'chat-bottom-tabs-height';
@@ -322,15 +325,16 @@ function ChangesHeaderActions() {
   const clearChatFileInfo = useChatApplyStore(
     (state) => state.clearChatFileInfo,
   );
-  const ide = useExtensionStore((state) => state.IDE);
-  // Y3: isVscode 之前用于 BackendApplyToggle，现已 SKIP
-  // @ts-expect-error TS6133 unused
-  const isVscode = useMemo(() => ide === IDE.VisualStudioCode, [ide]);
+  // Y3: isVscode 之前用于 BackendApplyToggle，已 SKIP
+  // const ide = useExtensionStore((state) => state.IDE);
+  // const isVscode = useMemo(() => ide === IDE.VisualStudioCode, [ide]);
   const { postMessage } = usePostMessage();
   const { toast } = useCustomToast();
 
   // 批量回退确认对话框状态
   const [batchRevertDialog, setBatchRevertDialog] = useState(false);
+  // Y3: codeMakerVersion 之前用于 BackendApplyToggle 版本门控，已 SKIP
+  // const codeMakerVersion = useExtensionStore((state) => state.codeMakerVersion) || '';
 
   const hasChanges = useMemo(
     () => Object.keys(chatFileInfo).length > 0,
@@ -394,7 +398,7 @@ function ChangesHeaderActions() {
     <>
       <Flex alignItems="center" gap={1}>
         {/* Y3: SKIP BackendApplyToggle */}
-        {/* {isVscode && (<BackendApplyToggle />)} */}
+        {/* {isVscode && versionCompare(codeMakerVersion, '26.4.8') >= 0 && (<BackendApplyToggle />)} */}
         <Tooltip label="全部保留">
           <IconButton
             aria-label="全部保留"

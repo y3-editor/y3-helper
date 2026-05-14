@@ -376,6 +376,7 @@ const ToolCallResult = ({
           toolCallId={tool.id}
           filePath={result.path || toolParams.file_path || ''}
           isLatest={isLatest}
+          hasResponse={toolResponse[tool.id] !== undefined}
         />
         {result.isError && renderError()}
       </VStack>

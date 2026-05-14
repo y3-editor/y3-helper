@@ -1567,6 +1567,9 @@ function CodeChat() {
               Object.assign(updateFileConfig, {
                 isCreateFile: extra?.isCreateFile || false,
               })
+              updateChatApplyItem(tool_id, {
+                applying: false,
+              });
             }
             updateChatApplyItem(tool_id, updateFileConfig);
             userReporter.report({

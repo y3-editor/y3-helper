@@ -484,6 +484,8 @@ function App() {
         extensionStore.setCodebaseChatRtk(!!codebaseChatRtk);
 
         // Y3Helper: 当 fixedModel 存在时，自动注入到 chatModels 中，使自定义模型支持图片上传
+        // 注意：这里有意不设 supplyChannel，让 agentEntry 走 default 分支（CmCodebaseStream），
+        //   避免命中 AzureOpenAIStream（在 Y3 是 dead code，api-server 未注册 /proxy/cm/openai/v1/responses）
         extensionStore.setFixedModel(fixedModel || '');
         if (fixedModel) {
           const currentModels = useChatConfig.getState().chatModels;

@@ -219,8 +219,6 @@ const SUMMARY_SESSION_PROMPT = `使用四到五个字直接返回上一段话的
 
 export type ChatType = 'default' | 'codebase';
 
-let submitTimestamp = 0
-
 /**
  * 仓库智聊的开发模式
  * - vibe: Vibe Coding，自由对话式迭代
@@ -2364,12 +2362,9 @@ export const useChatStreamStore = create(
       },
       unselectedResults?: Set<string>,
     ) => {
-      // 防止重复触发
-      if (Date.now() - submitTimestamp < 2000) return;
       const chatStoreState = useChatStore.getState();
       const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
       const chatType = chatStoreState.chatType;
-      submitTimestamp = Date.now();
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
       if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
         userReporter.report({
@@ -3788,8 +3783,7 @@ export const useChatStreamStore = create(
 
         const compressionEnabled =
           compressConfig.enable &&
-          compressConfig.visible &&
-          !chatModels[chatConfig.model].isPrivate;
+          compressConfig.visible;
         const useCompression =
           compressionEnabled &&
           currentCompressStatus !== SessionStatus.FAILED;
@@ -3827,7 +3821,6 @@ export const useChatStreamStore = create(
 
 
         if (sendMessages.length < unCompressedMessages.length
-          && !chatModels[chatConfig.model].isPrivate
           && compressConfig.enable
           && compressConfig.visible
           && currentCompressStatus !== SessionStatus.COMPRESSING
@@ -5737,7 +5730,6 @@ export const useChatStreamStore = create(
                       chatStoreState.analyzeContext(sessionId).then(compressionAnalysis => {
                         if (compressionAnalysis.shouldCompress
                           && status !== SessionStatus.COMPRESSING
-                          && !chatModels[chatConfig.model].isPrivate
                           && status !== SessionStatus.FAILED) {
                           console.log('模型返回后触发自动压缩，token使用率:', compressionAnalysis.thresholds);
                           void chatStoreState.triggerCompression(sessionId);
@@ -6080,9 +6072,12 @@ export const useChatStreamStore = create(
          * 4. 不能穿插其他类型，相邻两条 message 的 role 不能相同
          */
         if (
-          model === ChatModel.DeepseekReasoner0120 ||
-          model === ChatModel.DeepseekReasonerDistilled0206 ||
-          model?.toLocaleLowerCase?.()?.includes?.('claude')
+          [
+            ChatModelSupplyChannel.DEEPSEEK,
+            ChatModelSupplyChannel.CLAUDE
+          ].includes(
+            getModelSupplyChannel(chatConfig.model)
+          )
         ) {
           if (messages[0].role !== ChatRole.Assistant) {
             messages.unshift({
@@ -6676,7 +6671,7 @@ export const useChatStreamStore = create(
         return;
       }
 
-      if ([ChatModel.GPT5, ChatModel.GPT51, ChatModel.GPT51Codex].includes(model)) {
+      if (data.model.includes('gpt-5')) {
         delete data.temperature;
       }
 
@@ -7551,7 +7546,7 @@ export const useUserActionStore = create<ChatUserAction>((set, get) => ({
  * 用于系统级 Prompt / specPrompt 处理时替换 userMessage.content，
  * 防止之前 MultiAttachment 分支中 push 进 content 的 ImageUrl 被覆盖丢失。
  */
-function reassembleContentWithImages(
+export function reassembleContentWithImages(
   existingContent: string | ChatMessageContentUnion[],
   newTextContent: string,
 ): ChatMessageContentUnion[] {

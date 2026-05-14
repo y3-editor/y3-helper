@@ -143,8 +143,9 @@ export interface TokenCalculationResult {
 /**
  * 判断是否为 Claude 模型
  */
-function isClaudeModel(model?: ChatModel | string): boolean {
-  return Boolean(model && model.toLowerCase().includes('claude'));
+function checkCacheModel(model?: ChatModel | string): boolean {
+  if (typeof model !== 'string') return false
+  return Boolean(['claude', 'gpt'].includes(model?.toLowerCase?.()));
 }
 
 /**
@@ -279,7 +280,7 @@ function calculateCostIncrement(
  * 3. 当估算超出实际值时，按比例缩放各组件
  * 4. 当估算小于实际值时，余额归入 systemTokens
  */
-function calculateClaudeTokens(
+function calculateCacheTokens(
   current: ConsumedTokens,
   increment: TokenIncrement,
 ): Partial<ConsumedTokens> {
@@ -521,8 +522,8 @@ export function calculateConsumedTokensUpdate(
   }
 
   // 2. 根据模型类型应用不同的 token 分类逻辑
-  const tokenUpdates = isClaudeModel(model)
-    ? calculateClaudeTokens(currentTokens, increment)
+  const tokenUpdates = checkCacheModel(model)
+    ? calculateCacheTokens(currentTokens, increment)
     : calculateNonClaudeTokens(currentTokens, increment);
 
   // 应用 token 更新

@@ -325,8 +325,8 @@ const MCPConfigCollapse = (props: IProps) => {
                             const isAuto = value === 'auto';
 
                             const params = {
-                              name: serverName,
                               ...server.config,
+                              name: server.name,
                               disabled: isDisabled,
                             }
 

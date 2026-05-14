@@ -20,7 +20,7 @@ import {
 } from '@chakra-ui/react';
 import CodeMakerLogo from '../../../assets/cmlogo.png';
 import ChatAssistantMessage from './AssistantMessage';
-import ToolCall from './ToolCall';
+// import ToolCall from './ToolCall';
 import { GroupAIMessageProps } from './types';
 import ChatMessageActionBar from '../ChatMessageActionBar';
 import userReporter from '../../../utils/report';
@@ -41,7 +41,7 @@ import { RxCheckCircled } from 'react-icons/rx';
 import * as React from 'react';
 import { usePrevious } from '../../../hooks/usePrevious';
 import { DateFormat } from '../../../utils';
-import { getToolName } from '../../../utils/toolCall';
+// import { getToolName } from '../../../utils/toolCall';
 import { useTheme, ThemeStyle } from '../../../ThemeContext';
 import TokenBreakdownPanel, {
   TOKEN_BREAKDOWN_COLORS,
@@ -122,72 +122,72 @@ function MergedMessagesRenderer({
 }
 
 // 收藏模式下单个工具调用的折叠项
-function ShareToolCallItem({
-  message,
-  isLatest,
-}: {
-  message: ChatMessage;
-  isLatest: boolean | undefined;
-}) {
-  const [isCollapsed, setIsCollapsed] = React.useState(true);
-  const borderColor = useColorModeValue('#e2e8f0', '#3a3a3a');
+// function ShareToolCallItem({
+//   message,
+//   isLatest,
+// }: {
+//   message: ChatMessage;
+//   isLatest: boolean | undefined;
+// }) {
+//   const [isCollapsed, setIsCollapsed] = React.useState(true);
+//   const borderColor = useColorModeValue('#e2e8f0', '#3a3a3a');
 
-  // 获取工具中文名称
-  const toolName = React.useMemo(() => {
-    const firstTool = message.tool_calls?.[0];
-    if (!firstTool) return '工具调用';
-    return getToolName(firstTool);
-  }, [message.tool_calls]);
+//   // 获取工具中文名称
+//   const toolName = React.useMemo(() => {
+//     const firstTool = message.tool_calls?.[0];
+//     if (!firstTool) return '工具调用';
+//     return getToolName(firstTool);
+//   }, [message.tool_calls]);
 
-  return (
-    <Box
-      border="1px solid"
-      borderColor={borderColor}
-      borderRadius="4px"
-      overflow="hidden"
-      mt={2}
-    >
-      {/* 内层标题栏 */}
-      <Flex
-        px={2}
-        py={1.5}
-        alignItems="center"
-        cursor="pointer"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        borderBottom={!isCollapsed ? '1px solid' : 'none'}
-        borderColor={borderColor}
-      >
-        <Icon as={RxCheckCircled} color="green.500" boxSize="14px" />
-        <Box
-          ml={1.5}
-          flex={1}
-          fontSize="12px"
-          fontWeight="400"
-          color="text.primary"
-          noOfLines={1}
-        >
-          {toolName}
-        </Box>
-        <Icon
-          as={isCollapsed ? FaAngleRight : FaAngleDown}
-          size="xs"
-          color="text.secondary"
-        />
-      </Flex>
-      {/* 内层内容区 */}
-      {!isCollapsed && (
-        <Box>
-          {typeof message.content === 'string' && message.content && message.content !== '-' && (
-            <Box px={2} py={1.5} fontSize="13px" color="text.primary">
-              {message.content}
-            </Box>
-          )}
-          <ToolCall message={message} isShare isLatest={isLatest} />
-        </Box>
-      )}
-    </Box>
-  );
-}
+//   return (
+//     <Box
+//       border="1px solid"
+//       borderColor={borderColor}
+//       borderRadius="4px"
+//       overflow="hidden"
+//       mt={2}
+//     >
+//       {/* 内层标题栏 */}
+//       <Flex
+//         px={2}
+//         py={1.5}
+//         alignItems="center"
+//         cursor="pointer"
+//         onClick={() => setIsCollapsed(!isCollapsed)}
+//         borderBottom={!isCollapsed ? '1px solid' : 'none'}
+//         borderColor={borderColor}
+//       >
+//         <Icon as={RxCheckCircled} color="green.500" boxSize="14px" />
+//         <Box
+//           ml={1.5}
+//           flex={1}
+//           fontSize="12px"
+//           fontWeight="400"
+//           color="text.primary"
+//           noOfLines={1}
+//         >
+//           {toolName}
+//         </Box>
+//         <Icon
+//           as={isCollapsed ? FaAngleRight : FaAngleDown}
+//           size="xs"
+//           color="text.secondary"
+//         />
+//       </Flex>
+//       {/* 内层内容区 */}
+//       {!isCollapsed && (
+//         <Box>
+//           {typeof message.content === 'string' && message.content && message.content !== '-' && (
+//             <Box px={2} py={1.5} fontSize="13px" color="text.primary">
+//               {message.content}
+//             </Box>
+//           )}
+//           <ToolCall message={message} isShare isLatest={isLatest} />
+//         </Box>
+//       )}
+//     </Box>
+//   );
+// }
 
 // 收藏模式下的工具调用聚合面板
 function ShareToolCallPanel({
@@ -199,6 +199,9 @@ function ShareToolCallPanel({
   allMessages,
   isLatest,
   isUserMsgSelected,
+  attachs,
+  onNewSession,
+  setRecommendFileChanges,
 }: {
   isToolCallCollapsed: boolean;
   setIsToolCallCollapsed: (v: boolean) => void;
@@ -208,6 +211,9 @@ function ShareToolCallPanel({
   allMessages: ChatMessage[];
   isLatest: boolean | undefined;
   isUserMsgSelected?: boolean;
+  attachs: any[];
+  onNewSession: any;
+  setRecommendFileChanges: any;
 }) {
   const bgColor = useColorModeValue('#f8f9fa', '#1f1f1f');
   const borderColor = useColorModeValue('#e2e8f0', '#3a3a3a');
@@ -241,6 +247,8 @@ function ShareToolCallPanel({
             alignItems="center"
             cursor="pointer"
             onClick={() => setIsToolCallCollapsed(!isToolCallCollapsed)}
+            borderBottom="1px solid"
+            borderColor={borderColor}
           >
             <Icon as={RxCheckCircled} color="green.500" boxSize="14px" />
             <Box
@@ -258,18 +266,22 @@ function ShareToolCallPanel({
               color="text.secondary"
             />
           </Flex>
-          {/* 展开后：只渲染含 tool_calls 的消息，文字+工具按顺序显示 */}
+          {/* 展开后：按原始顺序用 ChatAssistantMessage 渲染 */}
           {!isToolCallCollapsed && (
-            <Box px={2} pb={2}>
-              {allMessages
-                .filter((msg) => msg.tool_calls?.length)
-                .map((msg, idx) => (
-                  <ShareToolCallItem
-                    key={`${msg.id || ''}-${idx}`}
-                    message={msg}
-                    isLatest={isLatest}
-                  />
-                ))}
+            <Box px={2} pb={2} mt={1}>
+              {allMessages.map((msg, idx) => (
+                <ChatAssistantMessage
+                  key={`${msg.id || ''}-${idx}`}
+                  index={idx}
+                  message={msg}
+                  isLatest={isLatest}
+                  isRecent={false}
+                  attachs={attachs}
+                  onNewSession={onNewSession}
+                  isShare={false}
+                  setRecommendFileChanges={setRecommendFileChanges}
+                />
+              ))}
             </Box>
           )}
         </Box>
@@ -399,8 +411,15 @@ function OuterCollapseWrapper({
 
   // ===== 收藏模式下的渲染：工具调用 UI 聚合到折叠框，内部按原始顺序混排 =====
   if (isShare && hasToolCalls && userMsgId) {
-    // 所有消息按原始顺序传入
-    const allMessages = mergedMessages.map((g) => g.messages[0]);
+    const lastPureTextIndex = (() => {
+      for (let i = mergedMessages.length - 1; i >= 0; i--) {
+        if (!mergedMessages[i].messages[0].tool_calls?.length) return i;
+      }
+      return -1;
+    })();
+    const allMessages = mergedMessages
+      .filter((_, i) => i !== lastPureTextIndex)
+      .map((g) => g.messages[0]);
 
     return (
       <>
@@ -413,27 +432,29 @@ function OuterCollapseWrapper({
           allMessages={allMessages}
           isLatest={isLatest}
           isUserMsgSelected={isUserMsgSelected}
+          attachs={attachs}
+          onNewSession={onNewSession}
+          setRecommendFileChanges={setRecommendFileChanges}
         />
-        {/* 纯文字消息（无 tool_calls）在大盒子外部按顺序渲染 */}
-        {mergedMessages
-          .filter((group) => !group.messages[0].tool_calls?.length)
-          .map((group) => {
-            const message = group.messages[0];
-            const index = group.indices[0];
-            return (
-              <ChatAssistantMessage
-                key={(message?.id || '') + index}
-                index={index}
-                message={message}
-                isLatest={isLatest}
-                isRecent={index === mergedMessages.length - 1 && isLatest}
-                attachs={attachs}
-                onNewSession={onNewSession}
-                isShare={isShare}
-                setRecommendFileChanges={setRecommendFileChanges}
-              />
-            );
-          })}
+        {/* 总结内容在大盒子外部 */}
+        {lastPureTextIndex !== -1 && (() => {
+          const group = mergedMessages[lastPureTextIndex];
+          const message = group.messages[0];
+          const index = group.indices[0];
+          return (
+            <ChatAssistantMessage
+              key={(message?.id || '') + index}
+              index={index}
+              message={message}
+              isLatest={isLatest}
+              isRecent={index === mergedMessages.length - 1 && isLatest}
+              attachs={attachs}
+              onNewSession={onNewSession}
+              isShare={isShare}
+              setRecommendFileChanges={setRecommendFileChanges}
+            />
+          );
+        })()}
       </>
     );
   }

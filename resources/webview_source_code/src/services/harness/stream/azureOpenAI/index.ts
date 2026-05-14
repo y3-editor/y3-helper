@@ -31,6 +31,12 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
   private firstTokenReceived = false
 
   public get getUrl() {
+    // Y3 注意：此 URL Y3 api-server 未注册路由，调用会 404。
+    // 但 AzureOpenAIStream 在 Y3 是 dead code（agentEntry 不会实例化它，
+    //   因为 fixedModel 注入时未设 supplyChannel='gpt'），保留代码避免与上游同步冲突。
+    // 若未来需要启用 Responses API 协议，需：
+    //   1. App.tsx 注入 fixedModel 时设 supplyChannel = ChatModelSupplyChannel.GPT
+    //   2. api-server/routes/chat.mjs 注册 /proxy/cm/openai/v1/responses 路由 → 直通 streamResponsesApi
     return `/proxy/cm/openai/v1/responses`
   }
 
@@ -42,6 +48,14 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
     super(AzureOpenAIStream.convertRequestParams(data), options)
     this.originalData = data
     this.round = (useChatStreamStore.getState() as any).conversationRound;
+  }
+
+  public getRequestHeader() {
+    const baseHeaders = super.getRequestHeader()
+    return {
+      ...baseHeaders,
+      'downstream-client': 'codebase-chat'
+    }
   }
 
   /**
@@ -109,7 +123,7 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
       input,
       instructions,
       stream: data.stream ?? true,
-      temperature: data.temperature || 1,
+      temperature: data.temperature,
       top_p: data.top_p,
       max_output_tokens: data.max_tokens,
       tools: data.tools?.map(t => t.type === 'function' && (t as any).function
@@ -214,10 +228,10 @@ export default class AzureOpenAIStream extends BaseStream<ICmCodebaseStreamOptio
           if (usage) {
             this.conversationContext.totalTokens = usage.total_tokens ?? 0;
             this.conversationContext.completionTokens = usage.output_tokens ?? 0;
-            this.conversationContext.promptTokens = (usage.input_tokens ?? 0)
+            // this.conversationContext.promptTokens = (usage.input_tokens ?? 0)
             // TODO: gpt有缓存的，后续需要优化计算token的策略
-            // this.conversationContext.promptTokens = (usage.input_tokens ?? 0) - (usage.input_tokens_details?.cached_tokens ?? 0);
-            // this.conversationContext.cacheReadInputTokens = usage.input_tokens_details?.cached_tokens ?? 0;
+            this.conversationContext.promptTokens = (usage.input_tokens ?? 0) - (usage.input_tokens_details?.cached_tokens ?? 0);
+            this.conversationContext.cacheReadInputTokens = usage.input_tokens_details?.cached_tokens ?? 0;
           }
           if (resp?.id) {
             this.conversationContext.responseId = resp.id;

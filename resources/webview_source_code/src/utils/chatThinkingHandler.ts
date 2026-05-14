@@ -1,7 +1,7 @@
 import { ChatPromptBody } from "../services";
 import { IChatModelConfig } from "../services/chatModel";
 import { useChatStore } from "../store/chat";
-import { CHAT_MIN_TOKENS, ChatModelSupplyChannel } from "../store/chat-config";
+import { CHAT_MIN_TOKENS, ChatModelSupplyChannel, useChatConfig } from "../store/chat-config";
 import { checkThinkingSignatureValid } from "./validateBeforeChat";
 
 
@@ -53,6 +53,30 @@ export const configureThinkingSignature = (
       }
       break
     }
+    case ChatModelSupplyChannel.DEEPSEEK: {
+      if (!data.extra_body) data.extra_body = {}
+      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
+        Object.assign(data.extra_body, {
+          thinking: {
+            type: 'disabled',
+          }
+        })
+      } else {
+        const effortMap = useChatConfig.getState().selectedModelEffort;
+        const effort = effortMap[modelConfig.code] ?? modelConfig?.defaultEffort;
+        if (effort) {
+          Object.assign(data.extra_body, {
+            reasoning_effort: effort,
+          })
+        }
+        Object.assign(data.extra_body, {
+          thinking: {
+            type: 'enabled',
+          },
+        })
+      }
+      break
+    }
     case ChatModelSupplyChannel.KIMI: {
       if (!data.extra_body) data.extra_body = {}
       if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
@@ -69,6 +93,18 @@ export const configureThinkingSignature = (
         })
       }
       break
+    }
+    case ChatModelSupplyChannel.GPT: {
+      const effortMap = useChatConfig.getState().selectedModelEffort;
+      const effort = effortMap[modelConfig.code] ?? modelConfig?.defaultEffort;
+      if (!effort) break
+      if (!data.extra_body) data.extra_body = {}
+      Object.assign(data.extra_body, {
+        reasoning: {
+          effort, // "max", "xhigh", "high", "medium", "low"
+        },
+      })
+      break;
     }
     default:
       // 对于不支持 thinking 的模型供应商，不做处理
