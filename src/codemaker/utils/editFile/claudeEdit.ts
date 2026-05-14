@@ -89,6 +89,12 @@ export function validateAndResolveFilePath(filePath: string): string {
   // 安全校验：确保目标路径在工作区内
   // 1. 检查是否以工作区路径 + 路径分隔符开头（防止路径遍历攻击）
   // 2. 或者就是工作区根目录本身
+  //
+  // 注意：上游 be7a0ab5 (refactor: 支持跨工作区修改) 在此把 throw 收窄为
+  //   if (!path.isAbsolute(absolutePath)) throw ...
+  // 但 absolutePath 来自 path.resolve()，永远是绝对路径，等于整个工作区检查失效。
+  // Y3 是单工作区场景，保留严格校验更安全，故未同步该 refactor。
+  // 详见 .codemaker/sync/exclusions.json -> skip_be7a0ab5_claudeEdit_cross_workspace
   if (!normalizedAbsolute.startsWith(normalizedWorkspace + path.sep) && normalizedAbsolute !== normalizedWorkspace) {
     throw new Error(
       `File path "${filePath}" is not within the workspace directory "${workspaceRoot}".`

@@ -82,7 +82,13 @@
     "src/utils/initInsideServer.ts": "CodeMaker内置服务端初始化，Y3用自己写的api-server，不需要",
     "src/utils/serverRoutes.ts": "CodeMaker内置服务端路由定义，Y3用自己写的api-server，不需要",
     "src/routes/CodeChat/ChatSessionPicker.tsx": "[多会话] 多选会话发起新对话功能，Y3没有多会话功能",
-    "src/utils/swaggerUI.ts": "CodeMaker内置服务端Swagger文档UI，Y3用自己写的api-server，不需要"
+    "src/utils/swaggerUI.ts": "CodeMaker内置服务端Swagger文档UI，Y3用自己写的api-server，不需要",
+    "src/hooks/useBatchFixMode.ts": "[CodeReview] AI批量修复Issue hook，Y3无CodeReview功能",
+    "src/store/batchFix.ts": "[CodeReview] AI批量修复store，Y3无CodeReview功能",
+    "src/utils/formatIssuesForChat.ts": "[CodeReview] 批量修复Issue格式化工具，Y3无CodeReview功能",
+    "src/utils/repoUrlMatcher.ts": "[CodeReview] 仅供CodeReview使用，Y3无CodeReview功能",
+    "src/routes/CodeReview/BatchFixToolbar.tsx": "[CodeReview] AI批量修复工具栏，Y3无CodeReview功能",
+    "src/routes/CodeReview/StatusCategoryDropdown.tsx": "[CodeReview] 状态分类下拉，Y3无CodeReview功能"
   },
   "excluded_upstream_files_notes": {
     "_description": "文件路径为key，记录同步时需要注意的文件级别排除或特殊处理",
@@ -117,7 +123,10 @@
     "src/codemaker/webviewProvider.ts__glob_search": "REVIEW: 新增glob_search工具case和_toolGlobSearch方法。Y3的webviewProvider.ts结构不同，需手动添加而非覆盖",
     "src/codemaker/utils/file.ts__覆盖风险": "WARNING: 不要用上游完整文件覆盖Y3的file.ts。Y3版本是精简版，import路径不同。只应用具体diff",
     "src/codemaker/webviewProvider.ts__agentsHandler_import": "FIX: import路径用'./handlers/agentsHandler/index'（不带.js后缀，与项目其他import一致）。动态import()改为顶层静态import避免ts(2835)",
-    "src/codemaker/messageHandlers.ts__agentsHandler_import": "FIX: 同上，import路径用'./handlers/agentsHandler/index'（不带.js后缀）"
+    "src/codemaker/messageHandlers.ts__agentsHandler_import": "FIX: 同上，import路径用'./handlers/agentsHandler/index'（不带.js后缀）",
+    "src/routes/CodeChat/ChatTypeAhead/Prompt/PromptsPanel.tsx__hideBuiltInOpenSpecCommands": "SKIP: 251cd5dc 引入 hideBuiltInOpenSpecCommands 配置项屏蔽内置 OpenSpec 指令。Y3 已通过 stub 永久隐藏 OpenSpec，不需要此开关。覆盖前需对比 diff 确保不引入 hideBuiltInOpenSpecCommands 引用",
+    "src/store/chat-config.ts__hideBuiltInOpenSpecCommands": "SKIP: 251cd5dc 新增 hideBuiltInOpenSpecCommands 字段+setter。Y3 不需要 OpenSpec 隐藏开关",
+    "src/App.tsx__hideBuiltInOpenSpecCommands": "SKIP: 251cd5dc 在 SUBSCRIBE_USER_DATA 解构 hideBuiltInOpenSpecCommands 并调 setHideBuiltInOpenSpecCommands。Y3 不需要"
   },
   "sync_rules": {
     "_description": "同步规则和跳过的commit记录，key为规则名/commit hash，非文件路径",
@@ -165,7 +174,19 @@
     "merge_d2cbc61f_d4589b57": "MERGED: fix: edit 文件清空 (d2cbc61f webui + d4589b57 extension)。前者将 type 字段从 'edit'|'replace' 改 string 并移除 chat.ts cast；后者 claudeEdit.ts 的 executeSingleEdit catch 中用 originalContent 代替空串，避免 edit 失败把文件写空。Y3 之前用 1503669 自行修过（type cast 'edit'|'replace'|'write'），本次回滚 cast 与上游一致",
     "merge_6dc8bfa0": "MERGED: feat: Claude Edit 模式 + 子代理用户侧开关 (6dc8bfa0)。2026-04-22 webui 轮。(1) chat-config.ts 新增 enableSubagent/enableSubagentManualTriggerOnly/subagentConfigInitialized/initSubagentConfig 字段（从 extension.ts subagentEnable 字段迁移过来，并加持久化）(2) App.tsx 用 useChatConfig.getState().initSubagentConfig 替代 extensionStore.setSubagentEnable/setSubagentManualTriggerOnly (3) chat.ts/toolsEN.ts 引用从 useExtensionStore 改 useChatConfig (4) chat.ts 新增 agentTaskDirective 时向最后一条 user message 末尾注入约束 reminder 块 (5) 新增 modules/prompts/templates/claude-edit.txt 与 subagent/ 内多文件改动。claudeEdit 扩展到 write+edit 工具",
     "merge_58cbde2e_claudeedit_only": "MERGED: chore(只合 claudeEdit.ts 部分): filePath 空值校验（throw early 而非传 undefined 给 validateAndResolveFilePath）+ executeSingleWrite 把 originalContent 提到 try 外，catch 中用 originalContent 代替空串避免 write 失败把文件写空 + path 用 filePath || '' 兜空",
-    "skip_bbc3b737_codebase_main_path": "PARTIAL-SKIP: refactor: 重构流式请求架构,统一 Agent 处理逻辑 (bbc3b737)。2026-04-22 webui 轮。chat.ts 大段 hunk @4354/4544/4646/4688 把 codebase 主路径从 requestCodebaseChatStream 替换为 getCodemakerAgentEntry().execute,并改 url '/proxy/gpt/u5_chat/codebase_agent_stream' → '/proxy/gpt/gpt/codebase_chat_stream'。Y3 走自建本地 API server (api-server/routes/chat.mjs),baseURL 与上游不兼容,直接换会破坏 chat 功能。本路径主体保持 Y3 原版,仅合并新增能力(MCP visible/buildPromptMCPServers/probeModelIdentity)。同 rule6_store_chat_too_risky_to_overwrite。subagent 的 buildAgentListingReminder/wrapSystemReminder/generateSubagentConstraintText 三个 helpers 上游已删并迁到 buildCodebaseChatPayload 内部,Y3 仍直接用,导入保留。"
+    "skip_bbc3b737_codebase_main_path": "PARTIAL-SKIP: refactor: 重构流式请求架构,统一 Agent 处理逻辑 (bbc3b737)。2026-04-22 webui 轮。chat.ts 大段 hunk @4354/4544/4646/4688 把 codebase 主路径从 requestCodebaseChatStream 替换为 getCodemakerAgentEntry().execute,并改 url '/proxy/gpt/u5_chat/codebase_agent_stream' → '/proxy/gpt/gpt/codebase_chat_stream'。Y3 走自建本地 API server (api-server/routes/chat.mjs),baseURL 与上游不兼容,直接换会破坏 chat 功能。本路径主体保持 Y3 原版,仅合并新增能力(MCP visible/buildPromptMCPServers/probeModelIdentity)。同 rule6_store_chat_too_risky_to_overwrite。subagent 的 buildAgentListingReminder/wrapSystemReminder/generateSubagentConstraintText 三个 helpers 上游已删并迁到 buildCodebaseChatPayload 内部,Y3 仍直接用,导入保留。",
+    "skip_251cd5dc": "SKIP: feat: 新增隐藏内置 OpenSpec 指令的 IDE 配置项 (251cd5dc)。2026-04-28 webui 轮。Y3 已通过 stub 永久隐藏 OpenSpec，不需要 hideBuiltInOpenSpecCommands 配置开关。涉及 App.tsx/chat-config.ts/PromptsPanel.tsx/openspec/* 全部跳过",
+    "skip_77fc0f06": "SKIP: feat: 新增 AI 批量修复 Issue 功能 (77fc0f06)。2026-04-28 webui 轮。依赖 CodeReview，Y3 无 CodeReview。补 excluded_upstream_dirs: useBatchFixMode.ts/batchFix.ts/formatIssuesForChat.ts/repoUrlMatcher.ts/BatchFixToolbar.tsx/StatusCategoryDropdown.tsx",
+    "skip_2e19ca3c": "SKIP: feat: 限制Claude与deepseek系列任意切换 (2e19ca3c)。2026-04-28 webui 轮。仅影响 ChatModelSelector，Y3 无模型选择器",
+    "merge_d367adc1": "MERGED: feat: 新增 Skill 自动执行配置功能 (d367adc1)。2026-04-28 webui 轮。SkillConfig/SkillIndexItem 增 autoRun 字段；setSkills 持久化 autoRun；store/chat.ts onAfterToolCall 新增 isOnlySkillTools 旁路（纯 skill 工具调用时不阻塞 handleAutoExecute）。useToolCall/SkillConfigCollapse/MainAgentExecutionStrategy 直接覆盖",
+    "merge_399a1f19": "MERGED: feat: ClaudeEditFile 无 diff 时展示原始代码 (399a1f19)。2026-04-28 webui 轮。ClaudeEditFile.tsx + ToolCallResults.tsx 直接覆盖",
+    "merge_c128fb63_34b9f3cf": "MERGED: fix: 用户中断重复触发 (c128fb63) + fix: 流空内容跳过解析 (34b9f3cf)。2026-04-28 webui 轮。harness/stream/{azureOpenAI,base,cmCodebase}/index.ts + harness/swarm/agentEntry.ts 直接覆盖",
+    "merge_ebf8bfe2": "MERGED: fix: 修复模型token计算策略 (ebf8bfe2)。2026-04-28 webui 轮。chatApply.ts/consumedTokensCalculator.ts/tokenEstimate.ts 直接覆盖",
+    "merge_d105f57c_app_chatApplyMode_guard": "MERGED(部分): refactor: 优化effor选择工具入口 (d105f57c)。2026-04-28 webui 轮。原 commit 改 ChatEffotSelect.tsx 已 SKIP；附带的 App.tsx 中 setChatApplyMode 加 if (chatApplyMode) 兜空（避免 undefined 覆盖默认值）已 cherry-pick",
+    "skip_be7a0ab5_claudeEdit_cross_workspace": "SKIP: refactor: 支持跨工作区修改 (be7a0ab5)。2026-04-28 extension 轮。上游把 src/utils/editFile/claudeEdit.ts validateAndResolveFilePath 中的工作区检查 throw 收窄为 if (!path.isAbsolute(absolutePath)) throw ...，意图是绝对路径放行以支持跨工作区。但 absolutePath = path.resolve(workspaceRoot, filePath) 永远是绝对路径，等于工作区检查完全失效，path.normalize/../outside.txt 也能通过。Y3 单工作区场景，保留严格校验更安全。已在 src/codemaker/utils/editFile/claudeEdit.ts 加注释，避免下次同步看到懵。",
+    "merge_96919a61_extension": "MERGED: feat: Skill 配置支持 autoRun 自动执行参数 (96919a61)。2026-04-28 extension 轮。Y3 src/codemaker/skillsHandler.ts: SkillConfig/SkillIndexItem 增 autoRun?: boolean 字段；handleUpdateSkillConfig 解构 autoRun 并合并到 skillConfigs（!== undefined 时才覆盖，防止覆盖已有值）；getSkillIndex 透传 autoRun 给 webview。webviewProvider/index.ts hunk1 (UPDATE_SKILL_CONFIG) 因 Y3 messageHandlers.ts 走 handleUpdateSkillConfig(data) 直传 data，autoRun 自动通过，无需 cherry-pick",
+    "skip_ade8ae9e_extension": "SKIP: feat: 新增隐藏内置 OpenSpec 命令的配置项 (ade8ae9e)。2026-04-28 extension 轮。同 webui 251cd5dc，Y3 stub 永久隐藏 OpenSpec。涉及 package.json/.nls.json/extension.ts/configures.ts/CodebaseChatPanelManager.ts (auto SKIP) + webviewProvider hunk2/3 (HideBuiltInOpenSpecCommands 配置注入) + sendWebviewInitData.ts 全部跳过",
+    "skip_0b707841_extension": "SKIP: chore: 调整ChatApplyMode 默认值为 claudeedit (0b707841)。2026-04-28 extension 轮。仅改 package.json default 值（auto SKIP）。Y3 自有 ChatApplyMode 默认值策略，不跟"
   },
 
   "_merge_lessons_learned": {
