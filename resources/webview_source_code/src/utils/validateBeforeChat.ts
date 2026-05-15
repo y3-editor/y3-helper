@@ -66,7 +66,15 @@ export function validateCodeBlocksLanguage(
  * @name 检查Thinking消息列表有效性
  * @param messages
  */
-export const checkThinkingSignatureValid = (messages: ChatMessage[]) => {
+export const checkThinkingSignatureValid = (messages: ChatMessage[], supplyChannel?: ChatModelSupplyChannel) => {
+  if (supplyChannel === ChatModelSupplyChannel.DEEPSEEK) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant' && !messages[i].reasoning_content) {
+        return false;
+      }
+    }
+    return true;
+  }
   let containUserMessage = false
   for (let i = messages.length - 1; i >= 0; i--) {
     const curMessage = messages[i]
@@ -254,7 +262,7 @@ export const serializeCodebaseMessages = async ({
       delete curMessage.reasoningContent;
     }
     // 修复有推理内容没有签名的情况
-    if (hasThinking && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
+    if (isClaudeModel && hasThinking && curMessage.role === ChatRole.Assistant && curMessage?.reasoning_content && !curMessage?.thinking_signature) {
       curMessage.reasoning_content = '';
     }
     if (!nextMessage && curMessage.role === ChatRole.Assistant && curMessage.tool_calls?.length && status === 1) {
@@ -384,15 +392,15 @@ export const serializeCodebaseMessages = async ({
     startIndex++
   }
 
-  if (hasThinking && isClaudeModel && !checkThinkingSignatureValid(filteredMessages)) {
-    errorMessages.push('缺失Thinking字段，默认降级到Claude3.7')
-    filteredMessages.forEach(message => {
-      delete message.redacted_thinking;
-      delete message.thinking_signature;
-      delete message.reasoning_content;
-      delete message.reasoningContent;
-    })
-  }
+  // if (hasThinking && isClaudeModel && !checkThinkingSignatureValid(filteredMessages)) {
+  //   errorMessages.push('缺失 thinking 字段，默认降级到非 thinking 模式')
+  //   filteredMessages.forEach(message => {
+  //     delete message.redacted_thinking;
+  //     delete message.thinking_signature;
+  //     delete message.reasoning_content;
+  //     delete message.reasoningContent;
+  //   })
+  // }
 
   // 错误类型处理上报
   if (errorMessages.length) {

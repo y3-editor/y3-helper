@@ -4,8 +4,10 @@
 
 import { useCallback } from 'react';
 import { ChatMessage } from '../../services';
-import { useChatStreamStore } from '../../store/chat';
+import { useChatStore, useChatStreamStore } from '../../store/chat';
 import { useChatApplyStore } from '../../store/chatApply';
+import { useChatConfig } from '../../store/chat-config';
+import { useExtensionStore } from '../../store/extension';
 import { usePostMessage, BroadcastActions } from '../../PostMessageProvider';
 import { UserEvent } from '../../types/report';
 import { updateCurrentSession } from '../useCurrentSession';
@@ -16,6 +18,7 @@ import {
   useTerminalMessage,
 } from '../../routes/CodeChat/ChatMessagesList/TermialPanel';
 import { ToolCallHandlers } from './types';
+import { toastError } from '../../services/error';
 
 export function useToolCallHandlers(
   message: ChatMessage,
@@ -31,6 +34,7 @@ export function useToolCallHandlers(
   hasTodoTool: boolean,
 ): ToolCallHandlers {
   const onUserSubmit = useChatStreamStore((state) => state.onUserSubmit);
+  const currentSessionId = useChatStore((state) => state.currentSessionId);
   const isTerminalProcessing = useChatStreamStore(
     (state) => state.isTerminalProcessing,
   );
@@ -42,8 +46,11 @@ export function useToolCallHandlers(
   );
   const acceptEdit = useChatApplyStore((state) => state.acceptEdit);
   const rejectEdit = useChatApplyStore((state) => state.rejectEdit);
+  const chatApplyInfo = useChatApplyStore((state) => state.chatApplyInfo);
   const { postMessage } = usePostMessage();
   const { updateTerminalLog } = useTerminalMessage();
+  const rtkEnabled = useChatConfig((state) => state.rtkEnabled);
+  const rtkBinaryAvailable = useExtensionStore((state) => state.rtkBinaryAvailable);
 
   // 查找命令工具
   const commandTool = message.tool_calls?.find(
@@ -64,6 +71,7 @@ export function useToolCallHandlers(
         console.error(err);
         params = {};
       }
+      params.enableRtk = rtkEnabled && rtkBinaryAvailable;
       // 终端进入等待状态
       updateTerminalLog(
         {
@@ -84,6 +92,7 @@ export function useToolCallHandlers(
             tool_name: commandTool.function.name,
             tool_params: params,
             tool_id: commandTool?.id,
+            session_id: currentSessionId,
           },
         },
         '*',
@@ -93,10 +102,13 @@ export function useToolCallHandlers(
       commandTool?.function?.arguments,
       commandTool?.function?.name,
       commandTool?.id,
+      currentSessionId,
       isTerminalProcessing,
       message.id,
       setIsTerminalProcessing,
       updateTerminalLog,
+      rtkEnabled,
+      rtkBinaryAvailable,
     ],
   );
 
@@ -118,6 +130,12 @@ export function useToolCallHandlers(
           ),
         );
         if (editTool) {
+          const isEditDisabled = chatApplyInfo[editTool.id]?.applying;
+          if (isEditDisabled) {
+            toastError('当前有编辑文件正在处理中，请稍后再试')
+            return
+          }
+
           if (accept) {
             // 应用编辑
             acceptEdit(editTool.id);
@@ -174,6 +192,7 @@ export function useToolCallHandlers(
               tool_name: mcpTool.function.name,
               tool_params: toolCallParams,
               tool_id: mcpTool.id,
+              session_id: currentSessionId,
             },
           });
           return;
@@ -240,11 +259,13 @@ export function useToolCallHandlers(
       }
     },
     [
+      chatApplyInfo,
       commandTool,
       execCommandTool,
       hasEditFileTool,
       hasMakePlanTool,
       hasMCPTool,
+      currentSessionId,
       message.tool_calls,
       acceptEdit,
       rejectEdit,

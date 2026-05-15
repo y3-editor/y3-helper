@@ -62,7 +62,9 @@ export enum StreamError {
   FailedToFetch = 'Failed to fetch',
   PeerClosedConnection = 'peer closed connection without sending complete message body',
   AzureaiRateLimitChunk = 'azureai_error_chunk code:rate_limit_exceeded',
-  InvalidModelIdentifier = 'The provided model identifier is invalid'
+  InvalidModelIdentifier = 'The provided model identifier is invalid',
+  AnthropicErrorChunk = 'rate_limit_error message',
+  ParsedStreamDataError = 'Expecting value: line 1 column 1 (char 0)',
 }
 
 export enum ChatRole {
@@ -74,7 +76,23 @@ export enum ChatRole {
 
 enum FinishReason {
   Stop = 'stop',
+  // Continue 是历史命名，保留向后兼容；Length 是 OpenAI 官方语义，二者同值
   Continue = 'length',
+  Length = 'length',
+  ContentFilter = 'content_filter',
+}
+
+const CONTENT_FILTER_ERROR_PREFIX = 'ContentFilterError:';
+const CONTENT_FILTER_ERROR_MESSAGE = `${CONTENT_FILTER_ERROR_PREFIX} 模型回复被安全过滤拦截`;
+
+/**
+ * 检查 SSE chunk 的 finish_reason，命中安全过滤时统一抛错。
+ * 配合 utils/specialErrorPatterns 的 ContentFilterError 模式呈现友好提示。
+ */
+function assertNotContentFilter(choice: { finish_reason?: string }): void {
+  if (choice?.finish_reason === FinishReason.ContentFilter) {
+    throw new Error(CONTENT_FILTER_ERROR_MESSAGE);
+  }
 }
 
 // time out 2min for knowledge base chat
@@ -250,6 +268,7 @@ async function createStream(req: Request, parseCallback?: (data: any) => void) {
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;
@@ -398,6 +417,7 @@ async function createDeepseekReasonerStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;
@@ -515,6 +535,7 @@ async function createClaude37ReasonerStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;
@@ -657,6 +678,7 @@ async function createBMStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;
@@ -993,6 +1015,7 @@ async function createGoogleGeminiNetworkStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;
@@ -1114,6 +1137,7 @@ async function createFunctionCallStream(
             if (choices[0].finish_reason === FinishReason.Continue) {
               needContinue = true;
             }
+            assertNotContentFilter(choices[0]);
 
             const delta = choices[0]?.delta;
             if (!delta) return;

@@ -560,6 +560,9 @@ export const specialErrorPatterns = [
       || msg.includes(StreamError.AzureaiRateLimitChunk)
       || msg.includes(StreamError.BaiChuan2TokenLimit)
       || msg.includes(StreamError.InvalidModelIdentifier)
+      || msg.includes(StreamError.AnthropicErrorChunk)
+      || msg.includes(StreamError.ParsedStreamDataError)
+      || msg.includes(`Too many requests. Please pace your requests reasonably. Your current concurrency`) && msg.includes('SupplierResponseFailedErrorFromAIGW')
     ),
     message: '⚠️ 当前请求触发模型限流，请稍后再试'
   },
@@ -656,10 +659,17 @@ export const specialErrorPatterns = [
     message: '🤨 检测到上下文思维签名异常，请切换非Thinking模型后再重新回复',
     errorType: 'InvalidSignature' as StreamErrorCallbackType,
   },
+  {
+    // 大模型 finish_reason: 'content_filter' —— 安全过滤拦截
+    // 抛错文案前缀 'ContentFilterError:' 由 useChatStream / chatStreamRequest 统一注入
+    condition: (msg: string) => msg.includes('ContentFilterError:'),
+    message: '🛡️ 回复内容触发安全过滤，请调整提问后重试',
+    errorType: 'ContentFilter' as StreamErrorCallbackType,
+  },
 ];
 
 
-export type StreamErrorCallbackType = 'ContextTooLong' | 'InvalidSignature' | 'Unknown';
+export type StreamErrorCallbackType = 'ContextTooLong' | 'InvalidSignature' | 'ContentFilter' | 'Unknown';
 
 export const handleStreamError = (
   error: StreamErrorType,
@@ -895,3 +905,4 @@ export function getValidToolName(name: string) {
 export function isImageFileByPath(path: string): boolean {
   return /\.(png|jpg|webp|gif|jpeg)$/i.test(path)
 }
+

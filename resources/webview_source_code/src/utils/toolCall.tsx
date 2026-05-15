@@ -6,9 +6,11 @@ import { ChatSession } from "../store/chat";
 import { useChatConfig } from "../store/chat-config";
 import { processMakePlanDenied, processMakePlanResult } from "../services/harness/tools/plan";
 import { processWriteTodoDenied, processWriteTodoResult } from "../services/harness/tools/todo";
-import { formatSkillContent, parseSkillToolResult } from "../store/skills";
+import {
+  parseSkillToolResults,
+  processResult as processUseSkillResult,
+} from "../services/harness/tools/use_skill";
 import { isImageFileByPath, truncateContent } from ".";
-import { onChunkLoadError } from "./chunkErrorHandler";
 import { formatUserDeniedResult } from "./toolResultFormatter";
 import { UserEvent } from "../types/report";
 import { compressBase64Image } from "../components/ImageUpload/ImageResize";
@@ -353,9 +355,12 @@ export function formatResultContent(options: {
         case 'write_todo':
           resultContent = processWriteTodoResult(tool, result, session);
           break;
-        case 'use_skill':
-          resultContent = processUseSkillResult(result);
+        case 'use_skill': {
+          const skillDataList = parseSkillToolResults(result.content);
+          resultContent = processUseSkillResult(result, skillDataList);
+          // Y3: 不调用 onUseSkillInvoked 埋点
           break;
+        }
         default:
           resultContent = result.content;
       }
@@ -364,21 +369,6 @@ export function formatResultContent(options: {
     console.error(err);
   }
   return resultContent;
-}
-
-function processUseSkillResult(result: ToolResult): string {
-  const skillData = parseSkillToolResult(result.content);
-  if (skillData) {
-    // 上报模型调用 Skill 事件
-    import('../services/skillUsage').then(({ reportSkillInvoke }) => {
-      import('../store/skills').then(({ getSkillDescription }) => {
-        const description = getSkillDescription(skillData.name);
-        reportSkillInvoke(skillData.name, { source: 'codemaker-model', description });
-      });
-    }).catch(onChunkLoadError);
-    return formatSkillContent(skillData);
-  }
-  return result.content;
 }
 
 function fileEditWithoutUserChanges(

@@ -94,9 +94,17 @@ export async function preprocessSubagentMessages(
     useChatConfig.getState().codebaseModelMaxTokens;
 
   // 优先使用 pruneToolOutputs 来减少token使用
-  const prunedMessages = await pruneToolOutputs(unCompressedMessages);
+  const pruneStateKey = `subagent:${taskId}`;
+  const pruneResult = await pruneToolOutputs(
+    unCompressedMessages,
+    pruneStateKey,
+  );
+  const prunedMessages = pruneResult.messages;
+  const hasPruning = prunedMessages.some(
+    (msg, index) => msg !== unCompressedMessages[index],
+  );
 
-  if (cacheEnable && prunedMessages.length !== unCompressedMessages.length) {
+  if (cacheEnable && hasPruning) {
     debugLog(MODULE, 'Tool Output Pruning Applied', {
       taskId,
       before: unCompressedMessages.length,
@@ -229,7 +237,7 @@ export async function preprocessSubagentMessages(
   const metadata = {
     originalMessageCount,
     finalMessageCount: filteredMessages.length,
-    hasCompression: prunedMessages.length !== unCompressedMessages.length,
+    hasCompression: hasPruning,
     hasTruncation: truncationResult.newTruncateStart !== -1,
     // systemPromptLength: codebaseChatSystemPrompt.length,
   };

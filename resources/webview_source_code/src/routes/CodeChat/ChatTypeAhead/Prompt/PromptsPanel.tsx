@@ -99,6 +99,7 @@ const PromptsPanel = (
   const setCodebaseChatMode = useChatStore(
     (state) => state.setCodebaseChatMode,
   );
+  const currentSessionId = useChatStore((state) => state.currentSessionId);
   const { panelId: currentPanelId } = usePanelContext();
 
   const isVscode = ide === 'vscode';
@@ -146,9 +147,7 @@ const PromptsPanel = (
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
   const subagents = useSubagentStore((state) => state.validAgents);
   const subagentEnable = useChatConfig((state) => state.enableSubagent);
-  // [Y3] hideBuiltInOpenSpecCommands 上游 251cd5dc 引入的 OpenSpec 隐藏开关，
-  // Y3 已通过 stub 永久隐藏 OpenSpec，固定视为 true（即始终隐藏内置 OpenSpec 指令）
-  const hideBuiltInOpenSpec = true;
+  const hideBuiltInOpenSpec = false; // Y3Helper: 不使用 OpenSpec 内置命令开关，固定不隐藏（OpenSpec 已 stub 化）
   const setAgentRunner = useAgentPromptStore((state) => state.setRunner);
   const setOpenspecUpdateModalVisible = useWorkspaceStore(
     (state) => state.setOpenspecUpdateModalVisible,
@@ -697,7 +696,7 @@ const PromptsPanel = (
           } else if (prompt.name === 'Compress') {
             const currentSessionId = useChatStore.getState().currentSessionId;
             if (currentSessionId) {
-              useChatStore.getState().triggerCompression(currentSessionId);
+              useChatStore.getState().triggerCompression(currentSessionId, 'manual');
             }
             if (userInputRef.current) {
               userInputRef.current.value = '';
@@ -754,6 +753,7 @@ const PromptsPanel = (
                   tool_name: 'use_skill',
                   tool_params: { skill_name: skillName },
                   tool_id: toolId,
+                  session_id: currentSessionId,
                 },
               });
               // 不清空输入框，保留用户已输入的文字内容

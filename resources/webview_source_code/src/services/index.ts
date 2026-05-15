@@ -330,6 +330,20 @@ export interface ChatMessage {
 
   // ✅ 标记消息是否为错误消息（便于 UI 识别）
   isError?: boolean;
+
+  /**
+   * 系统提示性通知（不是 LLM 产出，而是前端 guard / 保护机制等主动注入的消息）。
+   * 为了避免改动消息持久化协议，复用 role=assistant 消息并附加此扩展字段；
+   * 渲染层遇到有该字段的 assistant 消息时以系统提示样式展示。
+   */
+  systemNotice?: {
+    kind: 'repeat-toolcall-warn' | 'repeat-toolcall-abort';
+    toolNames?: string[];
+    /** UI 展示的文案。单独存储，避免覆盖 LLM 产出的 content 造成上下文污染 */
+    text?: string;
+  };
+  /** 仓库智聊实际回复的模型（Auto 渠道来自 X-Auto-Model header，非 Auto 来自 useModel） */
+  responseModel?: string;
 }
 
 // interface WebSearchType {

@@ -70,6 +70,8 @@ export interface IChatModelConfig {
   authInfo: AuthInfo;
   // Y3: DeepSeek thinking effort 默认值（来自上游 b1b637be）
   defaultEffort?: string;
+  /** 模型描述，如 Auto 渠道的"全系 Claude 组合" */
+  description?: string;
 }
 
 // getUserModels 接口响应类型
@@ -124,6 +126,7 @@ export enum ChatModel {
   Glm5 = 'glm-5',
   Glm5Turbo = 'glm-5-turbo',
   Glm51 = 'glm-5.1',
+  ClaudeOpus46 = 'claude-opus-4-6',
 }
 
 export async function getUserModels(): Promise<IGetUserModelsResponse> {

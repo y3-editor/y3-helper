@@ -72,8 +72,10 @@ import {
   CHAT_MAX_TOKENS,
   getAIGWModel,
   getModelSupplyChannel,
+  getModelConfigByUseModel,
   ChatModelSupplyChannel,
 } from './chat-config';
+import { getEnableRtk, getCurrentModel } from '../utils/toolCallDispatch';
 import { usePluginApp } from './plugin-app';
 import {
   PluginAction,
@@ -134,6 +136,10 @@ import { formatResultContent, getReportEventByToolName } from '../utils/toolCall
 import type { ExtendedPlanData, PlanStatus } from '../types/plan';
 import type { TodoList } from './../services/harness/tools/todo';
 import { onMessageToolCallResponse } from '../utils/chatToolCallHandler';
+import { evaluateRepeatGuard } from '../utils/toolCallRepeatGuard';
+import { useToolCallRepeatStore } from './toolCallRepeatStore';
+import { ABORT_REASON_REPEAT_TOOLCALL, createAbortReason } from '../utils/abort';
+import { deleteTranscript, migrateTranscriptRefs } from '../utils/transcript';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
 import { getPlanContextTruncationInstruction } from './workspace/planModePrompts';
@@ -143,6 +149,8 @@ import { Tool as TodoTool } from './../services/harness/tools/todo'
 import addCacheMarksToMessages, { addCacheMarksToTools } from '../utils/addCacheMarksToMessages';
 import EventBus, { EBusEvent } from '../utils/eventbus';
 import { debugSuccess } from '../utils/debugLog';
+import { sumUsageTokens } from '../utils/tokenCalculator';
+import { AgentStatus, getCodemakerAgentEntry } from '../services/harness/swarm/agentEntry';
 import {
   AgentTaskDirective,
   buildAgentListingReminder,
@@ -153,9 +161,11 @@ import { truncatedMessageWithSlideWindow, truncateMessagesIfNeeded } from '../ut
 import { SessionStatus, type CompressionContext, type CompressionHistory, type SessionCompressionState } from '../types/contextCompression';
 import {
   compressionService,
+  clearPruneState,
   getCompressSessionStatus,
   setCompressSessionStatus,
   pruneToolOutputs,
+  shouldForceFullCompact,
 } from '../services/compressionService';
 import { parseAtMentionedCodeBaseByAttach } from '../utils/codebaseChat';
 import { getImageUrlFromAttachs } from '../routes/CodeChat/ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
@@ -310,6 +320,8 @@ export const mentionKnowledgeMap: Map<string, boolean> = new Map()
 // 会话一旦出现在服务端列表中即被移除；模块级变量无需持久化，页面刷新后自然清空。
 const pendingSyncSessionIds = new Set<string>();
 
+export const recentlyDeletedSessionIds = new Set<string>();
+
 // 追踪每个会话当前正在进行的 syncHistory 调用数量（引用计数）。
 // 当 syncHistory 正在将本地数据写入服务端时，loadSessionData 不应用服务端数据覆盖本地，
 // 否则会导致消息回滚。计数归零后自动从 Map 中移除，恢复正常的多端同步行为。
@@ -360,6 +372,11 @@ export interface ChatSession {
     activeChangeId?: string;
     /** 关联的 SpecKit activeFeature ID，用于 Spec Coding 模式 */
     activeFeatureId?: string;
+    /** pruneToolOutputs 跨轮次替换状态，对齐 CC ContentReplacementState */
+    pruneState?: {
+      seenKeys: string[];
+      replacements: [string, string][];
+    };
   };
   /** 是否被收藏 */
   is_favorite?: boolean;
@@ -475,6 +492,10 @@ interface ChatStore {
   // 压缩相关方法
   analyzeContext: (sessionId: string) => Promise<{
     tokenUsage: number;
+    /** 模型最大上下文 token 数 */
+    maxTokenLimit: number;
+    /** 压缩触发阈值（绝对 token 数，如 maxTokens × 0.99） */
+    compressionTriggerThreshold: number;
     shouldCompress: boolean;
     thresholds: {
       isAboveWarningThreshold: boolean;
@@ -483,7 +504,7 @@ interface ChatStore {
       percentLeft: number;
     };
   }>;
-  triggerCompression: (sessionId: string) => Promise<boolean>;
+  triggerCompression: (sessionId: string, reason?: 'manual' | 'auto' | 'context_too_long') => Promise<boolean>;
   markMessagesAsCompressed: (sessionId: string, compressedMessages: ChatMessage[]) => void;
   // 基于收藏会话复制消息到新会话，继续对话
   forkFavoriteSession: (sourceSessionId: string) => Promise<void>;
@@ -693,6 +714,21 @@ export const useChatStore = create<ChatStore>()(
         pendingSyncSessionIds.add(newSession._id);
         const nextSessions = new Map(get().sessions);
         nextSessions.set(newSession._id, newSession);
+
+        // 分支场景：消息含旧 session 的 transcript 引用时，复制文件并替换路径
+        // prevSessionId 取自 set() 前的 currentSessionId，即"从此处重新发起"的源 session
+        const prevSessionId = get().currentSessionId;
+        if (messages?.length && prevSessionId && prevSessionId !== newSession._id) {
+          const hasTranscriptRef = (newSession.data?.messages || []).some(
+            (m) => m.isCompressionSummary && typeof m.content === 'string'
+              && m.content.includes('read the full transcript at:'),
+          );
+          if (hasTranscriptRef) {
+            await migrateTranscriptRefs(newSession.data!.messages, prevSessionId, newSession._id)
+              .catch((e) => console.warn('[onNewSession] transcript migration failed:', e));
+          }
+        }
+
         set(() => ({
           currentSessionId: newSession._id,
           sessions: nextSessions,
@@ -747,6 +783,19 @@ export const useChatStore = create<ChatStore>()(
             },
           },
         });
+
+        // 收藏分支：迁移源 session 的 transcript 引用
+        if (newSession.data?.messages?.length) {
+          const hasTranscriptRef = newSession.data.messages.some(
+            (m) => m.isCompressionSummary && typeof m.content === 'string'
+              && m.content.includes('read the full transcript at:'),
+          );
+          if (hasTranscriptRef) {
+            await migrateTranscriptRefs(newSession.data.messages, sourceSessionId, newSession._id)
+              .catch((e) => console.warn('[forkFavoriteSession] transcript migration failed:', e));
+          }
+        }
+
         set({
           sessions: nextSessions,
           currentSessionId: newSession._id,
@@ -938,14 +987,25 @@ export const useChatStore = create<ChatStore>()(
 
         // 清理被删除 session 的 subagent 状态
         useSubagentStore.getState().clearSessionStatuses(id);
+        useToolCallRepeatStore.getState().clearSession(id);
         // 清理被删除 session 的 MCP 激活工具键
         useMCPStore.getState().clearActivatedToolKeys(id);
 
         try {
           await removeSession(id);
+          // 标记为待删除，防止并发的 revalidateChatSessions
+          // 用服务端旧数据将已删除会话重新加回本地状态
+          recentlyDeletedSessionIds.add(id);
         } catch (error) {
           throw new Error(`Failed to remove history: ${error}`);
         }
+        // 云端删除成功后清理本地 transcript
+        deleteTranscript(id);
+        clearPruneState(id);
+        window.parent.postMessage(
+          { type: 'CLEAN_SESSION_FILES', data: { sessionId: id } },
+          '*',
+        );
         const nextSessions = new Map(sessions);
         nextSessions.delete(id);
 
@@ -975,7 +1035,6 @@ export const useChatStore = create<ChatStore>()(
           const latestSession = currentRepoSessions.sort((a, b) =>
             alphabeticalCompare(b.metadata.create_time, a.metadata.create_time),
           )[0];
-
           set({
             sessions: nextSessions,
             currentSessionId: latestSession._id,
@@ -1018,6 +1077,7 @@ export const useChatStore = create<ChatStore>()(
           // 清理旧 session 的 subagent 状态，避免跨 session 污染
           if (oldSessionId && oldSessionId !== id) {
             useSubagentStore.getState().clearSessionStatuses(oldSessionId);
+            useToolCallRepeatStore.getState().clearSession(oldSessionId);
           }
         } catch (error) {
           // 确保错误能够传递给调用者
@@ -1031,10 +1091,12 @@ export const useChatStore = create<ChatStore>()(
         if (!session) {
           return;
         }
+        clearPruneState(session._id);
         useChatApplyStore.getState().clearChatApplyInfo();
 
         // 清理当前 session 的 subagent 状态
         useSubagentStore.getState().clearSessionStatuses(session._id);
+        useToolCallRepeatStore.getState().clearSession(session._id);
 
         const newSession = {
           ...session,
@@ -1042,6 +1104,7 @@ export const useChatStore = create<ChatStore>()(
           data: {
             ...session.data,
             messages: [],
+            pruneState: { seenKeys: [], replacements: [] },
             consumedTokens: session.data?.consumedTokens || createInitialConsumedTokens(),
           },
         };
@@ -1306,7 +1369,9 @@ export const useChatStore = create<ChatStore>()(
         const sessionId = session._id;
         pendingSyncCounts.set(sessionId, (pendingSyncCounts.get(sessionId) || 0) + 1);
         try {
-          await updateSession(latestData);
+          if (!recentlyDeletedSessionIds.has(sessionId)) {
+            await updateSession(latestData);
+          }
         } catch (error) {
           console.error(error);
         } finally {
@@ -1401,6 +1466,8 @@ export const useChatStore = create<ChatStore>()(
         if (!session?.data?.messages) {
           return {
             tokenUsage: 0,
+            maxTokenLimit: 0,
+            compressionTriggerThreshold: 0,
             shouldCompress: false,
             thresholds: {
               isAboveWarningThreshold: false,
@@ -1426,6 +1493,8 @@ export const useChatStore = create<ChatStore>()(
 
         return {
           tokenUsage: analysis.currentTokenUsage,
+          maxTokenLimit: analysis.maxTokenLimit,
+          compressionTriggerThreshold: analysis.compressionTriggerThreshold,
           shouldCompress: analysis.shouldCompress,
           thresholds: {
             isAboveWarningThreshold: analysis.isAboveWarningThreshold,
@@ -1436,7 +1505,7 @@ export const useChatStore = create<ChatStore>()(
         };
       },
 
-      triggerCompression: async (sessionId) => {
+      triggerCompression: async (sessionId, reason = 'auto') => {
         try {
           const currentStatus = await getCompressSessionStatus(sessionId);
           if (currentStatus === SessionStatus.COMPRESSING) {
@@ -1452,18 +1521,43 @@ export const useChatStore = create<ChatStore>()(
           }
 
           const readyToCompress = session.data.messages.filter(msg => !msg.isCompressed)
-          // 私有化模型 (isPrivate) 不能走默认的 Gemini3Flash，必须沿用当前模型压缩
+          // 压缩模型选择:
+          // - compressConfig.useMainModel = true → 跟随主对话当前模型(质量高、与主对话一致)
+          // - 否则(默认)→ 走 Gemini3Flash,成本更低
+          // 兼容性兜底:
+          //   1. 私有化模型场景,Gemini3Flash 不可用 → 沿用主模型
+          //   2. 后端 chatModels 里没有 Gemini3Flash(测试环境 / 未来下线)→ 回退到主模型
+          //   3. 用户已关闭自动压缩(enable=false)但手动触发 /compress →
+          //      此时下拉框已隐藏,useMainModel 是"冻结值",走主模型给出可预期结果。
           const sessionModel = session.data?.model;
           const isPrivateModel = (sessionModel as unknown as { isPrivate?: boolean })?.isPrivate === true;
-          const compressionModel = isPrivateModel && sessionModel
+          // 线上后台对新模型的 code 是"标题-时间戳"(如 "Gemini 3 Flash-1770286002971"),
+          // 与前端枚举 ChatModel.Gemini3Flash="gemini-3-flash" 对不上,
+          // 所以必须按 useModel 反查拿到真实 code,再作为 compressionModel 下发。
+          const flashModelConfig = getModelConfigByUseModel(ChatModel.Gemini3Flash);
+          const hasFlashConfig = !!flashModelConfig;
+          const chatConfigStateForCompress = useChatConfig.getState();
+          const isManualWhileDisabled =
+            reason === 'manual' &&
+            chatConfigStateForCompress.compressConfig?.enable === false;
+          const useMainModelForCompress =
+            isPrivateModel ||
+            !hasFlashConfig ||
+            isManualWhileDisabled ||
+            chatConfigStateForCompress.compressConfig?.useMainModel === true;
+          const compressionModel = useMainModelForCompress && sessionModel
             ? sessionModel
-            : ChatModel.Gemini3Flash;
+            : (flashModelConfig?.code ?? ChatModel.Gemini3Flash);
+
+          // Y3 不采集 OTEL 指标，对应字段在上游用于 span 属性（compressionMetrics / turnCount / offloadEnabled）
+
           const compressionContext: CompressionContext = {
             messages: await serializeCodebaseMessages({
-              model: compressionModel,
+              model: compressionModel as ChatModel,
               sendMessages: readyToCompress,
             }),
             sessionId: sessionId,
+            model: compressionModel as ChatModel,
           };
 
           const compressionResult = await compressionService.performCompression(
@@ -1488,6 +1582,17 @@ export const useChatStore = create<ChatStore>()(
               compressedMessages
             );
 
+            // 压缩后处理：最近文件恢复 + transcript 写入 + 路径注入
+            if (compressionResult.compressedResult) {
+              const postCompactContent = await compressionService.buildPostCompactContent(
+                sessionId,
+                compressedMessages,
+                compressionResult.uncompressedMessages,
+              );
+              if (postCompactContent) {
+                compressionResult.compressedResult.content += postCompactContent;
+              }
+            }
 
             get().updateCurrentSession((session) => {
               if (session.data) {
@@ -1532,6 +1637,13 @@ export const useChatStore = create<ChatStore>()(
               }
             });
 
+            // 压缩完成后重置状态，防止竞态导致重复标记 pendingCompression
+            get().updateCurrentSession((s) => {
+              if (s.data?.compression) {
+                s.data.compression.pendingCompression = false;
+              }
+            });
+            await setCompressSessionStatus(sessionId, SessionStatus.INITIAL);
             get().syncHistory();
             return true;
           }
@@ -1927,7 +2039,8 @@ export const useChatStreamStore = create(
 
             // ✅ 修复：只有在未设置 skipAutoExecute 时才调用 handleAutoExecute
             // 这是为了避免与事件驱动的完成通知机制产生竞态
-            if (!options?.skipAutoExecute) {
+            if (!options?.skipAutoExecute && getCodemakerAgentEntry().status !== 'aborted') {
+              // 如果主Agent被中止，不要进行下一步. 最好改成任务Id来判定是否中止，每次触发聊天就是触发一次任务。执行时，需要根据任务id绑定工具调用和中止状态。现在先简单根据全局状态来判断，后续优化。
               get().handleAutoExecute(lastMessage, context, hasActiveTaskTools);
             }
           }
@@ -2471,7 +2584,13 @@ export const useChatStreamStore = create(
       const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
       const chatType = chatStoreState.chatType;
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
-      if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
+      if (
+        get().isStreaming ||
+        get().isSearching ||
+        get().isTerminalProcessing ||
+        isSubagentProcessing ||
+        getCodemakerAgentEntry().status === AgentStatus.ABORTED
+      ) {
         userReporter.report({
           event: UserEvent.CHAT_SUBMIT_ERROR,
           extends: {
@@ -2551,6 +2670,77 @@ export const useChatStreamStore = create(
       const devSpace = useWorkspaceStore.getState().devSpace;
       const userContent = assembleUserPromptContent(userInputContent || '-');
       const chatModels = useChatConfig.getState().chatModels
+
+      // 检查是否有待压缩标记，在用户发送时触发异步压缩
+      if (session.data?.compression?.pendingCompression) {
+        // 先清除标记
+        chatStoreState.updateCurrentSession((s) => {
+          if (s.data?.compression) {
+            s.data.compression.pendingCompression = false;
+          }
+        });
+        void getCompressSessionStatus(session._id).then(async (compressStatus) => {
+          if (
+            compressConfig.enable &&
+            compressConfig.visible &&
+            compressStatus !== SessionStatus.COMPRESSING
+          ) {
+            // ── 计算当前 token 用量（用于硬墙判断）──
+            let currentTokensForDecision: number | undefined;
+            const lastMsgWithUsage = [...(session.data?.messages ?? [])]
+              .reverse()
+              .find((m) => m.usage);
+            if (lastMsgWithUsage?.usage) {
+              currentTokensForDecision = sumUsageTokens(lastMsgWithUsage.usage);
+            }
+            const modelMaxTokensForDecision = codebaseModelMaxTokens[chatConfig.model];
+
+            // ── 微压缩独立路径：先尝试释放 token，但其结果不阻挡 full-compact ──
+            const enableToolResultOffload =
+              useChatConfig.getState().toolResultOffloadSupported &&
+              useChatConfig.getState().enableToolResultOffload;
+            let pruneEffective = false;
+            if (enableToolResultOffload) {
+              const unCompressed = session.data?.messages.filter(
+                (msg: ChatMessage) => !msg.isCompressed,
+              );
+              const pruneResult = await pruneToolOutputs(
+                unCompressed || [],
+                session._id,
+                currentTokensForDecision,
+                modelMaxTokensForDecision,
+              );
+              pruneEffective = pruneResult.effectivelyPruned;
+            }
+
+            // ── 硬墙：token 已突破强制阈值，无视任何启发式直接触发 full-compact ──
+            if (
+              shouldForceFullCompact(
+                currentTokensForDecision,
+                modelMaxTokensForDecision,
+              )
+            ) {
+              console.log(
+                `[压缩决策] 触发硬墙 (currentTokens=${currentTokensForDecision}, modelMax=${modelMaxTokensForDecision})，强制 full-compact`,
+              );
+              void chatStoreState.triggerCompression(session._id);
+              return;
+            }
+
+            // ── 软放行：本轮微压缩有效释放了空间，本次跳过 full-compact ──
+            if (pruneEffective) {
+              console.log(
+                '[压缩决策] 微压缩本轮有效释放空间，暂不触发 full-compact',
+              );
+              return;
+            }
+
+            console.log('[压缩决策] 微压缩裁不动或未启用，触发 full-compact');
+            void chatStoreState.triggerCompression(session._id);
+          }
+        });
+      }
+
       const ntesTraceId =
         chatType === 'default'
           ? get().streamRetryCount > 0
@@ -2703,13 +2893,7 @@ export const useChatStreamStore = create(
           title: skillRunner.title,
           source: skillRunner.source,
         };
-        // 上报 Skill 使用事件（用户手动触发）
-        import('../services/skillUsage').then(({ reportSkillInvoke }) => {
-          import('./skills').then(({ getSkillDescription }) => {
-            const description = getSkillDescription(skillRunner.skillName);
-            reportSkillInvoke(skillRunner.skillName, { source: 'codemaker-user', description });
-          });
-        });
+        // [Y3] 不上报 skill 调用埋点（CodeMaker 自有功能）
       }
 
       const promptRunner = usePromptApp.getState().runner
@@ -3895,13 +4079,40 @@ export const useChatStreamStore = create(
 
         let truncationResult;
         if (useCompression) {
-          truncationResult = {
-            sendMessages: await pruneToolOutputs(unCompressedMessages),
-            containUserMessage: true,
-            newTruncateStart: -1,
-            previousTokens: 0,
-            fallbackToSlideWindow: false,
-          };
+          const enableToolResultOffload = useChatConfig.getState().toolResultOffloadSupported && useChatConfig.getState().enableToolResultOffload;
+          if (enableToolResultOffload) {
+            // 传入当前 token 用量，用于激进模式判断（接近 errorThreshold 时强制清理 seenKeys）
+            let lastUsagesIdx = -1;
+            for (let i = session.data.messages.length - 1; i >= 0; i--) {
+              if (session.data.messages[i].usage) { lastUsagesIdx = i; break; }
+            }
+            const lastUsages = lastUsagesIdx >= 0 ? session.data.messages[lastUsagesIdx].usage : undefined;
+            const currentTokens = lastUsages
+              ? sumUsageTokens(lastUsages)
+              : undefined;
+            const modelMaxTokens = codebaseModelMaxTokens[chatConfig.model];
+            const pruneResult = await pruneToolOutputs(
+              unCompressedMessages,
+              sessionId,
+              currentTokens,
+              modelMaxTokens,
+            );
+            truncationResult = {
+              sendMessages: pruneResult.messages,
+              containUserMessage: true,
+              newTruncateStart: -1,
+              previousTokens: 0,
+              fallbackToSlideWindow: false,
+            };
+          } else {
+            truncationResult = {
+              sendMessages: unCompressedMessages,
+              containUserMessage: true,
+              newTruncateStart: -1,
+              previousTokens: 0,
+              fallbackToSlideWindow: false,
+            };
+          }
         } else if (cacheEnable) {
           truncationResult = truncateMessagesIfNeeded({
             messages: unCompressedMessages,
@@ -4593,6 +4804,7 @@ export const useChatStreamStore = create(
                                       tool_name: tool.function.name,
                                       tool_params: params,
                                       tool_id: tool.id,
+                                      session_id: sessionId,
                                     },
                                   },
                                   '*',
@@ -4691,6 +4903,7 @@ export const useChatStreamStore = create(
                                       collection: parseAtMentionedCodeBaseByAttach(),
                                     },
                                     tool_id: tool.id,
+                                    session_id: sessionId,
                                   },
                                 },
                                 '*',
@@ -4725,6 +4938,7 @@ export const useChatStreamStore = create(
                                       model: data.model,
                                     },
                                     tool_id: tool.id,
+                                    session_id: sessionId,
                                   },
                                 },
                                 '*',
@@ -4812,6 +5026,7 @@ export const useChatStreamStore = create(
                                       tool_name: tool.function.name,
                                       tool_params: hookArgs,
                                       tool_id: tool.id,
+                                      session_id: sessionId,
                                     },
                                   },
                                   '*',
@@ -4874,6 +5089,7 @@ export const useChatStreamStore = create(
                                     tool_name: tool.function.name,
                                     tool_params,
                                     tool_id: tool.id,
+                                    session_id: sessionId,
                                   },
                                 },
                                 '*',
@@ -5189,6 +5405,24 @@ export const useChatStreamStore = create(
                     state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(toolCall.function.name));
                   });
                   const curSessionId = chatStoreState.currentSessionId as string;
+
+                  // [Y3] ddacbf13: 重复 tool_call guard
+                  let repeatGuardResult:
+                    | ReturnType<typeof evaluateRepeatGuard>
+                    | undefined;
+                  let effectiveToolCalls = toolCalls;
+                  if (effectiveToolCalls && effectiveToolCalls.length) {
+                    repeatGuardResult = evaluateRepeatGuard({
+                      sessionId: curSessionId,
+                      agentKey: 'main',
+                      toolCalls: effectiveToolCalls,
+                      model: data.model,
+                    });
+                    if (repeatGuardResult.action === 'abort') {
+                      effectiveToolCalls = [];
+                    }
+                  }
+
                   chatStoreState.updateCurrentSession((session) => {
                     if (session._id !== curSessionId) return
                     if (session.data?.messages) {
@@ -5213,7 +5447,7 @@ export const useChatStreamStore = create(
                       ...claude37Response,
                       id,
                       content,
-                      tool_calls: toolCalls || [],
+                      tool_calls: effectiveToolCalls || [],
                       processing: isProcessing,
                       total_tokens: totalTokens,
                       group_tokens: groupTokens,
@@ -5228,6 +5462,11 @@ export const useChatStreamStore = create(
                         cache_read_input_tokens: cacheReadInputTokens || 0
                       },
                       isOutdatedTokens: hasCompressionOccurredDuringRequest,
+                      // Y3: 固定模型，无 Auto 渠道，直接用配置模型
+                      responseModel: useChatConfig.getState().config.model || undefined,
+                      ...(repeatGuardResult?.notice
+                        ? { systemNotice: repeatGuardResult.notice }
+                        : {}),
                     });
                     chatStoreState.updateConsumedTokens({
                       model: model,
@@ -5287,6 +5526,34 @@ export const useChatStreamStore = create(
                       compression_enabled: compressConfig.enable && compressConfig.visible,
                     }
                   });
+
+                  // [Y3] ddacbf13: 重复 tool_call guard 副作用
+                  if (repeatGuardResult && repeatGuardResult.action !== 'pass') {
+                    if (repeatGuardResult.action === 'warn' && repeatGuardResult.warnToolResults) {
+                      try {
+                        get().updateToolCallResults(repeatGuardResult.warnToolResults);
+                      } catch (err) {
+                        console.error('[RepeatGuard] failed to inject warn tool_results', err);
+                      }
+                    } else if (repeatGuardResult.action === 'abort') {
+                      const controller = ControllerPool.controllers.get(
+                        ControllerPool.key(sessionId, messageIndex),
+                      );
+                      if (controller) {
+                        controller.abort(
+                          createAbortReason(ABORT_REASON_REPEAT_TOOLCALL, __ABORT_LOC__),
+                        );
+                      }
+                      set((state) => {
+                        state.isStreaming = false;
+                        state.isProcessing = false;
+                        state.isApplying = false;
+                      });
+                    }
+                    // 清空 toolCalls 跳过后续分发
+                    toolCalls = [];
+                  }
+
                   if (toolCalls.length) {
                     if (!allResponsed) {
                       // 分离 task 工具和非 task 工具
@@ -5700,8 +5967,8 @@ export const useChatStreamStore = create(
                             })();
                           } else if (tool.function.name === 'read_file') {
                             // [Y3] e545978e fix: 兼容 deepseek 路径幻觉～，初步怀疑是其他工具的 file_path 参数被 deepseek 认为是 read_file 的 path 参数
-                            if (typeof tool_params === 'object' && !tool_params?.path && tool_params?.file_path) {
-                              tool_params.path = tool_params.file_path;
+                            if (typeof tool_params === 'object' && !tool_params?.path) {
+                              tool_params.path = tool_params?.file_path || tool_params?.filePath || tool_params?.filepath || tool_params?.file;
                             }
                             (async () => {
                               const allowed = await runToolBeforeExecuteHook(
@@ -5733,6 +6000,11 @@ export const useChatStreamStore = create(
                                   ...tool_params,
                                   messageId: id,
                                   is_approve: true,
+                                  ...(tool.function.name === 'run_terminal_cmd' && {
+                                    enableRtk: getEnableRtk(),
+                                    // Y3: model 字段后端未消费 (RTK 遥测未合)，保留对齐上游
+                                    model: getCurrentModel(),
+                                  }),
                                 };
                                 const allowed = await runToolBeforeExecuteHook(
                                   sessionId,
@@ -5850,25 +6122,59 @@ export const useChatStreamStore = create(
                     chatStoreState.updateModel(chatConfig.model);
                   }
                   useChatStore.getState().generateAndUpdateSessionTopic();
-                  chatStoreState.syncHistory();
 
 
                   if (hasCompressionOccurredDuringRequest) {
                     console.log('请求期间已发生压缩，跳过压缩检测。请求前摘要数:', compressionSummaryCountAtRequest, '当前摘要数:', compressionSummaryCountNow);
                   } else {
-                    // usage 有效，可以进行压缩检测
-                    void getCompressSessionStatus(sessionId).then(status => {
-                      chatStoreState.analyzeContext(sessionId).then(compressionAnalysis => {
-                        if (compressionAnalysis.shouldCompress
-                          && status !== SessionStatus.COMPRESSING
-                          && status !== SessionStatus.FAILED) {
-                          console.log('模型返回后触发自动压缩，token使用率:', compressionAnalysis.thresholds);
-                          void chatStoreState.triggerCompression(sessionId);
+                    // usage 有效，进行压缩检测并标记待压缩，下次用户发送时执行
+                    void getCompressSessionStatus(sessionId).then(async (status) => {
+                      // 再次检查：压缩可能在流结束后异步完成，此时 summary 数量已变化
+                      const latestSession = chatStoreState.sessions.get(sessionId);
+                      const latestSummaryCount = (
+                        latestSession?.data?.messages || []
+                      ).filter((msg: ChatMessage) => msg.isCompressionSummary).length;
+                      if (latestSummaryCount !== compressionSummaryCountAtRequest) {
+                        console.log(
+                          '请求期间已异步完成压缩，跳过重复标记。请求前摘要数:',
+                          compressionSummaryCountAtRequest,
+                          '当前摘要数:',
+                          latestSummaryCount,
+                        );
+                        return;
+                      }
+                      const compressionAnalysis = await chatStoreState.analyzeContext(sessionId);
+                      if (
+                        !compressionAnalysis.shouldCompress ||
+                        !compressConfig.enable ||
+                        !compressConfig.visible ||
+                        status === SessionStatus.COMPRESSING ||
+                        status === SessionStatus.COMPRESSED ||
+                        status === SessionStatus.FAILED
+                      ) {
+                        return;
+                      }
+                      console.log(
+                        '模型返回后标记待压缩，将在下次用户发送时执行，token使用率:',
+                        compressionAnalysis.thresholds,
+                      );
+                      chatStoreState.updateCurrentSession((session) => {
+                        if (!session.data) return;
+                        if (!session.data.compression) {
+                          session.data.compression = {
+                            enabled: true,
+                            compressionHistory: [],
+                            totalTokensSaved: 0,
+                            totalCompressionsCount: 0,
+                          };
                         }
-                      })
-                    })
+                        session.data.compression.pendingCompression = true;
+                      });
+                      chatStoreState.syncHistory();
+                    });
 
                   }
+                  chatStoreState.syncHistory();
                 } else {
                   set((state) => {
                     if (state.message) {
@@ -6013,7 +6319,7 @@ export const useChatStreamStore = create(
                         isAutoCompressingMessage: true
                       })
                     });
-                    const compressionSuccess = await chatStoreState.triggerCompression(sessionId);
+                    const compressionSuccess = await chatStoreState.triggerCompression(sessionId, 'context_too_long');
                     if (compressionSuccess) {
                       chatStoreState.updateCurrentSession((session) => {
                         if (session.data?.messages) {
@@ -6120,11 +6426,13 @@ export const useChatStreamStore = create(
 
         const modelConfig = chatModels[model];
         const supplyChannel = modelConfig?.supplyChannel?.toLocaleLowerCase?.() || '';
-        const isCludeThinking = modelConfig?.hasThinking && getAIGWModel(model)?.toLocaleLowerCase?.()?.includes?.('claude');
+        const isClaudeModel = getAIGWModel(model)?.toLocaleLowerCase?.()?.includes?.('claude');
+        const hasThinking = modelConfig?.hasThinking;
+
         const isDeepSeek = supplyChannel === ChatModelSupplyChannel.DEEPSEEK
           || model?.toLocaleLowerCase?.()?.includes?.('deepseek');
-        // 处理 claude37Sonnet的字段兼容问题
-        if (isCludeThinking && message.role === ChatRole.Assistant) {
+        // 处理 Claude 模型的 thinking 字段兼容问题
+        if (isClaudeModel && hasThinking  && message.role === ChatRole.Assistant) {
           message.redacted_thinking = message.redacted_thinking || '';
           message.thinking_signature = message.thinking_signature || '-';
           message.reasoning_content = message.reasoning_content || '';
@@ -6166,7 +6474,7 @@ export const useChatStreamStore = create(
             role: ChatRole.Assistant,
             content: '-',
           }
-          if (isCludeThinking) {
+          if (isClaudeModel && hasThinking) {
             message.redacted_thinking = '';
             message.thinking_signature = '-';
             message.reasoning_content = '';

@@ -18,10 +18,8 @@ import { ClaudeEditFile } from './ClaudeEditFile';
 import { useCallback, useMemo, useState } from 'react';
 import { RxCheckCircled, RxCircleBackslash } from 'react-icons/rx';
 import { getToolName } from '../../../utils/toolCall';
-import {
-  getSkillSourceLabel,
-  parseSkillToolResult,
-} from '../../../store/skills';
+import { parseSkillToolResults } from '../../../services/harness/tools/use_skill';
+import { getSkillSourceLabel } from '../../../store/skills';
 import MemoCodeBlock from '../../../components/Markdown/CodeBlock';
 import { usePostMessage } from '../../../PostMessageProvider';
 import MCPToolCall from './MCPToolCall';
@@ -216,19 +214,21 @@ const ToolCallResult = ({
 
   const displayContent = useMemo(() => {
     if (isSkillTool && result.content) {
-      try {
-        const skillData = JSON.parse(result.content);
-        let display = skillData.content;
-        if (skillData.resources?.files?.length) {
-          display += `\n\n## Resources (${skillData.resources.files.length} files)\n`;
-          display += skillData.resources.files.slice(0, 10).join('\n');
-          if (skillData.resources.files.length > 10) {
-            display += `\n... and ${skillData.resources.files.length - 10} more`;
+      const skillDataList = parseSkillToolResults(result.content);
+      if (skillDataList.length) {
+        const display = skillDataList.map((skillData) => {
+          let content = skillData.content;
+          if (skillData.resources?.files?.length) {
+            content += `\n\n## Resources (${skillData.resources.files.length} files)\n`;
+            content += skillData.resources.files.slice(0, 10).join('\n');
+            if (skillData.resources.files.length > 10) {
+              content += `\n... and ${skillData.resources.files.length - 10} more`;
+            }
           }
-        }
+          return content;
+        }).join('\n\n---\n\n');
+
         return truncateContent(display);
-      } catch {
-        // fallback
       }
     }
     return truncateContent(result.content);
@@ -471,9 +471,14 @@ const ToolCallResult = ({
   // 工具结果标题
   const renderResultTitle = () => {
     if (isSkillTool) {
-      const skillName = result.path || '';
-      const skillData = parseSkillToolResult(result.content);
-      const sourcePath = skillData ? getSkillSourceLabel(skillData.source) : '';
+      const skillDataList = parseSkillToolResults(result.content || '');
+      const skillName = skillDataList.length
+        ? skillDataList.map((skillData) => skillData.name).join(', ')
+        : result.path || '';
+      const sourcePathList = Array.from(
+        new Set(skillDataList.map((skillData) => getSkillSourceLabel(skillData.source))),
+      ).filter(Boolean);
+      const sourcePath = sourcePathList.join(', ');
 
       return (
         <Flex

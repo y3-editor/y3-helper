@@ -25,6 +25,7 @@ import { GroupAIMessageProps } from './types';
 import ChatMessageActionBar from '../ChatMessageActionBar';
 import userReporter from '../../../utils/report';
 import { useChatStore, useChatStreamStore } from '../../../store/chat';
+import { useChatConfig } from '../../../store/chat-config';
 import { useTaskCompletionStore } from '../../../modules/subagent';
 import { useCallback, useMemo, useState } from 'react';
 import { BroadcastActions, usePostMessage } from '../../../PostMessageProvider';
@@ -48,6 +49,7 @@ import TokenBreakdownPanel, {
 } from '../../../components/TokenBreakdownPopover';
 import type { TokenBreakdownItem } from '../../../components/TokenBreakdownPopover';
 import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
+import { AgentStatus, getCodemakerAgentEntry } from '../../../services/harness/swarm/agentEntry';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (
@@ -652,6 +654,27 @@ export function GroupAIMessage({
     return false;
   }, [isStreaming, isSearching, currentSession?.data?.messages]);
 
+  const chatModels = useChatConfig((state) => state.chatModels)
+  const responseModelInfo = useMemo(() => {
+    if (chatType !== 'codebase') return null;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.responseModel) {
+      const chatModelConfig = chatModels[lastMsg.responseModel];
+      if (chatModelConfig) {
+        return {
+          title: chatModelConfig.title,
+          icon: chatModelConfig.icon,
+        }
+      } else {
+        return {
+          title: (lastMsg.responseModel) as string,
+          icon: '',
+        }
+      }
+    }
+    return null;
+  }, [chatType, messages, chatModels]);
+
   const handleCopyToClipboard = useCallback(() => {
     let content = '';
     for (const msg of messages) {
@@ -677,6 +700,7 @@ export function GroupAIMessage({
   }, [message, currentSession, onNewSession, chatType]);
 
   const onRetryClick = useCallback(() => {
+    getCodemakerAgentEntry().status = AgentStatus.IDLE; // 重置 Agent 状态，允许重新执行
     setStreamRetryCount(0);
     onUserResubmit();
   }, [onUserResubmit, setStreamRetryCount]);
@@ -1057,15 +1081,48 @@ export function GroupAIMessage({
             isUserMsgSelected={isUserMsgSelected}
           />
         </Box>
+        {/* 底部信息栏：模型 + token 消耗 + 操作按钮 */}
         {!isShare &&
-          !isStreaming &&
-          !isProcessing &&
-          !isSearching &&
-          !isSubagentProcessing && (
+          !(isLatest && (isStreaming || isProcessing || isSearching || isSubagentProcessing)) && (
             <Flex gap={2} h={8} mx={4} mb={4} alignItems="center">
-              {isShowAction && timeInfoText && (
-                <Flex alignItems="center" gap={0} minW="0" overflow="hidden">
-                  {timeInfoWithoutTokens && (
+              <Flex alignItems="center" gap={0} minW="0" overflow="hidden">
+                {/* 模型信息 Tag */}
+                {responseModelInfo && (
+                  <Flex
+                    alignItems="center"
+                    flexShrink={0}
+                    px="6px"
+                    py="1px"
+                    borderRadius="4px"
+                    bg={isDark ? 'whiteAlpha.100' : 'blackAlpha.50'}
+                    mr={1}
+                  // border="1px solid"
+                  // borderColor={isDark ? 'whiteAlpha.200' : 'blackAlpha.100'}
+                  >
+                    <Box
+                      as="img"
+                      src={responseModelInfo?.icon}
+                      alt="model"
+                      w="12px"
+                      h="12px"
+                      mr="4px"
+                      hidden={!responseModelInfo?.icon}
+                      borderRadius="full"
+                      objectFit="contain"
+                    />
+                    <Box
+                      color="text.secondary"
+                      fontSize="11px"
+                      whiteSpace="nowrap"
+                      lineHeight="18px"
+                    >
+                      {responseModelInfo?.title}
+                    </Box>
+                  </Flex>
+                )}
+                {/* 时间和耗时 */}
+                {timeInfoWithoutTokens && (
+                  <>
                     <Tooltip
                       label={`${sentAtText ? `回复时间: ${sentAtText}` : ''}${durationText ? `，耗时: ${durationText}` : ''}`}
                     >
@@ -1080,77 +1137,109 @@ export function GroupAIMessage({
                         {timeInfoWithoutTokens}
                       </Box>
                     </Tooltip>
-                  )}
-                  {roundTokensText && (
-                    <>
-                      {timeInfoWithoutTokens && (
-                        <Box
-                          color="text.muted"
-                          fontSize="12px"
-                          mx="1"
-                          flexShrink={0}
-                        >
-                          |
-                        </Box>
-                      )}
-                      {roundTokenBreakdown.length > 0 ? (
-                        <Popover
-                          trigger="hover"
-                          placement="top"
-                          openDelay={0}
-                          closeDelay={200}
-                        >
-                          <PopoverTrigger>
-                            <Box
-                              color="text.muted"
-                              fontSize="12px"
-                              whiteSpace="nowrap"
-                              cursor="pointer"
-                              _hover={{ color: 'blue.300' }}
-                              transition="color 0.2s"
-                            >
-                              {roundTokensText}
-                            </Box>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            bg={isDark ? '#1E1E1E' : '#FFFFFF'}
-                            border="1px solid"
-                            borderColor={isDark ? '#333333' : '#E5E7EB'}
-                            borderRadius="lg"
-                            width="auto"
-                            minW="240px"
-                            maxW="350px"
-                            boxShadow="xl"
-                            _focus={{ boxShadow: 'xl' }}
-                          >
-                            <PopoverBody px={4} py={3} textAlign="left">
-                              <TokenBreakdownPanel
-                                items={roundTokenBreakdown}
-                                isDark={isDark}
-                                title="本轮 Tokens 消耗详情"
-                              />
-                            </PopoverBody>
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        <Tooltip label={`本轮消耗: ${roundTokensText}`}>
+                  </>
+                )}
+                {/* Tokens 消耗 */}
+                {roundTokensText && (
+                  <>
+                    {(timeInfoWithoutTokens || responseModelInfo) && (
+                      <Box
+                        color="text.muted"
+                        fontSize="12px"
+                        mx="1"
+                        flexShrink={0}
+                      >
+                        |
+                      </Box>
+                    )}
+                    {roundTokenBreakdown.length > 0 ? (
+                      <Popover
+                        trigger="hover"
+                        placement="top"
+                        openDelay={0}
+                        closeDelay={200}
+                      >
+                        <PopoverTrigger>
                           <Box
                             color="text.muted"
                             fontSize="12px"
                             whiteSpace="nowrap"
+                            cursor="pointer"
+                            _hover={{ color: 'blue.300' }}
+                            transition="color 0.2s"
                           >
                             {roundTokensText}
                           </Box>
-                        </Tooltip>
-                      )}
-                    </>
-                  )}
-                </Flex>
-              )}
+                        </PopoverTrigger>
+                        <PopoverContent
+                          bg={isDark ? '#1E1E1E' : '#FFFFFF'}
+                          border="1px solid"
+                          borderColor={isDark ? '#333333' : '#E5E7EB'}
+                          borderRadius="lg"
+                          width="auto"
+                          minW="240px"
+                          maxW="350px"
+                          boxShadow="xl"
+                          _focus={{ boxShadow: 'xl' }}
+                        >
+                          <PopoverBody px={4} py={3} textAlign="left">
+                            <TokenBreakdownPanel
+                              items={roundTokenBreakdown}
+                              isDark={isDark}
+                              title="本轮 Tokens 消耗详情"
+                            />
+                          </PopoverBody>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <Tooltip label={`本轮消耗: ${roundTokensText}`}>
+                        <Box
+                          color="text.muted"
+                          fontSize="12px"
+                          whiteSpace="nowrap"
+                        >
+                          {roundTokensText}
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </>
+                )}
+              </Flex>
               <Box flex="0 0 auto" ml="auto">
                 {renderActionBar}
               </Box>
             </Flex>
+          )}
+        {/* 流式传输中（仅最新消息）或分享模式下单独显示模型信息 */}
+        {responseModelInfo &&
+          !(isStreaming && isLatest) &&
+          (isShare || (isLatest && (isStreaming || isProcessing || isSearching || isSubagentProcessing))) && (
+            <Box
+              display="flex"
+              alignItems="center"
+              mx={4}
+              py="2px"
+              mb={isStreaming ? 10 : 0}
+              borderRadius="full"
+              borderColor="whiteAlpha.200"
+              flexShrink={0}
+              width="fit-content"
+            >
+              <Box
+                as="img"
+                src={responseModelInfo?.icon}
+                alt="model"
+                w="14px"
+                h="14px"
+                mr="4px"
+                hidden={!responseModelInfo?.icon}
+                borderRadius="full"
+                objectFit="contain"
+              />
+              <Box color="text.secondary" fontSize="11px" whiteSpace="nowrap">
+                {responseModelInfo?.title}
+              </Box>
+            </Box>
           )}
       </Box>
       {isLatest && !!Object?.keys(recommendFileChanges)?.length && (

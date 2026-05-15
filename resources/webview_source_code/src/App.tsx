@@ -402,7 +402,7 @@ function App() {
           subagentEnable,
           subagentManualTriggerOnly,
           chatApplyMode,
-          codebaseChatRtk,
+          rtkBinaryAvailable,
         } = event.data.data as any;
         setCodeCoverageApiUrl(CODE_COVERAGE_API_URL);
         authStore.setAccessToken(accessToken);
@@ -483,7 +483,7 @@ function App() {
           !!(subagentEnable && versionSupported),
           !!subagentManualTriggerOnly,
         );
-        extensionStore.setCodebaseChatRtk(!!codebaseChatRtk);
+        extensionStore.setRtkBinaryAvailable(!!rtkBinaryAvailable);
 
         // Y3Helper: 当 fixedModel 存在时，自动注入到 chatModels 中，使自定义模型支持图片上传
         // 注意：这里有意不设 supplyChannel，让 agentEntry 走 default 分支（CmCodebaseStream），

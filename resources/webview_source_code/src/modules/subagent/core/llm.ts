@@ -24,20 +24,24 @@ export function streamChat(
   subagentSpanContext?: SubagentSpanContext,
 ): Promise<LLMCallResult> {
 
-   if (
-     promptData.model.includes('gpt-5')
-   ) {
-     delete promptData.temperature;
-   } else if ([ChatModel.Gemini3Pro].includes(promptData.model as ChatModel)) {
-     if (promptData.messages?.length > 0 && promptData.messages[0].content != null) {
-       promptData.messages[0].content += `\nNote:Don't repeat yourself`;
-     }
-     promptData.temperature = 1;
-   } else if (
-     [ChatModel.Glm47, ChatModel.Glm5].includes(promptData.model as ChatModel)
-   ) {
-     promptData.temperature = 2;
-   }
+  if (
+    promptData.model.includes('gpt-5')
+  ) {
+    delete promptData.temperature;
+  } else if ([ChatModel.Gemini3Pro].includes(promptData.model as ChatModel)) {
+    if (promptData.messages?.length > 0 && promptData.messages[0].content != null) {
+      promptData.messages[0].content += `\nNote:Don't repeat yourself`;
+    }
+    promptData.temperature = 1;
+  } else if (
+    [ChatModel.Glm47, ChatModel.Glm5].includes(promptData.model as ChatModel)
+  ) {
+    promptData.temperature = 2;
+  } else if (promptData.model.includes('claude')) {
+    promptData.temperature = 1;
+  } else if (promptData.model.includes('deepseek')) {
+    promptData.temperature = 1;
+  }
 
   // LLM 调用超时 Promise
   const timeoutPromise = new Promise<LLMCallResult>((_, reject) => {

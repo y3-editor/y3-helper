@@ -1,3 +1,4 @@
+
 import { ChatPromptBody } from '../../index';
 import {
   ABORT_REASON_USER_CANCELLED,
@@ -9,7 +10,7 @@ import AzureOpenAIStream from '../stream/azureOpenAI';
 import CmCodebaseStream from '../stream/cmCodebase';
 import { ICmCodebaseStreamOption } from '../stream/cmCodebase/interface';
 
-enum AgentStatus {
+export enum AgentStatus {
   IDLE = 'idle',
   RUNNING = 'running',
   ABORTED = 'aborted',

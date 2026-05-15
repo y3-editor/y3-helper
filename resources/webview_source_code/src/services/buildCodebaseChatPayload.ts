@@ -473,7 +473,12 @@ export async function buildCodebaseChatPayload(
   ) {
     data.temperature = 2;
     data.top_p = 0.95;
+  } else if (data.model.includes('claude')) {
+    data.temperature = 1;
+  } else if (data.model.includes('deepseek')) {
+    data.temperature = 1;
   }
+
 
   // ---- 杂项业务字段(原 L4635-4643)----
   data.codebase_chat_mode = codebaseChatMode || 'vibe';

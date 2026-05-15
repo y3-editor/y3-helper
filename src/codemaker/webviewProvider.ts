@@ -12,6 +12,7 @@ import { initMcpHub, getMcpHub, disposeMcpHub } from './mcpHandlers/index';
 import SkillsHandler from './skillsHandler';
 import executeFunction from './utils/executeFunction';
 import { isRtkBinaryAvailable } from './utils/rtk/rtkBinaryManager';
+import { maybePersistToolResultToDisk } from './utils/persistToolResult';
 
 /**
  * CodeMaker WebView 视图提供者
@@ -261,7 +262,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 // - AI 走 write / edit 原生工具（配合 autoApply=true 可静默落盘）
                 // - 避免回答里出现「文件变更」推荐面板（FileRecommendApplyPanel）
                 chatApplyMode: 'claudeedit',
-                codebaseChatRtk: (vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk') || false) && isRtkBinaryAvailable(),
+                rtkBinaryAvailable: isRtkBinaryAvailable(),
             },
         };
 
@@ -336,7 +337,7 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
      * 前端会发送 TOOL_CALL，Extension 执行后返回 TOOL_CALL_RESULT
      */
     private async _handleToolCall(data: any) {
-        const { tool_name, tool_params, tool_id, task_id } = data || {};
+        const { tool_name, tool_params, tool_id, task_id, session_id } = data || {};
         if (!tool_name || !tool_id) {
             return;
         }
@@ -351,13 +352,34 @@ export class CodeMakerWebviewProvider implements vscode.WebviewViewProvider {
                 provider: this,
             });
 
+            // 对齐 CC: read_file 工具不落盘（自循环引用问题）
+            const shouldSkipPersist = tool_name === 'read_file';
+            let responseContent = result.content;
+            let responseExtra = result?.extra ? { ...result.extra } : {};
+            if (!shouldSkipPersist) {
+                const persisted = await maybePersistToolResultToDisk({
+                    toolId: tool_id,
+                    sessionId: session_id || task_id,
+                    content: result.content,
+                    isError: result.isError,
+                });
+                if (persisted) {
+                    responseContent = persisted.content;
+                    responseExtra = { ...responseExtra, ...persisted.extra };
+                }
+            }
+
             this.sendMessage({
                 type: 'TOOL_CALL_RESULT',
                 data: {
-                    tool_result: result,
+                    tool_result: {
+                        path: result.path,
+                        content: responseContent,
+                        isError: result.isError,
+                    },
                     tool_id: tool_id,
                     tool_name: tool_name,
-                    extra: result?.extra || {},
+                    extra: responseExtra,
                     // SubAgent 工具调用：透传 task_id 以便 WebView 路由到正确的流
                     ...(task_id && { task_id }),
                 },

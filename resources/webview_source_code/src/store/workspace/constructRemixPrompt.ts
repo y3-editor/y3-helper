@@ -10,7 +10,7 @@ import { PromptLinkMgr } from './pomptLinkMgr';
 import { OPENSPEC_1X_MODE_CONTEXT } from './openspecModeContext';
 import { ChatApplyType, useChatApplyStore } from '../chatApply';
 import { MAX_READ_ONLY_TOOLS, MAX_TASK_TOOLS } from '../../utils/toolCallFilter';
-import { useExtensionStore } from '../extension';
+import { getEnableRtk } from '../../utils/toolCallDispatch';
 
 /** Cache tier 分隔符，cache 路径下按此标记 split 为多个 content block */
 export const CACHE_TIER_BREAK = '\n\n<!--CACHE_TIER_BREAK-->\n\n';
@@ -38,7 +38,7 @@ export default function constructRemixPrompt(options: {
     info,
     MCPServers,
     enableTerminal,
-    enableRtk = useExtensionStore.getState().codebaseChatRtk,
+    enableRtk = getEnableRtk(),
     codeMakerVersion,
     effectiveRules,
     skills = [],

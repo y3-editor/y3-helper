@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { ChatMessage, setDefaultHeaders, ChatPromptBody } from '.';
-import { ChatSession, ChatType } from '../store/chat';
+import { ChatSession, ChatType, recentlyDeletedSessionIds } from '../store/chat';
 import { handleError } from './error';
 import { ChatMask } from '../store/config';
 import { CodeBaseFeedbackDetail } from '../routes/CodeChat/CodeBaseFeedback';
@@ -99,6 +99,9 @@ export async function updateSession(
       Pick<ChatSession, 'topic' | 'data' | 'chat_workspace' | 'chat_repo'>
     >,
 ) {
+  if (recentlyDeletedSessionIds.has(data._id)) {
+    return Promise.resolve('')
+  }
   return await codemakerChatHistoryRequest.put(
     `/chat_histories/${data._id}`,
     data,
@@ -111,10 +114,10 @@ export async function patchSession(
       Pick<ChatSession, 'topic' | 'chat_workspace' | 'chat_repo'>
     >,
 ) {
-   return await codemakerChatHistoryRequest.patch(
-     `/chat_histories/${data._id}`,
-     data,
-   );
+  return await codemakerChatHistoryRequest.patch(
+    `/chat_histories/${data._id}`,
+    data,
+  );
 }
 
 export async function updateSessionTopic(id: string, topic: string) {

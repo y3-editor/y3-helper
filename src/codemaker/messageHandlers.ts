@@ -43,6 +43,7 @@ import {
 import { handleGetRules, handleCreateNewRule, handleUpdateRule, handleDeleteRule } from './handlers/rulesHandler/index';
 import SkillsHandler from './skillsHandler';
 import { AgentsHandler } from './handlers/agentsHandler/index';
+import { cleanSessionFiles } from './utils/persistToolResult';
 
 /**
  * 处理所有从 WebView 发来的消息
@@ -497,6 +498,14 @@ export async function handleExtendedMessage(
 
         case 'OPEN_NEW_WINDOW': {
             await handleOpenNewWindow(message.data);
+            return true;
+        }
+
+        case 'CLEAN_SESSION_FILES': {
+            const { sessionId } = message.data || {};
+            if (sessionId && typeof sessionId === 'string') {
+                void cleanSessionFiles(sessionId);
+            }
             return true;
         }
 

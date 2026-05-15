@@ -73,6 +73,7 @@ import {
   getAIGWModelWithFallback,
   getAIGWModel,
 } from './../../../store/chat-config';
+import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
 import { promptBuilder } from './prompt-builder';
 import type { SubagentSpanContext } from '../types';
 import { startSubagentTaskSpan } from '../../../telemetry/otel';
@@ -110,13 +111,15 @@ import {
   SEARCH_TOOL_NAME,
 } from '../../../utils/mcpToolSearch';
 import { handleToolCall } from './toolCallHandler';
+import { clearPruneState } from '../../../services/compressionService';
 
 import {
   emitTaskStarted,
   emitTaskCompleted,
   emitTaskFailed,
 } from '../events/taskEventBus';
-import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
+import { evaluateRepeatGuard } from '../../../utils/toolCallRepeatGuard';
+import { useToolCallRepeatStore } from '../../../store/toolCallRepeatStore';
 
 /**
  * 将 Subagent 消息格式（工具结果为独立 role:'tool' 消息）转换为
@@ -820,6 +823,202 @@ async function runSubagentInner(
             cache_read_input_tokens: llmResult.usage.cacheReadInputTokens,
           },
         };
+
+        // 重复 tool_call 保护：subagent 以 (parentSessionId, taskId) 作为独立计数维度
+        // warn → 跳过本轮工具执行，为每个 tool_call 合成"已跳过"tool 消息并 continue
+        // abort → 打断 subagent 主循环
+        const repeatGuardResult =
+          llmResult.toolCalls.length > 0
+            ? evaluateRepeatGuard({
+                sessionId: parentSessionId,
+                agentKey: taskId,
+                toolCalls: llmResult.toolCalls,
+                model: promptData.model,
+              })
+            : undefined;
+
+        if (repeatGuardResult && repeatGuardResult.action !== 'pass') {
+          assistantMessage.systemNotice = repeatGuardResult.notice;
+          if (repeatGuardResult.action === 'warn' && repeatGuardResult.warnToolResults) {
+            // warn：保留 tool_calls（让消息历史 id 对齐），content 不覆盖
+            assistantMessage.tool_calls = llmResult.toolCalls;
+            messages.push(assistantMessage);
+            // 为每个原 tool_call 合成一条 tool role 消息回灌给模型
+            for (const tc of llmResult.toolCalls) {
+              if (!tc?.id) continue;
+              const warnResult = repeatGuardResult.warnToolResults[tc.id];
+              messages.push({
+                role: ChatRole.Tool,
+                tool_call_id: tc.id,
+                content: warnResult?.content || repeatGuardResult.noticeText || '',
+                isError: true,
+              } as ChatMessage);
+            }
+            useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+              draft.messages.push({
+                id: nanoid(),
+                role: ChatRole.Assistant,
+                content: llmResult.text,
+                tool_calls: llmResult.toolCalls,
+                createdAt: Date.now(),
+                systemNotice: repeatGuardResult.notice,
+              } as ChatMessage);
+            });
+            debugLog(MODULE, 'Repeat toolcall guard: warn (skipping tools)', {
+              taskId,
+              count: repeatGuardResult.count,
+            });
+            continue;
+          }
+          // abort：不保留 tool_calls（循环不会再继续）
+          messages.push(assistantMessage);
+          useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+            draft.messages.push({
+              id: nanoid(),
+              role: ChatRole.Assistant,
+              content: llmResult.text,
+              createdAt: Date.now(),
+              systemNotice: repeatGuardResult.notice,
+            } as ChatMessage);
+          });
+          debugLog(MODULE, 'Repeat toolcall guard: abort (breaking loop)', {
+            taskId,
+            count: repeatGuardResult.count,
+          });
+          // 标记为截断而非失败：让主 agent 仍能拿到 partial 结果
+          // （TaskStatus.Truncated 路径会提取最后一条 assistant content 作为 task_result）
+          isTruncated = true;
+
+          // TODO(refactor): 这一段 force summary 与 line ~1170 maxSteps 截断分支
+          // 几乎完全一致，未来抽成 requestForceSummary(messages, ...) helper，
+          // 两个触发点共用。当前为最小改动直接复制。
+          try {
+            const summaryRequestMessage: ChatMessage = {
+              role: ChatRole.User,
+              hidden: true,
+              content: `Your latest tool call was blocked by the system because you have repeatedly invoked the same tool with the same arguments. The execution is now being terminated to avoid an infinite loop.
+
+Now provide a structured handoff summary so that another agent can seamlessly continue your work. Follow this format EXACTLY:
+
+---
+
+## Status: [COMPLETED / PARTIALLY_COMPLETED / BARELY_STARTED]
+
+## Completion Estimate: [X]%
+
+## What Has Been Accomplished
+For each sub-task or requirement listed in the original task, state what was done:
+- **[Sub-task name/topic]**: [What was found, decided, or produced. Include specific file paths, code snippets, key data points, or conclusions. Do NOT paraphrase vaguely — be concrete.]
+- ...
+(Cover every sub-task that was touched, even partially. If you read a file and learned something relevant, include that finding here.)
+
+## Key Discoveries & Context
+List specific, non-obvious findings that would be lost if not recorded here:
+- [Finding 1]
+- [Finding 2]
+(These are facts, observations, or gotchas discovered during exploration. Only include things that are NOT obvious from reading the task description alone.)
+
+## What Remains To Be Done
+For each sub-task or requirement NOT yet completed:
+- **[Sub-task name/topic]**: [What specifically still needs to happen. If you already have a partial plan or know the right approach, state it.]
+- ...
+
+## Recommended Next Steps (Ordered)
+Provide a concrete, actionable sequence that the next agent should follow:
+1. [First action — be specific: which file to read, which search to run, which function to implement]
+2. [Second action]
+3. ...
+(These should be immediately executable instructions, not general advice.)
+
+## Artifacts Produced
+List any files created, modified, or code written during this session:
+- [File path or artifact]: [Current state — complete/partial/draft]
+(If none, write "None".)
+
+---
+
+IMPORTANT RULES:
+- Reference specific file paths, function names, variable names, and line numbers whenever possible.
+- Do NOT repeat the original task requirements back to me — only report on actual progress and findings.
+- Do NOT pad with generic observations. Every sentence should contain information that would be LOST if not captured here.
+- Keep the total response under 800 words. Prioritize information density over completeness of prose.`,
+            };
+            messages.push(summaryRequestMessage);
+
+            const preprocessOptions: MessagePreprocessOptions = {
+              messages,
+              agent,
+              model: llmModel,
+              tools: subagentTools,
+              cacheEnable,
+              taskId,
+              compressionState,
+            };
+
+            const preprocessResult =
+              await preprocessSubagentMessages(preprocessOptions);
+
+            const summaryPromptData = buildSubagentChatPromptBody(
+              preprocessResult,
+              llmModel,
+              {
+                stream: true,
+                tool_choice: 'none',
+                temperature: 0,
+                taskId,
+              },
+            );
+
+            const summaryResult = await streamChat(
+              summaryPromptData,
+              createAbortControllerAdapter(abortManager),
+            );
+
+            mergeUsage(totalUsage, summaryResult.usage);
+
+            const summaryAssistantMessage: ChatMessage = {
+              id: nanoid(),
+              role: ChatRole.Assistant,
+              content: summaryResult.text,
+              createdAt: Date.now(),
+              usage: {
+                prompt_tokens: summaryResult.usage.promptTokens,
+                completion_tokens: summaryResult.usage.completionTokens,
+                total_tokens: summaryResult.usage.totalTokens,
+                cache_creation_input_tokens:
+                  summaryResult.usage.cacheCreationInputTokens,
+                cache_read_input_tokens:
+                  summaryResult.usage.cacheReadInputTokens,
+              },
+            };
+            messages.push(summaryAssistantMessage);
+
+            useSubagentStore.getState().updateSubagentSession(taskId, (draft) => {
+              draft.messages.push(summaryAssistantMessage);
+            });
+
+            debugLog(MODULE, 'Repeat guard force summary completed', {
+              taskId,
+              summaryLength: summaryResult.text.length,
+              usage: summaryResult.usage,
+            });
+          } catch (summaryError) {
+            debugLog(
+              MODULE,
+              'Repeat guard force summary failed, falling back to last assistant message',
+              {
+                taskId,
+                error:
+                  summaryError instanceof Error
+                    ? summaryError.message
+                    : String(summaryError),
+              },
+            );
+          }
+
+          break;
+        }
+
         if (llmResult.toolCalls.length > 0) {
           assistantMessage.tool_calls = llmResult.toolCalls;
         }
@@ -1687,9 +1886,14 @@ IMPORTANT RULES:
 
         // ✅ 清理 AbortManager 资源
         abortManager.cleanup();
+
+        // ✅ 清理本 subagent 的重复 toolcall 计数器，避免长 session 内占用内存
+        useToolCallRepeatStore.getState().reset(parentSessionId, taskId);
       }
     }
   } while (retrying);
+
+  clearPruneState(`subagent:${taskId}`);
 
   // ============ 包装在 try-finally 中确保事件必定发出 ============
   try {

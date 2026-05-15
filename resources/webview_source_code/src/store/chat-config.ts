@@ -127,6 +127,17 @@ export const getModelSupplyChannel = (model: ChatModel) => {
 }
 
 /**
+ * 通过 useModel 值反查模型配置
+ * 用于 subagent 等场景，此时只有解析后的 useModel（如 "claude-opus-4-6"），需要找到对应的完整配置
+ */
+export const getModelConfigByUseModel = (useModel: string): IChatModelConfig | null => {
+  const chatModels = useChatConfig.getState().chatModels;
+  return Object.values(chatModels).find(
+    (config) => config?.enabled && config.useModel === useModel,
+  ) || null;
+}
+
+/**
  * 根据模型 code，在同一供应商渠道（supplyChannel）中找出性价比最高（价格最低）的模型。
  * 适用于 subagent 自动降级选模型、成本分析等场景。
  *
@@ -257,8 +268,14 @@ interface ChatConfigStore {
   compressConfig: {
     enable: boolean;
     visible: boolean;
+    /**
+     * 压缩(Memory 工具)使用的模型。
+     * - false(默认):走 Gemini3Flash,成本更低
+     * - true:跟随主对话当前模型,质量更高、与主对话保持一致
+     */
+    useMainModel: boolean;
   }
-  setMemoryConfig: (config: { enable?: boolean; visible?: boolean }) => void;
+  setMemoryConfig: (config: { enable?: boolean; visible?: boolean; useMainModel?: boolean }) => void;
 
   enableSkills: boolean;
   setEnableSkills: (enable: boolean) => void;
@@ -266,6 +283,14 @@ interface ChatConfigStore {
   /** Caveman 简洁模式：省略冗余词汇，精简回复 */
   cavemanMode: CavemanMode;
   setCavemanMode: (mode: CavemanMode) => void;
+  enableToolResultOffload: boolean; // Tool Output 落盘（用户偏好）
+  setEnableToolResultOffload: (enable: boolean) => void;
+
+  toolResultOffloadSupported: boolean; // 插件是否支持落盘（运行时检测，不持久化）
+  setToolResultOffloadSupported: (supported: boolean) => void;
+  /** RTK 命令拦截开关（WebView 层配置，配合 rtkBinaryAvailable 双重守卫） */
+  rtkEnabled: boolean;
+  setRtkEnabled: (enabled: boolean) => void;
   /** 仓库智聊 特殊工具启用 End */
 
   /** 用户侧子代理开关：true 为开启，false 为关闭 */
@@ -387,8 +412,9 @@ export const useChatConfig = create<ChatConfigStore>()(
       compressConfig: {
         enable: true,
         visible: false,
+        useMainModel: false,
       },
-      setMemoryConfig: (config: { enable?: boolean; visible?: boolean }) => {
+      setMemoryConfig: (config: { enable?: boolean; visible?: boolean; useMainModel?: boolean }) => {
         const current = get().compressConfig;
         set(() => ({
           compressConfig: {
@@ -407,6 +433,12 @@ export const useChatConfig = create<ChatConfigStore>()(
       setCavemanMode: (mode: CavemanMode) => {
         set(() => ({
           cavemanMode: mode,
+        }))
+      },
+      rtkEnabled: false,
+      setRtkEnabled: (enabled: boolean) => {
+        set(() => ({
+          rtkEnabled: enabled,
         }))
       },
       enableDevspaceConfig: true,
@@ -460,6 +492,18 @@ export const useChatConfig = create<ChatConfigStore>()(
           },
         }));
       },
+      enableToolResultOffload: true,
+      setEnableToolResultOffload: (enable: boolean) => {
+        set(() => ({
+          enableToolResultOffload: enable
+        }))
+      },
+      toolResultOffloadSupported: false,
+      setToolResultOffloadSupported: (supported: boolean) => {
+        set(() => ({
+          toolResultOffloadSupported: supported
+        }))
+      },
     }),
     {
       name: 'codechat-config',
@@ -477,6 +521,7 @@ export const useChatConfig = create<ChatConfigStore>()(
         compressConfig: state.compressConfig,
         enableSkills: state.enableSkills,
         cavemanMode: state.cavemanMode,
+        rtkEnabled: state.rtkEnabled,
         enableUserQuestion: state.enableUserQuestion,
         enableDevspaceConfig: state.enableDevspaceConfig,
         enableGlobSearch: state.enableGlobSearch,
@@ -486,6 +531,7 @@ export const useChatConfig = create<ChatConfigStore>()(
         enableSubagentManualTriggerOnly: state.enableSubagentManualTriggerOnly,
         subagentConfigInitialized: state.subagentConfigInitialized,
         selectedModelEffort: state.selectedModelEffort,
+        enableToolResultOffload: state.enableToolResultOffload,
       }),
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as object) };

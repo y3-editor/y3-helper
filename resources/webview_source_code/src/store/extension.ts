@@ -29,10 +29,10 @@ interface ExtensionStore {
   // IDE 版本号
   appVersion: string | null;
   setAppVersion: (version: string) => void;
-  // RTK 命令拦截开关
-  codebaseChatRtk: boolean;
-  setCodebaseChatRtk: (enable: boolean) => void;
-  // Y3 定制：固定模型（从 VSCode Settings 读取）
+  // RTK 二进制是否可用（由 INIT_DATA 下发）
+  rtkBinaryAvailable: boolean;
+  setRtkBinaryAvailable: (available: boolean) => void;
+  // Y3Helper 定制：固定模型（VSCode 端通过 INIT_DATA 透传，使自定义模型支持图片上传等）
   fixedModel: string;
   setFixedModel: (model: string) => void;
 }
@@ -74,12 +74,10 @@ export const useExtensionStore = create<ExtensionStore>()((set) => ({
   setAppVersion: (version) => {
     set(() => ({ appVersion: version }));
   },
-  // 默认关闭 RTK，由 INIT_DATA 控制
-  codebaseChatRtk: false,
-  setCodebaseChatRtk: (enable: boolean) => {
-    set(() => ({ codebaseChatRtk: enable }));
+  rtkBinaryAvailable: false,
+  setRtkBinaryAvailable: (available: boolean) => {
+    set(() => ({ rtkBinaryAvailable: available }));
   },
-  // Y3 定制：固定模型
   fixedModel: '',
   setFixedModel: (model: string) => {
     set(() => ({ fixedModel: model }));

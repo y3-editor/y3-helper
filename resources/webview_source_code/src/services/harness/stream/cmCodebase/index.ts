@@ -41,6 +41,7 @@ export const EMPTY_CM_STREAM_CONTEXT = (): ICmCodebaseStreamContext => ({
     redacted_thinking: '',
   },
   responseId: '',
+  autoModel: undefined,
 });
 
 
@@ -88,9 +89,47 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
     }
   }
 
+  public setContextTokenByUsage(usage: any) {
+    const {
+      completion_tokens = 0,
+      prompt_tokens = 0,
+      total_tokens = 0,
+      cache_creation_input_tokens = 0,
+      cache_read_input_tokens = 0,
+      prompt_tokens_details,
+    } = usage;
+    this.streamContext.totalTokens = total_tokens;
+    this.streamContext.completionTokens = completion_tokens;
+    if (this.requestParmas?.model?.includes('deepseek')) {
+      const cacheReadInputTokens = prompt_tokens_details?.cached_tokens || 0;
+      this.streamContext.promptTokens = Math.max(0, prompt_tokens - cacheReadInputTokens); // 未被命中的缓存
+      this.streamContext.cacheCreationInputTokens = cache_creation_input_tokens;
+      this.streamContext.cacheReadInputTokens = cacheReadInputTokens; // prompt_tokens_details 只有deepseek才有
+    } else {
+      this.streamContext.promptTokens = prompt_tokens;
+      this.streamContext.cacheCreationInputTokens = cache_creation_input_tokens;
+      this.streamContext.cacheReadInputTokens = cache_read_input_tokens;
+    }
+  }
+
+  public handleApiError(parsedData: any) {
+    try {
+      const errorInfo = JSON.parse(parsedData.data)
+      if (errorInfo?.error && errorInfo?.error?.message) {
+        this.streamContext.responseText = errorInfo?.error?.message ?? '⚠️ 未知错误'
+        return
+      }
+      throw new Error();
+    } catch (_) {
+      this.options?.onError?.(new Error(JSON.stringify(
+        parsedData?.data
+      )));
+    }
+  }
+
   public onParse(event: ParsedEvent) {
-    if (event.type !== 'event') return;
-    const eData = event.data;
+    if (event?.type !== 'event') return;
+    const eData = event?.data;
     if (eData?.trim?.() === '[DONE]') {
       this.close()
       return
@@ -112,21 +151,14 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
 
       // 这基本属于 api 层面的报错，而且是在流式传输中。
       if (!parsedData?.choices && parsedData?.data) {
-        this.options?.onError?.(new Error(JSON.stringify(
-          parsedData?.data
-        )));
+        this.handleApiError(parsedData);
         this.close();
         return
       }
 
       // Token usage
-      if (parsedData.usage) {
-        const { completion_tokens, prompt_tokens, total_tokens, cache_creation_input_tokens, cache_read_input_tokens } = parsedData.usage;
-        this.streamContext.totalTokens = total_tokens || 0;
-        this.streamContext.completionTokens = completion_tokens || 0;
-        this.streamContext.promptTokens = prompt_tokens || 0;
-        this.streamContext.cacheCreationInputTokens = cache_creation_input_tokens || 0;
-        this.streamContext.cacheReadInputTokens = cache_read_input_tokens || 0;
+      if (parsedData.usage && typeof parsedData.usage === 'object') {
+        this.setContextTokenByUsage(parsedData.usage);
       }
 
       if (!Array.isArray(parsedData.choices) || !parsedData.choices.length) return;
@@ -202,7 +234,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       return;
     }
 
-    const { responseText, toolCalls, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId } = this.streamContext;
+    const { responseText, toolCalls, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId, autoModel } = this.streamContext;
     this.options.onMessage(
       responseText,
       done,
@@ -217,6 +249,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       cacheReadInputTokens,
       claude37Response,
       responseId,
+      autoModel,
     );
     if (done) {
       this.options?.onFinish?.(this.conversationContext)
@@ -257,8 +290,11 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
     clearTimeout(this.pingpongTimer);
     this.setupChunkTimeout();
 
+    // 将 BaseStream 中提取的 autoModel 写入 streamContext
+    this.streamContext.autoModel = this.autoModel;
+
     this.tracker.startChatSpan({
-      name: 'requestChatStream.run',
+      name: 'ai.streamChat',
       event: UserEvent.CODE_CHAT_CODEBASE,
       url: this.getUrl,
       data: this.originalData,
@@ -276,7 +312,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
         const { done, value } = await reader.read();
         if (!this.firstTokenReceived && value?.length) {
           this.firstTokenReceived = true;
-          this.tracker.setChatSpanAttribute('gen_ai.server.time_to_first_token_ms', Math.round(performance.now() - this.requestStartTime));
+          (this.tracker as any).recordTTFT?.(performance.now() - this.requestStartTime);
         }
         if (value?.length) {
           this.lastChunkTime = Date.now();
@@ -312,7 +348,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
         }
       }
 
-      if ((this._shouldRetry || !toolcallParsable) && this.continueCount < MAX_CONTINUE_COUNT) {
+      if (!this.isUserAborted && (this._shouldRetry || !toolcallParsable) && this.continueCount < MAX_CONTINUE_COUNT) {
         this._shouldRetry = false;
         this.continueCount++;
 

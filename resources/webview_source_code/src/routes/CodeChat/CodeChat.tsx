@@ -72,7 +72,8 @@ import { usePluginApp } from '../../store/plugin-app';
 import { useMcpPromptApp } from '../../store/mcp-prompt';
 import { createSkillToolId, isSkillToolId } from '../../store/skills';
 import { useSkillPromptApp } from '../../store/skills/skill-prompt';
-import { compressionSkillToolIds } from '../../utils/compressionPrompt';
+import { pendingIDEToolCallIds } from '../../PostMessageProvider';
+import { PERSISTED_TOOL_OUTPUT_MARKER } from '../../utils/toolResultPersistenceConstants';
 import { PromptCategoryType } from '../../services/prompt';
 import { debounce, cloneDeep, findLastIndex, isEqual } from 'lodash';
 import useService from '../../hooks/useService';
@@ -120,6 +121,7 @@ import ChatBottomTabs, {
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
 import { formatMcpToolResult, getReportEventByToolName } from '../../utils/toolCall';
+import { getCodemakerAgentEntry, AgentStatus } from '../../services/harness/swarm/agentEntry';
 import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
@@ -171,7 +173,6 @@ import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
 // import { usePageEntryTour, useEventTriggerTour, CODEBASE_SESSION_CREATED_EVENT } from '../../components/FeatureTour'; // Y3不需要FeatureTour
 import { usePanelContext } from '../../context/PanelContext';
-import { onChunkLoadError } from '../../utils/chunkErrorHandler';
 
 // 468(原本宽度)+40(token数的宽度)
 // const MAX_SHOW_CONTEXT_WIDTH = '508px';
@@ -976,6 +977,7 @@ function CodeChat() {
       if (checkInputTokensWithExceed(_prompt, mentionAttachs)) {
         return;
       }
+      getCodemakerAgentEntry().status = AgentStatus.IDLE; // 重置 Agent 状态，允许重新执行
       setStreamRetryCount(0);
       onUserSubmit(
         _prompt,
@@ -1370,12 +1372,7 @@ function CodeChat() {
         if (result.isUpdate) return;
         
         if (result.success && result.skillName) {
-          // 上报安装事件
-          import('../../services/skillUsage').then(({ reportSkillInstall }) => {
-            reportSkillInstall(result.skillName!, {
-              source: 'codemaker-command',
-            });
-          }).catch(onChunkLoadError);
+          // [Y3] 不上报 skill 安装埋点（CodeMaker 自有功能）
           toast({
             title: 'Skill 安装成功',
             description: `${result.skillName} 已安装到 ${result.installPath}`,
@@ -1393,6 +1390,7 @@ function CodeChat() {
                 tool_name: 'use_skill',
                 tool_params: { skill_name: result.skillName },
                 tool_id: toolId,
+                session_id: currentSessionId,
               },
             },
             '*',
@@ -1427,15 +1425,17 @@ function CodeChat() {
           return;
         }
 
+        // 跳过由 callIDETool 发起的内部调用（压缩文件恢复、skill 获取等）
+        if (pendingIDEToolCallIds.has(tool_id)) {
+          return;
+        }
+
         const toolSpan = otel.startToolCallSpan({
           toolName: tool_name,
           toolId: tool_id,
           round: (useChatStreamStore.getState() as any).conversationRound ?? 0,
         });
         if (tool_name === 'use_skill' && isSkillToolId(tool_id)) {
-          if (compressionSkillToolIds.has(tool_id)) {
-            return;
-          }
           // 如果消息指定了 targetPanelId，只有匹配的面板处理
           const targetPanelId = eventData?.targetPanelId;
           if (targetPanelId) {
@@ -1733,8 +1733,16 @@ function CodeChat() {
                       extra,
                     );
                   } else {
+                    // 扩展侧已落盘并替换为短文本时勿再截断（与 prompt cache 稳定一致）
+                    const persistedByExtension =
+                      extra?.toolResultPersisted === true ||
+                      (typeof tool_result.content === 'string' &&
+                        tool_result.content.startsWith(
+                          PERSISTED_TOOL_OUTPUT_MARKER,
+                        ));
                     // TODO: 如果回复的内容太长，先做截断，后续进行优化
                     if (
+                      !persistedByExtension &&
                       tool_result.content &&
                       tool_result.content.length > 100000 &&
                       !['retrieve_code', 'retrieve_knowledge'].includes(
@@ -1768,34 +1776,41 @@ function CodeChat() {
                   }
                   // 更新 tool_result
                   if (['retrieve_code'].includes(tool_name)) {
-                    let searchResult = [];
+                    let searchResult: any[] | null = null;
                     try {
-                      searchResult = JSON.parse(tool_result.content);
+                      const parsed = JSON.parse(tool_result.content);
+                      if (Array.isArray(parsed)) {
+                        searchResult = parsed;
+                      } else {
+                        console.log('retrieve_code 返回非数组，跳过覆盖：', parsed);
+                      }
                     } catch (e) {
                       console.log('无法解析原内容：', tool_result.content);
                     }
-                    const devSpace = useWorkspaceStore.getState().devSpace;
+                    if (searchResult) {
+                      const devSpace = useWorkspaceStore.getState().devSpace;
 
-                    let isLpc = false;
-                    isLpc = devSpace?.allow_public_model_access === false;
-                    searchResult.forEach((item: any) => {
-                      item.isLpc = isLpc;
-                      if (item.to_func) {
-                        item.to_func.forEach((func: any) => {
-                          func.isLpc = isLpc;
-                        });
-                      }
-                    });
-                    updateToolCallResults(
-                      {
-                        [tool_id]: {
-                          path: tool_result.path,
-                          content: JSON.stringify(searchResult),
-                          isError: tool_result.isError,
+                      let isLpc = false;
+                      isLpc = devSpace?.allow_public_model_access === false;
+                      searchResult.forEach((item: any) => {
+                        item.isLpc = isLpc;
+                        if (item.to_func) {
+                          item.to_func.forEach((func: any) => {
+                            func.isLpc = isLpc;
+                          });
+                        }
+                      });
+                      updateToolCallResults(
+                        {
+                          [tool_id]: {
+                            path: tool_result.path,
+                            content: JSON.stringify(searchResult),
+                            isError: tool_result.isError,
+                          },
                         },
-                      },
-                      extra,
-                    );
+                        extra,
+                      );
+                    }
                   }
                 }
               }
@@ -2169,16 +2184,20 @@ function CodeChat() {
                   }
                 }
               });
-              useChatStreamStore.getState().onUserSubmit(
-                '',
-                {
-                  event: UserEvent.CODE_CHAT_CODEBASE,
-                },
-                undefined,
-                {
-                  [result.item.toolCallId]: true,
-                },
-              );
+
+              // [Y3] 26e81a37: 中止状态不允许继续提交消息，避免用户在修改后继续提问导致上下文不一致
+              if (getCodemakerAgentEntry().status !== 'aborted') {
+                useChatStreamStore.getState().onUserSubmit(
+                  '',
+                  {
+                    event: UserEvent.CODE_CHAT_CODEBASE,
+                  },
+                  undefined,
+                  {
+                    [result.item.toolCallId]: true,
+                  },
+                );
+              }
             }
           } else {
             handleAcceptEditFailed(result.item);
@@ -2410,6 +2429,7 @@ function CodeChat() {
             });
           }
           handleStopStream();
+          getCodemakerAgentEntry().status = AgentStatus.IDLE;
           updateChatConfig((config) => {
             config.model = model || config.model;
           });

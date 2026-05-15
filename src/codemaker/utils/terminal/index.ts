@@ -109,11 +109,19 @@ export default async function runTerminalCmd(
         sendTerminalLog('', ETS.START, false);
 
         return new Promise<ExecuteCommandResult>((resolve) => {
+            // 设置 detached: true 创建新的进程组，便于后续用 -pid 杀死整个进程树。
+            // Windows 例外：detached 会让进程失去 console，PowerShell.exe / cmd.exe 依赖 console 输出，
+            // 一旦失去 console 所有 stdout 写入会被静默丢弃；同时 Windows 还会给 detached 子进程
+            // 分配一个新的 console 窗口（即看到的"黑色 cmd 一闪而过"）。
+            // Windows 上不需要 detached 也能用 taskkill /T 杀进程树。
+            // 此逻辑与上游 codemaker TerminalProcess.runWithoutShellIntegration 保持一致。
+            const isWin = process.platform === 'win32';
             const childProcess = spawn(command, [], {
                 cwd: workspace || process.cwd(),
                 shell: true,
                 stdio: 'pipe',
-                detached: true,
+                detached: !isWin,
+                windowsHide: true,
                 env: {
                     ...process.env,
                     PYTHONIOENCODING: 'utf-8',
@@ -126,6 +134,36 @@ export default async function runTerminalCmd(
                     CHCP: '65001',
                 },
             });
+
+            // 跨平台进程树终止：Windows 用 taskkill /T /F，POSIX 用进程组 kill
+            const killTree = (sig: NodeJS.Signals = 'SIGTERM') => {
+                const pid = childProcess.pid;
+                if (!pid) {
+                    try { childProcess.kill(sig); } catch { /* ignore */ }
+                    return;
+                }
+                if (isWin) {
+                    try {
+                        // /T 杀整棵进程树，/F 强制
+                        require('child_process').execFileSync(
+                            'taskkill',
+                            ['/pid', String(pid), '/T', '/F'],
+                            { windowsHide: true, stdio: 'ignore' },
+                        );
+                    } catch {
+                        try { childProcess.kill(sig); } catch { /* ignore */ }
+                    }
+                } else {
+                    try {
+                        process.kill(-pid, sig);
+                        setTimeout(() => {
+                            try { process.kill(-pid, 'SIGKILL'); } catch { /* 进程已退出 */ }
+                        }, 500);
+                    } catch {
+                        try { childProcess.kill('SIGKILL'); } catch { /* ignore */ }
+                    }
+                }
+            };
 
             let lines: string[] = [];
             let exitCode = 0;
@@ -186,20 +224,7 @@ export default async function runTerminalCmd(
                             if (match) {
                                 interactivePromptInfo = { prompt: match[0].trim(), output: stripped };
                                 console.log(`[Y3Maker] Interactive prompt detected: "${match[0].trim()}"`);
-                                // 终止进程（使用进程组 kill）
-                                const pid = childProcess.pid;
-                                if (pid) {
-                                    try {
-                                        process.kill(-pid, 'SIGTERM');
-                                        setTimeout(() => {
-                                            try { process.kill(-pid, 'SIGKILL'); } catch { /* 进程已退出 */ }
-                                        }, 500);
-                                    } catch {
-                                        childProcess.kill('SIGKILL');
-                                    }
-                                } else {
-                                    childProcess.kill('SIGKILL');
-                                }
+                                killTree('SIGTERM');
                                 break;
                             }
                         }
@@ -263,19 +288,7 @@ export default async function runTerminalCmd(
             const timeout = 120000; // 2分钟
             setTimeout(() => {
                 if (!childProcess.killed) {
-                    const pid = childProcess.pid;
-                    if (pid) {
-                        try {
-                            process.kill(-pid, 'SIGTERM');
-                            setTimeout(() => {
-                                try { process.kill(-pid, 'SIGKILL'); } catch { /* 进程已退出 */ }
-                            }, 500);
-                        } catch {
-                            childProcess.kill('SIGKILL');
-                        }
-                    } else {
-                        childProcess.kill('SIGKILL');
-                    }
+                    killTree('SIGTERM');
                     const outputText = lines.join('').trim();
                     result.content = `Command timed out after ${timeout / 1000}s.\nOutput so far: ${outputText}\n`;
                     result.isError = true;

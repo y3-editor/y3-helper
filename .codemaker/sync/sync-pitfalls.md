@@ -209,3 +209,62 @@ git diff --name-only HEAD | Where-Object { $_ -match '\.(ts|tsx|js)$' } |
 **为什么要加注释而不是仅依赖 customized 列表**：customized 标记会让文件进入 REVIEW，但 REVIEW 仍可能整文件覆盖（特别是上游做大重构、Y3 现状本来就接近 baseline 时）。注释是落在源码里的"防腐层"，AI 整文件覆盖后做后处理时能直接看到提醒。
 
 ---
+
+## 9. 跨仓库联动功能：webui 合了但 extension 整组跳
+
+**触发场景**：上游一个需求常拆成两端 commit（webui + extension 同日提交，仅前端字段对应后端消费）。Y3 决策跳过 extension 端时，**webui 端已合的字段会成为 dead field**。
+
+**典型案例**：
+- 上游 `webui 3d758725` (run_terminal_cmd 注入 `model`) ↔ `extension 60dc7065` (RTK 遥测消费 `model`)
+- 上游 `webui 9fb96c3a` (落盘开关 IDE 单源化) ↔ `extension 36f33e42` (UPDATE_USER_PREFERENCE handler)
+
+Y3 不要 RTK 遥测，跳了 extension 60dc7065；落盘单源依赖 globalState handler，跳了 36f33e42。
+
+**处理原则**：
+1. **webui 已合的死字段保留不动**：撤销会造成下次同步上游若改字段触发 REVIEW 噪音，且上游来回改时易产生反复
+2. **在死字段处加 Y3 注释**：标明 "Y3 后端不消费 (extension XXXXXXXX 整组未合)，保留对齐上游"
+3. **欠债清单维护**：见下方表格
+
+**Y3 dead field 清单（webui 端有，extension 未消费）**：
+
+| 字段 | 注入点 (webui) | 上游对端 commit (extension, 未合) | 备注 |
+|---|---|---|---|
+| `tool_params.model` (run_terminal_cmd) | `utils/toolCallDispatch.ts::getCurrentModel`、`store/chat.ts` 主 toolcall 注入 | 60dc7065/0b41e271 RTK 遥测 | Y3 后端 `executeFunction.ts:run_terminal_cmd` 解构忽略，零运行时副作用 |
+
+**反向情况（extension 已合，webui 端未消费）**：暂无记录，遇到时同样建议保留 + 加注释。
+
+---
+
+## 10. Y3 主聊天链路不走 CmCodebaseSteam → onMessage 形参别错位
+
+**触发场景**：上游 commit `66fcc070` 在 `CmCodebaseSteam.emitMessage` 给 `onMessage` 多加第 12 参 `autoModel`（Auto 渠道 X-Auto-Model header 值）。同时 `store/chat.ts` 的 `agentEntry.execute` onMessage 也加该参数。Y3 同步时直接照搬 chat.ts 的形参 → 编译报 "Target signature provides too few arguments. Expected 11 or more, but got 10"。
+
+**根因**：
+
+```
+上游主聊天链路:
+  store/chat.ts → getCodemakerAgentEntry().execute(...)
+                  → agentEntry → CmCodebaseSteam.emitMessage(...12 参...)
+
+Y3 主聊天链路:
+  store/chat.ts → requestCodebaseChatStream(...)        ← 在 useChatStream.ts，10 参 onMessage
+                  (完全不走 agentEntry / CmCodebaseSteam)
+```
+
+`getCodemakerAgentEntry / CmCodebaseSteam` 在 Y3 是 dead code（仅 `compactionAgent.ts` 还引用）。
+
+**判定方法**：合并 store/chat.ts 的 onMessage 改动前先 grep：
+
+```bash
+grep -n "getCodemakerAgentEntry().execute\|requestCodebaseChatStream(" \
+  resources/webview_source_code/src/store/chat.ts
+```
+
+若只命中后者 → Y3 走的是 `requestCodebaseChatStream`，签名以它为准（在 useChatStream.ts 找定义）。
+
+**修法**：
+
+- 不动 onMessage 形参（Y3 拿不到 autoModel）
+- 想用 responseModel 字段 → 直接在 chat.ts 内 `useChatConfig.getState().config.model` 取（Y3 模型固定，无 Auto 渠道，等价）
+- cmCodebase/index.ts 的 12 参签名仍按上游合（dead code 保留对齐，避下次 REVIEW 噪音）
+
