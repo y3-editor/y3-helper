@@ -9,6 +9,7 @@
  */
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
+import * as iconv from 'iconv-lite';
 import { checkTerminalCommandAccess } from '../commandParser';
 import type { ExecuteCommandResult, ToolProvider } from '../executeFunction';
 
@@ -142,12 +143,22 @@ export default async function runTerminalCmd(
             let promptDetectTimer: NodeJS.Timeout | null = null;
             let interactivePromptInfo: { prompt: string; output: string } | null = null;
 
-            // 解码 Buffer 为 UTF-8 字符串
+            // Decode command output as UTF-8 first; Windows localized cmd.exe output
+            // may still be GBK/CP936, so fall back when UTF-8 replacement chars appear.
             const decodeBuffer = (data: Buffer): string => {
+                const utf8Output = data.toString('utf-8');
+                if (process.platform !== 'win32' || !utf8Output.includes('\uFFFD')) {
+                    return utf8Output;
+                }
+
                 try {
-                    return data.toString('utf-8');
+                    return iconv.decode(data, 'gbk');
                 } catch {
-                    return data.toString();
+                    try {
+                        return iconv.decode(data, 'gb2312');
+                    } catch {
+                        return data.toString();
+                    }
                 }
             };
 
