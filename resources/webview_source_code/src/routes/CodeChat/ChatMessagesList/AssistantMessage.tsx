@@ -237,6 +237,18 @@ const AssistantMessage: React.FC<ChatAssistantMessageProps> = (props) => {
           isLatest={!!isLatest}
         />
       ) : null}
+      {message.systemNotice?.kind === 'repeat-toolcall-abort' ? (
+        <Box
+          px={2}
+          py={1}
+          color="text.default"
+          opacity={0.7}
+          fontSize="sm"
+          data-testid="system-notice-repeat-toolcall-abort"
+        >
+          {message.systemNotice.text || '检测到模型重复调用工具，已自动中止本次对话以避免无效循环。'}
+        </Box>
+      ) : null}
       {
         !isShare && isRecent && isError && (
           <Retry userScrollLock={false} />

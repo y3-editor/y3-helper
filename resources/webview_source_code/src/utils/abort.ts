@@ -12,6 +12,7 @@ export const ABORT_ERROR_NAME = 'AbortError';
 export const ABORT_REASON_FINISHED = 'StreamFinished';
 export const ABORT_REASON_USER_CANCELLED = 'UserCancelled';
 export const ABORT_REASON_CLEANUP = 'Cleanup';
+export const ABORT_REASON_REPEAT_TOOLCALL = 'RepeatToolCall';
 export const REQUEST_TIMEOUT_NAME = 'RequestTimeout';
 
 /**
@@ -42,7 +43,8 @@ export function isAbortError(error: any): boolean {
   if (
     error.name === ABORT_REASON_FINISHED ||
     error.name === ABORT_REASON_USER_CANCELLED ||
-    error.name === ABORT_REASON_CLEANUP
+    error.name === ABORT_REASON_CLEANUP ||
+    error.name === ABORT_REASON_REPEAT_TOOLCALL
   ) return true;
   return false;
 }

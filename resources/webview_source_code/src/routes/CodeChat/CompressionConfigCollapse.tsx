@@ -130,7 +130,7 @@ const CompressionConfigCollapse = ({ disabled = false }: IProps) => {
           setIsCollapsed(!isCollapsed);
         }}
       >
-        <LuMessageSquareTextIcon w="16px" h="16px" color="white" />
+        <LuMessageSquareTextIcon w="16px" h="16px" />
         <Text marginLeft={2} fontSize={12}>
           Memory 工具
         </Text>

@@ -135,6 +135,9 @@ import { formatResultContent, getReportEventByToolName } from '../utils/toolCall
 import type { ExtendedPlanData, PlanStatus } from '../types/plan';
 import type { TodoList } from './../services/harness/tools/todo';
 import { onMessageToolCallResponse } from '../utils/chatToolCallHandler';
+import { evaluateRepeatGuard } from '../utils/toolCallRepeatGuard';
+import { useToolCallRepeatStore } from './toolCallRepeatStore';
+import { ABORT_REASON_REPEAT_TOOLCALL, createAbortReason } from '../utils/abort';
 import { deleteTranscript, migrateTranscriptRefs } from '../utils/transcript';
 import { UserEvent } from '../types/report';
 import { ChatRole } from '../types/chat';
@@ -880,6 +883,7 @@ export const useChatStore = create<ChatStore>()(
 
         // 清理被删除 session 的 subagent 状态
         useSubagentStore.getState().clearSessionStatuses(id);
+        useToolCallRepeatStore.getState().clearSession(id);
         // 清理被删除 session 的 MCP 激活工具键
         useMCPStore.getState().clearActivatedToolKeys(id);
 
@@ -967,6 +971,7 @@ export const useChatStore = create<ChatStore>()(
           // 清理旧 session 的 subagent 状态，避免跨 session 污染
           if (oldSessionId && oldSessionId !== id) {
             useSubagentStore.getState().clearSessionStatuses(oldSessionId);
+            useToolCallRepeatStore.getState().clearSession(oldSessionId);
           }
         } catch (error) {
           // 确保错误能够传递给调用者
@@ -985,6 +990,7 @@ export const useChatStore = create<ChatStore>()(
 
         // 清理当前 session 的 subagent 状态
         useSubagentStore.getState().clearSessionStatuses(session._id);
+        useToolCallRepeatStore.getState().clearSession(session._id);
 
         const newSession = {
           ...session,
@@ -2773,13 +2779,7 @@ export const useChatStreamStore = create(
           title: skillRunner.title,
           source: skillRunner.source,
         };
-        // 上报 Skill 使用事件（用户手动触发）
-        import('../services/skillUsage').then(({ reportSkillInvoke }) => {
-          import('./skills').then(({ getSkillDescription }) => {
-            const description = getSkillDescription(skillRunner.skillName);
-            reportSkillInvoke(skillRunner.skillName, { source: 'codemaker-user', description });
-          });
-        });
+        // [Y3] 不上报 skill 调用埋点（CodeMaker 自有功能）
       }
 
       const promptRunner = usePromptApp.getState().runner
@@ -5282,6 +5282,24 @@ export const useChatStreamStore = create(
                     state.isApplying = toolCalls.some(toolCall => ['edit_file', 'reapply', 'replace_in_file', 'edit', 'write'].includes(toolCall.function.name));
                   });
                   const curSessionId = chatStoreState.currentSessionId as string;
+
+                  // [Y3] ddacbf13: 重复 tool_call guard
+                  let repeatGuardResult:
+                    | ReturnType<typeof evaluateRepeatGuard>
+                    | undefined;
+                  let effectiveToolCalls = toolCalls;
+                  if (effectiveToolCalls && effectiveToolCalls.length) {
+                    repeatGuardResult = evaluateRepeatGuard({
+                      sessionId: curSessionId,
+                      agentKey: 'main',
+                      toolCalls: effectiveToolCalls,
+                      model: data.model,
+                    });
+                    if (repeatGuardResult.action === 'abort') {
+                      effectiveToolCalls = [];
+                    }
+                  }
+
                   chatStoreState.updateCurrentSession((session) => {
                     if (session._id !== curSessionId) return
                     if (session.data?.messages) {
@@ -5306,7 +5324,7 @@ export const useChatStreamStore = create(
                       ...claude37Response,
                       id,
                       content,
-                      tool_calls: toolCalls || [],
+                      tool_calls: effectiveToolCalls || [],
                       processing: isProcessing,
                       total_tokens: totalTokens,
                       group_tokens: groupTokens,
@@ -5321,6 +5339,9 @@ export const useChatStreamStore = create(
                         cache_read_input_tokens: cacheReadInputTokens || 0
                       },
                       isOutdatedTokens: hasCompressionOccurredDuringRequest,
+                      ...(repeatGuardResult?.notice
+                        ? { systemNotice: repeatGuardResult.notice }
+                        : {}),
                     });
                     chatStoreState.updateConsumedTokens({
                       model: model,
@@ -5380,6 +5401,34 @@ export const useChatStreamStore = create(
                       compression_enabled: compressConfig.enable && compressConfig.visible,
                     }
                   });
+
+                  // [Y3] ddacbf13: 重复 tool_call guard 副作用
+                  if (repeatGuardResult && repeatGuardResult.action !== 'pass') {
+                    if (repeatGuardResult.action === 'warn' && repeatGuardResult.warnToolResults) {
+                      try {
+                        get().updateToolCallResults(repeatGuardResult.warnToolResults);
+                      } catch (err) {
+                        console.error('[RepeatGuard] failed to inject warn tool_results', err);
+                      }
+                    } else if (repeatGuardResult.action === 'abort') {
+                      const controller = ControllerPool.controllers.get(
+                        ControllerPool.key(sessionId, messageIndex),
+                      );
+                      if (controller) {
+                        controller.abort(
+                          createAbortReason(ABORT_REASON_REPEAT_TOOLCALL, __ABORT_LOC__),
+                        );
+                      }
+                      set((state) => {
+                        state.isStreaming = false;
+                        state.isProcessing = false;
+                        state.isApplying = false;
+                      });
+                    }
+                    // 清空 toolCalls 跳过后续分发
+                    toolCalls = [];
+                  }
+
                   if (toolCalls.length) {
                     if (!allResponsed) {
                       // 分离 task 工具和非 task 工具
@@ -5784,8 +5833,8 @@ export const useChatStreamStore = create(
                             })();
                           } else if (tool.function.name === 'read_file') {
                             // [Y3] e545978e fix: 兼容 deepseek 路径幻觉～，初步怀疑是其他工具的 file_path 参数被 deepseek 认为是 read_file 的 path 参数
-                            if (typeof tool_params === 'object' && !tool_params?.path && tool_params?.file_path) {
-                              tool_params.path = tool_params.file_path;
+                            if (typeof tool_params === 'object' && !tool_params?.path) {
+                              tool_params.path = tool_params?.file_path || tool_params?.filePath || tool_params?.filepath;
                             }
                             (async () => {
                               const allowed = await runToolBeforeExecuteHook(

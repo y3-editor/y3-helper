@@ -121,6 +121,7 @@ import ChatBottomTabs, {
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
 import { formatMcpToolResult, getReportEventByToolName } from '../../utils/toolCall';
+import { getCodemakerAgentEntry } from '../../services/harness/swarm/agentEntry';
 import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
@@ -172,7 +173,6 @@ import { FaFolderOpen } from 'react-icons/fa';
 import SpecActiveChangeGuide from './SpecActiveChangeGuide';
 // import { usePageEntryTour, useEventTriggerTour, CODEBASE_SESSION_CREATED_EVENT } from '../../components/FeatureTour'; // Y3不需要FeatureTour
 import { usePanelContext } from '../../context/PanelContext';
-import { onChunkLoadError } from '../../utils/chunkErrorHandler';
 
 // 468(原本宽度)+40(token数的宽度)
 // const MAX_SHOW_CONTEXT_WIDTH = '508px';
@@ -1371,12 +1371,7 @@ function CodeChat() {
         if (result.isUpdate) return;
         
         if (result.success && result.skillName) {
-          // 上报安装事件
-          import('../../services/skillUsage').then(({ reportSkillInstall }) => {
-            reportSkillInstall(result.skillName!, {
-              source: 'codemaker-command',
-            });
-          }).catch(onChunkLoadError);
+          // [Y3] 不上报 skill 安装埋点（CodeMaker 自有功能）
           toast({
             title: 'Skill 安装成功',
             description: `${result.skillName} 已安装到 ${result.installPath}`,
@@ -2188,16 +2183,20 @@ function CodeChat() {
                   }
                 }
               });
-              useChatStreamStore.getState().onUserSubmit(
-                '',
-                {
-                  event: UserEvent.CODE_CHAT_CODEBASE,
-                },
-                undefined,
-                {
-                  [result.item.toolCallId]: true,
-                },
-              );
+
+              // [Y3] 26e81a37: 中止状态不允许继续提交消息，避免用户在修改后继续提问导致上下文不一致
+              if (getCodemakerAgentEntry().status !== 'aborted') {
+                useChatStreamStore.getState().onUserSubmit(
+                  '',
+                  {
+                    event: UserEvent.CODE_CHAT_CODEBASE,
+                  },
+                  undefined,
+                  {
+                    [result.item.toolCallId]: true,
+                  },
+                );
+              }
             }
           } else {
             handleAcceptEditFailed(result.item);

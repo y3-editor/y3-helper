@@ -561,6 +561,7 @@ export const specialErrorPatterns = [
       || msg.includes(StreamError.BaiChuan2TokenLimit)
       || msg.includes(StreamError.InvalidModelIdentifier)
       || msg.includes(StreamError.AnthropicErrorChunk)
+      || msg.includes(StreamError.ParsedStreamDataError)
     ),
     message: '⚠️ 当前请求触发模型限流，请稍后再试'
   },

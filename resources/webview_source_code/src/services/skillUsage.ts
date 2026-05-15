@@ -1,8 +1,9 @@
 /**
- * Skill 使用数据上报服务
+ * Skill 使用数据上报服务 — Y3 stub
+ *
+ * Y3Maker 不需要 CodeMaker 的 skill 使用埋点（install / invoke），
+ * 此文件保留导出签名以兼容上游代码，所有上报函数为 no-op。
  */
-import { SKILLS_HUB_API_URL } from '../routes/CodeCoverage/const';
-import { proxyRequest } from './common';
 
 export type SkillUsageEventType = 'install' | 'invoke';
 
@@ -27,49 +28,14 @@ export interface SkillUsageReportResult {
   created_at: number;
 }
 
-/**
- * 上报 Skill 使用事件（静默失败，不影响主流程）
- */
-export async function reportSkillUsage(event: SkillUsageEvent): Promise<SkillUsageReportResult | null> {
-  try {
-    const result = await proxyRequest(
-      {
-        requestUrl: `${SKILLS_HUB_API_URL}/api/usage/report`,
-        method: 'post',
-        requestData: event,
-      },
-      10000,
-      true, // customErrorMsg: true，不显示错误 toast
-      undefined,
-      { errorToast: false } // 不显示错误 toast
-    );
-    console.log('[SkillUsage] Report success:', result);
-    return result as SkillUsageReportResult;
-  } catch (error) {
-    // 静默失败，不影响主流程
-    console.warn('[SkillUsage] Report failed:', error);
-    return null;
-  }
+export async function reportSkillUsage(_event: SkillUsageEvent): Promise<SkillUsageReportResult | null> {
+  return null;
 }
 
-/**
- * 上报 Skill 安装事件
- */
-export function reportSkillInstall(skillName: string, eventParams?: Record<string, any>): Promise<SkillUsageReportResult | null> {
-  return reportSkillUsage({
-    event_type: 'install',
-    skill_name: skillName,
-    event_params: eventParams,
-  });
+export function reportSkillInstall(_skillName: string, _eventParams?: Record<string, any>): Promise<SkillUsageReportResult | null> {
+  return Promise.resolve(null);
 }
 
-/**
- * 上报 Skill 调用事件
- */
-export function reportSkillInvoke(skillName: string, eventParams?: Record<string, any>): Promise<SkillUsageReportResult | null> {
-  return reportSkillUsage({
-    event_type: 'invoke',
-    skill_name: skillName,
-    event_params: eventParams,
-  });
+export function reportSkillInvoke(_skillName: string, _eventParams?: Record<string, any>): Promise<SkillUsageReportResult | null> {
+  return Promise.resolve(null);
 }

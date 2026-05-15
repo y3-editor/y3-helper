@@ -66,7 +66,15 @@ export function validateCodeBlocksLanguage(
  * @name 检查Thinking消息列表有效性
  * @param messages
  */
-export const checkThinkingSignatureValid = (messages: ChatMessage[]) => {
+export const checkThinkingSignatureValid = (messages: ChatMessage[], supplyChannel?: ChatModelSupplyChannel) => {
+  if (supplyChannel === ChatModelSupplyChannel.DEEPSEEK) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant' && !messages[i].reasoning_content) {
+        return false;
+      }
+    }
+    return true;
+  }
   let containUserMessage = false
   for (let i = messages.length - 1; i >= 0; i--) {
     const curMessage = messages[i]

@@ -2,6 +2,7 @@ import { ChatPromptBody } from "../services";
 import { IChatModelConfig } from "../services/chatModel";
 import { useChatStore } from "../store/chat";
 import { CHAT_MIN_TOKENS, ChatModelSupplyChannel, useChatConfig } from "../store/chat-config";
+import { checkThinkingSignatureValid } from "./validateBeforeChat";
 
 
 /**
@@ -54,7 +55,7 @@ export const configureThinkingSignature = (
     }
     case ChatModelSupplyChannel.DEEPSEEK: {
       if (!data.extra_body) data.extra_body = {}
-      if (!modelConfig.hasThinking) {
+      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages, ChatModelSupplyChannel.DEEPSEEK)) {
         Object.assign(data.extra_body, {
           thinking: {
             type: 'disabled',

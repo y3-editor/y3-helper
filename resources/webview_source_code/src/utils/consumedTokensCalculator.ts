@@ -149,6 +149,7 @@ function checkCacheModel(model?: ChatModel | string): boolean {
   return [
     'claude',
     'gpt',
+    'deepseek',
   ].some(i => modelName.includes(i))
 }
 

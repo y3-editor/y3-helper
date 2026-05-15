@@ -111,3 +111,11 @@ export enum SessionStatus {
   COMPRESSED = 'compressed',
   FAILED = 'failed',
 }
+
+/**
+ * 压缩策略值 —— 把 (enable, useMainModel) 两个布尔合成一个下拉值
+ * - 'off'   = 关闭压缩（enable=false）
+ * - 'flash' = 启用 + 使用 Gemini 3 Flash（enable=true, useMainModel=false）
+ * - 'main'  = 启用 + 跟随主模型（enable=true, useMainModel=true）
+ */
+export type CompressStrategy = 'off' | 'flash' | 'main';

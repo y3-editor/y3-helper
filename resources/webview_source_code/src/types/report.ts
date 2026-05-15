@@ -15,6 +15,9 @@ export enum UserEvent {
   CODE_CHAT_UP_VOTE = 'CodeChat.up_vote',
   CODE_CHAT_DOWN_VOTE = 'CodeChat.down_vote',
   CODE_CHAT_CHUNK_TIMEOUT = 'CodeChat.chunk_timeout',
+  // 重复 tool_call 保护
+  CODE_CHAT_REPEAT_TOOLCALL_WARN = 'CodeChat.repeat_toolcall_warn',
+  CODE_CHAT_REPEAT_TOOLCALL_ABORT = 'CodeChat.repeat_toolcall_abort',
   CODE_CHAT_APPLY_EDIT = 'CodeChat.apply_edit',
   CODE_CHAT_APPLY_EDIT_CONFIRM = 'CodeChat.apply_edit_confirm',
   CODE_CHAT_APPLY_EDIT_SUCCESS = 'CodeChat.apply_edit_success',

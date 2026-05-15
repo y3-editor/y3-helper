@@ -64,6 +64,7 @@ export enum StreamError {
   AzureaiRateLimitChunk = 'azureai_error_chunk code:rate_limit_exceeded',
   InvalidModelIdentifier = 'The provided model identifier is invalid',
   AnthropicErrorChunk = 'rate_limit_error message',
+  ParsedStreamDataError = 'Expecting value: line 1 column 1 (char 0)',
 }
 
 export enum ChatRole {

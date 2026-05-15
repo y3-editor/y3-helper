@@ -548,7 +548,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 })}
                 {renderSwitchItem({
                   title: '需求澄清工具',
-                  icon: <RiQuestionnaireLine size={'16'} color="white" />,
+                  icon: <RiQuestionnaireLine size={'16'} />,
                   value: enableUserQuestion,
                   lebalTooltips:
                     '针对不明确的问题，仓库智聊会主动向你提问并提供相关选项，助力澄清需求',
