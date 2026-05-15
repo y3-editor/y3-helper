@@ -22,6 +22,7 @@ export interface ICmCodebaseStreamOption extends Omit<IStreamOption, 'onMessage'
       redacted_thinking: string;
     },
     responseId: string,
+    autoModel?: string,
   ) => void;
 }
 
@@ -39,4 +40,5 @@ export interface ICmCodebaseStreamContext {
     redacted_thinking: string;
   };
   responseId: string;
+  autoModel?: string;
 }

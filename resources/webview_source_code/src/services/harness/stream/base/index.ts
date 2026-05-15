@@ -14,6 +14,8 @@ import { httpErrorType } from "../../../../utils/error";
 export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'onMessage'> & { onMessage: (...args: any[]) => void } = IStreamOption> implements IBaseStream {
   protected _needContinue = true // 继续传输流
   protected pingpongTimer: NodeJS.Timeout | undefined
+  /** Auto 渠道实际使用的模型，从响应 header X-Auto-Model 获取 */
+  protected autoModel?: string
   public options: TOption
 
   public get getUrl() {
@@ -129,6 +131,9 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
       this.close();
       return null;
     }
+
+    // 提取 Auto 渠道实际模型 header
+    this.autoModel = res.headers.get('X-Auto-Model') || undefined;
 
     // 直接返回响应的 body 流，不需要重新创建流
     // 流的解析逻辑统一在 onStream 方法中处理
@@ -273,6 +278,7 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
   public reset() {
     this._needContinue = true
     this.abortController = new AbortController()
+    this.autoModel = undefined
     clearTimeout(this.pingpongTimer)
     this.conversationContext = {
       content: '',

@@ -342,6 +342,8 @@ export interface ChatMessage {
     /** UI 展示的文案。单独存储，避免覆盖 LLM 产出的 content 造成上下文污染 */
     text?: string;
   };
+  /** 仓库智聊实际回复的模型（Auto 渠道来自 X-Auto-Model header，非 Auto 来自 useModel） */
+  responseModel?: string;
 }
 
 // interface WebSearchType {

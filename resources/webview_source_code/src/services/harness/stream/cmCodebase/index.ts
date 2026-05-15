@@ -41,6 +41,7 @@ export const EMPTY_CM_STREAM_CONTEXT = (): ICmCodebaseStreamContext => ({
     redacted_thinking: '',
   },
   responseId: '',
+  autoModel: undefined,
 });
 
 
@@ -233,7 +234,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       return;
     }
 
-    const { responseText, toolCalls, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId } = this.streamContext;
+    const { responseText, toolCalls, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId, autoModel } = this.streamContext;
     this.options.onMessage(
       responseText,
       done,
@@ -248,6 +249,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
       cacheReadInputTokens,
       claude37Response,
       responseId,
+      autoModel,
     );
     if (done) {
       this.options?.onFinish?.(this.conversationContext)
@@ -287,6 +289,9 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
     }
     clearTimeout(this.pingpongTimer);
     this.setupChunkTimeout();
+
+    // 将 BaseStream 中提取的 autoModel 写入 streamContext
+    this.streamContext.autoModel = this.autoModel;
 
     this.tracker.startChatSpan({
       name: 'requestChatStream.run',

@@ -74,7 +74,7 @@ import {
   getModelConfigByUseModel,
   ChatModelSupplyChannel,
 } from './chat-config';
-import { getEnableRtk } from '../utils/toolCallDispatch';
+import { getEnableRtk, getCurrentModel } from '../utils/toolCallDispatch';
 import { usePluginApp } from './plugin-app';
 import {
   PluginAction,
@@ -5339,6 +5339,8 @@ export const useChatStreamStore = create(
                         cache_read_input_tokens: cacheReadInputTokens || 0
                       },
                       isOutdatedTokens: hasCompressionOccurredDuringRequest,
+                      // Y3: 固定模型，无 Auto 渠道，直接用配置模型
+                      responseModel: useChatConfig.getState().config.model || undefined,
                       ...(repeatGuardResult?.notice
                         ? { systemNotice: repeatGuardResult.notice }
                         : {}),
@@ -5868,6 +5870,8 @@ export const useChatStreamStore = create(
                                   is_approve: true,
                                   ...(tool.function.name === 'run_terminal_cmd' && {
                                     enableRtk: getEnableRtk(),
+                                    // Y3: model 字段后端未消费 (RTK 遥测未合)，保留对齐上游
+                                    model: getCurrentModel(),
                                   }),
                                 };
                                 const allowed = await runToolBeforeExecuteHook(
