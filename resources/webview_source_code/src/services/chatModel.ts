@@ -68,6 +68,8 @@ export interface IChatModelConfig {
   tokenInfo: TokenInfo;
   priceInfo: PriceInfo;
   authInfo: AuthInfo;
+  // Y3: DeepSeek thinking effort 默认值（来自上游 b1b637be）
+  defaultEffort?: string;
 }
 
 // getUserModels 接口响应类型

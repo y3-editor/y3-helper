@@ -202,6 +202,7 @@ export async function preprocessSubagentMessages(
   let filteredMessages = await serializeCodebaseMessages({
     model,
     sendMessages,
+    status: 1,
   });
 
   // 4.5 Gemini 模型的 thinking_signature 特殊处理
@@ -271,11 +272,17 @@ export function buildSubagentChatPromptBody(
     taskId = 'unknown',
   } = options;
 
-  // 计算默认max_tokens
-  let defaultMaxTokens = 10240;
+  // 计算默认max_tokens，与 buildCodebaseChatPayload 保持一致
+  let DEFAULT_MAX_TOKENS = 10240;
   if ([ChatModel.Gemini25, ChatModel.Gemini3Pro].includes(model)) {
-    defaultMaxTokens = 32000;
+    DEFAULT_MAX_TOKENS = 32000;
   }
+  const chatModels = useChatConfig.getState().chatModels;
+  const defaultMaxTokens = Math.max(
+    max_tokens || 0,
+    DEFAULT_MAX_TOKENS,
+    chatModels[model]?.tokenInfo?.maxOutputTokens || 10240,
+  );
 
   // 在构建最终请求体时添加缓存标记（与主agent的时机保持一致）
   let finalMessages = preprocessResult.messages;
@@ -305,7 +312,7 @@ export function buildSubagentChatPromptBody(
     stream,
     tool_choice: model.startsWith('claude') ? undefined : tool_choice,
     temperature,
-    max_tokens: Math.max(max_tokens || 0, defaultMaxTokens),
+    max_tokens: defaultMaxTokens,
   };
 
   return promptData;

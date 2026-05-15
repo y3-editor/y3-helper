@@ -122,21 +122,28 @@ export function stopToolCallSpan(
   return undefined;
 }
 
-export function startChatSpan(_name: string, _options?: unknown): SafeSpan {
-  return createNoopSafeSpan();
+export function startChatSpan(_name: string, _options?: unknown): Span {
+  return createNoopOtelSpan();
+}
+
+export function stopChatSpan(
+  _span: Span | SafeSpan | null | undefined,
+  _options?: unknown,
+): void {
+  return undefined;
+}
+
+export function startSpan(
+  _name: string,
+  _options?: unknown,
+  _round?: unknown,
+): Span {
+  return createNoopOtelSpan();
 }
 
 export function applyAssociationAttributes(
   _span: unknown,
   _association?: AssociationProperties,
-): void {
-  return undefined;
-}
-
-export function saveToolContext(
-  _toolCallId: string,
-  _args: string | undefined,
-  _round: unknown,
 ): void {
   return undefined;
 }

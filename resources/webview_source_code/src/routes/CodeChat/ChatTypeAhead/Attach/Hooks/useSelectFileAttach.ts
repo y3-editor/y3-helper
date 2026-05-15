@@ -3,7 +3,7 @@ import { FileItem, IMultiAttachment, useChatAttach } from "../../../../../store/
 import { AttachType } from "../../../../../store/attaches"
 import { cloneDeep } from "lodash"
 import EventBus, { EBusEvent } from "../../../../../utils/eventbus"
-import { getFilePrompt } from "../../../../../store/workspace/tools/read"
+import { getFilePrompt } from "./../../../../../services/harness/tools/read"
 import { isDocsetFile } from "../../../../../utils/chatAttachParseHandler"
 
 export const useSelecteFileAttach = (): {
@@ -23,6 +23,7 @@ export const useSelecteFileAttach = (): {
 
   // 处理选中文件
   const selectFileAttaches = useCallback((files: FileItem[], autoFill = true, hasSelectFile = false) => {
+
     if (attachs?.attachType !== AttachType.MultiAttachment) {
       updateAttach({
         attachType: AttachType.MultiAttachment,

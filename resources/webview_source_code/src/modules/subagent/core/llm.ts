@@ -25,9 +25,7 @@ export function streamChat(
 ): Promise<LLMCallResult> {
 
    if (
-     [ChatModel.GPT5, ChatModel.GPT51, ChatModel.GPT51Codex].includes(
-       promptData.model as ChatModel,
-     )
+     promptData.model.includes('gpt-5')
    ) {
      delete promptData.temperature;
    } else if ([ChatModel.Gemini3Pro].includes(promptData.model as ChatModel)) {

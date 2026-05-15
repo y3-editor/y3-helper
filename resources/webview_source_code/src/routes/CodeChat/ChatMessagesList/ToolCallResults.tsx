@@ -39,15 +39,15 @@ import TodoList from '../../../components/TodoList';
 import {
   TodoList as TodoListType,
   getToolParams as getTodoToolParams,
-} from '../../../store/workspace/tools/todo';
+} from './../../../services/harness/tools/todo';
 import {
   generatePlanText,
   getToolParams as getPlanToolParams,
-} from '../../../store/workspace/tools/plan';
+} from './../../../services/harness/tools/plan';
 import PreviewCodewikiStructure from './PreviewCodewikiStructure';
 import AskUserQuestion from './AskUserQuestion';
-import { getToolParams as getAskUserQuestionToolParams } from '../../../store/workspace/tools/askUserQuestion';
-import { parseGlobSearchParams } from '../../../store/workspace/tools/search/glob';
+import { getToolParams as getAskUserQuestionToolParams } from './../../../services/harness/tools/askUserQuestion';
+import { parseGlobSearchParams } from './../../../services/harness/tools/search/glob';
 
 // 提取文件名的工具函数
 const getFileName = (filePath: string): string => {
@@ -375,7 +375,9 @@ const ToolCallResult = ({
           messageId={message.id}
           toolCallId={tool.id}
           filePath={result.path || toolParams.file_path || ''}
+          toolArgs={tool?.function?.arguments || ''}
           isLatest={isLatest}
+          hasResponse={toolResponse[tool.id] !== undefined}
         />
         {result.isError && renderError()}
       </VStack>
@@ -420,6 +422,7 @@ const ToolCallResult = ({
     const terminalLog = result.content || '';
     const terminalStatus = result.extra?.terminalStatus || '';
     const hasShellIntegration = result.extra?.hasShellIntegration || false;
+    const isRtk = !!result.extra?.isRtk;
 
     // 解析 terminal 配置
     let terminalConfig = {
@@ -447,6 +450,7 @@ const ToolCallResult = ({
           log={terminalLog}
           status={terminalStatus}
           hasShellIntegration={hasShellIntegration}
+          isRtk={isRtk}
         />
       </VStack>
     );
@@ -721,6 +725,7 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
         const isMCPTool =
           tool.function.name === 'use_mcp_tool' ||
           tool.function.name === 'access_mcp_resource';
+        const editFileTool = ['write', 'edit', 'edit_file', 'replace_in_file'].includes(tool.function.name);
 
         // task, ask_user_question, run_terminal_cmd, make_plan, MCP工具总是显示(用于展示实时执行状态和等待用户交互)
         // 其他工具只有在有结果时才显示(避免空白卡片)
@@ -730,7 +735,8 @@ export default function ToolCallResults(props: ToolCallResultsProps) {
           !isRunTerminalTool &&
           !isMakePlanTool &&
           !isMCPTool &&
-          !toolCallResults[tool.id]
+          !toolCallResults[tool.id] &&
+          !editFileTool
         ) {
           return null;
         }

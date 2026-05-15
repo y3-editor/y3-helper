@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useChatStore } from '../store/chat';
-import { TodoItem } from '../store/workspace/tools/todo';
+import { TodoItem } from '../services/harness/tools/todo';
 import userReporter from '../utils/report';
 import { UserEvent } from '../types/report';
 import { updateCurrentSession } from './useCurrentSession';

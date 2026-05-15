@@ -1,5 +1,4 @@
 import { cloneDeep } from "lodash";
-import ParseNoneCodeFileStream from "../services/Agents/Stream/ParseNoneCodeFile";
 import { AttachType } from "../store/attaches";
 import { FileItem, IMultiAttachment, useChatAttach, useChatStore, useChatStreamStore } from "../store/chat";
 import { toastError } from "../services/error";
@@ -9,8 +8,10 @@ import EventBus, { EBusEvent } from "./eventbus";
 import { uploadImg } from "../services/chat";
 import { useChatConfig } from "../store/chat-config";
 import { ParseImgType } from "../services/chatModel";
-import { getDocsetPrompt } from "../store/workspace/tools/read";
+import { getDocsetPrompt } from "../services/harness/tools/read";
 import { compressImage } from "../components/ImageUpload/ImageResize";
+import ParserDocumentStream from "../services/harness/stream/parserDocument";
+import { hasNonEmptyImageDataUrl } from "./imageDataValidation";
 
 
 
@@ -63,7 +64,7 @@ export const checkFileTypeValid = (fileName: string) => {
 export const convertTextByAddress = (address: string, filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     let content = ''
-    new ParseNoneCodeFileStream(address, {
+    new ParserDocumentStream(address, {
       onMessage: (message: string) => {
         content += message
       },
@@ -310,6 +311,9 @@ export const parseImageFromReadFileTool = async (
     }
     const fileNeme = path.split(/[/\\]/).pop() || path
     const uint8Array = new Uint8Array((content as any)?.data as any);
+    if (!uint8Array.length) {
+      throw new Error(`Unable to read image file or image is empty: ${path}`)
+    }
     // 根据文件扩展名确定正确的图片 MIME 类型
     const ext = fileNeme.split('.').pop()?.toLowerCase() || ''
     const mimeTypeMap: Record<string, string> = {
@@ -332,6 +336,19 @@ export const parseImageFromReadFileTool = async (
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
+      if (!hasNonEmptyImageDataUrl(base64)) {
+        onFinish()
+        updateToolCallResults(
+          {
+            [tool_id]: {
+              path: path,
+              content: `Unable to read image file or image is empty: ${path}`,
+              isError: true,
+            },
+          }
+        );
+        return
+      }
       // 移除 "data:image/xxx;base64," 前缀
       // const pureBase64 = base64.split(',')[1];
       onFinish()

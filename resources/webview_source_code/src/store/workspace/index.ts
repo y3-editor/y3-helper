@@ -4,7 +4,7 @@ import { isEqual } from 'lodash';
 import constructReActPrompt from './constructReActPrompt';
 import constructH75Prompt from './constructH75Prompt';
 import { BroadcastActions } from '../../PostMessageProvider';
-import { useMCPStore } from '../mcp';
+import { MCPServer, useMCPStore } from '../mcp';
 import { getToolsEN } from './toolsEN';
 import { getTools } from './tools';
 import constructRemixPrompt from './constructRemixPrompt';
@@ -19,6 +19,12 @@ import { AttachType } from '../attaches';
 import { useSkillsStore } from '../skills';
 import { OPSX_BUILTIN_SKILLS } from '../skills/builtinSkills';
 import { PromptLinkMgr } from './pomptLinkMgr';
+import {
+  buildPromptMCPServers,
+  getVisibleMCPToolCount,
+  getSearchToolDefinition,
+  shouldUseOnDemandMCPTools,
+} from '../../utils/mcpToolSearch';
 
 export enum LocalRepoType {
   GIT = 'git',
@@ -421,8 +427,19 @@ export type WorkspaceStore = {
     promptLink?: PromptLinkMgr,
     /** Agent system reminders (listing + optional invocation directive) */
     agentReminders?: string,
+    mcpSnapshot?: {
+      visibleMCPServers: MCPServer[],
+      promptMCPServers: MCPServer[],
+      isOnDemandMode: boolean,
+    }
   }) => string;
-  getCodebaseChatTools: (options?: { forceIncludeTask?: boolean }) => Tool[];
+  getCodebaseChatTools: (options?: {
+    forceIncludeTask?: boolean,
+    mcpSnapshot?: {
+      visibleMCPServers: MCPServer[],
+      isOnDemandMode: boolean,
+    }
+  }) => Tool[];
   getCodebaseFunctionPrompt: () => string;
   setDevSpace: (newDevSpace: DevSpace) => void;
   setDevSpaceOptions: (options: DevSpaceOption[]) => void;
@@ -636,16 +653,22 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         effectiveRules: Rule[],
         promptLink?: PromptLinkMgr,
         agentReminders?: string,
+        mcpSnapshot?: {
+          visibleMCPServers: MCPServer[],
+          promptMCPServers: MCPServer[],
+          isOnDemandMode: boolean,
+        }
       } = {
           isReAct: false,
           effectiveRules: [],
         }) {
-        const { isReAct, effectiveRules, promptLink, agentReminders } = options;
+        const { isReAct, effectiveRules, promptLink, agentReminders, mcpSnapshot } = options;
         const { workspace, osName, shell, openFilePaths, repoCodeTable, codebaseCustomPrompt } =
           get().workspaceInfo;
         const { enableNewApply } = useChatApplyStore.getState();
-        const MCPServers = useMCPStore.getState().getAvailableMCPServers();
-        const disabledSwitches = useMCPStore.getState().disabledSwitches;
+        const visibleMCPServers =
+          mcpSnapshot?.visibleMCPServers ||
+          useMCPStore.getState().getVisibleMCPServers();
         const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
         const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
         const enableTerminal = useChatTerminalStore.getState().enableTerminal;
@@ -655,8 +678,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const { codebases } = get().devSpace;
         const hasCodeTable = codebases.length || repoCodeTable;
 
-        // 过滤掉被禁用的 MCP 服务器
-        const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
+        const {
+          promptMCPServers,
+          isOnDemandMode,
+        } = mcpSnapshot || buildPromptMCPServers({
+          servers: visibleMCPServers,
+        });
 
         let customPrompt = '';
         if (code_style) {
@@ -665,13 +692,14 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           customPrompt = codebaseCustomPrompt;
         }
         if (isReAct) {
-          return constructReActPrompt({
+          const reactPrompt = constructReActPrompt({
             info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
-            MCPServers: filteredMCPServers,
+            MCPServers: promptMCPServers,
             enableTerminal,
             codeMakerVersion,
             isVSCode
           })
+          return reactPrompt;
         }
 
         if (repoCodeTable && repoCodeTable.includes('h75_scripts_1211')) {
@@ -687,44 +715,57 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const effectiveSkills = isOpsxMode
           ? [...skills, ...OPSX_BUILTIN_SKILLS.filter(s => !skills.some(fs => fs.name === s.name))]
           : skills;
-
         if (enableNewApply) {
-          return constructRemixPrompt({
+          const prompt = constructRemixPrompt({
             info: { workspace, osName, shell, codebaseCustomPrompt: customPrompt },
-            MCPServers: filteredMCPServers,
+            MCPServers: promptMCPServers,
             codeMakerVersion,
             enableTerminal: enableTerminal && (isVSCode || isJetbrains),
+            enableRtk: useExtensionStore.getState().codebaseChatRtk,
             effectiveRules,
             skills: effectiveSkills,
             openspecVersion,
             promptLink: promptLink,
             agentReminders,
+            isOnDemandMode,
           });
+          return prompt;
         } else {
-          return constructToolCallPrompt({
+          const prompt = constructToolCallPrompt({
             info: { workspace, osName, shell, openFilePaths, codebaseCustomPrompt: customPrompt },
             withCodeTable: !!hasCodeTable,
-            MCPServers: filteredMCPServers,
+            MCPServers: promptMCPServers,
             enableTerminal: enableTerminal && (isVSCode || isJetbrains),
             effectiveRules,
             skills: effectiveSkills,
             promptLink: promptLink,
           });
+          return prompt;
         }
       },
-      getCodebaseChatTools(options?: { forceIncludeTask?: boolean }) {
-        const { forceIncludeTask = false } = options || {};
+      getCodebaseChatTools(options?: {
+        forceIncludeTask?: boolean,
+        mcpSnapshot?: {
+          visibleMCPServers: MCPServer[],
+          isOnDemandMode: boolean,
+        },
+      }) {
+        const { forceIncludeTask = false, mcpSnapshot } = options || {};
         const { workspace } = get().workspaceInfo;
         const { codebases } = get().devSpace;
         const { enableNewApply } = useChatApplyStore.getState();
-        const MCPServers = useMCPStore.getState().getAvailableMCPServers();
-        const disabledSwitches = useMCPStore.getState().disabledSwitches;
+        const visibleMCPServers =
+          mcpSnapshot?.visibleMCPServers ||
+          useMCPStore.getState().getVisibleMCPServers();
         const enableTerminal = useChatTerminalStore.getState().enableTerminal;
         const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
         const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
-
-        // 过滤掉被禁用的 MCP 服务器
-        const filteredMCPServers = MCPServers.filter(server => !disabledSwitches.has(server.name));
+        const isOnDemandMode =
+          typeof mcpSnapshot?.isOnDemandMode === 'boolean'
+            ? mcpSnapshot.isOnDemandMode
+            : shouldUseOnDemandMCPTools({
+                totalToolCount: getVisibleMCPToolCount(visibleMCPServers),
+              });
 
         let hasCodeTable = !!codebases.length;
         if (!hasCodeTable) {
@@ -742,25 +783,31 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const effectiveSkills = isOpsxMode
             ? [...skills, ...OPSX_BUILTIN_SKILLS.filter(s => !skills.some(fs => fs.name === s.name))]
             : skills;
-          return getToolsEN({
+          const tools = getToolsEN({
             workspace,
             hasCodeTable,
-            MCPServers: filteredMCPServers,
+            MCPServers: visibleMCPServers,
             enableTerminal,
             codeMakerVersion,
             isVSCode,
             skills: effectiveSkills,
             forceIncludeTask,
           });
+          return isOnDemandMode
+            ? [{ type: 'function', function: getSearchToolDefinition('en') }, ...tools]
+            : tools;
         } else {
-          return getTools({
+          const tools = getTools({
             workspace,
             hasCodeTable,
-            MCPServers: filteredMCPServers,
+            MCPServers: visibleMCPServers,
             enableTerminal,
             codeMakerVersion,
-            isVSCode
+            isVSCode,
           });
+          return isOnDemandMode
+            ? [{ type: 'function', function: getSearchToolDefinition('zh') }, ...tools]
+            : tools;
         }
       },
       getCodebaseFunctionPrompt() {

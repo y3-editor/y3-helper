@@ -29,7 +29,7 @@ const CODE_REGEX = /^```|function |class |const |let |var |import |export /;
  *
  * @param text 待估算的文本
  * @returns 估算的 token 数量
- */
+*/
 export function estimateTokens(text: string): number {
   if (!text) return 0;
 

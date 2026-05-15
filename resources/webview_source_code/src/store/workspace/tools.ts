@@ -3,11 +3,11 @@ import { versionCompare } from "../../utils/common";
 import { useChatStore } from "../chat";
 import { useChatConfig } from "../chat-config";
 import { MCPServer } from "../mcp";
-import { generateCodewikiStructure } from "./tools/codewiki";
-import { Tool as PlanTool } from "./tools/plan";
-import { getV2ReadFileToolZHTool } from "./tools/read";
-import { Tool as TodoTool } from "./tools/todo";
-import { getGlobTool } from "./tools/search/glob";
+import { generateCodewikiStructure } from "./../../services/harness/tools/codewiki";
+import { Tool as PlanTool } from "./../../services/harness/tools/plan";
+import { getV2ReadFileToolZHTool } from "./../../services/harness/tools/read";
+import { Tool as TodoTool } from "./../../services/harness/tools/todo";
+import { getGlobTool } from "./../../services/harness/tools/search/glob";
 
 export function getTools(options: {
   workspace: string;

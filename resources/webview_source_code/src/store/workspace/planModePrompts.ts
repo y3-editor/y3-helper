@@ -3,8 +3,8 @@
  */
 
 import { useChatStore } from "../chat";
-import { SYSTEM_PROMPT as PLAN_PROMPT } from "./tools/plan";
-import { SYSTEM_PROMPT as WRITE_TODO_PROMPT } from "./tools/todo";
+import { SYSTEM_PROMPT as PLAN_PROMPT } from "./../../services/harness/tools/plan";
+import { SYSTEM_PROMPT as WRITE_TODO_PROMPT } from "./../../services/harness/tools/todo";
 
 export function generatePlanModePrompt(): string {
 

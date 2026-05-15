@@ -5,7 +5,6 @@
  * 避免 tools 反过来依赖 CodeMakerWebviewProvider 类实体。
  */
 import SkillsHandler from '../skillsHandler';
-import { AgentsHandler } from '../handlers/agentsHandler/index';
 import { getMcpHub } from '../mcpHandlers/index';
 import { readFile, listFiles, viewSourceCodeDefinitionsTopLevel } from './analyzeProject/index';
 import grepSearch from './grepSearch';
@@ -15,6 +14,13 @@ import { executeClaudeEdit, executeClaudeWrite } from './editFile/claudeEdit';
 import replaceInFile from './replaceInFile/index';
 import { normalizeMcpToolArguments } from './mcpToolArguments';
 import runTerminalCmd from './terminal/index';
+import { getCodeMakerConfig } from '../configProvider';
+import { ensureRtkBinary } from './rtk/rtkBinaryManager';
+import { rewriteCommandViaRtk } from './rtk/rtkRewriter';
+import { rewriteCommandWithRtk } from './rtk/rtkCommandRewriter';
+import * as vscode from 'vscode';
+import * as os from 'os';
+import { buildImageDataUrl } from './imageData';
 
 /**
  * 工具执行所需的 provider 能力（由 CodeMakerWebviewProvider 实现）
@@ -90,6 +96,8 @@ export default async function executeFunction(
             return executeClaudeWrite({
                 file_path: toolParams?.file_path,
                 content: toolParams?.content ?? '',
+                toolId: params.toolId,
+                autoApply: toolParams?.autoApply ?? false,
             }) as Promise<ExecuteCommandResult>;
         case 'edit':
             // Claude 原生 edit 工具：old_string → new_string 精确替换
@@ -98,6 +106,8 @@ export default async function executeFunction(
                 old_string: toolParams?.old_string ?? '',
                 new_string: toolParams?.new_string ?? '',
                 replace_all: toolParams?.replace_all,
+                toolId: params.toolId,
+                autoApply: toolParams?.autoApply ?? false,
             }) as Promise<ExecuteCommandResult>;
         case 'run_terminal_cmd':
             if (!toolParams.command) {
@@ -106,7 +116,26 @@ export default async function executeFunction(
                     isError: true,
                 };
             }
-            return runTerminalCmd(toolParams, params.toolId, params.provider);
+            // RTK command interception
+            let command = toolParams.command;
+            let isRtk = false;
+            const rtkEnabled = vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk') || false;
+            if (rtkEnabled) {
+                const rtkPath = await ensureRtkBinary();
+                if (rtkPath) {
+                    if (os.platform() !== 'win32') {
+                        const rewritten = await rewriteCommandViaRtk(command, rtkPath);
+                        isRtk = rewritten !== command;
+                        command = rewritten;
+                    } else {
+                        const rewritten = rewriteCommandWithRtk(command, rtkPath);
+                        isRtk = rewritten !== command;
+                        command = rewritten;
+                    }
+                }
+            }
+            toolParams.command = command;
+            return runTerminalCmd(toolParams, params.toolId, params.provider, isRtk);
         case 'make_plan':
         case 'write_todo':
             return toolMakePlan();
@@ -118,10 +147,6 @@ export default async function executeFunction(
             return toolUseMcp(toolParams);
         case 'access_mcp_resource':
             return toolAccessMcpResource(toolParams);
-        case 'get_agents':
-            return toolGetAgents();
-        case 'get_agent':
-            return toolGetAgent(toolParams);
         default:
             return {
                 content: `Tool "${toolName}" is not supported in Y3Helper integration.`,
@@ -249,10 +274,17 @@ async function toolUseMcp(params: any): Promise<ExecuteCommandResult> {
             if (item.type === 'text') {
                 return { type: 'text', text: item.text };
             } else if (item.type === 'image') {
+                const imageUrl = buildImageDataUrl(item.mimeType || '', item.data);
+                if (!imageUrl) {
+                    return {
+                        type: 'text',
+                        text: 'Error: MCP tool returned an unreadable or empty image.',
+                    };
+                }
                 return {
                     type: 'image_url',
                     image_url: {
-                        url: `data:${item.mimeType};base64,${item.data}`,
+                        url: imageUrl,
                     },
                 };
             } else if (item.type === 'resource') {
@@ -312,22 +344,5 @@ async function toolAccessMcpResource(params: any): Promise<ExecuteCommandResult>
 }
 
 // ─────────────────────────────────────────────
-//  Agents
+//  Agents (get_agents/get_agent 已上游迁移至 LSP，删除)
 // ─────────────────────────────────────────────
-
-async function toolGetAgents(): Promise<ExecuteCommandResult> {
-    const agentsHandler = AgentsHandler.getInstance();
-    await agentsHandler.initialize();
-    const agents = agentsHandler.getAgentIndex();
-    return { content: JSON.stringify(agents), isError: false };
-}
-
-async function toolGetAgent(params: any): Promise<ExecuteCommandResult> {
-    const agentsHandler = AgentsHandler.getInstance();
-    await agentsHandler.initialize();
-    const agentResult = agentsHandler.getAgent(params.agent_name);
-    if (agentResult.success && agentResult.agent) {
-        return { content: JSON.stringify(agentResult.agent), isError: false };
-    }
-    return { content: agentResult.error || 'Agent not found', isError: true };
-}

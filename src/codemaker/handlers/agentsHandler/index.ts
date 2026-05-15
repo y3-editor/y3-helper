@@ -10,15 +10,24 @@ import {
   GetAgentResult,
   AgentSource,
   AgentSourceConfig,
+  CreateAgentParams,
+  CreateAgentResult,
+  agentSourceToScope,
 } from './types';
 const printLog = (...args: any[]) => console.log('[AgentsHandler]', ...args);
 const getErrorMessage = (e: any) => (e instanceof Error ? e.message : String(e));
 import AgentMdcParser from './parser';
+import { createAgent as createAgentImpl } from './createAgent';
 
 const EXCLUDED_DIRECTORIES = new Set([
   'node_modules', '.git', '.svn', '.hg',
   'dist', 'build', 'out', '.next', '.nuxt',
 ]);
+
+// Agent 目录常量（供 createAgent 使用）
+export const PROJECT_AGENT_DIR = '.codemaker/agents';
+export const USER_AGENT_DIR = '.codemaker/agents';
+
 
 // Agent 来源配置 - 按优先级顺序（后加载覆盖先加载）
 const AGENT_SOURCES: AgentSourceConfig[] = [
@@ -59,6 +68,8 @@ export class AgentsHandler {
   private disposables: vscode.Disposable[] = [];
   private isInitialized = false;
   private readonly enableWatcher: boolean;
+  /** 防止同一 agent 并发写入冲突 */
+  private inFlightWrites: Set<string> = new Set();
 
   // 轮询配置（兜底机制，覆盖 watcher 监听不存在路径的边缘情况）
   private static readonly POLL_INTERVAL_MS = 5000;
@@ -239,6 +250,8 @@ export class AgentsHandler {
       name: agent.name,
       description: agent.metaData.description,
       source: agent.source,
+      scope: agentSourceToScope(agent.source),
+      path: agent.path,
       model: agent.metaData.model,
       maxSteps: agent.metaData.maxSteps,
       // tools: agent.metaData.tools,
@@ -269,6 +282,7 @@ export class AgentsHandler {
         content: agent.content,
         path: agent.path,
         source: agent.source,
+        scope: agentSourceToScope(agent.source),
         metaData: agent.metaData
       }
     };
@@ -441,6 +455,37 @@ export class AgentsHandler {
           printLog(`[AgentsHandler] Failed to initialize watcher for ${sourceConfig.source}: ${getErrorMessage(error)}`);
         }
       }
+    }
+  }
+
+  /**
+   * 根据 webview 请求创建 agent markdown 文件
+   */
+  public async createAgent(
+    params: CreateAgentParams
+  ): Promise<CreateAgentResult> {
+    const key = `${params.scope}:${params.identifier}`;
+
+    if (this.inFlightWrites.has(key)) {
+      printLog(`[AgentsHandler] createAgent concurrent conflict - key: ${key}`);
+      return {
+        success: false,
+        identifier: params.identifier,
+        scope: params.scope,
+        code: 'WRITE_FAILED',
+        message: `Another createAgent request for "${key}" is still in flight`,
+      };
+    }
+
+    this.inFlightWrites.add(key);
+    try {
+      const result = await createAgentImpl(this, params);
+      if (result.success) {
+        printLog(`[AgentsHandler] createAgent success - path: ${result.path}`);
+      }
+      return result;
+    } finally {
+      this.inFlightWrites.delete(key);
     }
   }
 

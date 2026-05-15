@@ -18,10 +18,86 @@ import {
   generateSubagentToolCallingPrompt,
   generateCommunicationPrompt,
   generateOpenSpecPrompt,
+  generateCavemanPrompt,
+  generateMCPPrompt,
   createPromptContext
 } from './shared';
 import { PromptTemplateLoader } from './template-loader';
 import { SubagentPromptOptions, PromptContext } from './types';
+import {
+  shouldUseOnDemandMCPTools,
+  getSearchToolDefinition,
+} from '../../utils/mcpToolSearch';
+import type { MCPServer } from '../../store/mcp';
+
+/**
+ * 生成支持 on-demand 模式的 MCP 工具 prompt。
+ *
+ * - 工具总数 < 10：与 generateMCPPrompt 行为完全一致（完整 inputSchema）
+ * - 工具总数 ≥ 10：切换为 on-demand 模式，只显示工具名，
+ *   并注入 search_tool 约束说明和完整定义
+ */
+async function generateMCPPromptWithOnDemand(
+  context: PromptContext,
+  mcpServers: MCPServer[] | null | undefined,
+): Promise<string | null> {
+  if (!Array.isArray(mcpServers)) return null;
+
+  const connectedServers = mcpServers.filter(
+    (s) => s.status === 'connected' && !s.disabled,
+  );
+
+  if (!connectedServers.length) return null;
+
+  const totalToolCount = connectedServers.reduce(
+    (acc, s) => acc + (s.tools?.length || 0),
+    0,
+  );
+  const isOnDemandMode = shouldUseOnDemandMCPTools({ totalToolCount });
+
+  if (!isOnDemandMode) {
+    // 非 on-demand：复用 shared 中已有的 generateMCPPrompt
+    return generateMCPPrompt(context);
+  }
+
+  // on-demand 模式：只显示工具名 + 注入 search_tool 说明
+  const getChineseNameByServerName = useMCPStore.getState().getChineseNameByServerName;
+
+  const searchToolDef = getSearchToolDefinition('en');
+  const searchToolSection = `## search_tool
+${searchToolDef.description}
+Args: \`query\` (required, string), \`limit\` (optional, number, default 4, max 10)`;
+
+  const serversContent = [...connectedServers]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((server) => {
+      const tools = [...(server.tools || [])]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((tool) => `- ${tool.name}`)
+        .join('\n');
+
+      const chineseName =
+        server.config?.chinese_name || getChineseNameByServerName(server.name);
+      const serverTitle = chineseName
+        ? `## ${server.name} (alias: ${chineseName})`
+        : `## ${server.name}`;
+
+      return serverTitle + (tools ? `\n\n### Available Tools\n${tools}` : '');
+    })
+    .join('\n\n');
+
+  return `<mcp_tool_call>
+The Model Context Protocol (MCP) enables communication between the system and locally running MCP servers, which provide additional tools and resources to extend your capabilities.
+The tools below are in on-demand mode and shown by name only. You MUST call search_tool to activate a tool before calling use_mcp_tool.
+Do not guess tool capabilities or parameters. If you know the tool name, server name, or alias, pass it directly as \`query\`.
+${searchToolSection}
+<available_servers>
+\`\`\`
+${serversContent}
+\`\`\`
+</available_servers>
+</mcp_tool_call>`;
+}
 
 /**
  * 增强的子代理 Prompt 构建器
@@ -50,13 +126,20 @@ export class EnhancedPromptBuilder {
       code_style: devSpace?.code_style || '',
     });
 
+    // 调用方若已通过 contextOptions.mcpServers 指定 MCP 列表（如自定义 Agent 按需过滤），
+    // 则直接使用；否则回退到全局已连接的 MCPStore 列表。
+    const mcpServers =
+      contextOptions.mcpServers !== undefined
+        ? contextOptions.mcpServers
+        : mcpStore.MCPServers.filter((s) => s.status === 'connected' && !s.disabled);
+
     // 合并配置：优先使用 store 最新状态，但保留 contextOptions 中的 variables 等字段
     const context: PromptContext = createPromptContext({
       variables: contextOptions.variables, // 保留调用方的自定义变量
       ...contextOptions, // 继承其他字段
       // 核心字段：强制使用 store 最新状态（覆盖 contextOptions 中的同名字段）
       workspace: workspaceInfo,
-      mcpServers: mcpStore.MCPServers.filter(s => s.status === 'connected' && !s.disabled),
+      mcpServers,
       skills: skillsStore.skills,
       rules: effectiveRules,
       isSubagent: true,
@@ -95,6 +178,9 @@ export class EnhancedPromptBuilder {
     const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
+    const mcpPrompt = await generateMCPPromptWithOnDemand(context, mcpServers);
+    if (mcpPrompt) tier2Parts.push(mcpPrompt);
+
     const skillsPrompt = await generateSkillsPrompt(context);
     if (skillsPrompt) tier2Parts.push(skillsPrompt);
 
@@ -103,6 +189,9 @@ export class EnhancedPromptBuilder {
 
     const openspecPrompt = await generateOpenSpecPrompt(context);
     if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
+    const cavemanPrompt = await generateCavemanPrompt(context);
+    if (cavemanPrompt) tier2Parts.push(cavemanPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 
@@ -212,6 +301,10 @@ export function useSubagentPromptBuilder() {
     const userInfoPrompt = await generateUserInfoPrompt(context);
     if (userInfoPrompt) tier2Parts.push(userInfoPrompt);
 
+    // on-demand 感知的 MCP prompt（工具数 ≥ 10 时仅显示工具名 + search_tool 约束）
+    const mcpPromptHook = await generateMCPPromptWithOnDemand(context, mcpServers);
+    if (mcpPromptHook) tier2Parts.push(mcpPromptHook);
+
     const skillsPrompt = await generateSkillsPrompt(context);
     if (skillsPrompt) tier2Parts.push(skillsPrompt);
 
@@ -220,6 +313,9 @@ export function useSubagentPromptBuilder() {
 
     const openspecPrompt = await generateOpenSpecPrompt(context);
     if (openspecPrompt) tier2Parts.push(openspecPrompt);
+
+    const cavemanPrompt = await generateCavemanPrompt(context);
+    if (cavemanPrompt) tier2Parts.push(cavemanPrompt);
 
     const tier2 = tier2Parts.filter(Boolean).join('\n\n');
 

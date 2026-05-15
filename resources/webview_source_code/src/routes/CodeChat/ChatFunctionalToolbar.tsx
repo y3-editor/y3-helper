@@ -25,17 +25,17 @@ import {
 import { FiFileText, FiSearch, FiTarget } from 'react-icons/fi';
 import { Z_INDEX_POPOVER_TOOLBAR } from '../../const';
 import { useChatConfig } from '../../store/chat-config';
+import { CavemanMode, CAVEMAN_MODE_LABELS } from '../../store/skills/prompt';
 import { LuListTodo } from 'react-icons/lu';
 import { IoTerminalOutline } from 'react-icons/io5';
 import { IoMdBook } from 'react-icons/io';
 import MCPConfigCollapse from './MCPConfigCollapse';
 import SkillConfigCollapse from './SkillConfigCollapse';
-import { TbBrandNetbeans } from 'react-icons/tb';
+import { TbBone, TbBrandNetbeans } from 'react-icons/tb';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
 import SkillSettingModal from './SkillSettingModal';
 import AgentConfigCollapse from './AgentConfigCollapse';
-import AgentSettingModal from './AgentSettingModal';
 import { IDE, useExtensionStore } from '../../store/extension';
 import { versionCompare } from '../../utils/common';
 import { LuMessageSquareTextIcon } from '../../components/Icon';
@@ -53,6 +53,7 @@ import { UserEvent } from '../../types/report';
 import MiniButton from '../../components/MiniButton';
 // Y3不需要研发知识集
 // import DevspaceCollapse from './DevspaceCollapse';
+import AgentSettingModal from './components/AgentSettingModal';
 
 enum EAutoConfig {
   AutoApprove = 'autoApprove',
@@ -137,6 +138,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     setEnableGlobSearch,
     enableGrepSearch,
     setEnableGrepSearch,
+    cavemanMode,
+    setCavemanMode,
   ] = useChatConfig((state) => [
     state.enableCodeMapSearch,
     state.setEnableCodeMapSearch,
@@ -150,6 +153,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     state.setEnableGlobSearch,
     state.enableGrepSearch,
     state.setEnableGrepSearch,
+    state.cavemanMode,
+    state.setCavemanMode,
   ]);
 
   useOutsideClick({
@@ -570,6 +575,53 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                     setEnableUserQuestion(val);
                   },
                 })}
+                {/* Caveman 简洁模式 - 多级模式选择 */}
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  paddingBottom={2}
+                >
+                  <Box fontSize={12} display="flex" alignItems="center">
+                    <TbBone size={16} />
+                    <Text marginLeft={2} fontSize="12px">Caveman 简洁模式</Text>
+                    <Tooltip
+                      label="省略冗余词汇，精简 AI 回复，减少输出 Token。Lite=轻量精简 / Full=标准穴居人 / Ultra=极限压缩（参考 Caveman 项目）"
+                      placement="top"
+                    >
+                      <Box
+                        display="inline-flex"
+                        alignItems="center"
+                        ml={1}
+                        cursor="help"
+                      >
+                        <Icon
+                          as={AiOutlineQuestionCircle}
+                          w="14px"
+                          h="14px"
+                          color="gray.500"
+                        />
+                      </Box>
+                    </Tooltip>
+                  </Box>
+                  <Box display="flex" alignItems="center">
+                    <SelectWithTooltip
+                      size="xs"
+                      width="90px"
+                      options={Object.entries(CAVEMAN_MODE_LABELS).map(([value, label]) => ({ value, label }))}
+                      value={cavemanMode}
+                      isDisabled={disabled}
+                      onChange={(e) => {
+                        const mode = e.target.value as CavemanMode;
+                        setCavemanMode(mode);
+                        userReporter.report({
+                          event: UserEvent.CODE_CHAT_CAVEMAN_MODE_TOGGLE,
+                          extends: { enabled: mode !== 'off', mode },
+                        });
+                      }}
+                    />
+                  </Box>
+                </Box>
 
                 {/* Y3不需要研发知识集 */}
                 {/* <DevspaceCollapse /> */}

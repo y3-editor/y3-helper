@@ -1,0 +1,256 @@
+import { diffLines } from "diff";
+import { ParseImgType } from "../../../services/chatModel";
+import { jetbrainsVersionCompare } from "../../../utils/common";
+import { useChatConfig } from "../../../store/chat-config";
+import { IDE, useExtensionStore } from "../../../store/extension";
+
+/**
+ * 读取文件Tool
+ */
+interface IReadFileToolParams {
+  hasCodeTable: boolean;
+}
+
+export const maxTruncatedLine = 500
+export const maxTruncatedChar = 2000
+
+
+export const getV1ReadFileTool = (data: IReadFileToolParams) => {
+  const { hasCodeTable } = data;
+  return {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: hasCodeTable
+        ? 'Read the contents of a file at the specified path. This tool can be used to analyze code, view text files, or extract information from configuration files. You must provide a path to a file that actually exists; do not fabricate file paths. Note that this tool may not be suitable for very large or binary files as it returns the raw content as a string. You can use this tool at most twice in the same round of questioning. If both attempts at `read_file` don\'t find highly relevant code, please use the `retrieve_code` tool. If you find that a file is too long and gets truncated, you can inform the user "The current file is large and has been truncated, please use @ to actively reference the file" to have the user provide you with the complete file.'
+        : 'Read the contents of a file at the specified path. This tool can be used to analyze code, view text files, or extract information from configuration files. You must provide a path to a file that actually exists; do not fabricate file paths. Note that this tool may not be suitable for very large or binary files as it returns the raw content as a string. If you find that a file is too long and gets truncated, you can inform the user "The current file is large and has been truncated, please use @ to actively reference the file" to have the user provide you with the complete file.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description:
+              'Path of the file to be read. You must provide a path to a file that actually exists; do not fabricate file paths.',
+          },
+        },
+        required: ['path'],
+      },
+    },
+  }
+}
+
+export const getV2ReadFileTool = (data: IReadFileToolParams) => {
+  const { hasCodeTable } = data;
+  const chatModels = useChatConfig.getState().chatModels
+  const selectedModel = useChatConfig.getState().config.model
+
+  const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
+  const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
+  const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
+
+  const isSupportImage = chatModels[selectedModel]?.parseImgType === ParseImgType.BASE64 && (
+    isVSCode ||
+    (isJetbrains && jetbrainsVersionCompare(codeMakerVersion, '242-3.1.0.5') >= 0)
+  )
+  let description = hasCodeTable
+    ?
+    `Reads a file from the local filesystem. You can access any file directly by using this tool.
+Assume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
+Usage:
+- The path parameter must be an absolute path, not a relative path
+- By default, it reads up to ${maxTruncatedLine} lines starting from the beginning of the file
+- You can optionally specify a line offset and limit (especially handy for long files)
+- Any lines longer than ${maxTruncatedChar} characters will be truncated
+- Results are returned using cat -n format, with line numbers starting at 1
+- You have the capability to call multiple tools in a single response. It is always better to speculatively read multiple files as a batch that are potentially useful.
+- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
+- You can use this tool at most twice in the same round of questioning.
+- If both attempts at read_file don't find highly relevant code, please use the retrieve_code tool`
+    :
+    `Reads a file from the local filesystem. You can access any file directly by using this tool.
+Assume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
+Usage:
+- The path parameter must be an absolute path, not a relative path
+- By default, it reads up to ${maxTruncatedLine} lines starting from the beginning of the file
+- You can optionally specify a line offset and limit (especially handy for long files)
+- Any lines longer than ${maxTruncatedChar} characters will be truncated\n- Results are returned using cat -n format, with line numbers starting at 1
+- You have the capability to call multiple tools in a single response. It is always better to speculatively read multiple files as a batch that are potentially useful.
+- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
+- You can use this tool at most twice in the same round of questioning.`
+
+  if (isSupportImage) {
+    description += `This tool can also read image files when called with the appropriate path, Supported image formats: jpeg/jpg, png, gif, webp.`
+  }
+
+  return {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: description,
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description:
+              'The absolute path to the file to read. You must provide a path to a file that actually exists; do not fabricate file paths.',
+          },
+          offset: {
+            type: 'number',
+            description:
+              'The line number to start reading from. Omit this unless you need a focused read from the middle of a long file.',
+          },
+          limit: {
+            type: 'number',
+            description: `The number of lines to read. If omitted or invalid, the system defaults to about ${maxTruncatedLine} lines. For long files, prefer focused reads and keep the value within ${maxTruncatedLine}.`,
+          },
+        },
+        required: ['path'],
+      }
+    },
+  }
+}
+
+/**
+ * 格式化截断行
+ */
+export const formatTruncatedLine = (line: string) => {
+  return line.length > maxTruncatedChar ? line.substring(0, maxTruncatedChar) + '...' : line;
+}
+
+/**
+ * @name 大文本文件的Prompt
+ * @description 对于超过 maxTruncatedLine 行的大文件，返回前 maxTruncatedLine 行内容并附带提示信息
+ */
+export const getFilePrompt = (path: string, content: string, lineNoDisbled?: boolean) => {
+  const lines = content?.split('\n') || [];
+  const totalLines = lines.length;
+
+  // 获取前 maxTruncatedLine 行内容，格式化为带行号的格式
+  let formattedContent = '';
+  const linesToShow = Math.min(maxTruncatedLine, totalLines);
+
+  if (lineNoDisbled) {
+    formattedContent += lines.slice(0, linesToShow).join('\n')
+  } else {
+    for (let i = 0; i < linesToShow; i++) {
+      const lineNumber = (i + 1).toString().padStart(6, ' ');
+      formattedContent += `${lineNumber}\t${formatTruncatedLine(lines[i] || '')}\n`;
+    }
+  }
+
+  if (totalLines > maxTruncatedLine) {
+    formattedContent += `\n(${path} output truncated, total lines: ${totalLines}. Use 'offset' parameter to read beyond line ${linesToShow + 1})`
+  }
+
+  return formattedContent;
+}
+
+/**
+ * @name 获取文档Prompt
+ */
+export const getDocsetPrompt = (path: string, content: string) => {
+  return `Extract the information from  ${path} and reformat it into a well-organized data structure. \nExtracted content is\n` + content
+}
+
+/**
+ * @name 获取文本更新的diff
+ */
+export function getDiffPatchOfContent(
+  editBeforeSnippet: string,
+  editAfterSnippet: string,
+) {
+
+  const changes = diffLines(editBeforeSnippet, editAfterSnippet);
+  let lineNumber = 1;
+  let content = ''
+  for (const change of changes) {
+    const count = change.count || 0
+    if (change.added || change.removed) {
+      const lines = change.value.split('\n');
+      lines.forEach((line, index) => {
+        if (change.added) {
+          content += `+ ${lineNumber + (index)}:${line}\n`;
+        } else if (change.removed) {
+          content += `- ${lineNumber + (index)}:${line}\n`;
+        }
+      })
+    }
+    lineNumber += count
+  }
+  // console.log('==content==', content)
+  return content
+}
+
+export const getV1ReadFileZHTool = (data: IReadFileToolParams) => {
+  const { hasCodeTable } = data;
+  return ({
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: hasCodeTable
+        ? '读取指定路径下文件的内容。此工具可以分析代码、查看文本文件或从配置文件中提取信息。你必须提供实际存在的文件路径，禁止编造文件路径。请注意，此工具可能不适用于非常大的文件或二进制文件，因为它会以字符串形式返回原始内容。同一轮问题中你最多使用两次此工具，如果两次 `read_file` 都没有找到相关度高的代码，请使用 `retrieve_code` 工具。如果发现文件太长被截断，可以告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户主动给你提供完整文件。'
+        : '读取指定路径下文件的内容。此工具可以分析代码、查看文本文件或从配置文件中提取信息。你必须提供实际存在的文件路径，禁止编造文件路径。请注意，此工具可能不适用于非常大的文件或二进制文件，因为它会以字符串形式返回原始内容。如果发现文件太长被截断，可以告知用户“当前文件较大被截断，请通过@主动引用文件”，让用户主动给你提供完整文件。',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description:
+              '需要读取的文件的路径，你必须提供实际存在的文件路径，禁止编造文件路径。',
+          },
+        },
+        required: ['path'],
+      },
+    },
+  })
+}
+
+export const getV2ReadFileToolZHTool = (data: IReadFileToolParams) => {
+  const { hasCodeTable } = data;
+  const chatModels = useChatConfig.getState().chatModels
+  const selectedModel = useChatConfig.getState().config.model
+
+  let description = hasCodeTable
+    ? "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告\n- 如果经过聚焦的本地读取后仍未找到相关代码，请使用 retrieve_code 工具"
+    : "从本地文件系统读取文件。您可以通过此工具直接访问任何文件。\n假设此工具能够读取计算机上的所有文件。如果用户提供了文件路径，请假设该路径是有效的。读取不存在的文件是可以的；系统将返回错误。\n\n使用说明：\n- path 参数必须是绝对路径，而非相对路径\n- 对于长文件，优先使用 offset 和 limit 进行局部读取，而不是一次性读取整个文件\n- 如果 limit 省略、无效或小于等于 0，系统默认读取约 ${maxTruncatedLine} 行\n- 在进行定向读取前，优先使用 view_source_code_definitions_top_level 提供的行号范围\n- 任何超过 ${maxTruncatedLine} 个字符的单行将被截断，limit 超过 ${maxTruncatedLine} 行时会被裁剪\n- 结果以 cat -n 格式返回，行号从 1 开始\n- 您能够在单次响应中调用多个工具。通常更适合将多个可能相关的文件作为小批量一起读取\n- 如果您读取存在但内容为空的文件，将在文件内容位置收到系统提醒警告"
+
+  const codeMakerVersion = useExtensionStore.getState().codeMakerVersion || '';
+  const isJetbrains = useExtensionStore.getState().IDE === IDE.JetBrains;
+  const isVSCode = useExtensionStore.getState().IDE === IDE.VisualStudioCode;
+
+  const isSupportImage = chatModels[selectedModel]?.parseImgType === ParseImgType.BASE64 && (
+    isVSCode ||
+    (isJetbrains && jetbrainsVersionCompare(codeMakerVersion, '242-3.1.0.5') >= 0)
+  )
+
+  if (isSupportImage) {
+    description += `此工具还可调用适当的路径读取图像文件。支持的图像格式：jpeg/jpg、png、gif、webp。`
+  }
+
+  return ({
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "description": description,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "要读取文件的绝对路径。必须提供实际存在的文件路径；请勿虚构文件路径。"
+          },
+          "offset": {
+            "type": "number",
+            "description": "开始读取的行号。仅在需要从长文件中间进行定向读取时提供。"
+          },
+          "limit": {
+            "type": "number",
+            "description": `要读取的行数。对于长文件建议保持在 ${maxTruncatedLine} 以内。`
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  })
+}

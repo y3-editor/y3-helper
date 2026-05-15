@@ -34,6 +34,7 @@ interface IProps {
   },
   messageId?: string
   hasShellIntegration?: boolean
+  isRtk?: boolean
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -87,7 +88,7 @@ const getStatusIcon = (status: string) => {
 export default function TerminalPanel(
   props: IProps
 ) {
-  const { messageId, terminalId, config, log, status, hasShellIntegration } = props
+  const { messageId, terminalId, config, log, status, hasShellIntegration, isRtk } = props
   const { toast } = useCustomToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -145,6 +146,7 @@ export default function TerminalPanel(
             <Box mr={1}>{getStatusIcon(status)}</Box>
             <Box display={'flex'} alignItems={'center'} justifyContent={'center'} gap={1}>
               {getStatusText(status)}
+              {isRtk && <Box fontSize={'12px'} color={'teal.400'} fontWeight={600}>RTK</Box>}
               <Box
                 fontSize={'12px'}
                 color={
@@ -420,6 +422,11 @@ export const useChatTerminal = (
     return tool_result?.[termialTool?.id || '']?.extra?.hasShellIntegration || false
   }, [termialTool, tool_result])
 
+  const isRtk = useMemo(() => {
+    if (!termialTool) return false
+    return tool_result?.[termialTool?.id || '']?.extra?.isRtk || false
+  }, [termialTool, tool_result])
+
   const commandConfig = useMemo(() => {
     const config = {
       command: '',
@@ -448,9 +455,10 @@ export const useChatTerminal = (
         log={terminalLog}
         status={terminalStatus}
         hasShellIntegration={hasShellIntegration}
+        isRtk={isRtk}
       />
     )
-  }, [termialTool, id, commandConfig, terminalLog, terminalStatus, hasShellIntegration])
+  }, [termialTool, id, commandConfig, terminalLog, terminalStatus, hasShellIntegration, isRtk])
 
   const hasDangerousCommand = useMemo(() => {
     if (!termialTool) return false
@@ -511,6 +519,7 @@ export const useTerminalMessage = () => {
       Object.assign(target, {
         isError: terminalStatus === ETerminalStatus.FAILED,
         extra: {
+          ...target?.extra,
           hasShellIntegration: hasShellIntegration,
           terminalStatus: target?.extra?.terminalStatus === ETerminalStatus.ABORT ? ETerminalStatus.ABORT : terminalStatus,
           terminalLog: truncateContent(content),
@@ -560,8 +569,9 @@ export const useTerminalMessage = () => {
     log: string
     terminalStatus: string,
     enableTimeout?: boolean,
+    isRtk?: boolean,
   }, isInitial?: boolean) => {
-    const { messageId, terminalId, log, terminalStatus, enableTimeout } = data
+    const { messageId, terminalId, log, terminalStatus, enableTimeout, isRtk } = data
     let content = ''
     let isAbort = false
     updateCurrentSession((session) => {
@@ -593,6 +603,7 @@ export const useTerminalMessage = () => {
         .includes(currentStatus as ETerminalStatus)
         ? currentStatus
         : terminalStatus
+      if (isRtk !== undefined) target.extra.isRtk = isRtk
       message.tool_result = {
         ...message.tool_result,
         [terminalId]: target

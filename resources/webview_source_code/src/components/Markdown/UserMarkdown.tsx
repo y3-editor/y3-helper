@@ -38,7 +38,7 @@ interface MarkdownProps<TD, TP> {
 }
 function preprocessMarkdown(markdown: string): string {
   // Convert \[...\] math delimiters before escaping backslashes
-  let result = markdown.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$\n${math}\n$$`);
+  const result = markdown.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$\n${math}\n$$`);
   // Escape backslashes only outside math blocks ($$...$$ and $...$)
   return result.replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$|\\/g, (match) => {
     if (match.startsWith('$')) return match;

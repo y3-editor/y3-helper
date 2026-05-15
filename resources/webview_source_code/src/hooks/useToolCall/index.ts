@@ -107,7 +107,8 @@ export function useToolCall(
       (toolTypeChecks.hasEditFileTool && permissions.autoApply) || // 代码自动应用
       (toolTypeChecks.hasTerminalTool && permissions.autoExecute) || // 命令自动执行
       (toolTypeChecks.hasTodoTool && permissions.autoTodo) || // Plan 自动执行
-      (toolTypeChecks.hasMCPTool && mcpToolInfo?.mcpServer?.config?.autoApprove) // MCP 自动调用
+      (toolTypeChecks.hasMCPTool && mcpToolInfo?.mcpServer?.config?.autoApprove) || // MCP 自动调用
+      (toolTypeChecks.hasSkillTool && toolTypeChecks.hasSkillAutoRun) // Skill 自动执行
     );
   }, [
     classification.executionContext.permissions,

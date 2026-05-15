@@ -124,7 +124,11 @@ import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
 // import { usePrevious } from '../../hooks/usePrevious';
-import { generateCodeQualityFixPrompt } from '../../utils/codebaseQualityAutofix';
+import { generateCodeQualityContext, generateBatchCodeQualityContext } from '../../utils/codebaseQualityAutofix';
+import { CODE_QUALITY_AUTOFIX_PROMPT_APP } from './ChatTypeAhead/Prompt/useUserPrompt';
+import { UnionType } from './ChatTypeAhead/Prompt/type';
+import { estimateTokens } from '../../utils/tokenEstimate';
+import { AgentTaskDirective } from '../../modules/subagent/utils/messages';
 import { useMcpServices } from '../../hooks/useMcpServices';
 import { shallow } from 'zustand/shallow';
 import { useSelecteFileAttach } from './ChatTypeAhead/Attach/Hooks/useSelectFileAttach';
@@ -133,7 +137,7 @@ import {
   maxTruncatedLine,
   getDiffPatchOfContent,
   getFilePrompt,
-} from '../../store/workspace/tools/read';
+} from '../../services/harness/tools/read';
 import { updateCurrentSession as updateCurrentSessionUtil } from '../../hooks/useCurrentSession';
 import { generateTraceId } from '../../utils/trace';
 import { ABORT_REASON_CLEANUP, createAbortReason } from '../../utils/abort';
@@ -154,7 +158,7 @@ import {
 import FileUpload from '../../components/FileUpload';
 import ChatConsumeTokenPanel from './ChatConsumeTokenPanel';
 import { TokenUsageIndicator } from './TokenUsageIndicator';
-import { ChatModel, ParseImgType } from '../../services/chatModel';
+import { ParseImgType } from '../../services/chatModel';
 import { useSelectImageAttach } from './ChatTypeAhead/Attach/Hooks/useSelectImageAttach';
 import { useUploadRes } from '../../components/ImageUpload/useUploadRes';
 import MCPErrorModal from './MCPErrorModal';
@@ -564,7 +568,7 @@ function CodeChat() {
   React.useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if ([SubscribeActions.CODEBASE_QUALITY_ISSUE_AUTOFIX, SubscribeActions.TRIGGERT_CODEBASE_QUALITY_ISSUE_AUTOFIX].includes(event.data.type)) {
-        const autofixData = event.data.data;
+        const rawData = event.data.data;
         if (
           isStreaming ||
           isProcessing ||
@@ -580,7 +584,7 @@ function CodeChat() {
           });
           return;
         }
-        console.log('[CodeChat] 处理代码质量问题修复请求:', autofixData);
+        console.log('[CodeChat] 处理代码质量问题修复请求:', rawData);
 
         if (chatType !== 'codebase') {
           console.log('[CodeChat] 自动切换到仓库智聊模式');
@@ -589,11 +593,30 @@ function CodeChat() {
 
         setTimeout(() => {
           try {
-            const fixPrompt = generateCodeQualityFixPrompt(autofixData);
-            if (fillInputRef.current) {
-              fillInputRef.current(fixPrompt);
+            const isBatch = Array.isArray(rawData);
+            const context = isBatch
+              ? generateBatchCodeQualityContext(rawData)
+              : generateCodeQualityContext(rawData);
+            const prompt = cloneDeep(CODE_QUALITY_AUTOFIX_PROMPT_APP);
+
+            // 设置当前选中的指令
+            promptRef.current = prompt;
+            updateChatPrompt(prompt, '');
+            updatePromptApp({
+              name: prompt.name,
+              description: prompt.description,
+              type: UnionType.Prompt,
+              meta: prompt,
+              _id: prompt._id,
+            });
+
+            if (fillInputRef.current && inputRef.current) {
+              inputRef.current.value = '';
+              fillInputRef.current(context);
               toast({
-                title: `已为您生成${autofixData.sourceModule}问题的修复提示词，请检查后发送。`,
+                title: isBatch
+                  ? `已为您选中"代码质量修复"指令，并填充 ${rawData.length} 个待处理问题信息，请检查后按 Enter 发送`
+                  : `已为您选中"代码质量修复"指令，并填充${rawData.sourceModule}问题信息，请检查问题信息是否正确，然后按 Enter 发送`,
                 status: 'success',
                 duration: 4000,
                 isClosable: true,
@@ -705,9 +728,9 @@ function CodeChat() {
   );
 
   const handleMentionAttach = React.useCallback(
-    (prompt: string) => {
+    (prompt: string): IMultiAttachment['dataSource'] => {
       // 根据关键字剔除@无效附件
-      if (attachs?.attachType !== AttachType.MultiAttachment) return;
+      if (attachs?.attachType !== AttachType.MultiAttachment) return [];
       const filteredAttaches = filterMentionedAttach(
         prompt,
         attachs as IMultiAttachment,
@@ -716,9 +739,48 @@ function CodeChat() {
         attachType: AttachType.MultiAttachment,
         dataSource: filteredAttaches,
       });
+      return filteredAttaches;
     },
     [attachs, updateAttachs],
   );
+
+  // 检查输入的token是否有限制
+  const checkInputTokensWithExceed = React.useCallback((
+    prompt: string,
+    attach: IMultiAttachment['dataSource'],
+  ) => {
+    if (prompt.length > MAX_CHARACTER_LIMIT) {
+      toastError(
+        '单次限制10万字符，建议将大文本存入文件后@文件发送',
+      );
+      return true;
+    }
+
+    const maxInputTokens = chatModels[model]?.tokenInfo?.maxInputTokens || 100000;
+    let content = prompt;
+    let statAttach = cloneDeep(attach);
+    statAttach = statAttach.filter(i => {
+      if (i.attachType === AttachType.File) {
+        const file = i as FileItem;
+        if (isDocsetFile(file.path)) return false;
+        if (isImageFileByPath(file.path)) return false;
+        return true;
+      }
+      return true;
+    });
+    try {
+      content += JSON.stringify(statAttach);
+    } catch (e) { /* empty */ }
+    const inputToken = estimateTokens(content) + 20000;
+
+    if (inputToken > (maxInputTokens / 2)) {
+      toastError(
+        `当前模型单次发送的上下文只支持 ${maxInputTokens} token, 建议更换模型或调整输入内容`,
+      );
+      return true;
+    }
+    return false;
+  }, [chatModels, model]);
 
   // 清空输入框草稿的辅助函数
   const clearInputDraft = React.useCallback(() => {
@@ -730,7 +792,10 @@ function CodeChat() {
   }, [chatType]);
 
   const handleSubmit = React.useCallback(
-    async (prompt: string) => {
+    async (
+      prompt: string,
+      submitOptions?: { agentTaskDirective?: AgentTaskDirective },
+    ) => {
       // console.log('prompt', prompt);
       // console.log('pluginApp', promptApp);
 
@@ -893,62 +958,39 @@ function CodeChat() {
             type: promptRef.current.type,
           },
         });
-        updateChatPrompt(promptRef.current, prePromptCodeBlock);
+        let codeBlock = prePromptCodeBlock;
+        // 质量修复：用户输入的上下文（_prompt）作为 codeBlock 传入，
+        // 避免系统 prompt 暴露给用户，同时确保上下文能在 API 请求时被注入
+        if (promptRef.current._id === CODE_QUALITY_AUTOFIX_PROMPT_APP._id) {
+          codeBlock = _prompt;
+        }
+        updateChatPrompt(promptRef.current, codeBlock);
       } else {
         updateChatPrompt(undefined, undefined);
       }
       // 发问之后，就不再展示开场问题
       setShowRecommendation(false);
       // @指令时，附件去重处理
-      handleMentionAttach(_prompt);
-      if (_prompt.length > MAX_CHARACTER_LIMIT) {
-        if (![ChatModel.Gemini25, ChatModel.Gemini3Pro].includes(model)) {
-          if (new Blob([_prompt]).size > MAX_CHARACTER_LIMIT) {
-            //提醒
-            toastError(
-              '单次限制10万字符，可改用 Gemini-2.5 模型或调整输入内容',
-            );
-            return;
-          }
-          if (
-            new Blob([JSON.stringify(attachs)]).size >
-            MAX_CHARACTER_LIMIT + 1000
-          ) {
-            //提醒
-            toastError(
-              '单次限制10万字符，可改用 Gemini-2.5 模型或调整输入内容',
-            );
-            return;
-          }
-        } else {
-          if (new Blob([_prompt]).size > MAX_CHARACTER_LIMIT * 3) {
-            //提醒
-            toastError('单次限制30万字符，请调整输入内容');
-            return;
-          }
-
-          if (
-            new Blob([JSON.stringify(attachs)]).size >
-            MAX_CHARACTER_LIMIT * 3 + 1000
-          ) {
-            //提醒
-            toastError('单次限制30万字符，请调整输入内容');
-            return;
-          }
-        }
-
-        // TODO: 因为 CodeBase 需要原始的 prompt 切割用户输入的问题，所以现在直接传进去了，后续需要优化
+      const mentionAttachs = handleMentionAttach(_prompt);
+      // 检查输入的Token是否超过限制
+      if (checkInputTokensWithExceed(_prompt, mentionAttachs)) {
+        return;
       }
       setStreamRetryCount(0);
       onUserSubmit(
         _prompt,
-        { event, specPrompt: specPrompt as Prompt },
+        {
+          event,
+          specPrompt: specPrompt as Prompt,
+          agentTaskDirective: submitOptions?.agentTaskDirective,
+        },
         prompt,
       );
       // clear
       onRemovePrePromptCodeBlock();
       if (inputRef.current) {
-        if (!promptRef.current || specPrompt) {
+        // 质量修复和 specPrompt 一样，发送后需要清空输入框
+        if (!promptRef.current || specPrompt || promptRef.current._id === CODE_QUALITY_AUTOFIX_PROMPT_APP._id) {
           inputRef.current.value = '';
           clearInputDraft(); // 清空草稿
         }
@@ -958,6 +1000,7 @@ function CodeChat() {
       promptRef.current = null;
     },
     [
+      checkInputTokensWithExceed,
       authExtends?.c_unrestrict,
       setStreamRetryCount,
       addSessionID,
@@ -1524,6 +1567,9 @@ function CodeChat() {
               Object.assign(updateFileConfig, {
                 isCreateFile: extra?.isCreateFile || false,
               })
+              updateChatApplyItem(tool_id, {
+                applying: false,
+              });
             }
             updateChatApplyItem(tool_id, updateFileConfig);
             userReporter.report({
@@ -2332,6 +2378,7 @@ function CodeChat() {
           log,
           terminalStatus: extra?.terminalStatus || ETerminalStatus.RUNNING,
           enableTimeout: true,
+          isRtk: extra?.isRtk,
         });
         updateTerminals(terminalId, {
           id: terminalId,

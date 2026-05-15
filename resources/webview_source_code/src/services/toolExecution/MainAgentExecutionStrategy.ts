@@ -7,6 +7,7 @@ import { ToolCall } from '../../services';
 import { ExecutionContext } from '../../types/executionContext';
 import { ToolExecutionStrategy } from './ToolExecutionStrategy';
 import { terminalCmdFunction } from '../../routes/CodeChat/ChatMessagesList/TermialPanel';
+import { useSkillsStore } from '../../store/skills';
 
 export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
   getStrategyName(): string {
@@ -59,6 +60,19 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
       return false;
     }
 
+    if (this.isSkillTool(toolName)) {
+      // use_skill 工具：启用（未禁用）即自动执行
+      try {
+        const skillsStore = useSkillsStore.getState();
+        const params = JSON.parse(toolCall.function.arguments || '{}');
+        const skillNames: string | string[] = params.skill_name;
+        const names = Array.isArray(skillNames) ? skillNames : [skillNames];
+        return names.every((name: string) => !skillsStore.skillConfigs[name]?.disabled);
+      } catch {
+        return false;
+      }
+    }
+
     // 其他工具使用总的 autoApprove 开关
     const isGenerallySafe = this.isGenerallySafeTool(toolName);
     return permissions.autoApprove && isGenerallySafe;
@@ -107,6 +121,13 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
   }
 
   /**
+   * 是否是Skill工具
+   */
+  private isSkillTool(toolName: string): boolean {
+    return toolName === 'use_skill';
+  }
+
+  /**
    * 是否是通常安全的工具
    */
   private isGenerallySafeTool(toolName: string): boolean {
@@ -120,7 +141,6 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
       'glob_search',
       'retrieve_code',
       'retrieve_knowledge',
-      'use_skill', // skill工具是安全的知识获取操作
     ];
     return safeTools.includes(toolName);
   }

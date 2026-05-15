@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
-import { BiBox } from 'react-icons/bi';
+import { LuServer } from "react-icons/lu";
 import UserMarkdown from '../../../components/Markdown/UserMarkdown';
 import ChatCodeBlock from '../ChatCodeBlock';
 import { ChatMessage } from './types';
@@ -26,7 +26,7 @@ interface CompressionSummaryProps {
 /**
  * 清理 LLM 生成的响应中的 XML 标签
  * 参考 cleanAnalysisSummaryTags 方法
- * 
+ *
  * 将 <analysis>...</analysis> 标签转换为 "Analysis:\n..."
  * 将 <summary>...</summary> 标签转换为 "Summary:\n..."
  */
@@ -116,7 +116,8 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
           className="divider-line"
           flex={1}
           height="1px"
-          borderTop="1px dashed"
+          borderTop="1px solid"
+          borderColor="whiteAlpha.300"
           transition="border-color 0.2s"
         />
 
@@ -124,8 +125,6 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
           className="summary-text"
           alignItems="center"
           gap={1.5}
-          border="1px solid"
-          borderRadius="3xl"
           transition="all 0.2s"
           p={2}
           _hover={{
@@ -133,24 +132,14 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
             bg: 'bg.subtle'
           }}
         >
-          <BiBox size={15} />
+          <LuServer size={15} />
           <Text fontSize="xs" mb={'0 !important'} display="flex" alignItems="center" flexWrap="wrap" gap={1}>
-            <Text as="span">Memory：上下文已总结</Text>
+            <Text as="span">Memory：上下文已自动总结压缩</Text>
             {metadata && (
-              <Text as="span" fontSize="2xs" opacity={0.7}>
-                (节省 {metadata.tokensSaved.toLocaleString()} tokens)
+              <Text as="span" fontSize="xs" opacity={0.7}>
+                (本次为您节省 {metadata.tokensSaved.toLocaleString()} tokens)
               </Text>
             )}
-            <Text as="span">。新任务建议</Text>
-            <Text
-              as="span"
-              color="purple.400"
-              textDecoration="underline"
-              onClick={handleCreateNewSession}
-            >
-              新建对话
-            </Text>
-            <Text as="span">，避免额外Token消耗</Text>
           </Text>
           {isCompressionExpanded ? (
             <ChevronUpIcon boxSize={5} />
@@ -163,9 +152,11 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
           className="divider-line"
           flex={1}
           height="1px"
-          borderTop="1px dashed"
+          borderTop="1px solid"
+          borderColor="whiteAlpha.300"
           transition="border-color 0.2s"
         />
+
       </Flex>
 
       {/* 折叠/展开的详细内容 */}
@@ -190,23 +181,44 @@ export default function CompressionSummary({ message }: CompressionSummaryProps)
       )}
 
       {isCompressionExpanded && compressionContent && metadata && (
-            <Box
-              mt={3}
-              pt={3}
-              borderTop="1px solid"
-              borderTopColor="border.default"
-              fontSize="xs"
-              color="text.muted"
-            >
-              <Flex gap={4} flexWrap="wrap">
-                <Text>压缩消息数: {metadata.originalMessageCount}</Text>
-                <Text>压缩比: {metadata.compressionRatio.toFixed(2)}x</Text>
-                <Text>
-                  压缩时间: {new Date(metadata.compressedAt).toLocaleString('zh-CN')}
-                </Text>
-              </Flex>
-            </Box>
-          )}
+        <Box
+          mt={3}
+          pt={3}
+          borderTop="1px solid"
+          borderTopColor="border.default"
+          fontSize="xs"
+          color="text.muted"
+        >
+          <Flex gap={4} flexWrap="wrap">
+            <Text>压缩消息数: {metadata.originalMessageCount}</Text>
+            <Text>压缩比: {metadata.compressionRatio.toFixed(2)}x</Text>
+            <Text>
+              压缩时间: {new Date(metadata.compressedAt).toLocaleString('zh-CN')}
+            </Text>
+          </Flex>
+        </Box>
+      )}
+
+      {/* 红色警告提示 */}
+      <Box
+        mt={2}
+        py={2}
+        bg="rgba(255, 71, 71, 0.15)"
+        border="1px solid"
+        borderColor="rgba(255, 71, 71, 0.15)"
+        borderRadius="md"
+        display="flex"
+        alignItems="center"
+        justifyContent={'center'}
+      >
+        <Text ml={1} fontSize="xs" color="error" mb={'0 !important'}>
+          新任务请点击{' '}
+          <Text as="span" color="#786FFF" cursor="pointer" onClick={handleCreateNewSession}>
+            新建对话
+          </Text>
+          ，避免携带过长历史上下文影响回答质量、消耗额外积分
+        </Text>
+      </Box>
     </Box>
   );
 }

@@ -4,10 +4,11 @@
 
 import { isImageFileByPath, truncateContent, getErrorMessage } from '../../utils';
 import { EParsedDocsStatus } from '../../utils/chatAttachParseHandler';
-import { getFilePrompt, maxTruncatedLine, getDiffPatchOfContent } from '../../store/workspace/tools/read';
+import { getFilePrompt, maxTruncatedLine, getDiffPatchOfContent } from './../../services/harness/tools/read';
 import { ChatMessageContent } from '../../services';
 import type { ToolResultInput, ToolResultOutput } from './types';
 import { compressImage } from '../../components/ImageUpload/ImageResize';
+import { hasNonEmptyImageDataUrl, sanitizeImageContentList } from '../../utils/imageDataValidation';
 
 /** 检查是否为图片文件且需要异步处理 */
 export function requiresImageProcessing(input: ToolResultInput): boolean {
@@ -122,19 +123,22 @@ export function processRetrieveEmptyResult(input: ToolResultInput): ToolResultOu
 export function processMCPToolResult(input: ToolResultInput): ToolResultOutput {
   let content = input.tool_result.content;
 
+  if (typeof content === 'string') {
+    try {
+      content = JSON.parse(content);
+    } catch (e) {
+      // 保持原样
+    }
+  }
+
   if (Array.isArray(content)) {
+    content = sanitizeImageContentList(content as any[], input.tool_result.path);
     // 只有列表才会返回 MCP 结果内容
     content.forEach((contentItem: { type: 'text'; text: string }) => {
       if (contentItem.type === 'text') {
         contentItem.text = truncateContent(contentItem.text, 60000);
       }
     });
-  } else if (typeof content === 'string') {
-    try {
-      content = JSON.parse(content);
-    } catch (e) {
-      // 保持原样
-    }
   }
 
   return {
@@ -214,6 +218,10 @@ export async function processImageBufferSync(input: ToolResultInput): Promise<To
       throw new Error(`Unsupported data format: ${typeof data}`);
     }
 
+    if (!uint8Array.length) {
+      throw new Error(`Unable to read image file or image is empty: ${path}`);
+    }
+
     // 确保创建一个完全兼容的 Uint8Array 用于 Blob
     const blobCompatibleArray = new Uint8Array(uint8Array);
     const blob = new Blob([blobCompatibleArray], { type: 'application/octet-stream' });
@@ -231,6 +239,9 @@ export async function processImageBufferSync(input: ToolResultInput): Promise<To
       reader.onload = () => {
         try {
           const base64 = reader.result as string;
+          if (!hasNonEmptyImageDataUrl(base64)) {
+            throw new Error(`Unable to read image file or image is empty: ${path}`);
+          }
 
           const imageContent = JSON.stringify([{
             type: ChatMessageContent.ImageUrl,

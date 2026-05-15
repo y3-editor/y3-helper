@@ -17,6 +17,7 @@ import { UserEvent } from '../../types/report';
 import { FaAngleDown, FaAngleRight, FaAngleUp, FaCheckCircle, FaTimesCircle, FaCircle } from 'react-icons/fa';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { MdAutorenew } from 'react-icons/md';
+import { normalizeMcpServerName } from '../../utils/mcpToolSearch';
 import { getLocalStorage, setLocalStorage } from '../../utils/storage';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { TbFileCode } from 'react-icons/tb';
@@ -200,9 +201,7 @@ const MCPConfigCollapse = (props: IProps) => {
         {
           cacheMCpServers.length
             ? (showAllServers ? cacheMCpServers : cacheMCpServers.slice(0, 3)).map((server, index) => {
-              let serverName = server.name || '';
-              serverName = serverName.replace(/\\/g, '/');
-              serverName = serverName.split('/').slice(-1)[0];
+              const serverName = normalizeMcpServerName(server.name);
               // 查找中文名称的优先级：
               // 1. server.config.chinese_name (本地配置)
               // 2. nameMappings (API 返回的权限数据)
@@ -326,8 +325,8 @@ const MCPConfigCollapse = (props: IProps) => {
                             const isAuto = value === 'auto';
 
                             const params = {
-                              name: serverName,
                               ...server.config,
+                              name: server.name,
                               disabled: isDisabled,
                             }
 

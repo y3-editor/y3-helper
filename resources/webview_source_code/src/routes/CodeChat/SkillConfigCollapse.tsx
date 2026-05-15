@@ -183,7 +183,7 @@ const SkillConfigCollapse = (props: IProps) => {
                               value: 'on',
                               label: '启用',
                               tooltipTitle: '启用 Skill',
-                              tooltip: '在智聊过程中启用此 Skill',
+                              tooltip: '在智聊过程中启用此 Skill；AI 调用时自动执行，无需确认',
                             },
                           ] as SelectOption[]
                         }
@@ -191,7 +191,6 @@ const SkillConfigCollapse = (props: IProps) => {
                         onChange={(e) => {
                           const value = e.target.value;
                           const disabled = value === 'off';
-                          // 状态未变化时不执行后续逻辑
                           if (disabled === isDisabled) return;
                           setSkillConfig(skill.name, { disabled });
                           postMessage({

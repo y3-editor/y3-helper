@@ -126,6 +126,7 @@ export class SubagentExecutionStrategy implements ToolExecutionStrategy {
       'glob_search',
       'retrieve_code',
       'retrieve_knowledge',
+      'search_tool', // MCP 工具搜索，只读操作
     ];
     return readOnlyTools.includes(toolName);
   }

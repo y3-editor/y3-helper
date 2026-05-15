@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { existsSync } from 'fs';
 import { getWorkspaceRootPath } from '../getWorkspaceInfo';
+import { getEditApplyProvider, type ApplyItem } from '../../editApplyProvider';
 
 interface ClaudeEditResult {
   content: string;
@@ -19,6 +20,8 @@ interface ClaudeEditResult {
 interface WriteToolParams {
   file_path: string;
   content: string;
+  toolId: string;
+  autoApply: boolean;
 }
 
 interface EditToolParams {
@@ -26,22 +29,72 @@ interface EditToolParams {
   old_string: string;
   new_string: string;
   replace_all?: boolean;
+  toolId: string;
+  autoApply: boolean;
+}
+
+/** 防止同一 toolCallId 重复自动应用 */
+export const autoApplyToolIdMap: Map<string, boolean> = new Map();
+
+/**
+ * 向 autoApplyToolIdMap 添加记录，只保留最新的 50 个
+ */
+function addToAutoApplyMap(toolId: string, autoApply: boolean) {
+  if (autoApplyToolIdMap.has(toolId)) {
+    autoApplyToolIdMap.delete(toolId);
+  }
+  if (autoApplyToolIdMap.size >= 50) {
+    const firstKey = autoApplyToolIdMap.keys().next().value;
+    if (firstKey !== undefined) {
+      autoApplyToolIdMap.delete(firstKey);
+    }
+  }
+  autoApplyToolIdMap.set(toolId, autoApply);
 }
 
 /**
- * 校验 file_path 是否在工作区路径下
- * @returns 绝对路径
+ * 校验文件路径是否在工作区目录下并返回绝对路径
+ *
+ * 此函数确保文件操作安全，防止访问工作区外的文件，避免潜在的安全风险
+ *
+ * @param filePath - 待校验的文件路径（可以是相对路径或绝对路径）
+ * @returns 校验通过后的绝对文件路径
+ * @throws {Error} 当工作区根路径不存在时
+ * @throws {Error} 当文件路径不在工作区目录内时
+ *
+ * @example
+ * ```typescript
+ * // 假设工作区为 /Users/dev/project
+ * validateAndResolveFilePath('src/index.ts')
+ * // 返回: /Users/dev/project/src/index.ts
+ *
+ * validateAndResolveFilePath('../outside.txt')
+ * // 抛出错误: File path is not within workspace
+ * ```
  */
-function validateAndResolveFilePath(filePath: string): string {
+export function validateAndResolveFilePath(filePath: string): string {
+  // 获取当前工作区根目录
   const workspaceRoot = getWorkspaceRootPath();
   if (!workspaceRoot) {
     throw new Error('No workspace root path found. Please open a workspace first.');
   }
 
+  // 将输入路径转换为绝对路径
   const absolutePath = path.resolve(workspaceRoot, filePath);
+
+  // 规范化路径，解决 . 和 .. 以及路径分隔符问题
   const normalizedAbsolute = path.resolve(absolutePath);
   const normalizedWorkspace = path.resolve(workspaceRoot);
 
+  // 安全校验：确保目标路径在工作区内
+  // 1. 检查是否以工作区路径 + 路径分隔符开头（防止路径遍历攻击）
+  // 2. 或者就是工作区根目录本身
+  //
+  // 注意：上游 be7a0ab5 (refactor: 支持跨工作区修改) 在此把 throw 收窄为
+  //   if (!path.isAbsolute(absolutePath)) throw ...
+  // 但 absolutePath 来自 path.resolve()，永远是绝对路径，等于整个工作区检查失效。
+  // Y3 是单工作区场景，保留严格校验更安全，故未同步该 refactor。
+  // 详见 .codemaker/sync/exclusions.json -> skip_be7a0ab5_claudeEdit_cross_workspace
   if (!normalizedAbsolute.startsWith(normalizedWorkspace + path.sep) && normalizedAbsolute !== normalizedWorkspace) {
     throw new Error(
       `File path "${filePath}" is not within the workspace directory "${workspaceRoot}".`
@@ -105,7 +158,7 @@ export function normalizeEscapeChars(str: string): string {
 export function findCompatibleString(
   fileContent: string,
   searchString: string,
-  rawSearchString?: string,
+  rawSearchString: string,
 ): string | null {
   // 1. 精确匹配
   if (fileContent.includes(searchString)) {
@@ -124,7 +177,7 @@ export function findCompatibleString(
   // 3. 使用原始 old_string（未经 normalizeEscapeChars）直接匹配
   //    场景：文件里存储的是字面量 \n（Python/C 代码），AI 传来的 old_string
   //    经 JSON 解析后也是字面量 \n，但 normalizeEscapeChars 错误地把它转成了真实换行
-  if (rawSearchString !== undefined && rawSearchString !== searchString) {
+  if (rawSearchString !== searchString) {
     if (fileContent.includes(rawSearchString)) {
       return rawSearchString;
     }
@@ -146,7 +199,8 @@ export function findCompatibleString(
  */
 async function executeSingleWrite(
   filePath: string,
-  content: string
+  content: string,
+  autoApply: boolean,
 ): Promise<ClaudeEditResult> {
   let absolutePath = filePath || '';
   let originalContent = '';
@@ -167,6 +221,21 @@ async function executeSingleWrite(
       originalContent = currentDocument.getText();
     }
 
+    // autoApply: 直接写盘
+    if (autoApply) {
+      const detectWriteResult = await getEditApplyProvider().acceptSingleEditWithClaude({
+        filePath: absolutePath,
+        finalResult: content,
+        isCreateFile,
+        beforeEdit: originalContent,
+        toolCallId: '',
+        type: 'write',
+      } as ApplyItem);
+
+      if (!detectWriteResult.success) {
+        throw new Error(detectWriteResult.message);
+      }
+    }
 
     const successMessage = isCreateFile
       ? `File created successfully at: ${absolutePath}`
@@ -397,11 +466,13 @@ async function executeSingleEdit({
   oldString,
   newString,
   replaceAll = false,
+  autoApply = false,
 }: {
   filePath: string,
   oldString: string,
   newString: string,
-  replaceAll?: boolean
+  replaceAll?: boolean,
+  autoApply?: boolean,
 }
 ): Promise<ClaudeEditResult> {
   let absolutePath = filePath || '';
@@ -427,21 +498,21 @@ async function executeSingleEdit({
     }
 
     // 处理模型返回的转义字符（如 \\n -> \n）
-    const normalizedNewString = normalizeEscapeChars(newString);
+    // const normalizedNewString = normalizeEscapeChars(newString);
 
     let updatedContent: string;
     if (!originalContent && isCreateFile) {
       // 文件不存在且无内容，直接使用 new_string 作为内容
-      updatedContent = normalizedNewString;
+      updatedContent = newString;
     } else {
       const normalizedOldString = normalizeEscapeChars(oldString);
-      const actualOldString = findCompatibleString(originalContent, normalizedOldString, oldString) || normalizedOldString
+      const actualOldString = findCompatibleString(originalContent, oldString, normalizedOldString) || oldString
 
       // Preserve curly quotes in new_string when the file uses them
       const actualNewString = preserveQuoteStyle(
         oldString,
         actualOldString,
-        normalizedNewString,
+        newString,
       )
 
       updatedContent = getPatchForEdits({
@@ -458,6 +529,22 @@ async function executeSingleEdit({
       }
     }
 
+
+    // autoApply: 直接写盘
+    if (autoApply) {
+      const detectWriteResult = await getEditApplyProvider().acceptSingleEditWithClaude({
+        filePath: absolutePath,
+        finalResult: updatedContent,
+        isCreateFile,
+        beforeEdit: beforeEdit,
+        toolCallId: '',
+        type: 'edit',
+      } as ApplyItem);
+
+      if (!detectWriteResult.success) {
+        throw new Error(detectWriteResult.message);
+      }
+    }
 
     const successMessage = isCreateFile
       ? `File created successfully at: ${absolutePath}`
@@ -500,10 +587,11 @@ let editCount = 0
 export async function executeClaudeWrite(
   params: WriteToolParams
 ): Promise<ClaudeEditResult> {
-  const { file_path, content } = params;
+  const { file_path, content, autoApply = false, toolId } = params;
+  addToAutoApplyMap(toolId, autoApply)
   await delay(editCount * 1000) // 防止多次调用edit/write时序问题
   editCount++
-  const result = await executeSingleWrite(file_path, content);
+  const result = await executeSingleWrite(file_path, content, autoApply);
   editCount--
   return result
 }
@@ -514,7 +602,8 @@ export async function executeClaudeWrite(
 export async function executeClaudeEdit(
   params: EditToolParams
 ): Promise<ClaudeEditResult> {
-  const { file_path, old_string, new_string, replace_all = false } = params;
+  const { toolId, file_path, old_string, new_string, replace_all = false, autoApply = false } = params;
+  addToAutoApplyMap(toolId, autoApply)
   await delay(editCount * 1000) // 防止多次调用edit/write时序问题
   editCount++
   const result = await executeSingleEdit({
@@ -522,6 +611,7 @@ export async function executeClaudeEdit(
     oldString: old_string,
     newString: new_string,
     replaceAll: replace_all,
+    autoApply: autoApply,
   });
   editCount--
   return result

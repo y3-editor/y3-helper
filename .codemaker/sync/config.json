@@ -48,6 +48,7 @@
       "src/patchSetup.ts",
       "src/telemetry/",
       "src/routes/CodeChat/ChatEffotSelect.tsx",
+      "src/routes/CodeChat/ChatModelSelector/",
       ".github/",
       ".gitlab-ci.yml",
       "Dockerfile",
@@ -81,7 +82,8 @@
       "src/handlers/skillsHandler/index.ts": "src/codemaker/skillsHandler.ts",
       "src/utils/file.ts": "src/codemaker/utils/file.ts",
       "src/utils/editFile/claudeEdit.ts": "src/codemaker/utils/editFile/claudeEdit.ts",
-      "src/utils/executeFunction.ts": "src/codemaker/utils/executeFunction.ts"
+      "src/utils/executeFunction.ts": "src/codemaker/utils/executeFunction.ts",
+      "src/provider/editApplyProvider.ts": "src/codemaker/editApplyProvider.ts"
     },
     "upstream_watch": [
       "src/provider/webviewProvider/index.ts",

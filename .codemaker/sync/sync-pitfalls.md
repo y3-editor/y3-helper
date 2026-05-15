@@ -169,3 +169,43 @@ IDE 端 `_handleToolCall` 已透传 `task_id`（`src/codemaker/webviewProvider.t
 3. **subagent 工具结果是否回流**：webview console 看 `[Subagent] No active runner / No pending tool result callback`，IDE log 看 TOOL_CALL_RESULT 是否含 `task_id`，CodeChat.tsx 是否拦截路由 → 7.3
 
 ---
+
+## 8. 上游"敏感字符串"不要照搬，搬完一定要全文 grep
+
+**触发场景**：合并上游时整文件覆盖 / 大块新增代码（如 `agentsHandler/parser.ts`、`services/agentCreation.ts`），里面藏着上游内部的字符串字面量。最常见就是 `netease`、`netease-codemaker/` 这类前缀。Y3Helper 是对外发布产物，把母公司域名 / 内部 model 命名空间塞进去是事故。
+
+**典型藏身位置**：
+
+| 文件 | 上游写法 | Y3 应改成 |
+|---|---|---|
+| `agentCreation.ts` | model 字段拼 `netease-codemaker/${model}` | 直接写裸 model 名 |
+| `agentsHandler/parser.ts` | `MODEL_PREFIXES_TO_REMOVE = ['netease-codemaker/']` + `normalizeModelName()` | 整段删除，model 透传 |
+| 任何 `*.ts` 字符串字面量 | URL `*.nie.netease.com` / `*.netease.com` | 视情况用占位 / 删除 |
+
+**机械动作（每次 Phase 2 合并完跑一次）**：
+
+```bash
+git diff --name-only HEAD -- 'src/**' 'resources/webview_source_code/src/**' \
+  | xargs grep -nH 'netease\|popo\.netease' 2>/dev/null
+```
+
+PowerShell 版：
+
+```powershell
+git diff --name-only HEAD | Where-Object { $_ -match '\.(ts|tsx|js)$' } |
+  ForEach-Object { Select-String -Path $_ -Pattern 'netease|popo\.netease' }
+```
+
+发现命中后：
+1. 如果是 URL：判断 Y3 流程是否会走到，不会走到的整段删（含外层 if 分支）。
+2. 如果是 model / 包名前缀：去掉拼接逻辑，让函数透传。
+3. 删除前后**必须加注释**标注 "⚠️ Y3 定制 (sync)"，说明上游有该字符串，方便下次合并时识别。注释模板：
+
+```ts
+// ⚠️ Y3 定制 (sync): 上游会拼 `netease-codemaker/` 前缀, Y3 不需要。
+// 同步上游时若 diff 出现该前缀, 请删除拼接逻辑而不是合入。
+```
+
+**为什么要加注释而不是仅依赖 customized 列表**：customized 标记会让文件进入 REVIEW，但 REVIEW 仍可能整文件覆盖（特别是上游做大重构、Y3 现状本来就接近 baseline 时）。注释是落在源码里的"防腐层"，AI 整文件覆盖后做后处理时能直接看到提醒。
+
+---

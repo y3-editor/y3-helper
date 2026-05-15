@@ -38,18 +38,28 @@ function normalizeToolName(toolName: string): string {
 }
 
 /**
+ * 基础设施工具：无视 agent 白名单，只要 allTools 中存在就自动透传。
+ * - search_tool：on-demand 模式下由 getCodebaseChatTools 动态注入，必须透传给 subagent
+ * - use_mcp_tool / access_mcp_resource：有 MCP 服务器时由 getCodebaseChatTools 注入，必须透传
+ */
+const INFRA_TOOLS = new Set(['search_tool', 'use_mcp_tool', 'access_mcp_resource']);
+
+/**
  * 根据 Agent 的白名单和黑名单过滤工具列表。
  * 1. 标准化工具名：将旧工具名（edit_file/replace_in_file）转换为规范名（write/edit）
  * 2. 展开规范名别名：使规范名同时命中各模式对应的实际工具
- * 3. 应用白名单过滤
+ * 3. 应用白名单过滤（基础设施工具跳过白名单，直接透传）
  * 4. 应用黑名单排除
  * 5. 子代理自动排除 task 工具，避免无限递归
  */
 export function getToolsForAgent(allTools: Tool[], agent: Agent): Tool[] {
   const disallowedSet = new Set(agent.disallowedTools || []);
 
-  // 子代理自动禁用 task 工具，避免无限递归
+  // 子代理自动禁用的工具：
+  // - task：避免无限递归
+  // - ask_user_question：子代理不应直接打断用户流程
   disallowedSet.add('task');
+  disallowedSet.add('ask_user_question');
 
   // tools 未指定时表示允许所有工具（不做白名单过滤），仅走黑名单
   if (!agent.tools) {
@@ -68,6 +78,9 @@ export function getToolsForAgent(allTools: Tool[], agent: Agent): Tool[] {
 
   return allTools.filter((tool) => {
     const name = tool.function.name;
-    return allowedSet.has(name) && !disallowedSet.has(name);
+    if (disallowedSet.has(name)) return false;
+    // 基础设施工具跳过白名单校验，只要 allTools 中存在（由上游按条件注入）就透传
+    if (INFRA_TOOLS.has(name)) return true;
+    return allowedSet.has(name);
   });
 }

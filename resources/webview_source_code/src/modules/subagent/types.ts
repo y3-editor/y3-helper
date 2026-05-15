@@ -5,16 +5,34 @@
  */
 
 import { ToolCall } from '../../services';
-import type {
-  AssociationProperties,
-  ConversationRoundState,
-  Context,
-  SafeSpan,
-} from '../../telemetry/otel';
+import type { AssociationProperties, ConversationRoundState } from '../../telemetry/otel';
+import type { Context } from '../../telemetry/otel';
+import type { SafeSpan } from '../../telemetry/otel';
 
 // ============================================================
 // Agent 定义
 // ============================================================
+
+/**
+ * Agent 专属 MCP server 配置项。
+ * 格式兼容 Claude claude.ai 的 mcpServers 字段配置。
+ */
+export interface AgentMCPServerConfig {
+  /** stdio 类型：启动命令（如 "npx"、"python"） */
+  command?: string;
+  /** stdio 类型：命令参数列表 */
+  args?: string[];
+  /** 环境变量（Record<string, string> 格式，兼容 Claude claude.ai） */
+  env?: Record<string, string>;
+  /** sse / streamableHttp 类型：服务器地址 */
+  url?: string;
+  /** server 类型，默认为 stdio */
+  type?: 'stdio' | 'sse' | 'streamableHttp';
+  /** 连接超时（毫秒） */
+  timeout?: number;
+  /** HTTP headers（sse / streamableHttp 类型） */
+  headers?: Record<string, string>;
+}
 
 /** Agent 定义：描述一个子代理的能力和约束 */
 export interface Agent {
@@ -34,6 +52,27 @@ export interface Agent {
   maxSteps?: number;
   /** Agent 来源：builtin 为内置，custom 为 IDE 加载的用户自定义 */
   source?: 'builtin' | 'custom';
+  /** 自定义 Agent 的文件路径（绝对路径） */
+  path?: string;
+  /** 存储范围：project 为项目级，user 为个人级 */
+  scope?: 'project' | 'user';
+  /**
+   * Agent 专属 MCP server 配置（格式兼容 Claude claude.ai mcpServers 字段）。
+   *
+   * - 未指定时：Subagent 使用全局所有已连接的 MCP servers（默认行为）
+   * - 指定时：Subagent 执行前向 IDE 请求启动这些专属 servers，执行结束后自动清理
+   *
+   * key 为 server 的逻辑名称（如 "filesystem"、"github"），
+   * 实际注册到 IDE 时会自动添加隔离前缀，避免并发冲突。
+   */
+  mcpServers?: Record<string, AgentMCPServerConfig>;
+  /**
+   * 运行时加载状态 — 不持久化到文件。
+   * IDE 解析 agent.md 失败时置为 "error"，webview 据此禁用该 agent。
+   */
+  _status?: 'success' | 'error';
+  /** 解析失败时的错误信息，仅 _status === "error" 时有效 */
+  _msg?: string;
 }
 
 // ============================================================

@@ -1,6 +1,101 @@
 import * as yaml from 'yaml';
 import { AgentMetaData } from './types';
 const getErrorMessage = (e: any) => (e instanceof Error ? e.message : String(e));
+const printLog = (...args: any[]) => console.log('[AgentsHandler:parser]', ...args);
+
+// ─── METADATA_FIELD_MAP ───────────────────────────────────────────────────────
+
+/**
+ * 单个 metadata 字段的定义描述符
+ * K: AgentMetaData 上的目标属性名
+ */
+interface MetadataFieldDef<K extends keyof AgentMetaData> {
+  /** AgentMetaData 上的目标属性名 */
+  key: K;
+  /** frontmatter 中的 YAML key，默认与 key 相同 */
+  yamlKey?: string;
+  /**
+   * 类型转换 + 验证函数
+   * 返回 undefined 表示值无效，该字段将被忽略
+   */
+  transform: (raw: unknown, fileBaseName: string) => AgentMetaData[K] | undefined;
+  /**
+   * stringify 时是否输出该字段（默认 true）
+   * prompt 字段不写入 frontmatter，设为 false
+   */
+  stringifySkip?: boolean;
+}
+
+/**
+ * defineField 保留泛型精度的 helper
+ */
+function defineField<K extends keyof AgentMetaData>(
+  def: MetadataFieldDef<K>
+): MetadataFieldDef<K> {
+  return def;
+}
+
+/**
+ * METADATA_FIELD_MAP
+ *
+ * 声明顺序即 frontmatter 输出顺序。
+ * 新增字段只需在此处追加一个 defineField 条目，无需修改 parseFrontMatter / stringify。
+ */
+const METADATA_FIELD_MAP = [
+  defineField({
+    key: 'name',
+    transform: (raw, fileBaseName) =>
+      raw ? String(raw).trim() : fileBaseName,
+  }),
+  defineField({
+    key: 'description',
+    transform: (raw) =>
+      raw ? String(raw).trim() : 'No description provided',
+  }),
+  defineField({
+    key: 'tools',
+    transform: (raw) => (raw ? String(raw).trim() : undefined),
+  }),
+  defineField({
+    key: 'model',
+    // ⚠️ Y3 定制 (sync): 上游用 normalizeModelName(...) 剥离 `netease-codemaker/` 前缀。
+    // Y3 既不会写入也不会读到该前缀（agentCreation.ts 已去掉拼接），
+    // 所以连同 normalizeModelName / MODEL_PREFIXES_TO_REMOVE 一并删除，避免敏感词。
+    // 同步上游时若 diff 出现 normalizeModelName，请保持当前裸 trim 写法。
+    transform: (raw) =>
+      raw ? String(raw).trim() : undefined,
+  }),
+  defineField({
+    key: 'maxSteps',
+    transform: (raw) => {
+      if (raw === undefined || raw === null) return undefined;
+      const n = Number(raw);
+      return !isNaN(n) && n > 0 ? n : undefined;
+    },
+  }),
+  defineField({
+    key: 'mcpServers',
+    transform: (raw, fileBaseName) => {
+      if (!raw) return undefined;
+      if (typeof raw === 'object' && !Array.isArray(raw)) {
+        return raw as AgentMetaData['mcpServers'];
+      }
+      printLog(
+        `[AgentParser] mcpServers invalid type for ${fileBaseName}: ${typeof raw}${Array.isArray(raw) ? ' (array)' : ''}`
+      );
+      return undefined;
+    },
+  }),
+  defineField({
+    key: 'prompt',
+    // prompt 来自 frontmatter 之外的内容，不参与 parseFrontMatter 循环，
+    // 也不写入 frontmatter（由 stringify 单独处理）
+    transform: () => undefined,
+    stringifySkip: true,
+  }),
+] as const;
+
+// ─── Parser ───────────────────────────────────────────────────────────────────
 
 /**
  * Agent MDC文件解析结果
@@ -47,13 +142,13 @@ export class AgentMdcParser {
       // 从文件名提取 agent name（移除.md后缀）
       const fileBaseName = fileName.replace(/\.md$/i, '');
 
-      // 检查是否以front matter开始
+      // 检查是否以 front matter 开始
       if (!trimmedContent.startsWith(AgentMdcParser.FRONT_MATTER_DELIMITER)) {
-        // 如果没有front matter，使用文件名作为默认name
+        // 如果没有 front matter，使用文件名作为默认 name
         return AgentMdcParser.parseWithoutFrontMatter(content, fileBaseName);
       }
 
-      // 分割front matter和content
+      // 分割 front matter 和 content
       const lines = trimmedContent.split('\n');
       if (lines.length < 3) {
         throw new Error('Invalid MDC format: insufficient lines');
@@ -69,29 +164,33 @@ export class AgentMdcParser {
       }
 
       if (frontMatterEnd === -1) {
-        throw new Error('Invalid MDC format: missing closing front matter delimiter');
+        throw new Error(
+          'Invalid MDC format: missing closing front matter delimiter'
+        );
       }
 
-      // 提取front matter内容（去除分隔符行）
+      // 提取 front matter 内容（去除分隔符行）
       const frontMatterLines = lines.slice(1, frontMatterEnd);
       const frontMatterContent = frontMatterLines.join('\n');
 
-      // 提取content部分（去除front matter和分隔符）
+      // 提取 content 部分（去除 front matter 和分隔符）
       const contentLines = lines.slice(frontMatterEnd + 1);
       const promptContent = contentLines.join('\n').trim();
 
-      // 解析YAML front matter，传入文件基础名作为默认name
-      const metaData = AgentMdcParser.parseFrontMatter(frontMatterContent, fileBaseName);
+      // 解析 YAML front matter，传入文件基础名作为默认 name
+      const metaData = AgentMdcParser.parseFrontMatter(
+        frontMatterContent,
+        fileBaseName
+      );
 
       return {
         metaData: {
           ...metaData,
-          prompt: promptContent
+          prompt: promptContent,
         },
         content: promptContent,
-        success: true
+        success: true,
       };
-
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       const fileBaseName = fileName.replace(/\.md$/i, '');
@@ -99,21 +198,24 @@ export class AgentMdcParser {
         metaData: {
           name: fileBaseName,
           description: 'No description provided',
-          prompt: ''
+          prompt: '',
         },
         content: '',
         success: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
 
   /**
-   * 解析没有front matter的内容
+   * 解析没有 front matter 的内容
    * @param content 文件内容
    * @param fileBaseName 文件基础名（已移除扩展名）
    */
-  private static parseWithoutFrontMatter(content: string, fileBaseName: string): AgentParseResult {
+  private static parseWithoutFrontMatter(
+    content: string,
+    fileBaseName: string
+  ): AgentParseResult {
     const lines = content.replace(/\r\n/g, '\n').split('\n');
     let name = fileBaseName; // 默认使用文件基础名
     let description = 'No description provided';
@@ -134,82 +236,72 @@ export class AgentMdcParser {
       metaData: {
         name,
         description,
-        prompt: content.trim()
+        prompt: content.trim(),
       },
       content: content.trim(),
-      success: true
+      success: true,
     };
   }
 
   /**
-   * 解析front matter YAML内容
+   * 解析 front matter YAML 内容（映射表驱动）
    * @param yamlContent YAML内容
-   * @param fileBaseName 文件基础名（作为默认name）
+   * @param fileBaseName 文件基础名（作为默认 name）
    */
-  private static parseFrontMatter(yamlContent: string, fileBaseName: string): Omit<AgentMetaData, 'prompt'> {
+  private static parseFrontMatter(
+    yamlContent: string,
+    fileBaseName: string
+  ): Omit<AgentMetaData, 'prompt'> {
     try {
       const parsed = yaml.parse(yamlContent) || {};
+      const metaData: Partial<AgentMetaData> = {};
 
-      // 默认使用文件基础名，如果YAML中定义了name则覆盖
-      const metaData: Omit<AgentMetaData, 'prompt'> = {
-        name: parsed.name ? String(parsed.name).trim() : fileBaseName,
-        description: parsed.description ? String(parsed.description).trim() : 'No description provided'
-      };
-
-      // 可选字段
-      if (parsed.model) {
-        metaData.model = String(parsed.model).trim();
-      }
-
-      if (parsed.tools) {
-        metaData.tools = String(parsed.tools).trim();
-      }
-
-      if (parsed.maxSteps !== undefined && parsed.maxSteps !== null) {
-        const maxSteps = Number(parsed.maxSteps);
-        if (!isNaN(maxSteps) && maxSteps > 0) {
-          metaData.maxSteps = maxSteps;
+      for (const fieldDef of METADATA_FIELD_MAP) {
+        if (fieldDef.stringifySkip) continue;
+        const yamlKey = fieldDef.yamlKey ?? fieldDef.key;
+        const value = fieldDef.transform(parsed[yamlKey], fileBaseName);
+        if (value !== undefined) {
+          (metaData as Record<string, unknown>)[fieldDef.key] = value;
         }
       }
 
-      return metaData;
+      // name / description 有兜底默认值，始终存在
+      return metaData as Omit<AgentMetaData, 'prompt'>;
     } catch (error) {
-      // 如果YAML解析失败，返回默认值
       return {
         name: fileBaseName,
-        description: 'No description provided'
+        description: 'No description provided',
       };
     }
   }
 
   /**
-   * 将Agent对象转换为MDC格式字符串
+   * 将 Agent 对象转换为 MDC 格式字符串（映射表驱动，字段顺序由映射表声明顺序决定）
    */
   public static stringify(metaData: AgentMetaData): string {
     try {
-      // 构建front matter对象
-      const frontMatterObj: Record<string, any> = {
-        name: metaData.name,
-        description: metaData.description
-      };
+      const frontMatterObj: Record<string, unknown> = {};
 
-      // 添加可选字段，按照 Claude Code 格式的顺序
-      if (metaData.tools) {
-        frontMatterObj.tools = metaData.tools;
-      }
-
-      if (metaData.model) {
-        frontMatterObj.model = metaData.model;
-      }
-
-      if (metaData.maxSteps !== undefined && metaData.maxSteps !== null) {
-        frontMatterObj.maxSteps = metaData.maxSteps;
+      for (const fieldDef of METADATA_FIELD_MAP) {
+        if (fieldDef.stringifySkip) continue;
+        const value = metaData[fieldDef.key];
+        if (value !== undefined && value !== null) {
+          // mcpServers 空对象不输出
+          if (
+            fieldDef.key === 'mcpServers' &&
+            typeof value === 'object' &&
+            Object.keys(value as object).length === 0
+          ) {
+            continue;
+          }
+          frontMatterObj[fieldDef.yamlKey ?? fieldDef.key] = value;
+        }
       }
 
       // 生成YAML front matter
-      const yamlContent = yaml.stringify(frontMatterObj, {
-        indent: 2
-      }).trim();
+      const yamlContent = yaml
+        .stringify(frontMatterObj, { indent: 2 })
+        .trim();
 
       // 组合完整的MDC内容
       const mdcContent = [
@@ -217,23 +309,28 @@ export class AgentMdcParser {
         yamlContent,
         AgentMdcParser.FRONT_MATTER_DELIMITER,
         '', // 空行分隔
-        metaData.prompt?.trim() || ''
+        metaData.prompt?.trim() || '',
       ].join('\n');
 
       return mdcContent;
     } catch (error) {
-      throw new Error(`Failed to stringify Agent MDC content: ${getErrorMessage(error)}`);
+      throw new Error(
+        `Failed to stringify Agent MDC content: ${getErrorMessage(error)}`
+      );
     }
   }
 
   /**
    * 验证Agent MDC格式是否有效
    */
-  public static validate(content: string, fileName: string): { valid: boolean; error?: string } {
+  public static validate(
+    content: string,
+    fileName: string
+  ): { valid: boolean; error?: string } {
     const result = AgentMdcParser.parse(content, fileName);
     return {
       valid: result.success,
-      error: result.error
+      error: result.error,
     };
   }
 
@@ -248,11 +345,13 @@ export class AgentMdcParser {
   /**
    * 提取元信息
    */
-  public static extractMetaData(content: string, fileName: string): AgentMetaData | null {
+  public static extractMetaData(
+    content: string,
+    fileName: string
+  ): AgentMetaData | null {
     const result = AgentMdcParser.parse(content, fileName);
     return result.success ? result.metaData : null;
   }
 }
-
 
 export default AgentMdcParser;

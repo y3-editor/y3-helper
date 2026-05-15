@@ -71,6 +71,8 @@ Complete the user's search request efficiently and report your findings clearly.
     'glob_search',
     'retrieve_code',
     'retrieve_knowledge',
+    'use_mcp_tool',
+    'access_mcp_resource',
   ],
   maxSteps: 50,
 };

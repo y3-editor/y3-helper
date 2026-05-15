@@ -6,7 +6,7 @@
  * - isAbortError() 判断错误是否为 abort 类错误，用于过滤不需要上报的错误
  */
 
-const ABORT_ERROR_NAME = 'AbortError';
+export const ABORT_ERROR_NAME = 'AbortError';
 
 // Abort reason 常量
 export const ABORT_REASON_FINISHED = 'StreamFinished';

@@ -49,6 +49,8 @@ Guidelines:
     'run_terminal_cmd',
     'make_plan',
     'write_todo',
+    'use_mcp_tool',
+    'access_mcp_resource',
   ],
   disallowedTools: ['task'],
   model: 'inherit',

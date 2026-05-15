@@ -144,8 +144,11 @@ const PromptsPanel = (
   }, [MCPServers]);
 
   const codebaseChatMode = useChatStore((state) => state.codebaseChatMode);
-  const subagents = useSubagentStore((state) => state.agents);
+  const subagents = useSubagentStore((state) => state.validAgents);
   const subagentEnable = useChatConfig((state) => state.enableSubagent);
+  // [Y3] hideBuiltInOpenSpecCommands 上游 251cd5dc 引入的 OpenSpec 隐藏开关，
+  // Y3 已通过 stub 永久隐藏 OpenSpec，固定视为 true（即始终隐藏内置 OpenSpec 指令）
+  const hideBuiltInOpenSpec = true;
   const setAgentRunner = useAgentPromptStore((state) => state.setRunner);
   const setOpenspecUpdateModalVisible = useWorkspaceStore(
     (state) => state.setOpenspecUpdateModalVisible,
@@ -221,7 +224,7 @@ const PromptsPanel = (
       });
     }
 
-    if (chatType === 'codebase' && codebaseChatMode === 'openspec') {
+    if (chatType === 'codebase' && codebaseChatMode === 'openspec' && !hideBuiltInOpenSpec) {
       // 根据安装的 OpenSpec 版本动态选择命令集
       const openspecPrompts = getOpenSpecPromptsByVersion(
         installedOpenSpecVersion,
@@ -385,7 +388,7 @@ const PromptsPanel = (
           type: PromptCategoryType._CodeMaker,
         },
       });
-      if (chatType === 'codebase' && !chatModels[chatConfig.model]?.isPrivate)
+      if (chatType === 'codebase')
         unionData.push({
           name: 'Compress',
           description: '触发上下文压缩',
@@ -523,6 +526,7 @@ const PromptsPanel = (
     subagentEnable,
     pluginApps,
     promptType,
+    hideBuiltInOpenSpec,
   ]);
 
   const currentIndex = getListIndex(renderPrompts, focusIndex);
@@ -726,7 +730,7 @@ const PromptsPanel = (
             } else if (prompt.meta.type === PromptCategoryType.Skill) {
               const skillName = prompt.meta.name || '';
               // const { useSkillPromptApp } = await import('../../../../store/skills/skill-prompt');
-              
+
               // 检查skill是否已经激活
               if (useSkillPromptApp.getState().hasSkill(skillName)) {
                 console.log('[use_skill] Skill already active, showing toast');
@@ -739,11 +743,11 @@ const PromptsPanel = (
                 });
                 return;
               }
-              
+
               useSkillPromptApp.getState().addSkill(skillName);
               setSkillLoading(true);
               const toolId = createSkillToolId();
-              
+
               postMessage({
                 type: BroadcastActions.TOOL_CALL,
                 data: {

@@ -162,9 +162,29 @@ export class McpHub {
     connections: McpConnection[] = [];
     isConnecting: boolean = false;
     private notifyCallback: McpNotifyCallback;
+    // 配置文件写入锁，防止并发读写竞态
+    private configLock: Promise<void> = Promise.resolve();
 
     constructor(notifyCallback: McpNotifyCallback) {
         this.notifyCallback = notifyCallback;
+    }
+
+    /**
+     * 使用 Promise 链实现简易互斥锁，确保配置文件读写操作串行执行
+     * @param fn 需要串行执行的异步操作
+     */
+    private async withConfigLock<T>(fn: () => Promise<T>): Promise<T> {
+        let release: () => void;
+        const waitForLock = this.configLock;
+        this.configLock = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        await waitForLock;
+        try {
+            return await fn();
+        } finally {
+            release!();
+        }
     }
 
     /**
@@ -769,13 +789,38 @@ export class McpHub {
 
     // ─── 自动重试 ────────────────────────────────────
 
+    /**
+     * 判断错误是否属于「会话已失效、重建连接可恢复」的类型。
+     * SSE transport 在服务端重启后，EventSource 会自动重连 SSE 流，但 SDK
+     * 不会重新读取新的 endpoint，client 仍往旧 sessionId POST，服务端通常
+     * 回 -32602 Invalid request parameters / Session not found。
+     */
+    private isSessionExpiredError(error: unknown, connection: McpConnection): boolean {
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        if (errorMessage.includes("SessionExpired") || errorMessage.includes("HTTP 401")) {
+            return true;
+        }
+        if (connection.transport instanceof SSEClientTransport && (
+            errorMessage.includes("-32602") ||
+            errorMessage.includes("Invalid request parameters") ||
+            errorMessage.includes("Session not found") ||
+            errorMessage.includes("Bad Request")
+        )) {
+            return true;
+        }
+        return false;
+    }
+
     private async executeWithRetry<T>(
         serverName: string,
         operation: (connection: McpConnection) => Promise<T>,
+        options?: {
+            noConnectionErrorMessage?: string;
+        },
     ): Promise<T> {
         let connection = this.connections.find((conn) => conn.server.name === serverName);
         if (!connection) {
-            throw new Error(`No connection found for server: ${serverName}`);
+            throw new Error(options?.noConnectionErrorMessage || `No connection found for server: ${serverName}`);
         }
         if (connection.server.disabled) {
             throw new Error(`Server "${serverName}" is disabled`);
@@ -784,17 +829,16 @@ export class McpHub {
         try {
             return await operation(connection);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-            if (errorMessage.includes("SessionExpired") || errorMessage.includes("HTTP 401")) {
+            if (this.isSessionExpiredError(error, connection)) {
                 console.log(`[McpHub] Session expired for ${serverName}, reconnecting...`);
                 await this.restartConnection(serverName);
-                connection = this.connections.find((conn) => conn.server.name === serverName);
-                if (connection && !connection.server.disabled) {
-                    return await operation(connection);
+                const retriedConnection = this.connections.find((conn) => conn.server.name === serverName);
+                if (retriedConnection && !retriedConnection.server.disabled && retriedConnection.server.status === 'connected') {
+                    return await operation(retriedConnection);
                 }
             }
             if (connection) {
-                this.handleTransportError(connection, error);
+                await this.handleTransportError(connection, error);
             }
             throw error;
         }
@@ -803,35 +847,30 @@ export class McpHub {
     // ─── 公共 API: 工具调用 / 资源读取 / Prompt ─────
 
     async callTool(serverName: string, toolName: string, toolArguments?: Record<string, unknown>): Promise<any> {
-        const connection = this.connections.find((conn) => conn.server.name === serverName);
-        if (!connection) {
-            throw new Error(`No connection found for server: ${serverName}. Available: ${this.connections.map(c => c.server.name).join(", ")}`);
-        }
-        if (connection.server.disabled) {
-            throw new Error(`Server "${serverName}" is disabled`);
-        }
+        return this.executeWithRetry(
+            serverName,
+            async (connection) => {
+                let timeout = secondsToMs(DEFAULT_MCP_TIMEOUT_SECONDS);
+                try {
+                    const config = JSON.parse(connection.server.config);
+                    const parsedConfig = ServerConfigSchema.parse(config);
+                    timeout = secondsToMs(parsedConfig.timeout);
+                } catch { /* use default */ }
 
-        let timeout = secondsToMs(DEFAULT_MCP_TIMEOUT_SECONDS);
-        try {
-            const config = JSON.parse(connection.server.config);
-            const parsedConfig = ServerConfigSchema.parse(config);
-            timeout = secondsToMs(parsedConfig.timeout);
-        } catch { /* use default */ }
+                console.log(`[McpHub] Calling ${serverName}.${toolName} (timeout: ${msToSeconds(timeout)}s)`);
 
-        console.log(`[McpHub] Calling ${serverName}.${toolName} (timeout: ${msToSeconds(timeout)}s)`);
+                const result = await connection.client.request(
+                    { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
+                    CallToolResultSchema,
+                    { timeout },
+                );
 
-        try {
-            const result = await connection.client.request(
-                { method: "tools/call", params: { name: toolName, arguments: toolArguments } },
-                CallToolResultSchema,
-                { timeout },
-            );
-
-            return { ...result, content: result.content ?? [] };
-        } catch (error) {
-            this.handleTransportError(connection, error);
-            throw error;
-        }
+                return { ...result, content: result.content ?? [] };
+            },
+            {
+                noConnectionErrorMessage: `No connection found for server: ${serverName}. Available: ${this.connections.map(c => c.server.name).join(", ")}`,
+            },
+        );
     }
 
     async readResource(serverName: string, uri: string): Promise<McpResourceResponse> {
@@ -849,7 +888,7 @@ export class McpHub {
                 ReadResourceResultSchema,
             );
         } catch (error) {
-            this.handleTransportError(connection, error);
+            await this.handleTransportError(connection, error);
             throw error;
         }
     }
@@ -878,15 +917,20 @@ export class McpHub {
 
     async addMcpServer(serverData: { name: string; [key: string]: any }): Promise<void> {
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const config = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            const config = await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const config = JSON.parse(content);
 
-            if (!config.mcpServers) { config.mcpServers = {}; }
-            const { name, ...serverConfig } = serverData;
-            config.mcpServers[name] = { ...serverConfig };
-            await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                if (!config.mcpServers) { config.mcpServers = {}; }
+                const { name, ...serverConfig } = serverData;
+                config.mcpServers[name] = { ...serverConfig };
+                await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                return config;
+            });
 
+            const { name } = serverData;
             this.notifyCallback({
                 type: "NOTIFY_MCP_SERVER_SUCCESS",
                 data: { message: `MCP 服务器 "${name}" 已成功添加` },
@@ -907,36 +951,40 @@ export class McpHub {
     }
 
     async upDataMcpConfig(serverData: any): Promise<void> {
+        const serverName = serverData.name;
+        const originalName = serverData.originalName;
+        if (!serverName) {
+            throw new Error("Server name is required");
+        }
+
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const currentConfig = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            const currentConfig = await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const currentConfig = JSON.parse(content);
 
-            const serverName = serverData.name;
-            const originalName = serverData.originalName;
-            if (!serverName) {
-                throw new Error("Server name is required");
-            }
+                if (!currentConfig.mcpServers) { currentConfig.mcpServers = {}; }
 
-            if (!currentConfig.mcpServers) { currentConfig.mcpServers = {}; }
-
-            if (originalName && originalName !== serverName) {
-                if (currentConfig.mcpServers[originalName]) {
-                    delete currentConfig.mcpServers[originalName];
+                if (originalName && originalName !== serverName) {
+                    if (currentConfig.mcpServers[originalName]) {
+                        delete currentConfig.mcpServers[originalName];
+                    }
                 }
-            }
 
-            if (serverData.mcpServers) {
-                currentConfig.mcpServers = { ...currentConfig.mcpServers, ...serverData.mcpServers };
-            } else {
-                const { name, originalName: _, status, error, tools, resources, resourceTemplates, prompts, ...serverConfig } = serverData;
-                currentConfig.mcpServers[serverName] = {
-                    ...currentConfig.mcpServers[serverName],
-                    ...serverConfig,
-                };
-            }
+                if (serverData.mcpServers) {
+                    currentConfig.mcpServers = { ...currentConfig.mcpServers, ...serverData.mcpServers };
+                } else {
+                    const { name, originalName: _, status, error, tools, resources, resourceTemplates, prompts, ...serverConfig } = serverData;
+                    currentConfig.mcpServers[serverName] = {
+                        ...currentConfig.mcpServers[serverName],
+                        ...serverConfig,
+                    };
+                }
 
-            await fs.writeFile(settingsPath, JSON.stringify(currentConfig, null, 2));
+                await fs.writeFile(settingsPath, JSON.stringify(currentConfig, null, 2));
+                return currentConfig;
+            });
 
             const successMessage = originalName && originalName !== serverName
                 ? `MCP 服务器 "${originalName}" 已重命名为 "${serverName}"`
@@ -964,16 +1012,20 @@ export class McpHub {
 
     async removeMcpServer(serverName: string): Promise<void> {
         try {
-            const settingsPath = await this.getMcpSettingsFilePath();
-            const content = await fs.readFile(settingsPath, "utf-8");
-            const config = JSON.parse(content);
+            // 使用锁保护配置文件读写，防止并发竞态
+            await this.withConfigLock(async () => {
+                const settingsPath = await this.getMcpSettingsFilePath();
+                const content = await fs.readFile(settingsPath, "utf-8");
+                const config = JSON.parse(content);
 
-            if (!config.mcpServers || !config.mcpServers[serverName]) {
-                throw new Error(`MCP 服务器 "${serverName}" 不存在`);
-            }
+                if (!config.mcpServers || !config.mcpServers[serverName]) {
+                    throw new Error(`MCP 服务器 "${serverName}" 不存在`);
+                }
 
-            delete config.mcpServers[serverName];
-            await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+                delete config.mcpServers[serverName];
+                await fs.writeFile(settingsPath, JSON.stringify(config, null, 2));
+            });
+
             await this.deleteConnection(serverName);
 
             this.notifyCallback({

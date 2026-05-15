@@ -47,11 +47,12 @@ ${rule.content}
         .map((server) => {
           const tools = server.tools
             ?.map((tool) => {
-              const schemaStr = tool.inputSchema
-                ? `    Input Schema:
-      ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-                : ""
+              if (!tool.inputSchema) {
+                return `- ${tool.name}`
+              }
 
+              const schemaStr = `    Input Schema:
+      ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
               return `- ${tool.name}: ${tool.description}\n${schemaStr}`
             })
             .join("\n\n")

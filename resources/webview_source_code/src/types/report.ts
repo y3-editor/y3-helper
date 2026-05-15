@@ -30,6 +30,7 @@ export enum UserEvent {
   CODE_CHAT_APPLY_BATCH_FAILED = 'CodeChat.apply_batch_failed',
   CODE_CHAT_ACCEPT_AUTO_MODE = 'CodeChat.accept_auto_mode',
   CODE_CHAT_ACCEPT_AUTO_MODE_BEFORE_CHAT = 'CodeChat.code_chat_accept_auto_mode_before_chat',
+  CODE_CHAT_CAVEMAN_MODE_TOGGLE = 'CodeChat.caveman_mode_toggle',
 
   CODE_CHAT_PROMPT_EXPLAIN = 'CodeChat.prompt_explain',
   CODE_CHAT_PROMPT_FIND_PROBLEM = 'CodeChat.prompt_find_problem',
@@ -45,6 +46,7 @@ export enum UserEvent {
   CODE_CHAT_CODEBASE = 'CodeChat.codebase',
   CODE_CHAT_SUBAGENT = 'CodeChat.subagent',
   CHAT_TOOL_CALL_ERROR = 'CodeChat.tool_call_error',
+  CODE_CHAT_TOPIC = 'CodeChat.topic',
 
   CODE_CHAT_DEFINE_PROMPT = 'CodeChat.define_prompt',
   CODE_CHAT_TRIGGER_TOKEN_LIMIT = 'CodeChat.trigger_token_limit',
@@ -124,6 +126,8 @@ export enum UserEvent {
   // MCP
   CODE_CHAT_MCP_SESSION_TOKEN_USED = 'CodeChat.mcp_session_token_used',
   CODE_CHAT_MCP_MESSAGE_TOKEN_USED = 'CodeChat.mcp_message_token_used',
+  CODE_CHAT_MCP_SEARCH_TOOL = 'CodeChat.mcp_search_tool',
+  CODE_CHAT_MCP_SEARCH_TOOL_FOLLOWUP = 'CodeChat.mcp_search_tool_followup',
 
   // New Apply
   CODE_CHAT_EDIT_FILE = 'CodeChat.edit_file',
@@ -191,4 +195,6 @@ export enum UserEvent {
   TOOLCALL_STOP_BY_LENGTH = 'CodeChat.toolcall_stop_by_length',
 
   CHAT_SUBMIT_ERROR = 'CodeChat.chat_submit_error',
+
+  CODE_CHAT_CREATE_AGENT = 'CodeChat.create_agent',
 }

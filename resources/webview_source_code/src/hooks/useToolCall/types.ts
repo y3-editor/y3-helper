@@ -19,6 +19,8 @@ export interface ToolTypeChecks {
   hasTaskTool: boolean;
   hasGlobSearchTool: boolean
   hasClaudeEditTool: boolean;
+  hasSkillTool: boolean;
+  hasSkillAutoRun: boolean;
 }
 
 export interface EnvironmentChecks {

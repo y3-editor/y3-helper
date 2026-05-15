@@ -118,12 +118,13 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
       // 以新的 skills 列表为准，清理已卸载 skill 的旧 config
       const activeNames = new Set(skills.map((s) => s.name));
       const updatedConfigs: Record<string, SkillConfig> = {};
+      const newSkillDefaultEnabled = localStorage.getItem('new-skill-default-enabled') !== 'false';
 
       skills.forEach((skill) => {
         const existing = state.skillConfigs[skill.name];
         updatedConfigs[skill.name] = {
           name: skill.name,
-          disabled: skill.disabled ?? existing?.disabled ?? false,
+          disabled: skill.disabled ?? existing?.disabled ?? (!existing ? !newSkillDefaultEnabled : false),
         };
       });
 
@@ -131,8 +132,9 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
       Object.keys(state.skillConfigs).forEach((name) => {
         if (activeNames.has(name) && updatedConfigs[name]) {
           updatedConfigs[name] = {
-            ...state.skillConfigs[name],
             ...updatedConfigs[name],
+            ...state.skillConfigs[name],
+            disabled: updatedConfigs[name].disabled,
           };
         }
       });

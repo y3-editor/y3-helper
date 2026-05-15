@@ -73,14 +73,8 @@ export const CODE_QUALITY_AUTOFIX_PROMPT_APP = {
 2. 如果问题代码存在，则自动修复问题，并简洁清晰地说明问题的根本原因。
 3. 修复时保持代码风格一致性，不要引入新的问题。`,
   _id: 'code_quality_autofix',
-  type: 'codemaker' as const,
-  meta: {
-    description: '自动修复代码质量问题',
-    name: 'Quality: 自动修复代码质量问题',
-    prompt: '',
-    type: 'codemaker' as const,
-    _id: 'code_quality_autofix',
-  },
+  type: PromptCategoryType._CodeMaker,
+  description: '自动修复代码质量问题',
 };
 
 export const PROMPT_CODE_VARIABLE = '{{%code%}}';

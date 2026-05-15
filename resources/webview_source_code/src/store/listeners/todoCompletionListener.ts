@@ -1,10 +1,10 @@
 /**
  * Todo 完成状态监听器
- * 
+ *
  * 监听当前会话中 TODO 列表的变化，当所有任务首次完成时触发回调
  */
 import { ChatSession, useChatStore } from '../chat';
-import type { TodoList } from '../workspace/tools/todo';
+import type { TodoList } from '../../services/harness/tools/todo';
 import type { ChatMessage } from '../../services';
 
 interface TodoCompletionConfig {

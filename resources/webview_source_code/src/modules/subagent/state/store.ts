@@ -65,8 +65,15 @@ const MAX_CACHED_SESSIONS = 20;
 const cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 interface SubagentStore {
-  /** Agent 注册表（内置 + 用户自定义合并后的列表） */
+  /** Agent 注册表（内置 + 用户自定义合并后的列表，含加载错误的 agent） */
   agents: Agent[];
+
+  /**
+   * 可用 Agent 列表（派生字段，非持久化）。
+   * 从 agents 中过滤掉 _status === "error" 的项，
+   * 用于 system prompt 注入、TypeAhead 选择等"应用"场景。
+   */
+  validAgents: Agent[];
 
   /**
    * 同步用户自定义 Agent 列表（由 IDE SYNC_AGENTS 事件触发）。
@@ -198,6 +205,8 @@ export const useSubagentStore = create<SubagentStore>()(
     immer((set, get) => ({
       agents: BUILTIN_AGENTS,
 
+      validAgents: BUILTIN_AGENTS,
+
       setAgents: (_agents: Agent[]) => {
         set((state) => {
           const builtinNames = new Set(BUILTIN_AGENTS.map((a) => a.name));
@@ -212,7 +221,9 @@ export const useSubagentStore = create<SubagentStore>()(
           const newAgents = _agents
             .filter((c) => !builtinNames.has(c.name))
             .map((c) => ({ ...c, source: 'custom' as const }));
-          state.agents = [...merged, ...newAgents];
+          const allAgents = [...merged, ...newAgents];
+          state.agents = allAgents;
+          state.validAgents = allAgents.filter((a) => a._status !== 'error');
         });
       },
 

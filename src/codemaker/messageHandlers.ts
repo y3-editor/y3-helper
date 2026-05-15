@@ -334,7 +334,46 @@ export async function handleExtendedMessage(
         case 'GET_AGENTS': {
             const agentsHandler = AgentsHandler.getInstance();
             await agentsHandler.initialize();
-            agentsHandler.syncAgents();
+            agentsHandler.syncAgents(provider);
+            return true;
+        }
+
+        case 'CREATE_AGENT': {
+            const { identifier, scope, markdown, overwrite } = message.data || {};
+            console.log(
+                `[AgentsHandler] CREATE_AGENT received - identifier: ${identifier}, scope: ${scope}, overwrite: ${overwrite}`
+            );
+
+            const agentsHandler = AgentsHandler.getInstance();
+            const result = await agentsHandler.createAgent({
+                identifier,
+                scope,
+                markdown,
+                overwrite,
+            });
+
+            provider.sendMessage({
+                type: 'CREATE_AGENT_RESULT',
+                data: result,
+            });
+
+            if (result.success) {
+                agentsHandler.syncAgents(provider);
+                // 打开创建的 agent 文件
+                if (result.path) {
+                    try {
+                        const fileUri = vscode.Uri.file(result.path);
+                        const document = await vscode.workspace.openTextDocument(fileUri);
+                        await vscode.window.showTextDocument(document);
+                        console.log(`[AgentsHandler] Agent file opened - path: ${result.path}`);
+                    } catch (err: any) {
+                        console.log(`[AgentsHandler] Failed to open agent file - path: ${result.path}, error: ${err?.message ?? err}`);
+                    }
+                }
+            } else {
+                console.log(`[AgentsHandler] CREATE_AGENT failed - code: ${result.code}, message: ${result.message}`);
+                vscode.window.showErrorMessage(result.message ?? 'Failed to create agent.');
+            }
             return true;
         }
 

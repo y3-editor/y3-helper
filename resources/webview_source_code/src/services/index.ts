@@ -150,6 +150,7 @@ export interface ToolResult {
     hasShellIntegration?: boolean;
     isLargeFile?: boolean; // 判定是否为大文件
     isTruncated?: boolean; // For task tool: indicates if subagent was truncated at maxSteps
+    isRtk?: boolean;
   }
 }
 

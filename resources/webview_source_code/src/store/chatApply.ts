@@ -413,6 +413,7 @@ export const useChatApplyStore = create<ChatApplyStore>()(
       },
       acceptEdit(toolCallId: string, force?: boolean) {
         const targetApplyItem = get().chatApplyInfo[toolCallId];
+        if (!targetApplyItem?.filePath) return
         const {
           filePath,
           finalResult,

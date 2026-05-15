@@ -1,5 +1,5 @@
 import { Box, Input, Textarea, Text, VStack } from '@chakra-ui/react';
-import type { TodoItem } from '../../../../store/workspace/tools/todo';
+import type { TodoItem } from './../../../../services/harness/tools/todo';
 
 interface TodoEditFormProps {
   todo: TodoItem;

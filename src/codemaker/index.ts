@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { CodeMakerWebviewProvider } from './webviewProvider';
 import { CodeMakerApiServer } from './apiServer';
+import { getCodeMakerConfig } from './configProvider';
 import { initOpenFilesHandler } from './handlers/openFilesHandler';
 import { initWorkspaceTracker } from './handlers/workspaceTracker';
 // import { initIgnoreHandler } from './handlers/ignoreHandler';
 import SkillsHandler from './skillsHandler';
+import { initEditApplyProvider } from './editApplyProvider';
+import { ensureRtkBinary } from './utils/rtk/rtkBinaryManager';
 
 let webviewProvider: CodeMakerWebviewProvider | undefined;
 let apiServer: CodeMakerApiServer | undefined;
@@ -51,7 +54,8 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
                 e.affectsConfiguration('Y3Maker.CodeChatWireApi') ||
                 e.affectsConfiguration('Y3Maker.CodeChatRequestTimeoutMs') ||
                 e.affectsConfiguration('Y3Maker.CodeChatMaxOutputTokens') ||
-                e.affectsConfiguration('Y3Maker.CodeChatContextWindowSize')
+                e.affectsConfiguration('Y3Maker.CodeChatContextWindowSize') ||
+                e.affectsConfiguration('Y3Maker.CodebaseChatRtk')
             ) {
                 // 向 webview 重新发送 INIT_DATA，刷新前端配置
                 if (webviewProvider) {
@@ -79,6 +83,14 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
     skillsHandler.initialize(context).catch(err => {
         console.error('[Y3Maker] SkillsHandler initialization failed:', err);
     });
+
+    // 初始化 EditApplyProvider（Claude edit/write 自动应用）
+    initEditApplyProvider(context);
+
+    // RTK 二进制预下载（异步，不阻塞启动）
+    if (getCodeMakerConfig().model && vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk')) {
+        ensureRtkBinary().catch(() => {});
+    }
 
 }
 

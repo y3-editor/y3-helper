@@ -15,7 +15,7 @@ import { truncateContent, isImageFileByPath } from '../../../utils';
 import {
   maxTruncatedLine,
   getFilePrompt,
-} from '../../../store/workspace/tools/read';
+} from './../../../services/harness/tools/read';
 import { EParsedDocsStatus } from '../../../utils/chatAttachParseHandler';
 import type {
   RawToolCallResult,

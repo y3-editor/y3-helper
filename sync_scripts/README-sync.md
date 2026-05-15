@@ -207,17 +207,20 @@ A: AI 会标记复杂项，你用 VS Code 或其他 git merge 工具手动处理
 
 ### Conventional Commit 类型判断
 
-| 前缀 | 含义 | 是否合并 |
-|------|------|---------|
-| `feat:` | 新功能 | ⚠️ 需询问用户确认 |
-| `fix:` | Bug 修复 | ✅ 通常需要合并 |
-| `refactor:` | 代码重构 | ✅ 通常需要合并 |
-| `perf:` | 性能优化 | ✅ 通常需要合并 |
-| `chore:` | 构建/发布版本 | ❌ 不需要合并（通常是版本号 bump + CHANGELOG） |
-| `docs:` | 文档变更 | ❌ 一般不合（注意：有些 docs 提交实际包含代码，需要看 diff） |
-| `style:` | 代码格式化 | ❌ 一般不合 |
-| `test:` | 测试用例 | ❌ 一般不合 |
-| `ci:` / `build:` | CI/构建配置 | ❌ 不合 |
+> [!IMPORTANT]
+> **看 diff 不看前缀**。下表只是默认倾向，最终决定永远基于 diff 实际内容。上游开发者经常滥用前缀（如把 UI 样式调整标 `style:`、把含代码改动的提交标 `docs:`/`chore:`），不能仅凭前缀判断。
+
+| 前缀 | 含义 | 默认倾向 | 何时反转 |
+|------|------|---------|---------|
+| `feat:` | 新功能 | ⚠️ 需询问用户确认 | Y3 明确不需要的功能 → 跳过 |
+| `fix:` | Bug 修复 | ✅ 通常合 | 修的是 Y3 不用的功能 → 跳过 |
+| `refactor:` | 代码重构 | ✅ 通常合 | — |
+| `perf:` | 性能优化 | ✅ 通常合 | — |
+| `chore:` | 杂项 | ❌ 默认不合（版本号 bump + CHANGELOG） | diff 含真实代码改动（trace-id 注入、提示文案调整等）→ 看内容决定 |
+| `docs:` | 文档变更 | ❌ 一般不合 | diff 含代码（一些人把代码改动也标 docs）→ 看内容决定 |
+| `style:` | 代码格式化 / UI 样式 | 🟡 看内容 | 纯 prettier/eslint 格式化 → 跳过；通用 UI 组件样式调整（Tailwind/CSS/className）→ 合；Y3 不需要功能的样式（如模型价格标）→ 跳过；Y3 定制过的文件 → REVIEW 手合 |
+| `test:` | 测试用例 | ❌ 一般不合 | — |
+| `ci:` / `build:` | CI/构建配置 | ❌ 不合 | — |
 
 ### Y3 不需要的上游功能
 
@@ -268,3 +271,18 @@ Y3Helper 的前端 webui 通过 axios 请求本地 API Server（`localhost:3001`
 > ⚠️ **踩坑记录（2026-04-30）**：上游在 2026-03-20 将 `codemakerChatHistoryRequest` 的 baseURL 从 `/proxy/gpt/u5_chat` 改为 `/proxy/gpt/chat`（同时 `uploadImg` 也从 `u5_chat` 改到了 `codemakderChatGptRequest` 即 `gpt/gpt/`），但 `api-server/routes/history.mjs` 和 `chat.mjs` 中的路由注册路径没有同步更新，导致前端请求全部 fallback 到 SPA 的 `index.html`，`data.items` 为 `undefined`，触发 `revalidateChatSessions` 中 `.filter()` 崩溃。
 >
 > **教训**：`api-server/routes/` 下的文件是 Y3 自建的后端，不在上游仓库中，合并时不会自动冲突。每次合并上游 webui 时，**必须检查 `services/chat.ts` 中的 `baseURL` 和硬编码 URL 是否有变更**，如有变更须手动对齐后端路由。
+
+### Y3 GPT 模型链路说明
+
+> 用户填 GPT 模型时实际链路（**不是** AzureOpenAIStream / Responses API）：
+> 1. `App.tsx` 注入 fixedModel 到 chatModels 时**有意不设 `supplyChannel`**
+> 2. `agentEntry.execute` 因此走 default 分支 → `CmCodebaseStream`
+> 3. 请求 `/proxy/gpt/u5_chat/codebase_chat_stream` → Y3 api-server `streamChatCompletion`
+> 4. api-server 拼成 `<用户配置的 baseURL>/v1/chat/completions` 直连用户上游
+> 5. 若用户配 `wireApi=responses`，api-server 会走 `streamResponsesApi` 拼 `/responses` 并把 SSE 转成 Chat Completions 格式回前端
+
+**`AzureOpenAIStream` 通路在 Y3 是 dead code**：
+- 上游 `harness/stream/azureOpenAI/index.ts` 改动同步合进来即可（不影响 Y3 运行）
+- 该 stream 的 URL 是 `/proxy/cm/openai/v1/responses`，Y3 api-server **没注册**该路由
+- 想启用：见 `azureOpenAI/index.ts::getUrl` 的注释
+
