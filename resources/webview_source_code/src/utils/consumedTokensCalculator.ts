@@ -150,6 +150,7 @@ function checkCacheModel(model?: ChatModel | string): boolean {
     'claude',
     'gpt',
     'deepseek',
+    'auto',
   ].some(i => modelName.includes(i))
 }
 
@@ -159,6 +160,7 @@ function checkCacheModel(model?: ChatModel | string): boolean {
  */
 export function formatSessionName(name: string): string {
   return name
+    .toLowerCase() // 转换为小写
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '_') // 将非字母数字字符替换为下划线
     .replace(/_{2,}/g, '_') // 将连续的下划线合并为一个

@@ -149,7 +149,7 @@ import addCacheMarksToMessages, { addCacheMarksToTools } from '../utils/addCache
 import EventBus, { EBusEvent } from '../utils/eventbus';
 import { debugSuccess } from '../utils/debugLog';
 import { sumUsageTokens } from '../utils/tokenCalculator';
-import { getCodemakerAgentEntry } from '../services/harness/swarm/agentEntry';
+import { AgentStatus, getCodemakerAgentEntry } from '../services/harness/swarm/agentEntry';
 import {
   AgentTaskDirective,
   buildAgentListingReminder,
@@ -214,6 +214,8 @@ export const mentionKnowledgeMap: Map<string, boolean> = new Map()
 // 用于在 revalidateChatSessions 中区分"刚创建待同步"与"已被其他端删除"的会话。
 // 会话一旦出现在服务端列表中即被移除；模块级变量无需持久化，页面刷新后自然清空。
 const pendingSyncSessionIds = new Set<string>();
+
+export const recentlyDeletedSessionIds = new Set<string>();
 
 // 追踪每个会话当前正在进行的 syncHistory 调用数量（引用计数）。
 // 当 syncHistory 正在将本地数据写入服务端时，loadSessionData 不应用服务端数据覆盖本地，
@@ -889,6 +891,9 @@ export const useChatStore = create<ChatStore>()(
 
         try {
           await removeSession(id);
+          // 标记为待删除，防止并发的 revalidateChatSessions
+          // 用服务端旧数据将已删除会话重新加回本地状态
+          recentlyDeletedSessionIds.add(id);
         } catch (error) {
           throw new Error(`Failed to remove history: ${error}`);
         }
@@ -928,7 +933,6 @@ export const useChatStore = create<ChatStore>()(
           const latestSession = currentRepoSessions.sort((a, b) =>
             alphabeticalCompare(b.metadata.create_time, a.metadata.create_time),
           )[0];
-
           set({
             sessions: nextSessions,
             currentSessionId: latestSession._id,
@@ -1263,7 +1267,9 @@ export const useChatStore = create<ChatStore>()(
         const sessionId = session._id;
         pendingSyncCounts.set(sessionId, (pendingSyncCounts.get(sessionId) || 0) + 1);
         try {
-          await updateSession(latestData);
+          if (!recentlyDeletedSessionIds.has(sessionId)) {
+            await updateSession(latestData);
+          }
         } catch (error) {
           console.error(error);
         } finally {
@@ -2476,7 +2482,13 @@ export const useChatStreamStore = create(
       const isSubagentProcessing = !useTaskCompletionStore.getState().isSessionComplete(chatStoreState.currentSessionId || '');
       const chatType = chatStoreState.chatType;
       // 先判断是否"处于流传输中"或者是"处于搜索中"或者"终端运行中"
-      if (get().isStreaming || get().isSearching || get().isTerminalProcessing || isSubagentProcessing) {
+      if (
+        get().isStreaming ||
+        get().isSearching ||
+        get().isTerminalProcessing ||
+        isSubagentProcessing ||
+        getCodemakerAgentEntry().status === AgentStatus.ABORTED
+      ) {
         userReporter.report({
           event: UserEvent.CHAT_SUBMIT_ERROR,
           extends: {
@@ -5836,7 +5848,7 @@ export const useChatStreamStore = create(
                           } else if (tool.function.name === 'read_file') {
                             // [Y3] e545978e fix: 兼容 deepseek 路径幻觉～，初步怀疑是其他工具的 file_path 参数被 deepseek 认为是 read_file 的 path 参数
                             if (typeof tool_params === 'object' && !tool_params?.path) {
-                              tool_params.path = tool_params?.file_path || tool_params?.filePath || tool_params?.filepath;
+                              tool_params.path = tool_params?.file_path || tool_params?.filePath || tool_params?.filepath || tool_params?.file;
                             }
                             (async () => {
                               const allowed = await runToolBeforeExecuteHook(

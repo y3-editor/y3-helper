@@ -49,6 +49,7 @@ import TokenBreakdownPanel, {
 } from '../../../components/TokenBreakdownPopover';
 import type { TokenBreakdownItem } from '../../../components/TokenBreakdownPopover';
 import type { ConsumedTokens } from '../../../utils/consumedTokensCalculator';
+import { AgentStatus, getCodemakerAgentEntry } from '../../../services/harness/swarm/agentEntry';
 
 // 工具分类函数 - 提取到组件外部避免重复定义
 const getToolCategory = (
@@ -699,6 +700,7 @@ export function GroupAIMessage({
   }, [message, currentSession, onNewSession, chatType]);
 
   const onRetryClick = useCallback(() => {
+    getCodemakerAgentEntry().status = AgentStatus.IDLE; // 重置 Agent 状态，允许重新执行
     setStreamRetryCount(0);
     onUserResubmit();
   }, [onUserResubmit, setStreamRetryCount]);

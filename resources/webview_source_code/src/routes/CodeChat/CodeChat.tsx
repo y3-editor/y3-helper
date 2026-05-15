@@ -121,7 +121,7 @@ import ChatBottomTabs, {
 import PlanTab, { PlanTabApi } from './ChatBottomTabs/tabs/PlanTab';
 import { UserEvent } from '../../types/report';
 import { formatMcpToolResult, getReportEventByToolName } from '../../utils/toolCall';
-import { getCodemakerAgentEntry } from '../../services/harness/swarm/agentEntry';
+import { getCodemakerAgentEntry, AgentStatus } from '../../services/harness/swarm/agentEntry';
 import { ChatRole } from '../../types/chat';
 // import { MdOutlineDifference } from 'react-icons/md';
 import ChatApplyTab from './ChatBottomTabs/tabs/ChatApplyTab';
@@ -977,6 +977,7 @@ function CodeChat() {
       if (checkInputTokensWithExceed(_prompt, mentionAttachs)) {
         return;
       }
+      getCodemakerAgentEntry().status = AgentStatus.IDLE; // 重置 Agent 状态，允许重新执行
       setStreamRetryCount(0);
       onUserSubmit(
         _prompt,
@@ -2428,6 +2429,7 @@ function CodeChat() {
             });
           }
           handleStopStream();
+          getCodemakerAgentEntry().status = AgentStatus.IDLE;
           updateChatConfig((config) => {
             config.model = model || config.model;
           });

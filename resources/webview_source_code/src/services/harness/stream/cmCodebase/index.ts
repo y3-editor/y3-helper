@@ -294,7 +294,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
     this.streamContext.autoModel = this.autoModel;
 
     this.tracker.startChatSpan({
-      name: 'requestChatStream.run',
+      name: 'ai.streamChat',
       event: UserEvent.CODE_CHAT_CODEBASE,
       url: this.getUrl,
       data: this.originalData,
@@ -312,7 +312,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
         const { done, value } = await reader.read();
         if (!this.firstTokenReceived && value?.length) {
           this.firstTokenReceived = true;
-          this.tracker.setChatSpanAttribute('gen_ai.server.time_to_first_token_ms', Math.round(performance.now() - this.requestStartTime));
+          (this.tracker as any).recordTTFT?.(performance.now() - this.requestStartTime);
         }
         if (value?.length) {
           this.lastChunkTime = Date.now();
@@ -348,7 +348,7 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
         }
       }
 
-      if ((this._shouldRetry || !toolcallParsable) && this.continueCount < MAX_CONTINUE_COUNT) {
+      if (!this.isUserAborted && (this._shouldRetry || !toolcallParsable) && this.continueCount < MAX_CONTINUE_COUNT) {
         this._shouldRetry = false;
         this.continueCount++;
 

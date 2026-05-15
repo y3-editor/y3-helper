@@ -404,7 +404,7 @@ export const useChatTerminal = (
   const codeBaseCheckCommands = useConfigStore((state) => state.config.codeBaseCheckCommands)
 
   const termialTool = useMemo(() => {
-    return tool_calls?.find((i) => i.function.name === terminalCmdFunction)
+    return tool_calls?.find((i) => i?.function?.name === terminalCmdFunction)
   }, [tool_calls])
 
   const terminalLog = useMemo(() => {

@@ -150,11 +150,8 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
       this.abortController?.abort(createAbortReason(ABORT_REASON_USER_CANCELLED, '请求异常，已取消请求'));
     } catch (e) { /* empty */ }
     if (
-      result.extra &&
-      result.extra.code === 30002 &&
-      (result.extra.msg as string)
-        .toLocaleLowerCase()
-        .includes(StreamError.AuthTokenIsExpired)
+      result?.extra?.code === 30002
+      && (result?.extra?.msg as string)?.toLocaleLowerCase?.()?.includes?.(StreamError.AuthTokenIsExpired)
     ) {
       this.options?.onError?.(new Error(StreamError.AuthTokenIsExpired));
     } else {
