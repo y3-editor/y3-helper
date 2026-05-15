@@ -1,8 +1,0 @@
-const e = `<run_terminal_cmd>
-When executing terminal commands, please follow these rules:
-  a. Commands are available and compatible with the {{shell|bash}} Shell of the {{osName|Unknown}} OS.
-  b. The actual command will NOT execute until the user approves it. The user may not approve it immediately. Do NOT assume the command has started running.
-</run_terminal_cmd>`;
-export {
-  e as default
-};

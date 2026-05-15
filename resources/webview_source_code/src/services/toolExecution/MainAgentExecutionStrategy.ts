@@ -8,6 +8,7 @@ import { ExecutionContext } from '../../types/executionContext';
 import { ToolExecutionStrategy } from './ToolExecutionStrategy';
 import { terminalCmdFunction } from '../../routes/CodeChat/ChatMessagesList/TermialPanel';
 import { useSkillsStore } from '../../store/skills';
+import { SEARCH_TOOL_NAME } from '../../utils/mcpToolSearch';
 
 export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
   getStrategyName(): string {
@@ -24,13 +25,18 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
       return true;
     }
 
-    const permissions = context.permissions;
-    if (!permissions) {
-      return false; // 没有权限配置，不自动执行
-    }
-
     const toolName = toolCall.function.name;
 
+    if (this.isWebViewOnlyInfrastructureTool(toolName)) {
+      // search_tool is handled locally in WebView and never forwarded to IDE/backend.
+      // Returning true lets handleAutoExecute continue after a standalone search_tool result.
+      return true;
+    }
+
+    const permissions = context.permissions;
+    if (!permissions) {
+      return false; // no permission config, do not auto-execute
+    }
     // 按工具类型检查对应的auto选项
     if (this.isEditFileTool(toolName)) {
       return permissions.autoApply;
@@ -118,6 +124,13 @@ export class MainAgentExecutionStrategy implements ToolExecutionStrategy {
    */
   private isMCPTool(toolName: string): boolean {
     return ['use_mcp_tool', 'access_mcp_resource'].includes(toolName);
+  }
+
+  /**
+   * WebView-only infrastructure tool; never forwarded to IDE/backend.
+   */
+  private isWebViewOnlyInfrastructureTool(toolName: string): boolean {
+    return toolName === SEARCH_TOOL_NAME;
   }
 
   /**

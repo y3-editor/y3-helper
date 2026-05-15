@@ -10,6 +10,7 @@ import {
   ChatMessageContentUnion,
   ChatMessageContent,
   ChatMessageContentText,
+  ToolCall,
   MultipleAttach,
 } from '../services';
 import {
@@ -165,6 +166,7 @@ import { UnionType } from '../routes/CodeChat/ChatTypeAhead/Prompt/type';
 import { BUILT_IN_PROMPTS, BUILT_IN_PROMPTS_SPECKIT, specPromptMap } from '../services/builtInPrompts';
 import { useHookStore } from './hooks';
 import { configureThinkingSignature } from '../utils/chatThinkingHandler';
+import { executeSearchTool, SEARCH_TOOL_NAME } from '../utils/mcpToolSearch';
 
 import {
   calculateConsumedTokensUpdate,
@@ -196,6 +198,109 @@ export const REQUEST_TIMEOUT_NAME = 'RequestTimeout';
 export const MAX_SHOW_TIP_NUM = 60;
 
 export const MAX_CHAT_RETRY_NUM = 3;
+
+
+function sortMainAgentNonTaskToolCalls<T extends { function: { name: string } }>(toolCalls: T[]): T[] {
+  const searchToolCalls = toolCalls.filter((tool) => tool.function.name === SEARCH_TOOL_NAME);
+  if (!searchToolCalls.length) {
+    return toolCalls;
+  }
+
+  const hasMcpToolCall = toolCalls.some((tool) =>
+    tool.function.name === 'use_mcp_tool' || tool.function.name === 'access_mcp_resource',
+  );
+  if (!hasMcpToolCall) {
+    return toolCalls;
+  }
+
+  const firstSearchOrMcpIndex = toolCalls.findIndex((tool) =>
+    tool.function.name === SEARCH_TOOL_NAME ||
+    tool.function.name === 'use_mcp_tool' ||
+    tool.function.name === 'access_mcp_resource',
+  );
+  const nonSearchToolCalls = toolCalls.filter((tool) => tool.function.name !== SEARCH_TOOL_NAME);
+
+  return [
+    ...nonSearchToolCalls.slice(0, firstSearchOrMcpIndex),
+    ...searchToolCalls,
+    ...nonSearchToolCalls.slice(firstSearchOrMcpIndex),
+  ];
+}
+
+function normalizeSearchToolParams(toolParams: any): Record<string, unknown> & { query?: string; limit?: string | number } {
+  if (!toolParams || typeof toolParams !== 'object') {
+    return {};
+  }
+
+  const query = toolParams.query == null ? undefined : String(toolParams.query);
+  const limit = typeof toolParams.limit === 'string' || typeof toolParams.limit === 'number'
+    ? toolParams.limit
+    : undefined;
+
+  return {
+    ...toolParams,
+    query,
+    limit,
+  };
+}
+
+async function executeMainAgentSearchToolLocally(options: {
+  sessionId: string;
+  tool: ToolCall;
+  toolParams: any;
+  updateToolCallResults: (results: Record<string, { path: string; content: string; isError?: boolean }>) => void;
+}) {
+  const { sessionId, tool, updateToolCallResults } = options;
+  const toolParams = normalizeSearchToolParams(options.toolParams);
+
+  const allowed = await runToolBeforeExecuteHook(
+    sessionId,
+    tool,
+    toolParams,
+    updateToolCallResults,
+  );
+  if (!allowed) return;
+
+  if (useChatStore.getState().currentSessionId !== sessionId) {
+    return;
+  }
+
+  try {
+    const { activatedToolKeys, content } = executeSearchTool({
+      servers: useMCPStore.getState().getVisibleMCPServers(),
+      query: toolParams.query,
+      limit: toolParams.limit,
+    });
+
+    if (useChatStore.getState().currentSessionId !== sessionId) {
+      return;
+    }
+
+    if (activatedToolKeys.length > 0) {
+      useMCPStore.getState().activateToolKeys(sessionId, activatedToolKeys);
+    }
+
+    updateToolCallResults({
+      [tool.id]: {
+        path: '',
+        content,
+      },
+    });
+  } catch (err) {
+    if (useChatStore.getState().currentSessionId !== sessionId) {
+      return;
+    }
+
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    updateToolCallResults({
+      [tool.id]: {
+        path: '',
+        content: errorMessage,
+        isError: true,
+      },
+    });
+  }
+}
 
 // 记录有提及知识库的会话
 export const mentionKnowledgeMap: Map<string, boolean> = new Map()
@@ -595,9 +700,6 @@ export const useChatStore = create<ChatStore>()(
         // 将 PENDING 范围内的 MCP 激活工具键迁移到新会话
         useMCPStore.getState().adoptPendingToolKeys(newSession._id);
 
-        // 新建 codebase 会话时触发引导
-        if (chatType === 'codebase') {
-        }
         // mutateService(requestChatSessions);
       },
 
@@ -4092,7 +4194,7 @@ export const useChatStreamStore = create(
             data,
             chatRequestUrl,
             {
-              onMessage(content, done, toolCalls, reasoningText, totalTokens, completionTokens, streamingToolCall) {
+              async onMessage(content, done, toolCalls, reasoningText, totalTokens, completionTokens, streamingToolCall) {
                 get().setStreamRetryCount(0)
                 if (chatStoreState.isError) {
                   chatStoreState.setError(false);
@@ -4215,8 +4317,8 @@ export const useChatStreamStore = create(
                       const taskToolCalls = toolCalls.filter(
                         (t) => t.function.name === 'task',
                       );
-                      const nonTaskToolCalls = toolCalls.filter(
-                        (t) => t.function.name !== 'task',
+                      const nonTaskToolCalls = sortMainAgentNonTaskToolCalls(
+                        toolCalls.filter((t) => t.function.name !== 'task'),
                       );
                       // task 工具：并行启动所有（不等待，各自完成后独立更新结果）
                       if (taskToolCalls.length > 0 && chatStoreState.currentSessionId) {
@@ -4356,6 +4458,15 @@ export const useChatStreamStore = create(
                               console.error(err);
                               tool_params = {};
                             }
+                          }
+                          if (tool.function.name === SEARCH_TOOL_NAME) {
+                            await executeMainAgentSearchToolLocally({
+                              sessionId,
+                              tool,
+                              toolParams: tool_params,
+                              updateToolCallResults: get().updateToolCallResults,
+                            });
+                            continue;
                           }
                           if (tool.function.name === 'use_mcp_tool' || tool.function.name === 'access_mcp_resource') {
                             let params: any = {};
@@ -4967,7 +5078,7 @@ export const useChatStreamStore = create(
             data,
             chatRequestUrl,
             {
-              onMessage(content, done, toolCalls, totalTokens, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId) {
+              async onMessage(content, done, toolCalls, totalTokens, completionTokens, promptTokens, cacheCreationInputTokens, cacheReadInputTokens, claude37Response, responseId) {
                 get().setStreamRetryCount(0)
 
                 if (chatStoreState.isError) {
@@ -5182,8 +5293,8 @@ export const useChatStreamStore = create(
                       const taskToolCalls = toolCalls.filter(
                         (t) => t.function.name === 'task',
                       );
-                      const nonTaskToolCalls = toolCalls.filter(
-                        (t) => t.function.name !== 'task',
+                      const nonTaskToolCalls = sortMainAgentNonTaskToolCalls(
+                        toolCalls.filter((t) => t.function.name !== 'task'),
                       );
                       // task 工具：并行启动所有（不等待，各自完成后独立更新结果）
                       if (taskToolCalls.length > 0 && chatStoreState.currentSessionId) {
@@ -5329,6 +5440,15 @@ export const useChatStreamStore = create(
                               console.error(err);
                               tool_params = {};
                             }
+                          }
+                          if (tool.function.name === SEARCH_TOOL_NAME) {
+                            await executeMainAgentSearchToolLocally({
+                              sessionId,
+                              tool,
+                              toolParams: tool_params,
+                              updateToolCallResults: get().updateToolCallResults,
+                            });
+                            continue;
                           }
                           if (tool.function.name === 'use_mcp_tool' || tool.function.name === 'access_mcp_resource') {
                             let params: any = {};
