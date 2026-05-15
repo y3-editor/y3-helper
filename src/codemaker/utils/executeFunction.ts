@@ -13,13 +13,14 @@ import editFile, { writeToFile } from './editFile/index';
 import { executeClaudeEdit, executeClaudeWrite } from './editFile/claudeEdit';
 import replaceInFile from './replaceInFile/index';
 import runTerminalCmd from './terminal/index';
-import { getCodeMakerConfig } from '../configProvider';
 import { ensureRtkBinary } from './rtk/rtkBinaryManager';
 import { rewriteCommandViaRtk } from './rtk/rtkRewriter';
 import { rewriteCommandWithRtk } from './rtk/rtkCommandRewriter';
 import * as vscode from 'vscode';
 import * as os from 'os';
 import { buildImageDataUrl } from './imageData';
+import { internalFs } from './internalFs';
+import { persistToolResultToDisk, maybePersistToolResultToDisk } from './persistToolResult';
 
 /**
  * 工具执行所需的 provider 能力（由 CodeMakerWebviewProvider 实现）
@@ -43,6 +44,17 @@ export interface ExecuteFunctionParams {
     panelId?: string;
     isPrivateModel?: boolean;
     provider: ToolProvider;
+}
+
+/**
+ * Strip `rtk ` prefix from command segments when RTK binary is unavailable.
+ * Handles command chains (&, |, ;) by stripping from each segment independently.
+ */
+function stripRtkPrefix(command: string): string {
+    return command
+        .split(/(&&|\|\||[;|])/)
+        .map(seg => seg.replace(/^\s*rtk\s+/, ''))
+        .join('');
 }
 
 /**
@@ -115,10 +127,10 @@ export default async function executeFunction(
                     isError: true,
                 };
             }
-            // RTK command interception
+            // RTK command interception (从前端 tool_params.enableRtk 透传)
             let command = toolParams.command;
             let isRtk = false;
-            const rtkEnabled = vscode.workspace.getConfiguration('Y3Maker').get<boolean>('CodebaseChatRtk') || false;
+            const rtkEnabled = toolParams.enableRtk === true;
             if (rtkEnabled) {
                 const rtkPath = await ensureRtkBinary();
                 if (rtkPath) {
@@ -131,6 +143,10 @@ export default async function executeFunction(
                         isRtk = rewritten !== command;
                         command = rewritten;
                     }
+                } else {
+                    // Fallback: binary unavailable — strip `rtk ` prefix to prevent command failure
+                    console.log(`[RTK] binary unavailable, stripping rtk prefix from: "${command}"`);
+                    command = stripRtkPrefix(command);
                 }
             }
             toolParams.command = command;
@@ -146,6 +162,27 @@ export default async function executeFunction(
             return toolUseMcp(toolParams);
         case 'access_mcp_resource':
             return toolAccessMcpResource(toolParams);
+        case 'internal_fs': {
+            const result = internalFs(toolParams);
+            return { content: result.content, path: toolParams.path || '', isError: result.isError };
+        }
+        case 'persist_pruned_output': {
+            // pruneToolOutputs 专用：将 tool output 落盘并返回 <persisted-output> 引用
+            const result = await persistToolResultToDisk({
+                toolId: toolParams.tool_call_id,
+                sessionId: toolParams.session_id,
+                content: toolParams.content,
+                skipThresholdCheck: true, // prune 按 token 预算决策，不限字符长度
+            });
+            if (!result) {
+                return { content: '', path: '', isError: true };
+            }
+            return {
+                content: result.content,
+                path: result.persistedFilePath,
+                isError: false,
+            };
+        }
         default:
             return {
                 content: `Tool "${toolName}" is not supported in Y3Helper integration.`,

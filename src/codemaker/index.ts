@@ -8,6 +8,8 @@ import { initWorkspaceTracker } from './handlers/workspaceTracker';
 import SkillsHandler from './skillsHandler';
 import { initEditApplyProvider } from './editApplyProvider';
 import { ensureRtkBinary } from './utils/rtk/rtkBinaryManager';
+import { scheduleToolResultsCleanup } from './utils/persistToolResult';
+import { cleanupOldTranscripts } from './utils/transcriptCleanup';
 
 let webviewProvider: CodeMakerWebviewProvider | undefined;
 let apiServer: CodeMakerApiServer | undefined;
@@ -89,6 +91,9 @@ export function initCodeMaker(context: vscode.ExtensionContext) {
         ensureRtkBinary().catch(() => {});
     }
 
+    // 工具结果落盘 + transcript 清理（与上游 e8d5a141 配套）
+    scheduleToolResultsCleanup();
+    cleanupOldTranscripts().catch(() => {});
 }
 
 async function startApiServer(context: vscode.ExtensionContext) {
