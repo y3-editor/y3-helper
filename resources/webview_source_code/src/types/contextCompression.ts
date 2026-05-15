@@ -94,6 +94,7 @@ export interface SessionCompressionState {
   compressSessionStatus?: SessionStatus;
   prevCompressSessionStatus?: SessionStatus;
   statusChangedTime?: number;    // 状态变更时间戳，用于超时检测和冷却计时
+  pendingCompression?: boolean;  // 标记是否需要在下次用户发送时执行压缩
 }
 
 // Track compression events for analytics

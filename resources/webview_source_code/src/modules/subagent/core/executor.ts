@@ -73,6 +73,7 @@ import {
   getAIGWModelWithFallback,
   getAIGWModel,
 } from './../../../store/chat-config';
+import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
 import { promptBuilder } from './prompt-builder';
 import type { SubagentSpanContext } from '../types';
 import { startSubagentTaskSpan } from '../../../telemetry/otel';
@@ -110,13 +111,13 @@ import {
   SEARCH_TOOL_NAME,
 } from '../../../utils/mcpToolSearch';
 import { handleToolCall } from './toolCallHandler';
+import { clearPruneState } from '../../../services/compressionService';
 
 import {
   emitTaskStarted,
   emitTaskCompleted,
   emitTaskFailed,
 } from '../events/taskEventBus';
-import { configureThinkingSignature } from '../../../utils/chatThinkingHandler';
 
 /**
  * 将 Subagent 消息格式（工具结果为独立 role:'tool' 消息）转换为
@@ -1690,6 +1691,8 @@ IMPORTANT RULES:
       }
     }
   } while (retrying);
+
+  clearPruneState(`subagent:${taskId}`);
 
   // ============ 包装在 try-finally 中确保事件必定发出 ============
   try {

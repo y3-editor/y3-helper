@@ -2,7 +2,6 @@ import { ChatPromptBody } from "../services";
 import { IChatModelConfig } from "../services/chatModel";
 import { useChatStore } from "../store/chat";
 import { CHAT_MIN_TOKENS, ChatModelSupplyChannel, useChatConfig } from "../store/chat-config";
-import { checkThinkingSignatureValid } from "./validateBeforeChat";
 
 
 /**
@@ -21,7 +20,7 @@ export const configureThinkingSignature = (
   switch (channel) {
     case ChatModelSupplyChannel.CLAUDE: {
       // 检查模型是否支持 thinking 功能
-      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
+      if (!modelConfig.hasThinking) {
         break;
       }
       if (chatType === 'codebase') {
@@ -43,7 +42,7 @@ export const configureThinkingSignature = (
       break;
     }
     case ChatModelSupplyChannel.GLM: {
-      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
+      if (!modelConfig.hasThinking) {
         if (!data.extra_body) data.extra_body = {}
         Object.assign(data.extra_body, {
           thinking: {
@@ -55,7 +54,7 @@ export const configureThinkingSignature = (
     }
     case ChatModelSupplyChannel.DEEPSEEK: {
       if (!data.extra_body) data.extra_body = {}
-      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
+      if (!modelConfig.hasThinking) {
         Object.assign(data.extra_body, {
           thinking: {
             type: 'disabled',
@@ -79,7 +78,7 @@ export const configureThinkingSignature = (
     }
     case ChatModelSupplyChannel.KIMI: {
       if (!data.extra_body) data.extra_body = {}
-      if (!modelConfig.hasThinking || !checkThinkingSignatureValid(data.messages)) {
+      if (!modelConfig.hasThinking) {
         Object.assign(data.extra_body, {
           thinking: {
             type: 'disabled',

@@ -152,6 +152,9 @@ export enum BroadcastActions {
   // 拖拽文件
   DROP_FILES = 'DROP_FILES',
 
+  // 删除会话时清理落盘的 tool result 文件
+  CLEAN_SESSION_FILES = 'CLEAN_SESSION_FILES',
+
   // 新建并行会话（在新窗口打开 Codebase Chat）
 
   // 更新面板标题（用于并行会话窗口动态更新标题）
@@ -347,6 +350,81 @@ export interface PostMessageSubscribeType {
 export interface PostMessageBroadcastType {
   type: BroadcastActions;
   data: unknown;
+}
+
+let ideToolCallCounter = 0;
+
+/**
+ * 正在等待 IDE 响应的 tool_id 集合。
+ * CodeChat 等全局 TOOL_CALL_RESULT 监听器应检查此集合，
+ * 跳过由 callIDETool 发起的内部调用，避免干扰主会话流程。
+ */
+export const pendingIDEToolCallIds = new Set<string>();
+
+/**
+ * 通过 postMessage 调用 IDE 扩展的工具并等待结果。
+ * 封装 TOOL_CALL → TOOL_CALL_RESULT 的请求/响应模式。
+ *
+ * @param toolName 工具名称（如 'read_file', 'use_skill'）
+ * @param toolParams 工具参数
+ * @param timeout 超时时间（毫秒），默认 5000
+ * @returns 工具结果，超时或失败返回 null
+ */
+export function callIDETool<T = { path: string; content: string; isError?: boolean }>(
+  toolName: string,
+  toolParams: Record<string, unknown>,
+  timeout = 5000,
+  extra?: Record<string, unknown>,
+): Promise<T | null> {
+  return new Promise((resolve) => {
+    const toolId = `ide_tool_${toolName}_${Date.now()}_${ideToolCallCounter++}`;
+    pendingIDEToolCallIds.add(toolId);
+
+    const cleanup = () => {
+      pendingIDEToolCallIds.delete(toolId);
+      window.removeEventListener('message', handleMessage);
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!pendingIDEToolCallIds.has(toolId)) return;
+      const { type, data } = event.data || {};
+      if (
+        type !== SubscribeActions.TOOL_CALL_RESULT ||
+        data?.tool_id !== toolId ||
+        data?.tool_name !== toolName
+      ) {
+        return;
+      }
+      cleanup();
+      const toolResult = data.tool_result;
+      if (toolResult?.isError || !toolResult?.content) {
+        resolve(null);
+        return;
+      }
+      resolve(toolResult as T);
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    window.parent.postMessage(
+      {
+        type: BroadcastActions.TOOL_CALL,
+        data: {
+          tool_name: toolName,
+          tool_params: toolParams,
+          tool_id: toolId,
+          ...extra,
+        },
+      },
+      '*',
+    );
+
+    setTimeout(() => {
+      if (!pendingIDEToolCallIds.has(toolId)) return;
+      cleanup();
+      resolve(null);
+    }, timeout);
+  });
 }
 
 export default function PostMessageProvider({

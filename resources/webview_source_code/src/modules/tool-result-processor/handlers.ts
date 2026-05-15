@@ -142,11 +142,21 @@ export function handleRetrieveTool(
 
   // retrieve_code 需要处理 LPC 权限
   if (input.tool_name === 'retrieve_code') {
-    let searchResult = [];
+    let searchResult: any[] = [];
     try {
-      searchResult = JSON.parse(input.tool_result.content as string);
+      const parsed = JSON.parse(input.tool_result.content as string);
+      if (!Array.isArray(parsed)) {
+        throw new Error('retrieve_code result is not an array');
+      }
+      searchResult = parsed;
     } catch (e) {
       console.log('无法解析原内容：', input.tool_result.content);
+      return {
+        content: input.tool_result.content as string,
+        path: input.tool_result.path,
+        isError: input.tool_result.isError,
+        extra: input.extra,
+      };
     }
 
     const isLpc = context.allowPublicModelAccess === false;

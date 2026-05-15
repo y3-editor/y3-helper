@@ -5,7 +5,7 @@
 
 import { useChatConfig } from '../../store/chat-config';
 import { useChatStore } from '../../store/chat';
-import { useExtensionStore } from '../../store/extension';
+import { getEnableRtk } from '../../utils/toolCallDispatch';
 import { PromptLinkMgr } from '../../store/workspace/pomptLinkMgr';
 import {
   generateMCPPrompt,
@@ -38,6 +38,7 @@ export async function constructMainPrompt(options: MainPromptOptions): Promise<s
   const context: PromptContext = createPromptContext({
     workspace: {
       workspace: workspace || '',
+      homePath: '',
       osName: osName || '',
       shell: shell || '',
       repoUrl: '',
@@ -56,7 +57,7 @@ export async function constructMainPrompt(options: MainPromptOptions): Promise<s
       enableTerminal,
       enableEditableMode,
       enableSkills,
-      enableRtk: useExtensionStore.getState().codebaseChatRtk,
+      enableRtk: getEnableRtk(),
       autoApply,
       autoExecute,
       codeMakerVersion,

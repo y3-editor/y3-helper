@@ -6,7 +6,7 @@ import { ChatSession } from "../store/chat";
 import { useChatConfig } from "../store/chat-config";
 import { processMakePlanDenied, processMakePlanResult } from "../services/harness/tools/plan";
 import { processWriteTodoDenied, processWriteTodoResult } from "../services/harness/tools/todo";
-import { formatSkillContent, parseSkillToolResult } from "../store/skills";
+import { formatSkillContent, parseSkillToolResult, SkillData } from "../store/skills";
 import { isImageFileByPath, truncateContent } from ".";
 import { onChunkLoadError } from "./chunkErrorHandler";
 import { formatUserDeniedResult } from "./toolResultFormatter";
@@ -367,18 +367,37 @@ export function formatResultContent(options: {
 }
 
 function processUseSkillResult(result: ToolResult): string {
-  const skillData = parseSkillToolResult(result.content);
-  if (skillData) {
+  const skillDataList = parseSkillToolResults(result.content);
+
+  if (skillDataList.length) {
     // 上报模型调用 Skill 事件
     import('../services/skillUsage').then(({ reportSkillInvoke }) => {
       import('../store/skills').then(({ getSkillDescription }) => {
-        const description = getSkillDescription(skillData.name);
-        reportSkillInvoke(skillData.name, { source: 'codemaker-model', description });
-      });
+        skillDataList.forEach((skillData) => {
+          const description = getSkillDescription(skillData.name);
+          reportSkillInvoke(skillData.name, { source: 'codemaker-model', description });
+        });
+      }).catch(onChunkLoadError);
     }).catch(onChunkLoadError);
-    return formatSkillContent(skillData);
+
+    return skillDataList.map(formatSkillContent).join('\n\n---\n\n');
   }
+
   return result.content;
+}
+
+export function parseSkillToolResults(content: string): SkillData[] {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    const skillDataArray = Array.isArray(parsed) ? parsed : [parsed];
+
+    return skillDataArray
+      .map((skillDataRaw) => parseSkillToolResult(JSON.stringify(skillDataRaw)))
+      .filter((skillData): skillData is SkillData => Boolean(skillData));
+  } catch {
+    const skillData = parseSkillToolResult(content);
+    return skillData ? [skillData] : [];
+  }
 }
 
 function fileEditWithoutUserChanges(

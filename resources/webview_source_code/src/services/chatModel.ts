@@ -124,6 +124,7 @@ export enum ChatModel {
   Glm5 = 'glm-5',
   Glm5Turbo = 'glm-5-turbo',
   Glm51 = 'glm-5.1',
+  ClaudeOpus46 = 'claude-opus-4-6',
 }
 
 export async function getUserModels(): Promise<IGetUserModelsResponse> {

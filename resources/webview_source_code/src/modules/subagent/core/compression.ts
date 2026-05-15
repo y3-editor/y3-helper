@@ -167,6 +167,21 @@ export async function checkAndCompress(
       // Business attributes
       compressionSpan.setAttribute('compression.session_id', sessionId);
 
+      // 压缩触发原因与上下文指标
+      compressionSpan.setAttribute('compression.trigger_reason', 'auto');
+      compressionSpan.setAttribute('compression.model_max_tokens', analysis.maxTokenLimit);
+      compressionSpan.setAttribute('compression.trigger_tokens', analysis.currentTokenUsage);
+      compressionSpan.setAttribute('compression.trigger_threshold', analysis.compressionTriggerThreshold);
+      compressionSpan.setAttribute('compression.turn_count',
+        sessionMessages.filter(m => m.role === 'user').length,
+      );
+      // 落盘需要：用户开启 + IDE 环境支持，两者必须同时满足
+      compressionSpan.setAttribute(
+        'compression.offload_enabled',
+        useChatConfig.getState().enableToolResultOffload &&
+          useChatConfig.getState().toolResultOffloadSupported,
+      );
+
       if (subagentSpanContext.association) {
         applyAssociationAttributes(
           compressionSpan,

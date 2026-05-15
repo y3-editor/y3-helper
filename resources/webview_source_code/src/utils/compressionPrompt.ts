@@ -8,14 +8,12 @@ import {
   formatSkillContent,
   SkillData,
   parseSkillToolResult,
-  createSkillToolId,
 } from '../store/skills';
-import { BroadcastActions, SubscribeActions } from '../PostMessageProvider';
+import { callIDETool } from '../PostMessageProvider';
+import { PERSISTED_TOOL_OUTPUT_MARKER } from './toolResultPersistenceConstants';
 
 const SKILL_FETCH_TIMEOUT = 10000;
 const SKILL_PLACEHOLDER_PATTERN = /\{\{SKILL:([^}]+)\}\}/g;
-
-export const compressionSkillToolIds = new Set<string>();
 
 function formatSkillToolResult(content: string): string {
   try {
@@ -29,64 +27,19 @@ function formatSkillToolResult(content: string): string {
   return content;
 }
 
-function fetchSkillFromIDE(skillName: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    const toolId = createSkillToolId();
-    compressionSkillToolIds.add(toolId);
-    let resolved = false;
-
-    const cleanup = () => {
-      resolved = true;
-      compressionSkillToolIds.delete(toolId);
-      window.removeEventListener('message', handleMessage);
-    };
-
-    const handleMessage = (event: MessageEvent) => {
-      if (resolved) return;
-
-      const { type, data } = event.data || {};
-      if (
-        type !== SubscribeActions.TOOL_CALL_RESULT ||
-        data?.tool_id !== toolId ||
-        data?.tool_name !== 'use_skill'
-      ) {
-        return;
-      }
-
-      cleanup();
-
-      const toolResult = data.tool_result;
-      if (toolResult?.isError || !toolResult?.content) {
-        console.warn(`[fetchSkillFromIDE] Failed to fetch skill: ${skillName}`);
-        resolve(null);
-        return;
-      }
-
-      const skillData = parseSkillToolResult(toolResult.content);
-      resolve(skillData ? formatSkillContent(skillData) : toolResult.content);
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    window.parent.postMessage(
-      {
-        type: BroadcastActions.TOOL_CALL,
-        data: {
-          tool_name: 'use_skill',
-          tool_params: { skill_name: skillName },
-          tool_id: toolId,
-        },
-      },
-      '*',
-    );
-
-    setTimeout(() => {
-      if (resolved) return;
-      cleanup();
-      console.warn(`[fetchSkillFromIDE] Timeout fetching skill: ${skillName}`);
-      resolve(null);
-    }, SKILL_FETCH_TIMEOUT);
-  });
+async function fetchSkillFromIDE(
+  skillName: string,
+  sessionId?: string,
+): Promise<string | null> {
+  const result = await callIDETool(
+    'use_skill',
+    { skill_name: skillName },
+    SKILL_FETCH_TIMEOUT,
+    sessionId ? { session_id: sessionId } : undefined,
+  );
+  if (!result?.content) return null;
+  const skillData = parseSkillToolResult(result.content);
+  return skillData ? formatSkillContent(skillData) : result.content;
 }
 
 function extractSkillContentFromMessages(
@@ -134,6 +87,7 @@ function extractSkillPlaceholders(summary: string): string[] {
 export async function replaceSkillPlaceholders(
   summary: string,
   compressedMessages: ChatMessage[] = [],
+  sessionId?: string,
 ): Promise<string> {
   const skillNames = extractSkillPlaceholders(summary);
   if (skillNames.length === 0) {
@@ -147,7 +101,7 @@ export async function replaceSkillPlaceholders(
     console.log('[replaceSkillPlaceholders] Fetching missing skills from IDE:', missingSkills);
     await Promise.all(
       missingSkills.map(async (skillName) => {
-        const content = await fetchSkillFromIDE(skillName);
+        const content = await fetchSkillFromIDE(skillName, sessionId);
         if (content) {
           skillContentMap.set(skillName, content);
         }
@@ -174,6 +128,8 @@ export async function replaceSkillPlaceholders(
 export function generateCompressionPrompt(additionalInstructions?: string): string {
   const basePrompt = `Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
 This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing development work without losing context.
+
+Tool outputs may begin with "${PERSISTED_TOOL_OUTPUT_MARKER}" — the full text was saved to the absolute path shown in that block (under ~/.codemaker/persisted/<session>/tool-results/). When summarizing, preserve that path and tool context verbatim; you may omit the preview section.
 
 Before providing your final summary, wrap your analysis in <analysis> tags to organize your thoughts and ensure you've covered all necessary points. In your analysis process:
 

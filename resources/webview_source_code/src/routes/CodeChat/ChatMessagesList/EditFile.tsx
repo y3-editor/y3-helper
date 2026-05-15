@@ -13,9 +13,9 @@ import { countGodeGenerate } from "../../../utils";
 import { IDE, useExtensionStore } from "../../../store/extension";
 import MemoDiffCodeBlock from "../../../components/Markdown/DiffCodeBlock";
 import { diffLines } from "diff";
-import { useChatStreamStore } from "../../../store/chat";
+import { useChatStore, useChatStreamStore } from "../../../store/chat";
 import { FaStop } from "react-icons/fa6";
-import { MdExpandLess, MdExpandMore, MdWrapText } from "react-icons/md";
+import { MdExpandLess, MdWrapText } from "react-icons/md";
 import { UserEvent } from "../../../types/report";
 import { shallow } from "zustand/shallow";
 import { CodeWhiteSpace, useConfigStore } from "../../../store/config";
@@ -112,6 +112,7 @@ export function EditFile(props: {
   }, [displayMode, finalResult, updateSnippet, replaceSnippet]);
 
   const ide = useExtensionStore((state) => state.IDE);
+  const currentSessionId = useChatStore((state) => state.currentSessionId);
   const isVsCodeIDE = ide === IDE.VisualStudioCode;
 
   // TODO: 可能不需要在此处计算
@@ -456,6 +457,7 @@ export function EditFile(props: {
                           is_create_file: isCreateFile
                         },
                         tool_id: toolCallId,
+                        session_id: currentSessionId,
                       },
                     },
                     '*',
@@ -473,6 +475,7 @@ export function EditFile(props: {
                           is_create_file: isCreateFile
                         },
                         tool_id: toolCallId,
+                        session_id: currentSessionId,
                       },
                     },
                     '*',
@@ -606,7 +609,7 @@ export function EditFile(props: {
             aria-label="展开/折叠"
             size="md"
             variant="link"
-            icon={isExpanded ? <MdExpandLess /> : <MdExpandMore />}
+            icon={<MdExpandLess className={`${isExpanded ? 'rotate-180' : 'rotate-90'} transition-all duration-200 ease-in-out`} />}
             onClick={() => setIsExpanded(!isExpanded)}
             minW="18px"
             h="24px"
@@ -680,7 +683,27 @@ export function EditFile(props: {
     </Box>
     <pre>
       {
-        isExpanded && displayMode === 'diff' && !!diffInfo && (
+        isLatest && targetApplyItem?.applying && (
+          <Box
+            display="flex"
+            alignItems="center"
+            px="2"
+            py="3"
+            borderX="1px"
+            borderBottom="1px"
+            borderColor="customBorder"
+            borderBottomRadius="8px"
+            bg="answerBgColor"
+            color="text.default"
+            fontSize="12px"
+          >
+            <Spinner size="xs" mr="6px" />
+            代码生成中，请稍候... (文件较大或内容复杂时，生成速度可能会慢一些，感谢您的耐心等待 🙏)
+          </Box>
+        )
+      }
+      {
+        isExpanded && displayMode === 'diff' && !!diffInfo && !targetApplyItem?.applying && (
           <MemoDiffCodeBlock
             language={language}
             value={diffInfo.content || ''}
@@ -694,7 +717,7 @@ export function EditFile(props: {
         )
       }
       {
-        isExpanded && (displayMode !== 'diff' || !diffInfo) && (
+        isExpanded && (displayMode !== 'diff' || !diffInfo) && !targetApplyItem?.applying && (
           <MemoCodeBlock
             language={language}
             value={displayedCode}

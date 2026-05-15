@@ -9,7 +9,7 @@ import { ABORT_REASON_CLEANUP, ABORT_REASON_USER_CANCELLED, createAbortReason, R
 import { useChatStore } from "../../../../store/chat";
 import { useChatConfig } from "../../../../store/chat-config";
 import { StreamError } from "../../../useChatStream";
-
+import { httpErrorType } from "../../../../utils/error";
 
 export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'onMessage'> & { onMessage: (...args: any[]) => void } = IStreamOption> implements IBaseStream {
   protected _needContinue = true // 继续传输流
@@ -137,26 +137,23 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
 
   public async onValidate(res: Response) {
     if (res.ok) return true;
+    let result: any
     try {
-      const text = await res.text();
-      console.error('[StreamError] body:', text);
-      let msg = '请求失败，请重试';
-      if (text) {
-        try {
-          const parsed = JSON.parse(text);
-          const detail = parsed?.detail;
-          if (typeof detail === 'string') {
-            try { msg = JSON.parse(detail)?.error?.message ?? detail; } catch { msg = detail; }
-          } else if (detail && typeof detail === 'object') {
-            msg = detail?.error?.message ?? text;
-          } else {
-            msg = text;
-          }
-        } catch { msg = text; }
-      }
-      this.options?.onError?.(new Error(msg));
-    } catch (e) {
-      this.options?.onError?.(e as Error);
+      result = await res.json();
+    } catch (e) { /* empty */ }
+    try {
+      this.abortController?.abort(createAbortReason(ABORT_REASON_USER_CANCELLED, '请求异常，已取消请求'));
+    } catch (e) { /* empty */ }
+    if (
+      result.extra &&
+      result.extra.code === 30002 &&
+      (result.extra.msg as string)
+        .toLocaleLowerCase()
+        .includes(StreamError.AuthTokenIsExpired)
+    ) {
+      this.options?.onError?.(new Error(StreamError.AuthTokenIsExpired));
+    } else {
+      this.options?.onError?.(new Error(`${httpErrorType[res.status] || httpErrorType['unknown']} (${res.status})`));
     }
     return false;
   }
@@ -177,8 +174,7 @@ export default abstract class BaseStream<TOption extends Omit<IStreamOption, 'on
         case 'error': {
           const eData = typeof parsedData.error === 'object' ? parsedData.error : {}
           try {
-            console.log('错误信息', parsedData.error)
-            this.options?.onMessage(eData?.message || '小助手出现点问题，建议同学重新提问~~')
+            this.options?.onMessage(eData?.message || 'Codemaker出现点问题，建议同学重新提问~~')
           } catch (error) {
             this.options?.onMessage("未知错误")
           }

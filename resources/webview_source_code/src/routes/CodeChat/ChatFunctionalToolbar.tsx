@@ -22,7 +22,7 @@ import {
   RiQuestionnaireLine,
   RiToolsLine,
 } from 'react-icons/ri';
-import { FiFileText, FiSearch, FiTarget } from 'react-icons/fi';
+import { FiFileText, FiSearch, FiTarget } from "react-icons/fi";
 import { Z_INDEX_POPOVER_TOOLBAR } from '../../const';
 import { useChatConfig } from '../../store/chat-config';
 import { CavemanMode, CAVEMAN_MODE_LABELS } from '../../store/skills/prompt';
@@ -31,6 +31,7 @@ import { IoTerminalOutline } from 'react-icons/io5';
 import { IoMdBook } from 'react-icons/io';
 import MCPConfigCollapse from './MCPConfigCollapse';
 import SkillConfigCollapse from './SkillConfigCollapse';
+import CompressionConfigCollapse from './CompressionConfigCollapse';
 import { TbBone, TbBrandNetbeans } from 'react-icons/tb';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
@@ -38,7 +39,6 @@ import SkillSettingModal from './SkillSettingModal';
 import AgentConfigCollapse from './AgentConfigCollapse';
 import { IDE, useExtensionStore } from '../../store/extension';
 import { versionCompare } from '../../utils/common';
-import { LuMessageSquareTextIcon } from '../../components/Icon';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { useChatAttach, useChatStore } from '../../store/chat';
 import { AttachType } from '../../store/attaches';
@@ -51,8 +51,7 @@ import { usePostMessage } from '../../PostMessageProvider';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
 import MiniButton from '../../components/MiniButton';
-// Y3不需要研发知识集
-// import DevspaceCollapse from './DevspaceCollapse';
+import DevspaceCollapse from './DevspaceCollapse';
 import AgentSettingModal from './components/AgentSettingModal';
 
 enum EAutoConfig {
@@ -105,10 +104,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
 
   const currentSession = useCurrentSession();
 
-  const [compressConfig, setCompressConfig] = useChatConfig((state) => [
-    state.compressConfig,
-    state.setMemoryConfig,
-  ]);
   const [enableTerminal, setEnableTerminal] = useChatTerminalStore((state) => [
     state.enableTerminal,
     state.setEnableTerminal,
@@ -140,6 +135,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     setEnableGrepSearch,
     cavemanMode,
     setCavemanMode,
+    rtkEnabled,
+    setRtkEnabled,
   ] = useChatConfig((state) => [
     state.enableCodeMapSearch,
     state.setEnableCodeMapSearch,
@@ -155,7 +152,11 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     state.setEnableGrepSearch,
     state.cavemanMode,
     state.setCavemanMode,
+    state.rtkEnabled,
+    state.setRtkEnabled,
   ]);
+
+  const rtkBinaryAvailable = useExtensionStore((state) => state.rtkBinaryAvailable);
 
   useOutsideClick({
     ref: popoverRef,
@@ -339,21 +340,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
     [disabled, onReportAutoConfig],
   );
 
-  const renderAutoMemoryItem = useCallback(() => {
-    if (!compressConfig.visible) return null;
-
-    return renderSwitchItem({
-      title: 'Memory 工具',
-      icon: <LuMessageSquareTextIcon w="16px" h="16px" color="white" />,
-      value: compressConfig.enable,
-      lebalTooltips:
-        '当上下文窗口占用达到100%时，自动进行内容压缩生成memory，增强仓库智聊对上下文的记忆能力',
-      onChange: (val) => {
-        setCompressConfig({ enable: val });
-      },
-    });
-  }, [compressConfig, renderSwitchItem, setCompressConfig]);
-
   return (
     <Box ref={popoverRef} data-tour="chat-functional-toolbar">
       <Popover placement="top" isOpen={isOpen} isLazy lazyBehavior="unmount">
@@ -427,7 +413,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {!['openspec', 'speckit'].includes(codebaseChatMode || '') &&
                   renderSwitchItem({
                     title: 'Plan Mode',
-                    hidden: true,
                     icon: <LuListTodo size={16} />,
                     value: currentSession?.data?.enablePlanMode || false,
                     lebalTooltips:
@@ -452,7 +437,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   })}
                 {renderSwitchItem({
                   title: '代码地图检索',
-                  hidden: true,
                   icon: <TbBrandNetbeans size={16} />,
                   tooltip:
                     '开启检索代码地图工具后，检索知识库工具将同步启用，因为检索代码地图工具是基于知识库的内容进行拓展分析',
@@ -472,7 +456,6 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 })}
                 {renderSwitchItem({
                   title: '知识库检索',
-                  hidden: true,
                   icon: <IoMdBook size={16} />,
                   value: enableKnowledgeLibSearch,
                   lebalTooltips:
@@ -563,10 +546,8 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                     setEnableGrepSearch(val);
                   },
                 })}
-                {renderAutoMemoryItem()}
                 {renderSwitchItem({
                   title: '需求澄清工具',
-                  hidden: true,
                   icon: <RiQuestionnaireLine size={'16'} color="white" />,
                   value: enableUserQuestion,
                   lebalTooltips:
@@ -623,8 +604,58 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   </Box>
                 </Box>
 
-                {/* Y3不需要研发知识集 */}
-                {/* <DevspaceCollapse /> */}
+                {/* RTK 命令拦截开关 — 仅 VSCode 支持 */}
+                {isVSCode && (
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  paddingBottom={2}
+                >
+                  <Box fontSize={12} display="flex" alignItems="center">
+                    <IoTerminalOutline size={16} />
+                    <Text marginLeft={2} fontSize="12px">RTK 命令拦截</Text>
+                    <Tooltip
+                      label={rtkBinaryAvailable
+                        ? '启用后对终端命令输出进行 Token 压缩，减少上下文消耗'
+                        : 'RTK 暂不可用（二进制下载中或下载失败）'}
+                      placement="top"
+                    >
+                      <Box
+                        display="inline-flex"
+                        alignItems="center"
+                        ml={1}
+                        cursor="help"
+                      >
+                        <Icon
+                          as={AiOutlineQuestionCircle}
+                          w="14px"
+                          h="14px"
+                          color="gray.500"
+                        />
+                      </Box>
+                    </Tooltip>
+                  </Box>
+                  <Box display="flex" alignItems="center">
+                    <SelectWithTooltip
+                      size="xs"
+                      width="90px"
+                      options={[
+                        { value: 'off', label: '关闭' },
+                        { value: 'on', label: '启用' },
+                      ]}
+                      value={rtkEnabled ? 'on' : 'off'}
+                      isDisabled={!rtkBinaryAvailable}
+                      onChange={(e) => {
+                        const enabled = e.target.value === 'on';
+                        setRtkEnabled(enabled);
+                      }}
+                    />
+                  </Box>
+                </Box>
+                )}
+                <CompressionConfigCollapse disabled={disabled} />
+                <DevspaceCollapse />
                 <AgentConfigCollapse
                   setAgentSettingOpen={setAgentSettingOpen}
                 />

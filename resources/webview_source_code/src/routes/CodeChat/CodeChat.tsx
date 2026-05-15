@@ -72,7 +72,8 @@ import { usePluginApp } from '../../store/plugin-app';
 import { useMcpPromptApp } from '../../store/mcp-prompt';
 import { createSkillToolId, isSkillToolId } from '../../store/skills';
 import { useSkillPromptApp } from '../../store/skills/skill-prompt';
-import { compressionSkillToolIds } from '../../utils/compressionPrompt';
+import { pendingIDEToolCallIds } from '../../PostMessageProvider';
+import { PERSISTED_TOOL_OUTPUT_MARKER } from '../../utils/toolResultPersistenceConstants';
 import { PromptCategoryType } from '../../services/prompt';
 import { debounce, cloneDeep, findLastIndex, isEqual } from 'lodash';
 import useService from '../../hooks/useService';
@@ -1393,6 +1394,7 @@ function CodeChat() {
                 tool_name: 'use_skill',
                 tool_params: { skill_name: result.skillName },
                 tool_id: toolId,
+                session_id: currentSessionId,
               },
             },
             '*',
@@ -1427,15 +1429,17 @@ function CodeChat() {
           return;
         }
 
+        // 跳过由 callIDETool 发起的内部调用（压缩文件恢复、skill 获取等）
+        if (pendingIDEToolCallIds.has(tool_id)) {
+          return;
+        }
+
         const toolSpan = otel.startToolCallSpan({
           toolName: tool_name,
           toolId: tool_id,
           round: (useChatStreamStore.getState() as any).conversationRound ?? 0,
         });
         if (tool_name === 'use_skill' && isSkillToolId(tool_id)) {
-          if (compressionSkillToolIds.has(tool_id)) {
-            return;
-          }
           // 如果消息指定了 targetPanelId，只有匹配的面板处理
           const targetPanelId = eventData?.targetPanelId;
           if (targetPanelId) {
@@ -1733,8 +1737,16 @@ function CodeChat() {
                       extra,
                     );
                   } else {
+                    // 扩展侧已落盘并替换为短文本时勿再截断（与 prompt cache 稳定一致）
+                    const persistedByExtension =
+                      extra?.toolResultPersisted === true ||
+                      (typeof tool_result.content === 'string' &&
+                        tool_result.content.startsWith(
+                          PERSISTED_TOOL_OUTPUT_MARKER,
+                        ));
                     // TODO: 如果回复的内容太长，先做截断，后续进行优化
                     if (
+                      !persistedByExtension &&
                       tool_result.content &&
                       tool_result.content.length > 100000 &&
                       !['retrieve_code', 'retrieve_knowledge'].includes(
@@ -1768,34 +1780,41 @@ function CodeChat() {
                   }
                   // 更新 tool_result
                   if (['retrieve_code'].includes(tool_name)) {
-                    let searchResult = [];
+                    let searchResult: any[] | null = null;
                     try {
-                      searchResult = JSON.parse(tool_result.content);
+                      const parsed = JSON.parse(tool_result.content);
+                      if (Array.isArray(parsed)) {
+                        searchResult = parsed;
+                      } else {
+                        console.log('retrieve_code 返回非数组，跳过覆盖：', parsed);
+                      }
                     } catch (e) {
                       console.log('无法解析原内容：', tool_result.content);
                     }
-                    const devSpace = useWorkspaceStore.getState().devSpace;
+                    if (searchResult) {
+                      const devSpace = useWorkspaceStore.getState().devSpace;
 
-                    let isLpc = false;
-                    isLpc = devSpace?.allow_public_model_access === false;
-                    searchResult.forEach((item: any) => {
-                      item.isLpc = isLpc;
-                      if (item.to_func) {
-                        item.to_func.forEach((func: any) => {
-                          func.isLpc = isLpc;
-                        });
-                      }
-                    });
-                    updateToolCallResults(
-                      {
-                        [tool_id]: {
-                          path: tool_result.path,
-                          content: JSON.stringify(searchResult),
-                          isError: tool_result.isError,
+                      let isLpc = false;
+                      isLpc = devSpace?.allow_public_model_access === false;
+                      searchResult.forEach((item: any) => {
+                        item.isLpc = isLpc;
+                        if (item.to_func) {
+                          item.to_func.forEach((func: any) => {
+                            func.isLpc = isLpc;
+                          });
+                        }
+                      });
+                      updateToolCallResults(
+                        {
+                          [tool_id]: {
+                            path: tool_result.path,
+                            content: JSON.stringify(searchResult),
+                            isError: tool_result.isError,
+                          },
                         },
-                      },
-                      extra,
-                    );
+                        extra,
+                      );
+                    }
                   }
                 }
               }

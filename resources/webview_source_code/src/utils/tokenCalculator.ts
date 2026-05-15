@@ -332,7 +332,7 @@ export async function calculateMessageTokens(messages: ChatMessage[]): Promise<n
 /**
  * 从 usage 对象汇总 token 总数
  */
-function sumUsageTokens(usage: NonNullable<ChatMessage['usage']>): number {
+export function sumUsageTokens(usage: NonNullable<ChatMessage['usage']>): number {
   return (
     (usage.prompt_tokens || 0) +
     (usage.completion_tokens || 0) +

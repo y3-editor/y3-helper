@@ -25,6 +25,7 @@ import {
   getSearchToolDefinition,
   shouldUseOnDemandMCPTools,
 } from '../../utils/mcpToolSearch';
+import { getEnableRtk } from '../../utils/toolCallDispatch';
 
 export enum LocalRepoType {
   GIT = 'git',
@@ -103,6 +104,7 @@ export interface DevSpace {
 
 export interface WorkspaceInfo {
   workspace: string;
+  homePath: string;
   repoUrl: string;
   repoName: string;
   osName: string;
@@ -473,6 +475,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
     (set, get) => ({
       workspaceInfo: {
         workspace: '',
+        homePath: '',
         repoUrl: '',
         repoName: '',
         osName: '',
@@ -721,7 +724,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             MCPServers: promptMCPServers,
             codeMakerVersion,
             enableTerminal: enableTerminal && (isVSCode || isJetbrains),
-            enableRtk: useExtensionStore.getState().codebaseChatRtk,
+            enableRtk: getEnableRtk(),
             effectiveRules,
             skills: effectiveSkills,
             openspecVersion,

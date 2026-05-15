@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { usePostMessage } from "../PostMessageProvider";
+import { callIDETool } from "../PostMessageProvider";
 import { useWorkspaceStore } from "../store/workspace";
+import { useChatConfig } from "../store/chat-config";
 
 export function useLoadWorkspace() {
   const workspaceInfo = useWorkspaceStore((state) => state.workspaceInfo);
@@ -9,6 +11,7 @@ export function useLoadWorkspace() {
   const currentCountRef = useRef(0);
   const hasWorkspaceInfoRef = useRef(false);
   const loadingRef = useRef(false);
+  const offloadCheckedRef = useRef(false);
 
   const loadWorkspaceInfo = useCallback(() => {
     if (loadingRef.current) return
@@ -34,7 +37,19 @@ export function useLoadWorkspace() {
 
 
   useEffect(() => {
-    hasWorkspaceInfoRef.current = !!workspaceInfo.repoName
+    hasWorkspaceInfoRef.current = !!workspaceInfo.repoName;
+    // 首次获取到 homePath 时，探测插件是否支持落盘功能
+    if (workspaceInfo.homePath && !offloadCheckedRef.current) {
+      offloadCheckedRef.current = true;
+      const home = workspaceInfo.homePath.replace(/\\/g, '/');
+      callIDETool('internal_fs', {
+        action: 'exists',
+        path: `${home}/.codemaker`,
+      }, 1500).then((result) => {
+        if (result !== null) {
+          useChatConfig.getState().setToolResultOffloadSupported(true);
+        }
+      });
+    }
   }, [workspaceInfo])
 }
-

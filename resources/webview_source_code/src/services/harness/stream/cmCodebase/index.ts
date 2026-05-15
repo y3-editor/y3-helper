@@ -89,8 +89,8 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
   }
 
   public onParse(event: ParsedEvent) {
-    if (event.type !== 'event') return;
-    const eData = event.data;
+    if (event?.type !== 'event') return;
+    const eData = event?.data;
     if (eData?.trim?.() === '[DONE]') {
       this.close()
       return
@@ -121,12 +121,12 @@ export default class CmCodebaseSteam extends BaseStream<ICmCodebaseStreamOption>
 
       // Token usage
       if (parsedData.usage) {
-        const { completion_tokens, prompt_tokens, total_tokens, cache_creation_input_tokens, cache_read_input_tokens } = parsedData.usage;
+        const { completion_tokens, prompt_tokens, total_tokens, cache_creation_input_tokens, cache_read_input_tokens, prompt_tokens_details } = parsedData.usage;
         this.streamContext.totalTokens = total_tokens || 0;
         this.streamContext.completionTokens = completion_tokens || 0;
         this.streamContext.promptTokens = prompt_tokens || 0;
         this.streamContext.cacheCreationInputTokens = cache_creation_input_tokens || 0;
-        this.streamContext.cacheReadInputTokens = cache_read_input_tokens || 0;
+        this.streamContext.cacheReadInputTokens = cache_read_input_tokens || prompt_tokens_details?.cached_tokens || 0; // prompt_tokens_details 只有deepseek才有
       }
 
       if (!Array.isArray(parsedData.choices) || !parsedData.choices.length) return;
