@@ -63,7 +63,8 @@ import { BroadcastActions } from '../../PostMessageProvider';
 import DevSpaceSelect from '../../components/DevSpaceSelect';
 import EventBus, { EBusEvent } from '../../utils/eventbus';
 import { ChatModel, ParseImgType } from '../../services/chatModel';
-import ChatTypeSelector from './ChatTypeSelector';
+// Y3Maker 暂不需要：聊天类型选择器
+// import ChatTypeSelector from './ChatTypeSelector';
 import RulesPanel from '../../components/RulesPanel';
 import { useChatBillStore } from '../../store/chatBill';
 import { useTaskCompletionStore } from '../../modules/subagent';
@@ -631,8 +632,9 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             </Menu>
             <Divider h="14px" mx="1" orientation="vertical" />
 
-            <ChatTypeSelector />
-            <Divider h="14px" mx="1" orientation="vertical" />
+            {/* Y3Maker 暂不需要：聊天类型选择器，默认强制 Agent 仓库智聊 */}
+            {/* <ChatTypeSelector />
+            <Divider h="14px" mx="1" orientation="vertical" /> */}
             {/* 模型选择器 */}
             <ChatModelSelector disabled={isCodebaseInputDisabled} />
             <Divider h="14px" mx="1" orientation="vertical" />
@@ -727,8 +729,9 @@ const CodeChatInputActionBar = (props: CodeChatInputActionBarProps) => {
             </MenuList>
           </Menu>
           <Divider h="14px" mx="1" orientation="vertical" />
-          <ChatTypeSelector />
-          <Divider h="14px" mx="1" orientation="vertical" />
+          {/* Y3Maker 暂不需要：聊天类型选择器 */}
+          {/* <ChatTypeSelector />
+          <Divider h="14px" mx="1" orientation="vertical" /> */}
           {/* 模型选择器 */}
           <ChatModelSelector disabled={isExceedCost} />
           <Divider h="14px" mx="1" orientation="vertical" />

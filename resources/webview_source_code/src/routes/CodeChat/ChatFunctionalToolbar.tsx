@@ -36,7 +36,8 @@ import { TbBone, TbBrandNetbeans } from 'react-icons/tb';
 import { useChatTerminalStore } from '../../store/chatTerminal';
 import MCPSettingModel from './MCPSettingModel';
 import SkillSettingModal from './SkillSettingModal';
-import AgentConfigCollapse from './AgentConfigCollapse';
+// Y3Maker 暂不需要：Agent 配置入口
+// import AgentConfigCollapse from './AgentConfigCollapse';
 import { IDE, useExtensionStore } from '../../store/extension';
 import { versionCompare } from '../../utils/common';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
@@ -51,7 +52,8 @@ import { usePostMessage } from '../../PostMessageProvider';
 import userReporter from '../../utils/report';
 import { UserEvent } from '../../types/report';
 import MiniButton from '../../components/MiniButton';
-import DevspaceCollapse from './DevspaceCollapse';
+// Y3Maker 暂不需要：研发知识入口
+// import DevspaceCollapse from './DevspaceCollapse';
 import AgentSettingModal from './components/AgentSettingModal';
 
 enum EAutoConfig {
@@ -414,6 +416,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                   renderSwitchItem({
                     title: 'Plan Mode',
                     icon: <LuListTodo size={16} />,
+                    hidden: true, // Y3Maker 暂不需要
                     value: currentSession?.data?.enablePlanMode || false,
                     lebalTooltips:
                       '将复杂需求分解成可执行的任务，提供plan面板可视化思路与进度，可随时介入调整计划方向',
@@ -438,6 +441,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderSwitchItem({
                   title: '代码地图检索',
                   icon: <TbBrandNetbeans size={16} />,
+                  hidden: true, // Y3Maker 暂不需要
                   tooltip:
                     '开启检索代码地图工具后，检索知识库工具将同步启用，因为检索代码地图工具是基于知识库的内容进行拓展分析',
                   value: enableCodeMapSearch,
@@ -457,6 +461,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderSwitchItem({
                   title: '知识库检索',
                   icon: <IoMdBook size={16} />,
+                  hidden: true, // Y3Maker 暂不需要
                   value: enableKnowledgeLibSearch,
                   lebalTooltips:
                     '根据需求智能调用有权限的知识库，检索相关的知识片段辅助智聊回答问题',
@@ -549,6 +554,7 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 {renderSwitchItem({
                   title: '需求澄清工具',
                   icon: <RiQuestionnaireLine size={'16'} />,
+                  hidden: true, // Y3Maker 暂不需要
                   value: enableUserQuestion,
                   lebalTooltips:
                     '针对不明确的问题，仓库智聊会主动向你提问并提供相关选项，助力澄清需求',
@@ -655,10 +661,11 @@ function ChatFunctionalToolbar({ disabled = false }: { disabled?: boolean }) {
                 </Box>
                 )}
                 <CompressionConfigCollapse disabled={disabled} />
-                <DevspaceCollapse />
-                <AgentConfigCollapse
+                {/* Y3Maker 暂不需要：研发知识(DevspaceCollapse) / Agent 配置(AgentConfigCollapse) */}
+                {/* <DevspaceCollapse /> */}
+                {/* <AgentConfigCollapse
                   setAgentSettingOpen={setAgentSettingOpen}
-                />
+                /> */}
                 <SkillConfigCollapse
                   setSkillSettingOpen={setSkillSettingOpen}
                 />

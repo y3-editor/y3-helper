@@ -23,7 +23,8 @@ import { TbPlus, TbDotsVertical } from 'react-icons/tb';
 import { useChatStore, useChatStreamStore } from '../../store/chat';
 import { useWorkspaceStore } from '../../store/workspace';
 // import { useTourStore } from '../../components/FeatureTour';
-import ChatExporter, { ChatExporterHandle } from './ChatExporter';
+// Y3Maker 暂不需要：分享会话按钮（仅保留 Handle 类型用于 ref）
+import { ChatExporterHandle } from './ChatExporter';
 import ChatFavoriter, { ChatFavoriterHandle } from './ChatFavoriter';
 import userReporter from '../../utils/report';
 import Icon from '../../components/Icon';
@@ -228,7 +229,8 @@ function ChatHeaderToolbar() {
             <PopoverContent w="90px">
               <PopoverBody py="1" pl="0" pr="1">
                 <VStack align="center" overflowY="auto" p="0">
-                  <ChatExporter ref={exportModelRef} />
+                  {/* Y3Maker 暂不需要：分享会话 */}
+                  {/* <ChatExporter ref={exportModelRef} /> */}
                   <ChatFavoriter ref={favoriterRef} />
                   <ChatDelete />
                   <Button
