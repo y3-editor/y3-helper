@@ -544,6 +544,8 @@ function parseDiffToCodeAndLines(diffStr: string) {
       const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (match) {
         realLine = parseInt(match[1], 10);
+      } else {
+        code.push(line);
       }
       continue;
     } else if (line.startsWith('+')) {

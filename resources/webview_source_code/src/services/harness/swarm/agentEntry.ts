@@ -50,11 +50,18 @@ export class AgentEntry {
         options.onController?.(controller);
       },
       onFinish: () => {
-        this.status = AgentStatus.IDLE;
+        // 用户中止后保持 ABORTED 状态，避免后续异步回调（tool_result 落回触发的
+        // handleAutoExecute）绕过 chat.ts 中 status !== 'aborted' 的 guard 再次发起请求。
+        // ABORTED → IDLE 的重置由用户主动重试/新提交时的入口负责。
+        if (this.status !== AgentStatus.ABORTED) {
+          this.status = AgentStatus.IDLE;
+        }
       },
       onError: (error: Error) => {
         options.onError?.(error);
-        this.status = AgentStatus.IDLE;
+        if (this.status !== AgentStatus.ABORTED) {
+          this.status = AgentStatus.IDLE;
+        }
       }
     }
     switch (supplyChannel) {
