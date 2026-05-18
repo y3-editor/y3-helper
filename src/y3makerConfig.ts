@@ -197,7 +197,22 @@ export async function migrateOldUser(projectUri: vscode.Uri): Promise<boolean> {
         return true;
     }
 
-    // .y3maker 不存在（用户误删），直接 clone
+    // .y3maker 不存在，但只有已初始化过的项目才自动恢复（避免对新建项目触发 clone）
+    const y3Uri = env.y3Uri;
+    if (!y3Uri) {
+        return false;
+    }
+    try {
+        if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type !== vscode.FileType.Directory) {
+            // y3/.git 存在但不是目录，不视为已初始化
+            return false;
+        }
+    } catch {
+        // y3/.git 不存在 → 项目从未初始化，不需要自动 clone .y3maker
+        return false;
+    }
+
+    // 项目已初始化过，用户误删 .y3maker，直接 clone 恢复
     const repoUrl = detectRepoSource(projectUri);
     await runShell('克隆 Y3Maker 配置', 'git', [
         'clone',
