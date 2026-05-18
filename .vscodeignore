@@ -9,6 +9,16 @@ src/
 !src/**/*.json
 **/*.log
 node_modules
+!node_modules/@anthropic-ai/
+!node_modules/@anthropic-ai/sdk/**
+!node_modules/@babel/
+!node_modules/@babel/runtime/**
+!node_modules/@stablelib/
+!node_modules/@stablelib/base64/**
+!node_modules/fast-sha256/**
+!node_modules/json-schema-to-ts/**
+!node_modules/standardwebhooks/**
+!node_modules/ts-algebra/**
 out/
 webpack.config.json
 .worktrees/
