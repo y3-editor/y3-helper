@@ -22023,17 +22023,17 @@ IMPORTANT: For any future changes to this file, use the final_file_content shown
       try {
         const s = (await Y9(Object.assign({
           "./templates/claude-edit.txt": () => ks(() => import("./claude-edit-14a0a05b.js"), []),
-          "./templates/code-edit.txt": () => ks(() => import("./code-edit-c09a1dd6.js"), []),
+          "./templates/code-edit.txt": () => ks(() => import("./code-edit-dd35704e.js"), []),
           "./templates/communication.txt": () => ks(() => import("./communication-8862360a.js"), []),
-          "./templates/external-apis.txt": () => ks(() => import("./external-apis-c50cff70.js"), []),
-          "./templates/mcp-tools.txt": () => ks(() => import("./mcp-tools-8d07c714.js"), []),
-          "./templates/search-and-reading-subagent.txt": () => ks(() => import("./search-and-reading-subagent-539f6945.js"), []),
-          "./templates/search-and-reading.txt": () => ks(() => import("./search-and-reading-0eb92c22.js"), []),
-          "./templates/terminal-rtk-slim.txt": () => ks(() => import("./terminal-rtk-slim-b32975b8.js"), []),
-          "./templates/terminal-rtk.txt": () => ks(() => import("./terminal-rtk-b3ef2340.js"), []),
-          "./templates/terminal.txt": () => ks(() => import("./terminal-33014d73.js"), []),
+          "./templates/external-apis.txt": () => ks(() => import("./external-apis-f884efd1.js"), []),
+          "./templates/mcp-tools.txt": () => ks(() => import("./mcp-tools-b8211ba8.js"), []),
+          "./templates/search-and-reading-subagent.txt": () => ks(() => import("./search-and-reading-subagent-5fb03769.js"), []),
+          "./templates/search-and-reading.txt": () => ks(() => import("./search-and-reading-05d70744.js"), []),
+          "./templates/terminal-rtk-slim.txt": () => ks(() => import("./terminal-rtk-slim-2c836f83.js"), []),
+          "./templates/terminal-rtk.txt": () => ks(() => import("./terminal-rtk-f7e8aa24.js"), []),
+          "./templates/terminal.txt": () => ks(() => import("./terminal-fb87b90b.js"), []),
           "./templates/tool-calling.txt": () => ks(() => import("./tool-calling-74ad965c.js"), []),
-          "./templates/user-info.txt": () => ks(() => import("./user-info-a45d1066.js"), [])
+          "./templates/user-info.txt": () => ks(() => import("./user-info-23a24879.js"), [])
         }), `./templates/${t}.txt`)).default;
         return this.templateCache.set(t, s), s;
       } catch (n) {
@@ -63049,7 +63049,7 @@ $$`);
         })
       ]
     });
-  }, tB = "/assets/checkbox-checked-f3b9cb41.svg", nB = "/assets/checkbox-unchecked-dark-02a70265.svg", sB = "/assets/checkbox-unchecked-light-356213e4.svg", rB = (e) => {
+  }, tB = "/assets/checkbox-checked-fc70f802.svg", nB = "/assets/checkbox-unchecked-dark-74f8dfbc.svg", sB = "/assets/checkbox-unchecked-light-8e1bdc20.svg", rB = (e) => {
     const { state: t, getInputProps: n, getCheckboxProps: s, getLabelProps: r, htmlProps: a } = JA(e), { activeTheme: i } = es(), l = i === Ft.Light ? sB : nB;
     return o.jsxs(fy.label, {
       ...a,
@@ -75550,7 +75550,7 @@ description: Replace with description of the skill and when Codemaker should use
       })
     });
   }
-  const hH = "_container_1m2kj_1", mH = "_gutter_1m2kj_6", fH = "_gutterHorizontal_1m2kj_25", gH = "_gutterVertical_1m2kj_35", kp = {
+  const hH = "_container_11zhq_1", mH = "_gutter_11zhq_11", fH = "_gutterHorizontal_11zhq_49", gH = "_gutterVertical_11zhq_69", kp = {
     container: hH,
     gutter: mH,
     gutterHorizontal: fH,

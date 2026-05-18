@@ -1,0 +1,15 @@
+const t = `<rtk_awareness>
+Your environment has RTK (Rust Token Killer) installed. Terminal command output may be filtered and compressed for token optimization.
+
+Important:
+- Command output you see may have details omitted (e.g., only errors shown, verbose info removed).
+- If output appears insufficient for your task, use \`rtk proxy <cmd>\` to get the complete unfiltered output.
+- If output contains \`[full output: <path>]\`, you can read that file for the full unfiltered log.
+
+Available meta commands:
+  rtk proxy <cmd>       # Run command without filtering (for debugging)
+  rtk gain              # Show token savings statistics
+</rtk_awareness>`;
+export {
+  t as default
+};

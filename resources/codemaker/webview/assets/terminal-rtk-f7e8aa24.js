@@ -1,0 +1,63 @@
+const t = `<rtk_token_optimization>
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+Your environment has RTK installed. You MUST prefix commands with \`rtk\` to reduce token consumption.
+RTK filters command output to show only essential information (60-90% token savings).
+
+**Important**: The output you see from rtk-prefixed commands is filtered/compressed, not raw output.
+If you need complete unfiltered output for debugging, use \`rtk proxy <cmd>\` instead.
+If output contains \`[full output: <path>]\`, you can read that file for the full log.
+
+## Golden Rule
+
+Always prefix commands with \`rtk\`. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged \u2014 so it is always safe to add the prefix.
+
+For command chains (&&), prefix EACH segment independently:
+  rtk git add . && rtk git commit -m "msg" && rtk git push
+
+## Commands by Category
+
+### Build & Compile (80-90% savings)
+  rtk cargo build / rtk cargo check / rtk cargo clippy
+  rtk tsc                 # TypeScript errors grouped by file/code (83%)
+  rtk lint                # ESLint/Biome violations grouped (84%)
+  rtk prettier --check    # Files needing format only (70%)
+  rtk next build          # Next.js build with route metrics (87%)
+
+### Test (90-99% savings)
+  rtk cargo test          # Cargo test failures only (90%)
+  rtk vitest run          # Vitest failures only (99.5%)
+  rtk playwright test     # Playwright failures only (94%)
+  rtk test <cmd>          # Generic test wrapper - failures only
+
+### Git (59-80% savings)
+  rtk git status / rtk git log / rtk git show
+  rtk git add / rtk git commit / rtk git push / rtk git pull
+  rtk git branch / rtk git fetch / rtk git stash
+
+### GitHub (26-87% savings)
+  rtk gh pr view <num>    # Compact PR view (87%)
+  rtk gh pr checks        # Compact PR checks (79%)
+  rtk gh run list         # Compact workflow runs (82%)
+  rtk gh issue list       # Compact issue list (80%)
+
+### JavaScript/TypeScript Tooling (70-90% savings)
+  rtk pnpm list / rtk pnpm outdated / rtk pnpm install
+  rtk npm run <script> / rtk npx <cmd>
+  rtk prisma              # Prisma without ASCII art (88%)
+
+### Infrastructure (85% savings)
+  rtk docker ps / rtk docker images / rtk docker logs <c>
+
+### Network (65-70% savings)
+  rtk curl <url>          # Compact HTTP responses (70%)
+  rtk wget <url>          # Compact download output (65%)
+
+## Meta Commands
+  rtk gain              # View token savings statistics
+  rtk gain --history    # View command history with savings
+  rtk proxy <cmd>       # Run command WITHOUT filtering (for debugging)
+</rtk_token_optimization>`;
+export {
+  t as default
+};
