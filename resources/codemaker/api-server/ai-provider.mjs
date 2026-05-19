@@ -97,7 +97,7 @@ function extractBaseUrl(requestBody) {
   
   // 3. 服务器配置（可能为空）
   if (config.baseUrl) {
-    return config.baseUrl;
+    return config.baseUrl.replace(/\/$/, '');
   }
   
   return null;

@@ -208,8 +208,14 @@ export class McpHub {
         const settingsPath = path.join(settingsDir, "mcp_settings.json");
 
         if (!(await fileExists(settingsPath))) {
-            await fs.mkdir(settingsDir, { recursive: true });
-            await fs.writeFile(settingsPath, JSON.stringify({ mcpServers: {} }, null, 2));
+            // 只在 .y3maker 目录已存在时才创建默认配置文件，不主动创建目录
+            // 避免在 migrateOldUser clone 之前误创建 .y3maker 目录导致 git clone 失败
+            try {
+                await fs.access(settingsDir);
+                await fs.writeFile(settingsPath, JSON.stringify({ mcpServers: {} }, null, 2));
+            } catch {
+                // 目录不存在，静默跳过
+            }
         }
         return settingsPath;
     }

@@ -519,14 +519,14 @@ class Helper {
             await this.runStartupStep('checkNewProject', () => this.checkNewProject());
             await this.runStartupStep('mainMenu.init', () => mainMenu.init());
 
-            // 后台检测 Y3Maker 配置更新（不阻塞激活流程）
+            // 后台检测 Y3Maker 配置更新 + MCP 启动（需保证 migrateOldUser 在 MCP 前完成，否则 McpHub 会误创建 .y3maker 目录）
             (async () => {
                 try {
                     await env.mapReady();
                     if (!env.project) {
                         return;
                     }
-                    // 先检测是否需要老用户迁移
+                    // 先检测是否需要老用户迁移/恢复，必须在 MCP 启动前完成
                     const migrated = await migrateOldUser(env.projectUri!);
                     if (migrated && webviewProvider) {
                         await webviewProvider.reloadCodemakerResources();
@@ -538,10 +538,11 @@ class Helper {
                 } catch {
                     // 静默跳过
                 }
+
+                // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
+                await this.tryAutoStartMCP();
             })();
 
-            // 仅在 Y3 仓库已初始化后才自动启动 MCP Server（静默模式）
-            await this.tryAutoStartMCP();
             await this.runStartupStep('metaBuilder.init', () => metaBuilder.init());
             await this.runStartupStep('debug.init', () => debug.init(this.context));
             await this.runStartupStep('console.init', () => console.init());
