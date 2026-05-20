@@ -20,7 +20,7 @@ context: |
 rules:
   proposal:
     - "命名格式: <英文描述>-<PM单号>，例如: star-blood-deduction-2224555"
-    - "必须包含 Issue 链接: [#XXXXX](https://up1.pm.netease.com/v6/issues/XXXXX)"
+    - "必须包含 Issue 链接: #XXXXX"
     - "必须包含 Why 章节: 描述PM Issue的背景和问题"
     - "必须包含 What Changes 章节: 主要功能变更和影响范围说明"
     - "必须包含 Capabilities 章节: 新增功能模块和修改的现有功能"

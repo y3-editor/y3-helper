@@ -33,7 +33,6 @@ import { useWorkspaceStore } from './store/workspace';
 import { useChatStore, ChatType } from './store/chat';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useMCPStore } from './store/mcp';
-import UserDashboard from './components/UserDashboard/UserDashboard';
 import { useChatApplyStore } from './store/chatApply';
 import { useChatConfig } from './store/chat-config';
 import { ChatModel, ParseImgType, ModelIconType, ChatModelType } from './services/chatModel';
@@ -128,7 +127,6 @@ function App() {
   const panelInitializedRef = React.useRef(false);
 
   const { toast } = useCustomToast();
-  const [userDashboardOpen, setUserDashboardOpen] = React.useState(false);
 
   const isVsCodeIDE = ide === IDE.VisualStudioCode;
 
@@ -665,8 +663,6 @@ function App() {
             console.error('保存工作区会话数据失败:', error);
           }
         }
-      } else if (event.data.type === SubscribeActions.TOGGLE_USER_DASHBOARD) {
-        setUserDashboardOpen(!userDashboardOpen);
       } else if (event.data.type === SubscribeActions.SYNC_RULES) {
         setRules(event.data?.data as any || []);
       } else if (event.data.type === SubscribeActions.NOTIFY_SKILL_CONFIG_SUCCESS) {
@@ -726,7 +722,7 @@ function App() {
       // 移除消息监听器
       window.removeEventListener('message', handleMessage);
     };
-  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, userDashboardOpen, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, setAgents, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, onNewSession, setShowMcpError]);
+  }, [isVsCodeIDE, filterTabs, ide, toast, extensionStore, authStore, updateConfig, accessToken, setWorkspaceInfo, setChatType, selectSession, setWorkspaceList, setMCPServers, currentSession?._id, setCurrentFileAutoAttach, setDisableNewApply, setPlanModeButtonEnabled, setSystemTheme, setTerminalTimeout, setRules, setSkills, setAgents, activeIndex, postMessage, chatType, initialChatType, isPanelMode, mode, panelId, onNewSession, setShowMcpError]);
 
   React.useEffect(() => {
     const pendingChatType = pendingChatTypeRef.current;
@@ -807,12 +803,6 @@ function App() {
           <CodeChat />
         </Box>
         <ContextMenu />
-        <UserDashboard
-          open={userDashboardOpen}
-          onClose={() => {
-            setUserDashboardOpen(false);
-          }}
-        />
       </Box>
     </ErrorBoundary>
   );

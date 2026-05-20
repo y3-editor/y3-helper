@@ -1,6 +1,6 @@
 ## Why
 
-[#98849](https://up1.pm.netease.com/v6/issues/98849)
+#98849
 
 Y3Helper 项目（https://github.com/y3-editor/y3-helper）已完成代码脱敏，但 Git 历史提交记录中仍保留了包含敏感信息的文件快照。攻击者可以通过浏览历史 commit 的 diff 查看到已删除的敏感内容。需要通过重建仓库的方式彻底清除历史记录中的敏感信息。
 

@@ -15,13 +15,13 @@
 
 ## 4. OpenSpec 归档文档脱敏
 
-- [x] 4.1 修改 `openspec/changes/archive/2026-03-13-docs-vscode-plugin-learning-98274/proposal.md` L3，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.2 修改 `openspec/changes/archive/2026-03-13-project-level-workspace-global-script-98276/proposal.md` L3，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.3 修改 `openspec/changes/archive/2026-03-17-vscode-save-gmp-98280/proposal.md` L3，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.4 修改 `openspec/changes/archive/2026-03-18-feat-codemaker-integration-with-y3helper-98275/proposal.md` L5，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.5 修改 `openspec/changes/archive/2026-03-23-feat-mcp-server-connection-98275/proposal.md` L5，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.6 修改 `openspec/changes/archive/2026-3-23-fix-codemaker-webview-message-handlers-98275/proposal.md` L3，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
-- [x] 4.7 修改 `openspec/changes/archive/2026-04-07-codemaker-session-memory-storage-98702/proposal.md` L12，移除 `up1.pm.netease.com` URL，仅保留 Issue 编号
+- [x] 4.1 修改 `openspec/changes/archive/2026-03-13-docs-vscode-plugin-learning-98274/proposal.md` L3，移除内部 URL，仅保留 Issue 编号
+- [x] 4.2 修改 `openspec/changes/archive/2026-03-13-project-level-workspace-global-script-98276/proposal.md` L3，移除内部 URL，仅保留 Issue 编号
+- [x] 4.3 修改 `openspec/changes/archive/2026-03-17-vscode-save-gmp-98280/proposal.md` L3，移除内部 URL，仅保留 Issue 编号
+- [x] 4.4 修改 `openspec/changes/archive/2026-03-18-feat-codemaker-integration-with-y3helper-98275/proposal.md` L5，移除内部 URL，仅保留 Issue 编号
+- [x] 4.5 修改 `openspec/changes/archive/2026-03-23-feat-mcp-server-connection-98275/proposal.md` L5，移除内部 URL，仅保留 Issue 编号
+- [x] 4.6 修改 `openspec/changes/archive/2026-3-23-fix-codemaker-webview-message-handlers-98275/proposal.md` L3，移除内部 URL，仅保留 Issue 编号
+- [x] 4.7 修改 `openspec/changes/archive/2026-04-07-codemaker-session-memory-storage-98702/proposal.md` L12，移除内部 URL，仅保留 Issue 编号
 
 ## 5. 脱敏验证
 

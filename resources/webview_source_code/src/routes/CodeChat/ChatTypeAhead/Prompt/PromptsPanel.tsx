@@ -19,7 +19,6 @@ import {
   BUILT_IN_PROMPTS,
   BUILT_IN_PROMPTS_SPECKIT,
   getOpenSpecPromptsByVersion,
-  BUILT_IN_PROMPTS_OPENSPEC_V023,
   BUILT_IN_PROMPTS_OPENSPEC_V1,
 } from '../../../../services/builtInPrompts';
 import useUserPrompt, { CODE_QUALITY_AUTOFIX_PROMPT_APP } from './useUserPrompt';
@@ -657,10 +656,7 @@ const PromptsPanel = (
             }
           } else if (
             [
-              // 支持 OpenSpec 0.23 和 1.x 的所有命令
-              ...BUILT_IN_PROMPTS_OPENSPEC_V023.map(
-                (openspecPrompt) => openspecPrompt.name,
-              ),
+              // OpenSpec 0.23 已移除 (Y3不需要)
               ...BUILT_IN_PROMPTS_OPENSPEC_V1.map(
                 (openspecPrompt) => openspecPrompt.name,
               ),

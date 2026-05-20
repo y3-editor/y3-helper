@@ -5,7 +5,6 @@ import {
   PopoverBody,
   Text,
   Flex,
-  Link,
   Box,
   Tooltip,
   Icon,
@@ -15,7 +14,6 @@ import { useTheme, ThemeStyle } from '../../../ThemeContext';
 import { useChatStore } from '../../../store/chat';
 import { useChatConfig } from '../../../store/chat-config';
 import { useMemo, useState } from 'react';
-import { usePostMessage } from '../../../PostMessageProvider';
 import MiniButton from '../../../components/MiniButton';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
@@ -469,7 +467,7 @@ function ChildSessionTokenSection({
 
 export default function ChatConsumeTokenPanel() {
   const { activeTheme } = useTheme();
-  const { postMessage } = usePostMessage();
+  // const { postMessage } = usePostMessage(); // Y3: 已移除内部链接，不再需要
   const isDark = activeTheme === ThemeStyle.Dark;
   const chatType = useChatStore((state) => state.chatType);
 
@@ -705,21 +703,7 @@ export default function ChatConsumeTokenPanel() {
               flexWrap="wrap"
               alignItems="center"
             >
-              <Text>会话消耗 Tokens 将根据</Text>
-              <Link
-                color="blue.300"
-                px="1"
-                cursor="pointer"
-                onClick={() => {
-                  postMessage({
-                    type: 'OPEN_IN_BROWSER',
-                    data: { url: 'https://modelspace.netease.com/model_app' },
-                  });
-                }}
-              >
-                模型单价
-              </Link>
-              <Text>转换为消耗积分</Text>
+              <Text>会话消耗 Tokens</Text>
             </Flex>
           </Flex>
         </PopoverBody>

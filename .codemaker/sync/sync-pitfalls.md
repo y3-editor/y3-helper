@@ -172,28 +172,28 @@ IDE 端 `_handleToolCall` 已透传 `task_id`（`src/codemaker/webviewProvider.t
 
 ## 8. 上游"敏感字符串"不要照搬，搬完一定要全文 grep
 
-**触发场景**：合并上游时整文件覆盖 / 大块新增代码（如 `agentsHandler/parser.ts`、`services/agentCreation.ts`），里面藏着上游内部的字符串字面量。最常见就是 `netease`、`netease-codemaker/` 这类前缀。Y3Helper 是对外发布产物，把母公司域名 / 内部 model 命名空间塞进去是事故。
+**触发场景**：合并上游时整文件覆盖 / 大块新增代码，里面藏着上游内部的字符串字面量。最常见就是内部域名、公司名等。Y3Helper 是对外发布产物，把内部信息塞进去是事故。
 
 **典型藏身位置**：
 
 | 文件 | 上游写法 | Y3 应改成 |
 |---|---|---|
-| `agentCreation.ts` | model 字段拼 `netease-codemaker/${model}` | 直接写裸 model 名 |
-| `agentsHandler/parser.ts` | `MODEL_PREFIXES_TO_REMOVE = ['netease-codemaker/']` + `normalizeModelName()` | 整段删除，model 透传 |
-| 任何 `*.ts` 字符串字面量 | URL `*.nie.netease.com` / `*.netease.com` | 视情况用占位 / 删除 |
+| `agentCreation.ts` | model 字段拼内部前缀 `${serialized}` | 直接写裸 model 名 |
+| `agentsHandler/parser.ts` | `MODEL_PREFIXES_TO_REMOVE` + `normalizeModelName()` | 整段删除，model 透传 |
+| 任何 `*.ts` 字符串字面量 | URL 内部域名 | 视情况用占位 / 删除 |
 
 **机械动作（每次 Phase 2 合并完跑一次）**：
 
 ```bash
 git diff --name-only HEAD -- 'src/**' 'resources/webview_source_code/src/**' \
-  | xargs grep -nH 'netease\|popo\.netease' 2>/dev/null
+  | xargs grep -nH '内部关键词' 2>/dev/null
 ```
 
 PowerShell 版：
 
 ```powershell
 git diff --name-only HEAD | Where-Object { $_ -match '\.(ts|tsx|js)$' } |
-  ForEach-Object { Select-String -Path $_ -Pattern 'netease|popo\.netease' }
+  ForEach-Object { Select-String -Path $_ -Pattern '内部关键词' }
 ```
 
 发现命中后：
@@ -202,7 +202,7 @@ git diff --name-only HEAD | Where-Object { $_ -match '\.(ts|tsx|js)$' } |
 3. 删除前后**必须加注释**标注 "⚠️ Y3 定制 (sync)"，说明上游有该字符串，方便下次合并时识别。注释模板：
 
 ```ts
-// ⚠️ Y3 定制 (sync): 上游会拼 `netease-codemaker/` 前缀, Y3 不需要。
+// ⚠️ Y3 定制 (sync): 上游会拼内部 model 前缀, Y3 不需要。
 // 同步上游时若 diff 出现该前缀, 请删除拼接逻辑而不是合入。
 ```
 

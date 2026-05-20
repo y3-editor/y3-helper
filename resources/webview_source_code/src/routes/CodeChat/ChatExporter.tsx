@@ -205,10 +205,7 @@ const ChatExporter = React.forwardRef<ChatExporterHandle>((_, ref) => {
             let newContent = `${prefixLabel}\n`;
             message.content.forEach((o) => {
               if (o.type === ChatMessageContent.ImageUrl) {
-                const newUrl = o.image_url.url.replace(
-                  'https://cm-img.s3v2.nie.netease.com',
-                  `${window.origin}/proxy/img`,
-                );
+              const newUrl = o.image_url.url;
                 newContent += `![image](${newUrl})\n`;
               } else {
                 newContent += `${o.text}\n`;

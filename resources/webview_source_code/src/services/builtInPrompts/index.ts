@@ -1,11 +1,5 @@
 import { RULES_PROMPT } from './rules';
 import {
-  OPEN_SPEC_PROPOSAL_PROMPT,
-  OPEN_SPEC_APPLY_PROMPT,
-  OPEN_SPEC_ARCHIVE_PROMPT,
-  OPEN_SPEC_UPGDATE_PROMPT
-} from './openSpecPrompts';
-import {
   OPSX_EXPLORE_PROMPT,
   OPSX_NEW_PROMPT,
   OPSX_CONTINUE_PROMPT,
@@ -34,13 +28,8 @@ export const BUILT_IN_PROMPTS: BuiltInPrompt[] = [
   SPECKIT_SETUP_PROMPT
 ];
 
-// OpenSpec 0.23 命令集
-export const BUILT_IN_PROMPTS_OPENSPEC_V023: BuiltInPrompt[] = [
-  OPEN_SPEC_PROPOSAL_PROMPT,
-  OPEN_SPEC_APPLY_PROMPT,
-  OPEN_SPEC_ARCHIVE_PROMPT,
-  OPEN_SPEC_UPGDATE_PROMPT
-]
+// OpenSpec 0.23 命令集 (已移除 - Y3Maker 不需要 OpenSpec)
+export const BUILT_IN_PROMPTS_OPENSPEC_V023: BuiltInPrompt[] = [];
 
 // OpenSpec 1.x (OPSX) 命令集
 export const BUILT_IN_PROMPTS_OPENSPEC_V1: BuiltInPrompt[] = [
@@ -84,11 +73,6 @@ export const BUILT_IN_PROMPTS_SPECKIT: BuiltInPrompt[] = [
 export const specPromptMap: {
   [propName: string]: string
 } = {
-  // OpenSpec 0.23 命令
-  'openspec-apply': OPEN_SPEC_APPLY_PROMPT.prompt,
-  'openspec-archive': OPEN_SPEC_ARCHIVE_PROMPT.prompt,
-  'openspec-proposal': OPEN_SPEC_PROPOSAL_PROMPT.prompt,
-  'openspec-update': OPEN_SPEC_UPGDATE_PROMPT.prompt,
   // OpenSpec 1.x (OPSX) 命令
   'opsx:explore': OPSX_EXPLORE_PROMPT.prompt,
   'opsx:new': OPSX_NEW_PROMPT.prompt,

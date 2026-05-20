@@ -506,73 +506,7 @@ export default function ChatMentionAreatext(props: ChatInputProp) {
   const favoriteInfo = favoriteRequiredInfo();
 
   const renderExceededTip = useCallback(() => {
-    return (
-      <Box position={'relative'} w={'full'} h={'full'} userSelect={'none'}>
-        <Box
-          position="absolute"
-          top="8px"
-          left="0"
-          right="0"
-          paddingLeft="0"
-          fontSize="12px"
-          color="#666"
-          zIndex={2}
-          pointerEvents="auto"
-        >
-          本月 {maxCostPerMonth * 100} 积分（等值于{maxCostPerMonth} 元 Token）额度已用完。
-          从 5 月起，个人 Token 额度将通过 AIGW 平台统一分配，
-          <Button
-            size="sm"
-            variant="link"
-            color="blue.400"
-            fontWeight="600"
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation();
-              postMessage({
-                type: "OPEN_IN_BROWSER",
-                data: { url: `https://km.netease.com/v4/detail/blog/268321` },
-              });
-            }}
-            _hover={{ textDecoration: 'none', opacity: 0.8 }}
-          >
-            查阅详细规范
-          </Button>
-          。若因工作需要申请提升额度，请参考
-          <Button
-            size="sm"
-            variant="link"
-            color="blue.400"
-            fontWeight="600"
-            mx={1}
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation();
-              postMessage({
-                type: "OPEN_IN_BROWSER",
-                data: { url: `https://g.126.fm/016Bgyt` },
-              });
-            }}
-            _hover={{ textDecoration: 'none', opacity: 0.8 }}
-          >
-            申请指引
-          </Button>
-          提交申请。审批通过后，点击
-          <Button
-            size="sm"
-            variant="link"
-            color="blue.400"
-            fontWeight="600"
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation();
-              EventBus.instance.dispatch(EBusEvent.Update_User_Quota)
-            }}
-            _hover={{ textDecoration: 'none', opacity: 0.8 }}
-          >
-            「刷新限额」
-          </Button>
-          即可恢复使用
-        </Box>
-      </Box>
-    )
+    return null
   }, [maxCostPerMonth, postMessage])
 
   const renderSessionLoadError = useCallback(() => {

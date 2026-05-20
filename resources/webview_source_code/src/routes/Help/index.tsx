@@ -425,18 +425,6 @@ export default function Help() {
             功能指引
           </Text>
           <Box mt={isSmallScreen ? '4' : '0'}>
-            <Box display="flex" alignItems="center" mt="1">
-              <Text fontSize="14px" fontWeight="bold" mr="4" minW="126px">
-                用户群
-              </Text>
-              <Text isTruncated>8270037</Text>
-            </Box>
-            <Box display="flex" mt="2">
-              <Text fontSize="14px" fontWeight="bold" mr="4" minW="126px">
-                服务助手
-              </Text>
-              <Text>grp.codemaker@corp.netease.com</Text>
-            </Box>
             {(extensionStore.IDE === IDE.VisualStudioCode ||
               extensionStore.IDE === IDE.JetBrains) && (
               <Button

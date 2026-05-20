@@ -1,11 +1,5 @@
 import { minimatch } from 'minimatch';
 
-export const CODE_SEARCH_URL =
-  'http://office-code-maker.nie.netease.com/proxy/code_search/api/v1';
-
-export const CODE_SEARCH_URL_NEW =
-  'https://office-ai.nie.netease.com/api/v1/apps/a01dde01-b213-459f-84ce-96f3f82c21fc/chat';
-
 export function removeTrailingPunctuation(str: string) {
   const regex = /[.。?？!！]+$/;
   return str.replace(regex, '');

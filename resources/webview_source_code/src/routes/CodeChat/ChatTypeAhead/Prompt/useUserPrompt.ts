@@ -53,7 +53,6 @@ export const prePromptIdsMap = new Map([
   [PrePrompt.UnitTest, '663c3aeec65c317f6eb1529d'],
 ]);
 
-// 定义的三个通用的 prompt，见：https://prompt.nie.netease.com/category/64cca5a50d40da33d799ef4d
 export const prePromptEventIdsMap = new Map([
   ['64cca6b00d40da33d799ef50', UserEvent.CODE_CHAT_PROMPT_OPTIMIZE],
   ['64cca63a0d40da33d799ef4e', UserEvent.CODE_CHAT_PROMPT_EXPLAIN],

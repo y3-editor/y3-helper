@@ -178,10 +178,6 @@ export function formatAgentAsMarkdown(config: GeneratedAgent): string {
       if (value === undefined || value === null || value === '') continue;
       let serialized =
         typeof value === 'object' ? JSON.stringify(value) : String(value);
-      // model 字段需要加上 netease-codemaker/ 前缀
-      if (key === 'model') {
-        serialized = `netease-codemaker/${serialized}`;
-      }
       extraMeta += `\n${key}: ${serialized}`;
     }
   }

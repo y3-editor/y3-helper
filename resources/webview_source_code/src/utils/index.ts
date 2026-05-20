@@ -1,4 +1,3 @@
-import { OFFICE_BM_API_URL } from '../routes/CodeCoverage/const';
 import { ChatMessage } from '../services';
 import { REQUEST_TIMEOUT_NAME } from './abort';
 import { useChatStore } from '../store/chat';
@@ -216,18 +215,13 @@ export function countGodeGenerate(code: string): {
 
 export async function getBase64FromUrl(url: string): Promise<string> {
   try {
-    // 使用代理去获取图片
-    const newUrl = url.replace(
-      'https://cm-img.s3v2.nie.netease.com',
-      '/proxy/img',
-    );
     // 提取文件扩展名
-    const fileExtensionMatch = newUrl.match(/\.(jpeg|png|gif|webp|jfif|jpg)$/i);
+    const fileExtensionMatch = url.match(/\.(jpeg|png|gif|webp|jfif|jpg)$/i);
     const fileExtension = fileExtensionMatch
       ? fileExtensionMatch[1].toLowerCase()
       : '';
     // 获取图片响应
-    const response = await fetch(newUrl);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -282,21 +276,7 @@ export async function getBase64FromUrl(url: string): Promise<string> {
 }
 
 export function proxyImage(url: string) {
-  // TODO: BM 图片需要特殊处理，目前没有更好的方案，先这样处理
-  // 后续需要优化
-  if (url.includes('brainmaker')) {
-    if (url.includes('brainmaker-office')) {
-      return url.replace(
-        `https://brainmaker-office.netease.com/proxy/server`,
-        `${OFFICE_BM_API_URL}/proxy/bm/api/v1`,
-      );
-    }
-    return url.replace(
-      `https://manage.brainmaker.netease.com/proxy/server`,
-      '/proxy/bm',
-    );
-  }
-  return url.replace('https://cm-img.s3v2.nie.netease.com', '/proxy/img');
+  return url;
 }
 
 // const superscriptNumbers: readonly string[] = [
@@ -460,7 +440,7 @@ export const exportGraphAsPng = async ({ type, chart }: ExportGraphOptions) => {
       throw new Error(`Unsupported graph type: ${type}`);
     }
 
-    const response = await fetch(`https://codemaker.nie.netease.com/kroki/${endpoint}/png`, {
+    const response = await fetch(`https://kroki.io/${endpoint}/png`, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',

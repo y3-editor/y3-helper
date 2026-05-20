@@ -58,7 +58,7 @@ const METADATA_FIELD_MAP = [
   }),
   defineField({
     key: 'model',
-    // ⚠️ Y3 定制 (sync): 上游用 normalizeModelName(...) 剥离 `netease-codemaker/` 前缀。
+    // ⚠️ Y3 定制 (sync): 上游用 normalizeModelName(...) 剥离 `...-codemaker/` 前缀。
     // Y3 既不会写入也不会读到该前缀（agentCreation.ts 已去掉拼接），
     // 所以连同 normalizeModelName / MODEL_PREFIXES_TO_REMOVE 一并删除，避免敏感词。
     // 同步上游时若 diff 出现 normalizeModelName，请保持当前裸 trim 写法。

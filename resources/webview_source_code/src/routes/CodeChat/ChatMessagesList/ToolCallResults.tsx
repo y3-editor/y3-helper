@@ -42,7 +42,6 @@ import {
   generatePlanText,
   getToolParams as getPlanToolParams,
 } from './../../../services/harness/tools/plan';
-import PreviewCodewikiStructure from './PreviewCodewikiStructure';
 import AskUserQuestion from './AskUserQuestion';
 import { getToolParams as getAskUserQuestionToolParams } from './../../../services/harness/tools/askUserQuestion';
 import { parseGlobSearchParams } from './../../../services/harness/tools/search/glob';
@@ -172,8 +171,6 @@ const ToolCallResult = ({
     'list_files_recursive',
   ].includes(tool.function.name);
   const isPlan = tool.function.name === 'make_plan';
-  const isPreviewCodewikiStructure =
-    tool.function.name === 'generate_codewiki_structure';
   const isSkillTool = tool.function.name === 'use_skill';
   const isGlobSearchTool = tool.function.name === 'glob_search';
 
@@ -298,16 +295,6 @@ const ToolCallResult = ({
     }
     return [];
   }, [tool.function.arguments, result.content]);
-
-  if (isPreviewCodewikiStructure) {
-    return (
-      <PreviewCodewikiStructure
-        hasError={result?.isError}
-        content={result.content}
-        isLatest={isLatest}
-      />
-    );
-  }
 
   if (isPlan) {
     return (

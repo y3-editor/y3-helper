@@ -15,7 +15,7 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
-const S3_BASE_URL = 'https://codemaker.netease.com/package/rtk/latest';
+const S3_BASE_URL = '';
 
 const UPDATE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 

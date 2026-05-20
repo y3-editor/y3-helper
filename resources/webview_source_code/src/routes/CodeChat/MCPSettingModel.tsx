@@ -31,7 +31,7 @@ import {
   TabPanel,
   Badge
 } from '@chakra-ui/react';
-import { SettingsIcon, DownloadIcon, DeleteIcon, ExternalLinkIcon, InfoOutlineIcon } from '@chakra-ui/icons';
+import { SettingsIcon, DownloadIcon, DeleteIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import { MCPServer, useMCPStore, BuiltInServer } from '../../store/mcp';
 import { BroadcastActions, usePostMessage } from '../../PostMessageProvider';
 import { useChatConfig } from '../../store/chat-config';
@@ -767,27 +767,7 @@ const MCPSettingModel: React.FC<MCPSettingModelProps> = ({ isOpen, onClose }) =>
               {/* 第二个 Tab: 推荐安装的 MCP 服务 */}
               <TabPanel px={0}>
                 <Flex alignItems="center" justifyContent="space-between" mb={4}>
-                  <Flex alignItems="center" gap={2}>
-                    <Text fontWeight="bold">推荐 MCP 服务</Text>
-                    <Text
-                      fontSize="sm"
-                      color="#786fff"
-                      cursor="pointer"
-                      _hover={{ color: '#5a4fcf' }}
-                      onClick={() => {
-                        postMessage({
-                          type: BroadcastActions.OPEN_IN_BROWSER,
-                          data: { url: 'https://modelspace.netease.com/mcphub' }
-                        });
-                      }}
-                      display="flex"
-                      alignItems="center"
-                      gap={1}
-                    >
-                      更多mcp服务
-                      <ExternalLinkIcon w={3} h={3} />
-                    </Text>
-                  </Flex>
+                  <Text fontWeight="bold">推荐 MCP 服务</Text>
                   <Button
                     colorScheme="blue"
                     size="sm"
