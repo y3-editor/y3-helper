@@ -1,21 +1,31 @@
 import * as y3 from 'y3-helper';
-import * as tools from '../tools';
+import * as fs from '../tools/fs';
 import { throttle } from '../utility/decorators';
 import * as l10n from '@vscode/l10n';
 
 export abstract class BaseBuilder {
     constructor(public path: string) { }
 
+    private _mapsReadySubscription?: ReturnType<typeof y3.env.onDidChange>;
+
     @throttle(500)
     public async updateAll() {
-        if (!y3.env.project) {
-            let dispose = y3.env.onDidChange(() => {
-                dispose.dispose();
+        const maps = y3.env.project?.maps;
+        if (!maps?.length) {
+            this._mapsReadySubscription ??= y3.env.onDidChange(() => {
+                if (!y3.env.project?.maps.length) {
+                    return;
+                }
+                this._mapsReadySubscription?.dispose();
+                this._mapsReadySubscription = undefined;
                 this.updateAll();
             });
             return;
         }
-        for (const map of y3.env.project.maps) {
+
+        this._mapsReadySubscription?.dispose();
+        this._mapsReadySubscription = undefined;
+        for (const map of maps) {
             await this.updateMap(map);
         }
     }
@@ -32,16 +42,16 @@ export abstract class BaseBuilder {
         }
         let code = await this.make(map);
         if (code === undefined) {
-            if (await tools.fs.isExists(map.helperUri, this.path)) {
+            if (await fs.isExists(map.helperUri, this.path)) {
                 return;
             } else {
-                await tools.fs.writeFile(map.helperUri, this.path, '');
+                await fs.writeFile(map.helperUri, this.path, '');
             }
         } else {
             code = code.replace(/\by3\b/g, l10n.t('y3'));
             code = code.replace(/\bY3\b/g, l10n.t('Y3'));
-            if (code !== (await tools.fs.readFile(map.helperUri))?.string) {
-                await tools.fs.writeFile(map.helperUri, this.path, code);
+            if (code !== (await fs.readFile(map.helperUri))?.string) {
+                await fs.writeFile(map.helperUri, this.path, code);
             }
         }
     }
