@@ -12,6 +12,17 @@ import { EditorManager } from './editorTable/editorTable';
 import * as l10n from '@vscode/l10n';
 import { config } from './config';
 import { PluginManager } from './plugin/plugin';
+import { MultiPlayerRole, parseLegacyMultiPlayerRoles, parseMultiPlayerRoles } from './multiPlayerRoles';
+import {
+    emptyLocalArchiveData,
+    getLocalArchiveAssignments,
+    LocalArchiveData,
+    MultiPlayerArchiveAssignment,
+    parseLocalArchiveData,
+    parseEditorNickname,
+    applyLocalArchiveAssignments,
+    serializeLocalArchiveData,
+} from './multiPlayerArchives';
 
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
@@ -110,6 +121,10 @@ class Project extends vscode.Disposable {
     maps: Map[] = [];
     entryMap?: Map;
     setting?: ProjectSetting;
+    multiPlayerRoles: MultiPlayerRole[] = [];
+    multiPlayerRolesError?: 'missing' | 'invalid';
+    multiPlayerArchives: LocalArchiveData = emptyLocalArchiveData();
+    multiPlayerArchivesError?: 'invalid';
     async start() {
         let projectFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.project'));
         if (!projectFile) {
@@ -133,6 +148,8 @@ class Project extends vscode.Disposable {
         let started: Promise<any>[] = [];
 
         started.push(this.loadSetting());
+        started.push(this.loadMultiPlayerRoles());
+        started.push(this.loadMultiPlayerArchives());
 
         for (const [mapName] of await y3.fs.dir(this.uri, 'maps')) {
             let map = new Map(mapName, vscode.Uri.joinPath(this.uri, 'maps', mapName));
@@ -166,6 +183,95 @@ class Project extends vscode.Disposable {
             await applySetting();
             this.onDiDChange?.();
         });
+    }
+
+    async reloadMultiPlayerRoles() {
+        const campInfoFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'campinfo.json'));
+        try {
+            if (campInfoFile) {
+                this.multiPlayerRoles = parseMultiPlayerRoles(campInfoFile.string);
+            } else {
+                const legacyFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'EntryMap', 'campinfo.json'));
+                if (!legacyFile) {
+                    this.multiPlayerRoles = [];
+                    this.multiPlayerRolesError = 'missing';
+                    return;
+                }
+                this.multiPlayerRoles = parseLegacyMultiPlayerRoles(legacyFile.string);
+            }
+            this.multiPlayerRolesError = undefined;
+        } catch (error) {
+            this.multiPlayerRoles = [];
+            this.multiPlayerRolesError = 'invalid';
+            y3.log.error(l10n.t('解析阵营配置失败：{0}', String(error)));
+        }
+    }
+
+    private async loadMultiPlayerRoles() {
+        await this.reloadMultiPlayerRoles();
+        const reload = async () => {
+            await this.reloadMultiPlayerRoles();
+            this.onDiDChange?.();
+        };
+        for (const pattern of ['campinfo.json', 'EntryMap/campinfo.json']) {
+            const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.uri, pattern));
+            this.disposables.push(watcher);
+            watcher.onDidChange(reload);
+            watcher.onDidCreate(reload);
+            watcher.onDidDelete(reload);
+        }
+    }
+
+    async reloadMultiPlayerArchives() {
+        const archiveFile = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'archive', 'archive_storage.json'));
+        if (!archiveFile) {
+            this.multiPlayerArchives = emptyLocalArchiveData();
+            this.multiPlayerArchivesError = undefined;
+            return;
+        }
+        try {
+            this.multiPlayerArchives = parseLocalArchiveData(archiveFile.string);
+            this.multiPlayerArchivesError = undefined;
+        } catch (error) {
+            this.multiPlayerArchives = emptyLocalArchiveData();
+            this.multiPlayerArchivesError = 'invalid';
+            y3.log.error(l10n.t('解析本地存档配置失败：{0}', String(error)));
+        }
+    }
+
+    getMultiPlayerArchiveAssignments(): MultiPlayerArchiveAssignment[] {
+        return getLocalArchiveAssignments(this.multiPlayerArchives);
+    }
+
+    async saveMultiPlayerArchiveAssignments(assignments: readonly MultiPlayerArchiveAssignment[]) {
+        await this.reloadMultiPlayerArchives();
+        if (this.multiPlayerArchivesError) {
+            throw new Error('Invalid archive_storage.json');
+        }
+        const updated = applyLocalArchiveAssignments(this.multiPlayerArchives, assignments);
+        const archiveUri = vscode.Uri.joinPath(this.uri, 'archive');
+        await vscode.workspace.fs.createDirectory(archiveUri);
+        await vscode.workspace.fs.writeFile(
+            vscode.Uri.joinPath(archiveUri, 'archive_storage.json'),
+            new TextEncoder().encode(serializeLocalArchiveData(updated)),
+        );
+        this.multiPlayerArchives = updated;
+        this.multiPlayerArchivesError = undefined;
+    }
+
+    private async loadMultiPlayerArchives() {
+        await this.reloadMultiPlayerArchives();
+        const reload = async () => {
+            await this.reloadMultiPlayerArchives();
+            this.onDiDChange?.();
+        };
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(this.uri, 'archive/archive_storage.json'),
+        );
+        this.disposables.push(watcher);
+        watcher.onDidChange(reload);
+        watcher.onDidCreate(reload);
+        watcher.onDidDelete(reload);
     }
 
     findMapByUri(uri: vscode.Uri): Map | undefined {
@@ -285,6 +391,25 @@ class Env {
         return '2.0';
     }
 
+    private async reloadEditorNickname() {
+        this.editorNickname = undefined;
+        if (!this.editorUri) {
+            return;
+        }
+        const userDefaultFile = await y3.fs.readFile(vscode.Uri.joinPath(
+            this.editorUri,
+            '../Engine/Binaries/Win64/UserDefault.json',
+        ));
+        if (!userDefaultFile) {
+            return;
+        }
+        try {
+            this.editorNickname = parseEditorNickname(userDefaultFile.string);
+        } catch (error) {
+            tools.log.error(`Failed to parse editor nickname: ${String(error)}`);
+        }
+    }
+
     private async searchProjectByFolder(folder: vscode.Uri): Promise<vscode.Uri | undefined> {
         let currentUri = folder;
         for (let i = 0; i < 20; i++) {
@@ -345,6 +470,7 @@ class Env {
     }
 
     public editorVersion: EditorVersion = 'unknown';
+    public editorNickname?: string;
     // Editor.exe 的路径
     public editorUri?: vscode.Uri;
     // Game_x64h.exe 的路径
@@ -402,6 +528,7 @@ class Env {
         this.editorUri = editorUri;
         this.editorVersion = await this.getEditorVersion();
         this.editorExeUri = this.getEditorExeUri();
+        await this.reloadEditorNickname();
         tools.log.info(`editorUri: ${this.editorUri?.fsPath}`);
         tools.log.info(`editorExeUri: ${this.editorExeUri?.fsPath}`);
         tools.log.info(`editorVersion: ${this.editorVersion}`);

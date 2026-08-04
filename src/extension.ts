@@ -286,10 +286,15 @@ class Helper {
 
             if (config.attachWhenLaunch) {
                 if (config.multiMode) {
+                    const selectedPlayers = [...config.multiPlayers].sort((a, b) => a - b);
+                    const selectedPlayerIds = new Set(selectedPlayers);
                     luaArgs['lua_multi_mode'] = 'true';
                     luaArgs['lua_multi_wait_debugger'] = 'true';
-                    luaArgs['lua_multi_debug_players'] = config.debugPlayers.sort().join('#');
-                    if (config.multiPlayers.length === 0) {
+                    luaArgs['lua_multi_debug_players'] = config.debugPlayers
+                        .filter((id) => selectedPlayerIds.has(id))
+                        .sort((a, b) => a - b)
+                        .join('#');
+                    if (selectedPlayers.length === 0) {
                         vscode.window.showErrorMessage(l10n.t('请至少选择一个玩家才能启动游戏！'));
                         return;
                     }
@@ -306,7 +311,8 @@ class Helper {
 
                 let suc = await gameLauncher.launch({
                     luaArgs: luaArgs,
-                    multi: config.multiMode ? config.multiPlayers.sort() : undefined,
+                    multi: config.multiMode ? [...config.multiPlayers].sort((a, b) => a - b) : undefined,
+                    multiNicknames: config.multiMode ? {...config.multiPlayerNicknames} : undefined,
                     tracy: config.tracy,
                 });
 

@@ -1,7 +1,8 @@
 class Config {
     multiMode: boolean = false;
-    multiPlayers: number[] = [1, 2];
-    debugPlayers: number[] = [1];
+    multiPlayers: number[] = [];
+    multiPlayerNicknames: Record<number, string> = {};
+    debugPlayers: number[] = [];
     tracy: boolean = false;
     attachWhenLaunch: boolean = true;
     launchMap: ['option' | 'map', string] = ['option', 'entry'];

@@ -4,11 +4,14 @@ import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 import { updateHelperPortFile } from './console';
 import * as l10n from '@vscode/l10n';
+import { findDuplicateMultiPlayerRoles, findInvalidMultiPlayerRoles } from './multiPlayerRoles';
+import { MultiPlayerArchiveAssignment, resolveLocalArchiveAssignments } from './multiPlayerArchives';
 
 
 interface LaunchOptions {
     luaArgs?: {[key: string]: string};
     multi?: number[];
+    multiNicknames?: Record<number, string>;
     debugPlayers?: number[];
     tracy?: boolean;
 }
@@ -45,6 +48,47 @@ export class GameLauncher {
             return false;
         }
 
+        let archiveAssignments: MultiPlayerArchiveAssignment[] | undefined;
+        if (options?.multi) {
+            await env.project?.reloadMultiPlayerRoles();
+            if (env.project?.multiPlayerRolesError) {
+                vscode.window.showErrorMessage(l10n.t('无法读取阵营角色配置，请在编辑器中保存工程后重试。'));
+                return false;
+            }
+            if (options.multi.length === 0) {
+                vscode.window.showErrorMessage(l10n.t('请至少选择一个玩家才能启动游戏！'));
+                return false;
+            }
+            const duplicateRoles = findDuplicateMultiPlayerRoles(options.multi);
+            if (duplicateRoles.length > 0) {
+                vscode.window.showErrorMessage(l10n.t('玩家列表包含重复角色：{0}', duplicateRoles.join(', ')));
+                return false;
+            }
+            const invalidRoles = findInvalidMultiPlayerRoles(options.multi, env.project?.multiPlayerRoles ?? []);
+            if (invalidRoles.length > 0) {
+                vscode.window.showErrorMessage(l10n.t('以下玩家已不在阵营配置中：{0}', invalidRoles.join(', ')));
+                return false;
+            }
+            await env.project?.reloadMultiPlayerArchives();
+            if (env.project?.multiPlayerArchivesError) {
+                vscode.window.showErrorMessage(l10n.t('无法读取本地存档配置，请检查 archive/archive_storage.json。'));
+                return false;
+            }
+            const resolvedArchives = resolveLocalArchiveAssignments(
+                options.multi,
+                options.multiNicknames,
+                env.project?.multiPlayerArchives ?? {},
+            );
+            archiveAssignments = resolvedArchives.assignments;
+            if (resolvedArchives.missingRoleIds.length > 0) {
+                vscode.window.showErrorMessage(l10n.t(
+                    '以下玩家未选择本地玩家昵称：{0}',
+                    resolvedArchives.missingRoleIds.join(', '),
+                ));
+                return false;
+            }
+        }
+
         if (await y3.version.askUpdate()) {
             return false;
         }
@@ -52,6 +96,16 @@ export class GameLauncher {
         let suc = await this.runPlugin(map);
         if (!suc) {
             return false;
+        }
+
+        if (archiveAssignments) {
+            try {
+                await env.project?.saveMultiPlayerArchiveAssignments(archiveAssignments);
+            } catch (error) {
+                y3.log.error(l10n.t('写入本地存档配置失败：{0}', String(error)));
+                vscode.window.showErrorMessage(l10n.t('写入本地存档配置失败，请检查 archive/archive_storage.json。'));
+                return false;
+            }
         }
 
         let args = [];

@@ -68,6 +68,11 @@
             ],
             "view/item/context": [
                 {
+                    "command": "y3-helper.debug.toggle",
+                    "when": "view == y3-helper.mainMenu && viewItem == multiPlayerRole",
+                    "group": "inline"
+                },
+                {
                     "command": "y3-helper.openFile",
                     "when": "view == y3-helper.editorTableView && viewItem == json",
                     "group": "navigation"
@@ -186,6 +191,11 @@
             ]
         },
         "commands": [
+            {
+                "command": "y3-helper.debug.toggle",
+                "title": "Toggle Player Debugger",
+                "icon": "$(debug)"
+            },
             {
                 "command": "y3-helper.initProject",
                 "title": "初始化开发环境",

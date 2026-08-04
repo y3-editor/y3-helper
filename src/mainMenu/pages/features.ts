@@ -7,57 +7,211 @@ import { TreeViewManager } from "../../console/treeView";
 import { WebviewTerminal } from "../../console/webviewTerminal";
 import * as globalScript from '../../globalScript';
 import * as l10n from '@vscode/l10n';
+import { getDefaultLocalArchiveNickname } from '../../multiPlayerArchives';
 
 function 多开模式() {
+    let loadedArchives = env.project?.multiPlayerArchives;
+
+    const setPlayerNickname = (roleId: number, nickname: string) => {
+        const oldNickname = config.multiPlayerNicknames[roleId];
+        const swappedRole = Object.entries(config.multiPlayerNicknames)
+            .find(([id, selected]) => Number(id) !== roleId && selected === nickname)?.[0];
+        config.multiPlayerNicknames[roleId] = nickname;
+        if (swappedRole !== undefined) {
+            const swappedRoleId = Number(swappedRole);
+            if (oldNickname) {
+                config.multiPlayerNicknames[swappedRoleId] = oldNickname;
+            } else {
+                delete config.multiPlayerNicknames[swappedRoleId];
+            }
+        }
+    };
+
+    const getDefaultNickname = () => {
+        return getDefaultLocalArchiveNickname(
+            config.multiPlayers,
+            config.multiPlayerNicknames,
+            env.editorNickname,
+        );
+    };
+
+    const selectPlayerNickname = async (roleId: number): Promise<boolean> => {
+        const archives = env.project?.multiPlayerArchives;
+        if (!archives || env.project?.multiPlayerArchivesError) {
+            vscode.window.showErrorMessage(l10n.t('无法读取本地存档配置，请检查 archive/archive_storage.json。'));
+            return false;
+        }
+        const current = config.multiPlayerNicknames[roleId];
+        const nicknameOptions = [...new Set([
+            ...Object.keys(archives),
+            ...Object.values(config.multiPlayerNicknames),
+        ])];
+        const selected = await vscode.window.showQuickPick([
+            ...nicknameOptions.map((nickname) => ({
+                label: nickname,
+                picked: nickname === current,
+                nickname,
+            })),
+            {
+                label: `$(add) ${l10n.t('新建本地玩家昵称...')}`,
+                picked: false,
+                nickname: undefined,
+                alwaysShow: true,
+            },
+        ], {
+            title: l10n.t('选择玩家{0}的本地存档', roleId),
+            placeHolder: l10n.t('选择昵称后，游戏将读取该昵称对应的本地存档'),
+        });
+        if (!selected) {
+            return false;
+        }
+
+        let nickname = selected.nickname;
+        if (!nickname) {
+            nickname = await vscode.window.showInputBox({
+                title: l10n.t('新建本地玩家昵称'),
+                value: getDefaultNickname(),
+                validateInput(value) {
+                    const trimmed = value.trim();
+                    if (!trimmed) {
+                        return l10n.t('玩家昵称不能为空');
+                    }
+                    if (nicknameOptions.includes(trimmed)) {
+                        return l10n.t('该昵称已存在，请从列表中选择');
+                    }
+                    return undefined;
+                },
+            });
+        }
+        nickname = nickname?.trim();
+        if (!nickname) {
+            return false;
+        }
+        setPlayerNickname(roleId, nickname);
+        return true;
+    };
+
+    const makePlayerNode = (id: number, roleName?: string) => {
+        const defaultName = l10n.t('玩家{0}', id);
+        const name = roleName ?? defaultName;
+        const playerNode = new TreeNode(name, {
+            description: name === defaultName ? undefined : defaultName,
+            checkboxState: config.multiPlayers.includes(id)
+                ? vscode.TreeItemCheckboxState.Checked
+                : vscode.TreeItemCheckboxState.Unchecked,
+            contextValue: 'multiPlayerRole',
+            command: {
+                title: l10n.t('选择本地玩家昵称'),
+                command: 'y3-helper.multi.selectNickname',
+                arguments: [id],
+            },
+            onDidChangeCheckboxState(state) {
+                if (state === vscode.TreeItemCheckboxState.Checked) {
+                    if (!config.multiPlayerNicknames[id]) {
+                        setPlayerNickname(id, getDefaultNickname());
+                    }
+                    if (!config.multiPlayers.includes(id)) {
+                        config.multiPlayers.push(id);
+                    }
+                } else {
+                    const index = config.multiPlayers.indexOf(id);
+                    if (index !== -1) {
+                        config.multiPlayers.splice(index, 1);
+                    }
+                    const debugIndex = config.debugPlayers.indexOf(id);
+                    if (debugIndex !== -1) {
+                        config.debugPlayers.splice(debugIndex, 1);
+                    }
+                    delete config.multiPlayerNicknames[id];
+                }
+                playerNode.refresh();
+            },
+            update: async (node) => {
+                const nickname = config.multiPlayers.includes(id)
+                    ? config.multiPlayerNicknames[id]
+                    : undefined;
+                const description = nickname ?? (name === defaultName ? undefined : defaultName);
+                node.description = config.debugPlayers.includes(id) && description
+                    ? `${description} · ${l10n.t('启用调试器')}`
+                    : config.debugPlayers.includes(id)
+                        ? l10n.t('启用调试器')
+                        : description;
+                node.tooltip = nickname
+                    ? l10n.t('玩家{0}使用本地存档：{1}', id, nickname)
+                    : undefined;
+            },
+            data: { roleId: id },
+        });
+        return playerNode;
+    };
+
     let node = new TreeNode(l10n.t('多开模式'), {
         tooltip: l10n.t('请手动启动编辑器登录（并选择30天免登录）再使用此功能'),
         checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
         onDidChangeCheckboxState(state) {
             config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
         },
-        childs: Array.from({ length: 8 }, (_, i) => {
-            const id = i + 1;
-            return new TreeNode(l10n.t('玩家{0}', id), {
-                checkboxState: config.multiPlayers.includes(id)
-                    ? vscode.TreeItemCheckboxState.Checked
-                    : vscode.TreeItemCheckboxState.Unchecked,
-                description: config.debugPlayers.includes(id)
-                    ? l10n.t('启用调试器')
-                    : undefined,
-                command: {
-                    title: l10n.t('切换调试'),
-                    command: 'y3-helper.debug.toggle',
-                    arguments: [id],
-                },
-                tooltip: l10n.t('点击此处可以切换是否附加调试此玩家。所有调试的玩家会共用断点，所以不应该附加太多调试器。'),
-                onDidChangeCheckboxState(state) {
-                    if (state === vscode.TreeItemCheckboxState.Checked) {
-                        if (!config.multiPlayers.includes(id)) {
-                            config.multiPlayers.push(id);
-                        }
-                    } else {
-                        const index = config.multiPlayers.indexOf(id);
-                        if (index !== -1) {
-                            config.multiPlayers.splice(index, 1);
-                        }
-                    }
-                },
-                update: async (node) => {
-                    node.description = config.debugPlayers.includes(id)
-                        ? l10n.t('启用调试器')
-                        : undefined;
-                },
+        childs: [],
+        update: async (node) => {
+            await env.mapReady();
+            const roles = env.project?.multiPlayerRoles ?? [];
+            const validIds = new Set(roles.map((role) => role.id));
+            config.multiPlayers = config.multiPlayers.filter((id) => validIds.has(id));
+            config.debugPlayers = config.debugPlayers.filter((id) => validIds.has(id) && config.multiPlayers.includes(id));
+            config.multiPlayerNicknames = Object.fromEntries(
+                Object.entries(config.multiPlayerNicknames).filter(([id]) => validIds.has(Number(id))),
+            );
+
+            if (loadedArchives !== env.project?.multiPlayerArchives) {
+                loadedArchives = env.project?.multiPlayerArchives;
+                config.multiPlayerNicknames = Object.fromEntries(
+                    (env.project?.getMultiPlayerArchiveAssignments() ?? [])
+                        .filter((assignment) => validIds.has(assignment.roleId))
+                        .map((assignment) => [assignment.roleId, assignment.nickname]),
+                );
+            }
+
+            if (env.project?.multiPlayerRolesError) {
+                node.childs = [new TreeNode(l10n.t('无法读取阵营角色配置'), {
+                    iconPath: new vscode.ThemeIcon('warning'),
+                })];
+                return;
+            }
+            const playerNodes = roles.map((role) => {
+                const roleName = role.name
+                    ? env.project?.entryMap?.language.get(role.name)
+                    : undefined;
+                return makePlayerNode(role.id, roleName);
             });
-        }),
+            node.childs = env.project?.multiPlayerArchivesError
+                ? [new TreeNode(l10n.t('无法读取本地存档配置'), {
+                    iconPath: new vscode.ThemeIcon('warning'),
+                }), ...playerNodes]
+                : playerNodes;
+        },
     });
-    vscode.commands.registerCommand('y3-helper.debug.toggle', async (id: number) => {
+    vscode.commands.registerCommand('y3-helper.multi.selectNickname', async (id: number) => {
+        if (!config.multiPlayers.includes(id) || !await selectPlayerNickname(id)) {
+            return;
+        }
+        node.childs?.find((child) => child.data?.roleId === id)?.refresh();
+    });
+    vscode.commands.registerCommand('y3-helper.debug.toggle', async (value: number | TreeNode) => {
+        const id = typeof value === 'number' ? value : value.data?.roleId;
+        if (typeof id !== 'number') {
+            return;
+        }
+        if (!config.multiPlayers.includes(id)) {
+            return;
+        }
         const index = config.debugPlayers.indexOf(id);
         if (index === -1) {
             config.debugPlayers.push(id);
         } else {
             config.debugPlayers.splice(index, 1);
         }
-        node.childs?.[id-1].refresh();
+        node.childs?.find((child) => child.data?.roleId === id)?.refresh();
     });
     return node;
 }
