@@ -12,8 +12,8 @@ local function initMaster(rootpath, address)
     if hasMaster() then
         return
     end
-    local chan = channel.create "DbgMaster"
-    local mt = thread.create(([[
+    channel.create "DbgMaster"
+    thread.create(([[
         local rootpath = %q
         package.path = rootpath.."/script/?.lua"
         local log = require "common.log"
@@ -31,10 +31,6 @@ local function initMaster(rootpath, address)
         rootpath,
         address
     ))
-    ExitGuard = setmetatable({}, {__gc=function()
-        chan:push(nil, "EXIT")
-        thread.wait(mt)
-    end})
 end
 
 local function startWorker(rootpath)

@@ -5,6 +5,7 @@ import { config } from './config';
 import * as y3 from 'y3-helper';
 import * as l10n from '@vscode/l10n';
 import { map } from 'zod/v4';
+import { debugAddressForPlayer, planMissingMultiDebugPlayers } from './debugPlayerSessions';
 
 const debuggerPath = '3rd/debugger';
 
@@ -97,32 +98,63 @@ export function init(context: vscode.ExtensionContext) {
     startWaitDebuggerHelper();
 }
 
-async function checkNeedAttach() {
+async function findWaitDebuggerFiles(): Promise<vscode.Uri[]> {
     if (!env.project) {
-        return;
+        return [];
     }
-    let needAttach = false;
+    const waitFiles: vscode.Uri[] = [];
     for (const map of env.project.maps) {
         const logPath = y3.uri(map.scriptUri, '.log', 'wait_debugger');
         if (await y3.fs.isExists(logPath)) {
-            await y3.fs.removeFile(logPath);
-            needAttach = true;
+            waitFiles.push(logPath);
         }
     }
 
     if (env.globalScriptUri) {
         const logPath = y3.uri(env.globalScriptUri, '.log', 'wait_debugger');
         if (await y3.fs.isExists(logPath)) {
-            await y3.fs.removeFile(logPath);
-            needAttach = true;
+            waitFiles.push(logPath);
         }
     }
+    return waitFiles;
+}
 
-    if (debugSessions.length > 0) {
+async function removeWaitDebuggerFiles(waitFiles: readonly vscode.Uri[]) {
+    await Promise.all(waitFiles.map((logPath) => y3.fs.removeFile(logPath)));
+}
+
+async function checkNeedAttach() {
+    const waitFiles = await findWaitDebuggerFiles();
+    if (waitFiles.length === 0) {
         return;
     }
-    if (needAttach) {
-        await attach();
+
+    if (!config.multiMode) {
+        if (debugSessions.length > 0) {
+            await removeWaitDebuggerFiles(waitFiles);
+            return;
+        }
+        if (await attachForOnePlayer()) {
+            await removeWaitDebuggerFiles(waitFiles);
+        }
+        return;
+    }
+
+    const configuredPlayerIds = config.multiPlayers.filter((id) => config.debugPlayers.includes(id));
+    const plan = planMissingMultiDebugPlayers(configuredPlayerIds, debugSessions);
+    if (!plan.consumeWaitMarker) {
+        return;
+    }
+    if (plan.missingPlayerIds.length === 0) {
+        await removeWaitDebuggerFiles(waitFiles);
+        return;
+    }
+
+    const results = await Promise.all(
+        plan.missingPlayerIds.map((id) => attachForOnePlayer(id)),
+    );
+    if (results.every((succeeded) => succeeded)) {
+        await removeWaitDebuggerFiles(waitFiles);
     }
 }
 
@@ -144,7 +176,6 @@ function findDebugSession(id?: number) {
 
 async function attachForOnePlayer(id?: number) {
     y3.log.info(l10n.t('正在启动调试器({0})', getName(id)));
-    const port = 12399 - (id ?? 0);
     let folder = vscode.workspace.getWorkspaceFolder(env.scriptUri!)
               ?? vscode.workspace.getWorkspaceFolder(env.globalScriptUri!)
               ?? vscode.workspace.workspaceFolders?.[0];
@@ -152,7 +183,7 @@ async function attachForOnePlayer(id?: number) {
         "type": "y3lua",
         "request": "attach",
         "name": getName(id),
-        "address": `127.0.0.1:${port}`,
+        "address": debugAddressForPlayer(id),
         "outputCapture": [],
         "stopOnEntry": false,
         "sourceCoding": "utf8",
