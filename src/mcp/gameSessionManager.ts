@@ -18,6 +18,11 @@ export class GameSessionManager extends vscode.Disposable {
     private clientCheckInterval?: NodeJS.Timeout;
     private isLaunching: boolean = false;  // 启动中标记，防止重复启动
     private cancelLaunch: boolean = false;  // 取消启动标记
+    // 保存每个 Client 的原始 print，保证 attachClient 幂等，避免多层包装导致日志重复
+    private readonly originalClientPrints = new WeakMap<Client, (msg: string) => void>();
+    // 每个 Client 独立的日志记录（支持多游戏窗口按 index 选择日志）
+    private readonly clientLogManagers = new Map<Client, LogManager>();
+    private clientLogSeq = 0;
 
     // 超时常量
     private readonly LAUNCH_TIMEOUT_MS = 110000;  // 启动超时时间（110秒）
@@ -235,6 +240,21 @@ export class GameSessionManager extends vscode.Disposable {
      */
     private startClientMonitoring(): void {
         this.clientCheckInterval = setInterval(() => {
+            // 为所有连接的客户端（含未 attach 的多窗口）记录 client 级日志
+            this.ensureAllClientsLogging();
+
+            // 清理已断开客户端的日志记录（释放 WriteStream 与日志文件）
+            for (const [client, logManager] of this.clientLogManagers) {
+                if (!Client.allClients.includes(client)) {
+                    try {
+                        logManager.cleanup();
+                    } catch {
+                        // 忽略清理异常
+                    }
+                    this.clientLogManagers.delete(client);
+                }
+            }
+
             if (this.currentSession) {
                 // 检查新客户端连接（启动或重启后）
                 if ((this.currentSession.status === 'launching' || this.currentSession.status === 'restarting')
@@ -270,7 +290,7 @@ export class GameSessionManager extends vscode.Disposable {
     }
 
     /**
-     * 附加客户端并拦截日志
+     * 附加客户端并拦截日志（幂等：同一 Client 重复 attach 不叠加包装层）
      */
     private attachClient(session: GameSession, client: Client): void {
         session.client = client;
@@ -278,15 +298,87 @@ export class GameSessionManager extends vscode.Disposable {
 
         tools.log.info(`[MCP] Client attached to session ${session.id}`);
 
-        // 拦截 print 方法
-        const originalPrint = client.print.bind(client);
-        client.print = (msg: string) => {
-            session.logManager.appendLog(msg);
-            return originalPrint(msg);
-        };
+        // 拦截 print 方法，同时写入 session 级与 client 级日志
+        this.wrapClientPrint(client, session);
 
         // 注意：Client 类没有 onDidDispose 方法
         // 客户端断开会通过 Client.allClients 数组的变化来检测
+    }
+
+    /**
+     * 获取（或创建）指定 Client 的独立日志记录
+     */
+    private getClientLogManager(client: Client): LogManager {
+        let logManager = this.clientLogManagers.get(client);
+        if (!logManager) {
+            this.clientLogSeq += 1;
+            logManager = new LogManager(`client_${this.clientLogSeq}`);
+            this.clientLogManagers.set(client, logManager);
+        }
+        return logManager;
+    }
+
+    /**
+     * 包装 Client 的 print 方法（幂等）：
+     * - 始终从原始 print 包装，重复调用不叠加包装层
+     * - 写入 client 级日志（多窗口按 index 选择日志的基础）
+     * - 若传入 session，同时写入该 session 的日志（供 execute_lua 增量对比使用）
+     */
+    private wrapClientPrint(client: Client, session?: GameSession): void {
+        let originalPrint = this.originalClientPrints.get(client);
+        if (!originalPrint) {
+            originalPrint = client.print.bind(client);
+            this.originalClientPrints.set(client, originalPrint);
+        }
+        const clientLogManager = this.getClientLogManager(client);
+        const sessionRef = session;
+        client.print = (msg: string) => {
+            clientLogManager.appendLog(msg);
+            if (sessionRef) {
+                sessionRef.logManager.appendLog(msg);
+            }
+            return originalPrint!(msg);
+        };
+    }
+
+    /**
+     * 为所有尚未包装的 Client 注册 client 级日志记录（多游戏窗口场景，
+     * 让未被 attach 到当前 session 的窗口日志也可通过 get_logs 的 clientSlot 读取）
+     */
+    private ensureAllClientsLogging(): void {
+        for (const client of Client.allClients) {
+            if (!this.originalClientPrints.has(client)) {
+                this.wrapClientPrint(client);
+            }
+        }
+    }
+
+    /**
+     * 解析目标客户端：
+     * - 指定 clientSlot → 按稳定窗口编号查找（Client.slot，窗口断开编号释放可复用）
+     * - 未指定 → 当前 session 绑定的客户端
+     */
+    private resolveClient(clientSlot?: number): { client: Client; slot: number } {
+        if (typeof clientSlot === 'number') {
+            const client = Client.allClients.find(c => c.slot === clientSlot);
+            if (!client) {
+                throw new MCPError(
+                    `Client slot ${clientSlot} not found, total clients: ${Client.allClients.length}`,
+                    MCPErrorCode.CLIENT_NOT_CONNECTED
+                );
+            }
+            return { client, slot: clientSlot };
+        }
+        if (!this.currentSession) {
+            throw new MCPError('没有活动的游戏会话', MCPErrorCode.SESSION_NOT_FOUND);
+        }
+        if (!this.currentSession.client) {
+            throw new MCPError('游戏客户端未连接', MCPErrorCode.CLIENT_NOT_CONNECTED);
+        }
+        return {
+            client: this.currentSession.client,
+            slot: this.currentSession.client.slot
+        };
     }
 
     /**
@@ -294,6 +386,8 @@ export class GameSessionManager extends vscode.Disposable {
      */
     getGameStatus(): any {
         const hasConnectedClient = Client.allClients.length > 0;
+        // 当前连接的客户端窗口列表（供 clientSlot 参数定位窗口；slot 为稳定编号，断开释放可复用）
+        const clients = Client.allClients.map(c => ({ slot: c.slot, name: c.name }));
 
         // 如果正在启动中，返回启动状态
         if (this.isLaunching) {
@@ -302,7 +396,8 @@ export class GameSessionManager extends vscode.Disposable {
                 session_id: this.currentSession?.id || null,
                 status: 'launching',
                 message: 'Game is launching, please wait...',
-                error: this.currentSession?.errorMessage || undefined
+                error: this.currentSession?.errorMessage || undefined,
+                clients
             };
         }
 
@@ -312,13 +407,15 @@ export class GameSessionManager extends vscode.Disposable {
                     running: true,
                     session_id: null,
                     status: 'running',
-                    message: 'Game is running (connected client detected, no MCP session)'
+                    message: 'Game is running (connected client detected, no MCP session)',
+                    clients
                 };
             }
             return {
                 running: false,
                 session_id: null,
-                status: 'no_session'
+                status: 'no_session',
+                clients
             };
         }
 
@@ -328,26 +425,56 @@ export class GameSessionManager extends vscode.Disposable {
             status: this.currentSession.status,
             uptime: Date.now() - this.currentSession.startTime,
             client_connected: hasConnectedClient,
+            clients,
             error: this.currentSession.errorMessage || undefined
         };
     }
 
     /**
      * 获取日志
+     * @param params.clientSlot 可选：指定读取窗口的稳定编号（Client.slot），
+     *                          默认读取当前 session 绑定的客户端日志
      */
     async getLogs(params: any = {}): Promise<any> {
-        if (!this.currentSession) {
-            return {
-                success: false,
-                message: 'No active session'
-            };
+        const clientSlot = params.clientSlot;
+        let logManager: LogManager | undefined;
+        let usedClient: Client | undefined;
+
+        if (typeof clientSlot === 'number') {
+            const client = Client.allClients.find(c => c.slot === clientSlot);
+            if (!client) {
+                return {
+                    success: false,
+                    message: `Client slot ${clientSlot} not found, total clients: ${Client.allClients.length}`
+                };
+            }
+            usedClient = client;
+            logManager = this.getClientLogManager(client);
+        } else {
+            if (!this.currentSession) {
+                return {
+                    success: false,
+                    message: 'No active session'
+                };
+            }
+            if (!this.currentSession.client) {
+                return {
+                    success: false,
+                    message: 'No client attached to current session'
+                };
+            }
+            usedClient = this.currentSession.client;
+            logManager = this.getClientLogManager(usedClient);
         }
 
         const limit = params.limit || 100;
-        const logs = await this.currentSession.logManager.readLogs(limit);
+        const logs = await logManager.readLogs(limit);
 
         return {
             success: true,
+            client_slot: usedClient.slot,
+            client_name: usedClient.name,
+            client_count: Client.allClients.length,
             log_count: logs.length,
             logs: logs.join('\n')
         };
@@ -355,21 +482,10 @@ export class GameSessionManager extends vscode.Disposable {
 
     /**
      * 执行 Lua 代码
+     * @param params.clientSlot 可选：指定目标游戏窗口的稳定编号，默认当前 session 绑定的客户端
      */
     async executeLua(params: any): Promise<any> {
-        if (!this.currentSession) {
-            throw new MCPError(
-                '没有活动的游戏会话',
-                MCPErrorCode.SESSION_NOT_FOUND
-            );
-        }
-
-        if (!this.currentSession.client) {
-            throw new MCPError(
-                '游戏客户端未连接',
-                MCPErrorCode.CLIENT_NOT_CONNECTED
-            );
-        }
+        const { client, slot } = this.resolveClient(params.clientSlot);
 
         const { code } = params;
         if (!code) {
@@ -379,73 +495,119 @@ export class GameSessionManager extends vscode.Disposable {
             };
         }
 
-        // 记录执行前的日志行数
-        const logsBefore = await this.currentSession.logManager.readLogs(10000);
+        // 记录执行前的日志行数（client 级日志）
+        const logsBefore = await this.getClientLogManager(client).readLogs(10000);
         const linesBefore = logsBefore.length;
 
         // 发送 Lua 代码
-        this.currentSession.client.notify('command', { data: code });
+        client.notify('command', { data: code });
 
         // 等待 1 秒收集输出
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // 获取新增的日志
-        const logsAfter = await this.currentSession.logManager.readLogs(10000);
+        const logsAfter = await this.getClientLogManager(client).readLogs(10000);
         const newLogs = logsAfter.slice(linesBefore);
 
         return {
             success: true,
+            client_slot: slot,
+            client_name: client.name,
             output: newLogs.join('\n')
         };
     }
 
     /**
-     * 快速重启游戏（.rr 命令）
+     * 等待指定客户端断开并重新连接（用于指定窗口的快速重启）
+     * @returns 重连后的新 Client；超时返回 undefined
      */
-    async quickRestart(): Promise<any> {
+    private async waitForClientReconnect(oldClient: Client, timeout: number): Promise<Client | undefined> {
+        // 快照当前已知客户端集合：排除其它仍在运行的窗口，
+        // 只认"重连后新出现"的客户端，避免多窗口下误把其它窗口当重启结果
+        const knownClients = new Set(Client.allClients);
+        const startTime = Date.now();
 
-        if (!this.currentSession) {
-            throw new MCPError(
-                '没有活动的游戏会话',
-                MCPErrorCode.SESSION_NOT_FOUND
-            );
+        while (Date.now() - startTime < timeout) {
+            if (!Client.allClients.includes(oldClient)) {
+                // 旧客户端已断开（重启生效），等待新客户端出现
+                const waitStart = Date.now();
+                while (Date.now() - waitStart < 30000) {
+                    const newClient = Client.allClients.find(c => !knownClients.has(c));
+                    if (newClient) {
+                        return newClient;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                return undefined;
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
-        if (!this.currentSession.client) {
-            throw new MCPError(
-                '游戏客户端未连接',
-                MCPErrorCode.CLIENT_NOT_CONNECTED
-            );
-        }
+        return undefined;
+    }
 
-        // 记录执行前的日志行数
-        const logsBefore = await this.currentSession.logManager.readLogs(10000);
-        const linesBefore = logsBefore.length;
+    /**
+     * 快速重启游戏（.rr 命令）
+     * @param params.clientSlot 可选：指定目标游戏窗口的稳定编号，默认当前 session 绑定的客户端
+     */
+    async quickRestart(params: any = {}): Promise<any> {
+        const hasClientSlot = typeof params.clientSlot === 'number';
+        const { client, slot } = this.resolveClient(params.clientSlot);
 
-        // 设置为重启状态
-        this.currentSession.status = 'restarting';
+        if (hasClientSlot) {
+            // 指定窗口：仅重启该窗口，不影响 session 绑定
+            client.notify('command', { data: '.rr' });
 
-        // 发送 .rr 命令
-        this.currentSession.client.notify('command', { data: '.rr' });
+            const newClient = await this.waitForClientReconnect(client, this.RESTART_TIMEOUT_MS);
+            if (!newClient) {
+                return {
+                    success: false,
+                    message: 'Game restart timeout - client did not reconnect within 60 seconds'
+                };
+            }
 
-        // 等待客户端重新连接（最多 60 秒，游戏重启可能需要较长时间）
-        const reconnected = await this.waitForClient(this.currentSession, this.RESTART_TIMEOUT_MS);
+            // 若重启的正是 session 绑定的窗口，把新客户端重新绑定回 session
+            if (this.currentSession?.client === client) {
+                this.attachClient(this.currentSession, newClient);
+            }
 
-        if (!reconnected) {
-            this.currentSession.status = 'stopped';
-            this.currentSession.errorMessage = 'Game restart timeout - client did not reconnect within 60 seconds';
+            // 重启后旧 Client 对象已消失，日志写入新 Client 的 logManager；
+            // 无公共基准线，直接返回新客户端自连接以来的全部日志
+            const newLogs = await this.getClientLogManager(newClient).readLogs(10000);
+
             return {
-                success: false,
-                message: this.currentSession.errorMessage
+                success: true,
+                client_slot: newClient.slot,
+                client_name: newClient.name,
+                message: 'Game restarted successfully',
+                output: newLogs.join('\n')
             };
+        } else {
+            // 默认：重启当前 session 绑定的窗口
+            this.currentSession!.status = 'restarting';
+
+            client.notify('command', { data: '.rr' });
+
+            const reconnected = await this.waitForClient(this.currentSession!, this.RESTART_TIMEOUT_MS);
+            if (!reconnected) {
+                this.currentSession!.status = 'stopped';
+                this.currentSession!.errorMessage = 'Game restart timeout - client did not reconnect within 60 seconds';
+                return {
+                    success: false,
+                    message: this.currentSession!.errorMessage
+                };
+            }
         }
 
-        // 获取新增的日志
-        const logsAfter = await this.currentSession.logManager.readLogs(10000);
-        const newLogs = logsAfter.slice(linesBefore);
+        // 重启后 session.client 已指向重连后的新客户端（监控循环 attachClient），
+        // 旧 client 对象的 logManager 不再写入，须从新客户端读取
+        const newClient = this.currentSession!.client!;
+        const newLogs = await this.getClientLogManager(newClient).readLogs(10000);
 
         return {
             success: true,
+            client_slot: newClient.slot,
+            client_name: newClient.name,
             message: 'Game restarted successfully',
             output: newLogs.join('\n')
         };
@@ -453,8 +615,37 @@ export class GameSessionManager extends vscode.Disposable {
 
     /**
      * 停止游戏
+     * @param params.clientSlot 可选：指定停止的游戏窗口（稳定编号），
+     *                          默认停止当前 session 绑定的窗口并清理会话
      */
     async stopGame(params: any = {}): Promise<any> {
+        const hasClientSlot = typeof params.clientSlot === 'number';
+
+        if (hasClientSlot) {
+            // 指定窗口：仅停止该窗口，不影响当前 session 绑定
+            const client = Client.allClients.find(c => c.slot === params.clientSlot);
+            if (!client) {
+                return {
+                    success: false,
+                    message: `Client slot ${params.clientSlot} not found, total clients: ${Client.allClients.length}`
+                };
+            }
+            await this.forceQuitClient(client);
+
+            // 若停止的正是 session 绑定的客户端，则顺带清理会话
+            if (this.currentSession?.client === client) {
+                this.currentSession.status = 'stopped';
+                this.currentSession.client = undefined;
+            }
+
+            return {
+                success: true,
+                client_slot: client.slot,
+                client_name: client.name,
+                message: 'Game stopped'
+            };
+        }
+
         // 设置取消标记，防止启动过程继续
         this.cancelLaunch = true;
         // 清除启动中状态，防止启动过程中停止后无法重新启动
@@ -471,25 +662,7 @@ export class GameSessionManager extends vscode.Disposable {
 
         // 通过 Lua 代码强制退出游戏
         if (session.client) {
-            try {
-                // 获取本地玩家并强制退出
-                const luaCode = `
-                    local player = y3.player:get_local()
-                    if player then
-                        GameAPI.role_force_quit(player.handle, '游戏已停止')
-                    end
-                `;
-                session.client.notify('command', { data: luaCode });
-                // 等待游戏关闭
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                // 检查客户端是否还存在再 dispose
-                if (session.client && typeof session.client.dispose === 'function') {
-                    session.client.dispose();
-                }
-            } catch (err) {
-                // 忽略错误，继续清理
-            }
+            await this.forceQuitClient(session.client);
         }
 
         // 更新状态
@@ -517,24 +690,45 @@ export class GameSessionManager extends vscode.Disposable {
     }
 
     /**
-     * 捕获游戏截图
+     * 通过 Lua 代码强制退出指定客户端（发退出命令 + 等待关闭 + dispose）
      */
-    async captureScreenshot(): Promise<any> {
-        // 检查是否有活动会话
-        if (!this.currentSession || this.currentSession.status === 'stopped') {
-            return {
-                success: false,
-                error: '游戏未运行，请先启动游戏'
-            };
+    private async forceQuitClient(client: Client): Promise<void> {
+        try {
+            // 获取本地玩家并强制退出
+            const luaCode = `
+                local player = y3.player:get_local()
+                if player then
+                    GameAPI.role_force_quit(player.handle, '游戏已停止')
+                end
+            `;
+            client.notify('command', { data: luaCode });
+            // 等待游戏关闭
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 检查客户端是否还存在再 dispose
+            if (typeof client.dispose === 'function') {
+                client.dispose();
+            }
+        } catch (err) {
+            // 忽略错误，继续清理
         }
+    }
 
-        const session = this.currentSession;
-
-        // 检查客户端是否连接
-        if (!session.client) {
+    /**
+     * 捕获游戏截图
+     * @param params.clientSlot 可选：指定截图的目标游戏窗口（稳定编号），默认当前 session 绑定的客户端
+     */
+    async captureScreenshot(params: any = {}): Promise<any> {
+        let client: Client;
+        let slot: number;
+        try {
+            const resolved = this.resolveClient(params.clientSlot);
+            client = resolved.client;
+            slot = resolved.slot;
+        } catch (err) {
             return {
                 success: false,
-                error: '游戏客户端未连接'
+                error: err instanceof Error ? err.message : String(err)
             };
         }
 
@@ -554,7 +748,7 @@ export class GameSessionManager extends vscode.Disposable {
             GameAPI.screenshot_func_for_lua("mcp_screenshots", "screenshot", width, height)
         `;
 
-            session.client.notify('command', { data: luaCode });
+            client.notify('command', { data: luaCode });
 
             // 构建截图文件路径
             const screenshotPath = path.normalize(
@@ -563,6 +757,8 @@ export class GameSessionManager extends vscode.Disposable {
 
             return {
                 success: true,
+                client_slot: slot,
+                client_name: client.name,
                 screenshot_path: screenshotPath,
                 message: `重要提示：如果你需要查看截图内容，请使用合适的 Read 工具读取此文件。如果 Read 工具无法读取图片或返回空内容，请不要猜测图片内容，而应该：1) 明确告知用户"无法读取截图文件"；2) 提供截图文件路径让用户手动查看；3) 不要编造或假设图片中的内容。`
             };

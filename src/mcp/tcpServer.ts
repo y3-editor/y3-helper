@@ -299,33 +299,41 @@ export class TCPServer extends vscode.Disposable {
         }, async () => this.runTool(() => this.sessionManager.getGameStatus()));
 
         server.registerTool('execute_lua', {
-            description: 'Execute Lua code in the running game',
+            description: 'Execute Lua code in the running game. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
             inputSchema: {
-                code: z.string()
+                code: z.string(),
+                clientSlot: z.number().optional()
             }
-        }, async ({ code }) => this.runTool(async () => await this.sessionManager.executeLua({ code })));
+        }, async ({ code, clientSlot }) => this.runTool(async () => await this.sessionManager.executeLua({ code, clientSlot })));
 
         server.registerTool('quick_restart', {
-            description: 'Quickly restart the game session',
-            inputSchema: {}
-        }, async () => this.runTool(async () => await this.sessionManager.quickRestart()));
+            description: 'Quickly restart the game session. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            inputSchema: {
+                clientSlot: z.number().optional()
+            }
+        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.quickRestart({ clientSlot })));
 
         server.registerTool('stop_game', {
-            description: 'Stop the running game session',
-            inputSchema: {}
-        }, async () => this.runTool(async () => await this.sessionManager.stopGame({})));
+            description: 'Stop the running game session. Use clientSlot to stop a specific game window (stable slot number from get_game_status clients list); default stops the client attached to current session and cleans up the session.',
+            inputSchema: {
+                clientSlot: z.number().optional()
+            }
+        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.stopGame({ clientSlot })));
 
         server.registerTool('get_logs', {
-            description: 'Fetch recent game logs',
+            description: 'Fetch recent game logs. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
             inputSchema: {
-                limit: z.number().optional()
+                limit: z.number().optional(),
+                clientSlot: z.number().optional()
             }
-        }, async ({ limit }) => this.runTool(async () => await this.sessionManager.getLogs({ limit })));
+        }, async ({ limit, clientSlot }) => this.runTool(async () => await this.sessionManager.getLogs({ limit, clientSlot })));
 
         server.registerTool('capture_screenshot', {
-            description: 'Capture a screenshot from the running game',
-            inputSchema: {}
-        }, async () => this.runTool(async () => await this.sessionManager.captureScreenshot()));
+            description: 'Capture a screenshot from the running game. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            inputSchema: {
+                clientSlot: z.number().optional()
+            }
+        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.captureScreenshot({ clientSlot })));
 
         server.registerTool('read_problems_lua', {
             description: 'Run Lua diagnostics on project files',

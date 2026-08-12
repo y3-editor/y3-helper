@@ -65,6 +65,18 @@ class Buttons extends vscode.Disposable {
 export class Client extends vscode.Disposable {
     static allClients: Client[] = [];
 
+    /**
+     * 分配最小空闲窗口编号（slot）：
+     * 窗口关闭后编号自动释放，再次启动窗口可复用（稳定编号，不受其他窗口启停影响）
+     */
+    static nextSlot(): number {
+        let slot = 0;
+        while (this.allClients.some(c => c.slot === slot)) {
+            slot += 1;
+        }
+        return slot;
+    }
+
     static button?: Buttons;
 
     static updateButton() {
@@ -95,11 +107,16 @@ export class Client extends vscode.Disposable {
             Client.allClients.splice(Client.allClients.indexOf(this), 1);
             Client.updateButton();
         });
+        // 分配稳定窗口编号（push 前计算，不占用自身）
+        this.slot = Client.nextSlot();
         Client.allClients.push(this);
         Client.updateButton();
 
         this.createTerminal(l10n.t('Y3控制台'));
     }
+
+    /** 窗口稳定编号：连接期间不变；断开后释放，可被新窗口复用 */
+    public readonly slot: number;
 
     public name = '默认客户端';
 
