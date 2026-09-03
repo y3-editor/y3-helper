@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import {
 	debugAddressForPlayer,
+	isManagedDebugSession,
+	isMapDebugSession,
 	planMissingMultiDebugPlayers,
 	type DebugSessionLike,
 } from '../../debugPlayerSessions';
@@ -10,6 +12,25 @@ function sessionAt(address: string): DebugSessionLike {
 }
 
 suite('Debug player sessions', () => {
+	test('manages built-in map sessions and external cloud script sessions', () => {
+		assert.strictEqual(isManagedDebugSession('y3lua', { configuration: {} }), true);
+		assert.strictEqual(isManagedDebugSession('lua', {
+			configuration: { y3HelperDebugKind: 'cloudScript' },
+		}), true);
+		assert.strictEqual(isManagedDebugSession('lua', { configuration: {} }), false);
+	});
+
+	test('does not classify a cloud script process session as a map session', () => {
+		assert.strictEqual(isMapDebugSession({
+			configuration: {
+				processId: 42,
+				y3HelperDebugKind: 'cloudScript',
+			},
+		}), false);
+		assert.strictEqual(isMapDebugSession(sessionAt(debugAddressForPlayer(1))), true);
+		assert.strictEqual(isMapDebugSession({ configuration: { processId: 99 } }), true);
+	});
+
 	test('plans an attach only for the configured player whose session is missing', () => {
 		const plan = planMissingMultiDebugPlayers(
 			[1, 2],

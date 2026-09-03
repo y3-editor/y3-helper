@@ -7,6 +7,20 @@ export interface MissingMultiDebugPlayersPlan {
     readonly consumeWaitMarker: boolean;
 }
 
+export function isManagedDebugSession(type: string, session: DebugSessionLike): boolean {
+    const configuration = session.configuration as {
+        readonly y3HelperDebugKind?: unknown;
+    };
+    return type === 'y3lua' || configuration.y3HelperDebugKind === 'cloudScript';
+}
+
+export function isMapDebugSession(session: DebugSessionLike): boolean {
+    const configuration = session.configuration as {
+        readonly y3HelperDebugKind?: unknown;
+    };
+    return configuration.y3HelperDebugKind !== 'cloudScript';
+}
+
 export function debugAddressForPlayer(id?: number): string {
     return `127.0.0.1:${12399 - (id ?? 0)}`;
 }

@@ -10,7 +10,7 @@ export interface TreeNodeOptional {
     contextValue?: typeof vscode.TreeItem.prototype.contextValue;
     tooltip?: typeof vscode.TreeItem.prototype.tooltip;
     checkboxState?: typeof vscode.TreeItem.prototype.checkboxState;
-    onDidChangeCheckboxState?: (state: vscode.TreeItemCheckboxState) => void;
+    onDidChangeCheckboxState?: (state: vscode.TreeItemCheckboxState, node: TreeNode) => void;
     childs?: TreeNode[];
     update?: (node: TreeNode) => void | Thenable<void>;
     init?: (node: TreeNode) => void | Thenable<void>;

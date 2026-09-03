@@ -22,6 +22,7 @@ import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
 import { config } from './config';
+import { shouldAutoAttachCloudScript } from './cloudScriptProcess';
 import * as globalScript from './globalScript';
 import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
@@ -308,6 +309,13 @@ class Helper {
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
+                const shouldAttachCloudScript = shouldAutoAttachCloudScript(
+                    config.attachCloudScriptWhenLaunch,
+                    config.multiMode,
+                );
+                const cloudScriptAttach = shouldAttachCloudScript && env.projectUri
+                    ? await debug.beginCloudScriptAutoAttach(env.projectUri)
+                    : undefined;
 
                 let suc = await gameLauncher.launch({
                     luaArgs: luaArgs,
@@ -317,12 +325,14 @@ class Helper {
                 });
 
                 if (!suc) {
+                    cloudScriptAttach?.cancel();
                     return;
                 }
 
-                if (config.attachWhenLaunch) {
-                    await debug.attach();
-                }
+                await Promise.all([
+                    config.attachWhenLaunch ? debug.attach() : Promise.resolve(true),
+                    cloudScriptAttach?.completion ?? Promise.resolve(true),
+                ]);
             });
         });
     }

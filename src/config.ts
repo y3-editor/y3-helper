@@ -5,6 +5,7 @@ class Config {
     debugPlayers: number[] = [];
     tracy: boolean = false;
     attachWhenLaunch: boolean = true;
+    attachCloudScriptWhenLaunch: boolean = false;
     launchMap: ['option' | 'map', string] = ['option', 'entry'];
 }
 

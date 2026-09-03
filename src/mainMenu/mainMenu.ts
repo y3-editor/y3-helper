@@ -71,7 +71,7 @@ class MainMenu {
         });
         this.view.onDidChangeCheckboxState(async (e) => {
             for (let [item, state] of e.items) {
-                item.onDidChangeCheckboxState?.(state);
+                item.onDidChangeCheckboxState?.(state, item);
             }
         });
         env.onDidChange(() => {

@@ -590,6 +590,7 @@
         ]
     },
     "extensionDependencies": [
+        "actboy168.lua-debug",
         "sumneko.lua",
         "sumneko.vscode-operator"
     ],

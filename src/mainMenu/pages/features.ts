@@ -151,6 +151,7 @@ function 多开模式() {
         collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
         onDidChangeCheckboxState(state) {
             config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
+            node.tree?.refresh.fire(undefined);
         },
         childs: [],
         update: async (node) => {
@@ -410,7 +411,33 @@ export class 功能 extends TreeNode {
                             onDidChangeCheckboxState(state) {
                                 config.attachWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
                             },
-                        })
+                        }),
+                        new TreeNode(l10n.t('启动后附加本地云脚本'), {
+                            checkboxState: config.attachCloudScriptWhenLaunch && !config.multiMode
+                                ? vscode.TreeItemCheckboxState.Checked
+                                : vscode.TreeItemCheckboxState.Unchecked,
+                            tooltip: config.multiMode
+                                ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
+                                : l10n.t('自动附加本次启动创建的本地云脚本进程。'),
+                            update(node) {
+                                node.checkboxState = config.attachCloudScriptWhenLaunch && !config.multiMode
+                                    ? vscode.TreeItemCheckboxState.Checked
+                                    : vscode.TreeItemCheckboxState.Unchecked;
+                                node.tooltip = config.multiMode
+                                    ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
+                                    : l10n.t('自动附加本次启动创建的本地云脚本进程。');
+                            },
+                            onDidChangeCheckboxState(state, node) {
+                                if (config.multiMode && state === vscode.TreeItemCheckboxState.Checked) {
+                                    vscode.window.showInformationMessage(l10n.t(
+                                        '本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。',
+                                    ));
+                                    node.refresh();
+                                    return;
+                                }
+                                config.attachCloudScriptWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
+                            },
+                        }),
                     ],
                 }),
                 new TreeNode(l10n.t('在编辑器中打开'), {
