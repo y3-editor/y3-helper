@@ -93,61 +93,17 @@ npx vsce package
 
 ### MCP
 
-Y3-Helper MCP Server 是一个基于 Model Context Protocol (MCP) 的服务，让 Claude Code 能够自动化控制 Y3 游戏的开发、测试和调试流程。
+Y3-Helper 内置了 MCP Server，可供 Y3Maker、Codex 和 Claude Code 等 AI 工具连接，用于启动和控制游戏、执行 Lua、读取日志等操作。
 
-#### 快速配置
+使用 VSCode 打开已初始化的 Y3 项目后，MCP Server 会自动启动；也可以在侧边栏的“Y3开发助手”中手动启动或停止服务。
 
-**Windows 原生环境**
+#### Y3Maker
 
-如果你在 Windows 上直接使用 Claude Code（非 WSL），可以通过以下步骤一键配置：
+通过 Y3-Helper 初始化项目后，项目根目录的 `.y3maker` 会自动包含所需的 MCP 配置，无需手动添加。直接打开 Y3Maker AI 即可使用。
 
-1. 在侧边栏的”Y3开发助手”中点击 `MCP Server/配置 MCP (Windows)`
-2. 扩展会自动检测 Claude CLI 并完成配置
-3. 配置成功后，在命令行中启动 `claude`，输入 `/mcp` 检查连接是否正常
+#### Codex 和 Claude Code
 
-**WSL 环境**
-
-如果你在 Windows 上使用 WSL 环境的 Claude Code，可以通过以下步骤一键配置：
-
-1. 在侧边栏的”Y3开发助手”中点击 `MCP Server/配置 MCP (WSL)`
-2. 扩展会自动检测 WSL 和 Claude CLI，并完成配置
-3. 配置成功后，在 WSL 终端中启动 `claude`，输入 `/mcp` 检查连接是否正常
-
-#### 手动配置
-在对应环境的终端中运行以下命令:
-```
-claude mcp add -s user y3-helper -- node.exe "C:\\Users\\<用户名>\\.vscode\\extensions\\sumneko.y3-helper-1.xx.x\\dist\\mcp-server.js"
-
-# 双引号内为y3开发扩展路径，以按照下面的步骤来替换双引号内的字符串
-
-1. 在 VSCode 中按 `Ctrl+Shift+P`
-
-2. 输入 "Developer: Open Extensions Folder"
-
-3. 找到 `sumneko.y3-helper-1.xx.x` 目录
-
-4. MCP Server 文件位于该目录下的 `dist/mcp-server.js`
-
-5. 将路径替换到前面的命令中
-
-```
-
-在侧边栏的”Y3开发助手”中点击 `MCP Server/启动 MCP Server` 后，启动 Claude Code 并输入 `/mcp` 检查链接是否正常。
-
-
-#### 更新MCP配置
-插件版本更新后，由于路径会改变，需要重新配置 MCP Server
-**自动配置**
-点击侧边栏配置按钮即可，如果自动配置失败，请手动配置
-
-**手动配置**
-```
-先删除原本的配置
-claude mcp remove y3-helper
-
-再添加新的配置
-claude mcp add -s user y3-helper -- node.exe "C:\\Users\\<用户名>\\.vscode\\extensions\\sumneko.y3-helper-1.xx.x\\dist\\mcp-server.js"
-```
+使用 [Y3Maker Migration Skills](https://github.com/BAIMOoo/y3maker-migration-skills) 将项目中的 `.y3maker` 配置迁移到 Codex 或 Claude Code。具体安装和迁移方式请参考该项目的说明。
 
 ## 如何对本插件进行二次开发？
 
