@@ -418,14 +418,14 @@ export class 功能 extends TreeNode {
                                 : vscode.TreeItemCheckboxState.Unchecked,
                             tooltip: config.multiMode
                                 ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
-                                : l10n.t('自动附加本次启动创建的本地云脚本进程。'),
+                                : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。'),
                             update(node) {
                                 node.checkboxState = config.attachCloudScriptWhenLaunch && !config.multiMode
                                     ? vscode.TreeItemCheckboxState.Checked
                                     : vscode.TreeItemCheckboxState.Unchecked;
                                 node.tooltip = config.multiMode
                                     ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
-                                    : l10n.t('自动附加本次启动创建的本地云脚本进程。');
+                                    : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。');
                             },
                             onDidChangeCheckboxState(state, node) {
                                 if (config.multiMode && state === vscode.TreeItemCheckboxState.Checked) {

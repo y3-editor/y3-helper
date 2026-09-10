@@ -4,37 +4,15 @@ import * as tools from './tools';
 import { config } from './config';
 import * as y3 from 'y3-helper';
 import * as l10n from '@vscode/l10n';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import {
     debugAddressForPlayer,
     isManagedDebugSession,
     isMapDebugSession,
     planMissingMultiDebugPlayers,
 } from './debugPlayerSessions';
-import {
-    createCloudScriptDebugConfiguration,
-    isProcessInjectionFailure,
-    selectLatestEntryPointFailure,
-    waitForNewProcess,
-    waitForProcessStability,
-    WindowsTasklistProcessProvider,
-} from './cloudScriptProcess';
-
 const debuggerPath = '3rd/debugger';
 
 let debugSessions: vscode.DebugSession[] = [];
-let cloudScriptAttachController: AbortController | undefined;
-
-const cloudScriptSessionName = 'Y3 Local Cloud Script';
-const cloudScriptProcessTimeoutMs = 30000;
-const cloudScriptProcessPollIntervalMs = 100;
-const cloudScriptProcessStabilityDelayMs = 1000;
-
-export interface CloudScriptAutoAttachOperation {
-    readonly completion: Promise<boolean>;
-    cancel(): void;
-}
 
 export function init(context: vscode.ExtensionContext) {
     const extensionUri = vscode.Uri.joinPath(context.extensionUri, debuggerPath);
@@ -122,13 +100,6 @@ export function init(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push({
-        dispose() {
-            cloudScriptAttachController?.abort();
-            cloudScriptAttachController = undefined;
-        },
-    });
-
     startWaitDebuggerHelper();
 }
 
@@ -209,168 +180,6 @@ function getName(id?: number) {
 function findDebugSession(id?: number) {
     let name = getName(id);
     return debugSessions.find((s) => isMapDebugSession(s) && s.name === name);
-}
-
-function isCloudScriptDebugSession(session: vscode.DebugSession): boolean {
-    return session.configuration.y3HelperDebugKind === 'cloudScript';
-}
-
-async function latestEntryPointFailure(
-    projectPath: string,
-    launchStartedAt: number,
-): Promise<string | undefined> {
-    const logDirectory = path.join(projectPath, 'cloud_script', 'mls_log');
-    try {
-        const entries = await fs.readdir(logDirectory, { withFileTypes: true });
-        const files = await Promise.all(entries
-            .filter((entry) => entry.isFile())
-            .map(async (entry) => {
-                const filePath = path.join(logDirectory, entry.name);
-                const modifiedAt = (await fs.stat(filePath)).mtimeMs;
-                const content = modifiedAt >= launchStartedAt
-                    ? await fs.readFile(filePath, 'utf8')
-                    : '';
-                return { filePath, modifiedAt, content };
-            }));
-        return selectLatestEntryPointFailure(files, launchStartedAt);
-    } catch {
-        return undefined;
-    }
-}
-
-async function reportCloudScriptProcessFailure(
-    projectPath: string,
-    launchStartedAt: number,
-    processExited: boolean,
-) {
-    const failureLog = await latestEntryPointFailure(projectPath, launchStartedAt);
-    if (failureLog) {
-        vscode.window.showErrorMessage(l10n.t(
-            '本地云脚本入口启动失败，请检查日志：{0}',
-            failureLog,
-        ));
-        return;
-    }
-    vscode.window.showErrorMessage(l10n.t(processExited
-        ? '本次启动的 MockMls.exe 在注入前已退出，请检查 cloud_script/mls_log。'
-        : '30 秒内未检测到本次启动的 MockMls.exe，请确认项目包含本地云脚本并检查 cloud_script/mls_log。'));
-}
-
-export async function beginCloudScriptAutoAttach(
-    projectUri: vscode.Uri,
-): Promise<CloudScriptAutoAttachOperation | undefined> {
-    if (process.platform !== 'win32') {
-        vscode.window.showErrorMessage(l10n.t('本地云脚本自动附加仅支持 Windows。'));
-        return undefined;
-    }
-
-    const launchStartedAt = Date.now();
-    cloudScriptAttachController?.abort();
-    const controller = new AbortController();
-    cloudScriptAttachController = controller;
-    const provider = new WindowsTasklistProcessProvider();
-    let processIdsBeforeLaunch: readonly number[];
-    try {
-        processIdsBeforeLaunch = await provider.listMockMlsProcessIds();
-    } catch (error) {
-        if (cloudScriptAttachController === controller) {
-            cloudScriptAttachController = undefined;
-        }
-        if (controller.signal.aborted) {
-            return undefined;
-        }
-        y3.log.error(l10n.t('读取 MockMls.exe 进程失败：{0}', String(error)));
-        vscode.window.showErrorMessage(l10n.t('无法读取 MockMls.exe 进程列表，请检查系统 tasklist 命令。'));
-        return undefined;
-    }
-
-    const completion = (async () => {
-        try {
-            const result = await waitForNewProcess(provider, processIdsBeforeLaunch, {
-                timeoutMs: cloudScriptProcessTimeoutMs,
-                pollIntervalMs: cloudScriptProcessPollIntervalMs,
-                signal: controller.signal,
-            });
-            if (result.kind === 'cancelled') {
-                return false;
-            }
-            if (result.kind === 'timeout') {
-                await reportCloudScriptProcessFailure(projectUri.fsPath, launchStartedAt, false);
-                return false;
-            }
-            if (result.kind === 'ambiguous') {
-                vscode.window.showErrorMessage(l10n.t(
-                    '本次启动检测到多个新的 MockMls.exe（PID：{0}），为避免附加错误实例，已取消自动附加。',
-                    result.processIds.join(', '),
-                ));
-                return false;
-            }
-
-            const stability = await waitForProcessStability(provider, result.processId, {
-                delayMs: cloudScriptProcessStabilityDelayMs,
-                signal: controller.signal,
-            });
-            if (stability.kind === 'cancelled') {
-                return false;
-            }
-            if (stability.kind === 'exited') {
-                await reportCloudScriptProcessFailure(projectUri.fsPath, launchStartedAt, true);
-                return false;
-            }
-
-            await Promise.all(debugSessions
-                .filter(isCloudScriptDebugSession)
-                .map((session) => vscode.debug.stopDebugging(session)));
-            if (controller.signal.aborted) {
-                return false;
-            }
-            y3.log.info(l10n.t('正在附加本地云脚本调试器（PID：{0}）', result.processId));
-            const folder = vscode.workspace.getWorkspaceFolder(projectUri)
-                ?? vscode.workspace.workspaceFolders?.[0];
-            const succeeded = await vscode.debug.startDebugging(
-                folder,
-                createCloudScriptDebugConfiguration(
-                    projectUri.fsPath,
-                    result.processId,
-                    cloudScriptSessionName,
-                ),
-            );
-            if (!succeeded) {
-                vscode.window.showErrorMessage(l10n.t(
-                    '本地云脚本调试器注入失败（PID：{0}），请检查调试控制台和 cloud_script/mls_log。',
-                    result.processId,
-                ));
-            }
-            return succeeded;
-        } catch (error) {
-            if (controller.signal.aborted) {
-                return false;
-            }
-            y3.log.error(l10n.t('自动附加本地云脚本失败：{0}', String(error)));
-            if (isProcessInjectionFailure(error)) {
-                vscode.window.showErrorMessage(l10n.t(
-                    '本地云脚本进程注入失败。请确保 VS Code 与 Y3 使用相同权限；若 Y3 以管理员运行，请以管理员身份启动 VS Code。',
-                ));
-                return false;
-            }
-            vscode.window.showErrorMessage(l10n.t(
-                '自动附加本地云脚本失败：{0}',
-                String(error),
-            ));
-            return false;
-        } finally {
-            if (cloudScriptAttachController === controller) {
-                cloudScriptAttachController = undefined;
-            }
-        }
-    })();
-
-    return {
-        completion,
-        cancel() {
-            controller.abort();
-        },
-    };
 }
 
 async function attachForOnePlayer(id?: number) {

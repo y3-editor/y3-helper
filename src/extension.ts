@@ -24,7 +24,7 @@ import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
 import { config } from './config';
-import { shouldAutoAttachCloudScript } from './cloudScriptProcess';
+import * as cloudScript from './cloudScript';
 import * as globalScript from './globalScript';
 import * as luaLanguage from './luaLanguage';
 import * as ecaCompiler from './ecaCompiler';
@@ -282,6 +282,7 @@ class Helper {
 
     private registerCommandOfLaunchGame() {
         vscode.commands.registerCommand('y3-helper.launchGame', async () => {
+            cloudScript.cancelAutoAttach();
             let luaArgs: Record<string, string> = {};
 
             if (config.tracy) {
@@ -312,20 +313,28 @@ class Helper {
                 location: vscode.ProgressLocation.Window,
             }, async (progress) => {
                 let gameLauncher = new GameLauncher();
-                const shouldAttachCloudScript = shouldAutoAttachCloudScript(
-                    config.attachCloudScriptWhenLaunch,
-                    config.multiMode,
-                );
-                const cloudScriptAttach = shouldAttachCloudScript && env.projectUri
-                    ? await debug.beginCloudScriptAutoAttach(env.projectUri)
-                    : undefined;
+                let cloudScriptAttach: cloudScript.CloudScriptAutoAttachOperation | undefined;
+                try {
+                    if (config.attachCloudScriptWhenLaunch && !config.multiMode) {
+                        cloudScriptAttach = await cloudScript.beginAutoAttach();
+                    }
+                } catch (error) {
+                    vscode.window.showErrorMessage(String(error));
+                    return;
+                }
 
-                let suc = await gameLauncher.launch({
-                    luaArgs: luaArgs,
-                    multi: config.multiMode ? [...config.multiPlayers].sort((a, b) => a - b) : undefined,
-                    multiNicknames: config.multiMode ? {...config.multiPlayerNicknames} : undefined,
-                    tracy: config.tracy,
-                });
+                let suc: boolean;
+                try {
+                    suc = await gameLauncher.launch({
+                        luaArgs: luaArgs,
+                        multi: config.multiMode ? [...config.multiPlayers].sort((a, b) => a - b) : undefined,
+                        multiNicknames: config.multiMode ? {...config.multiPlayerNicknames} : undefined,
+                        tracy: config.tracy,
+                    });
+                } catch (error) {
+                    cloudScriptAttach?.cancel();
+                    throw error;
+                }
 
                 if (!suc) {
                     cloudScriptAttach?.cancel();
@@ -588,6 +597,7 @@ class Helper {
 
             await this.runStartupStep('metaBuilder.init', () => metaBuilder.init());
             await this.runStartupStep('debug.init', () => debug.init(this.context));
+            await this.runStartupStep('cloudScript.init', () => cloudScript.init(this.context));
             await this.runStartupStep('console.init', () => console.init());
             await this.runStartupStep('editorTable.init', () => editorTable.init());
             await this.runStartupStep('plugin.init', () => plugin.init());

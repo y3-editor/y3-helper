@@ -20,15 +20,15 @@ suite('Debug player sessions', () => {
 		assert.strictEqual(isManagedDebugSession('lua', { configuration: {} }), false);
 	});
 
-	test('does not classify a cloud script process session as a map session', () => {
+	test('does not classify a cloud script port session as a map session', () => {
 		assert.strictEqual(isMapDebugSession({
 			configuration: {
-				processId: 42,
+				address: '127.0.0.1:12306',
 				y3HelperDebugKind: 'cloudScript',
 			},
 		}), false);
 		assert.strictEqual(isMapDebugSession(sessionAt(debugAddressForPlayer(1))), true);
-		assert.strictEqual(isMapDebugSession({ configuration: { processId: 99 } }), true);
+		assert.strictEqual(isMapDebugSession({ configuration: { address: '127.0.0.1:12306' } }), true);
 	});
 
 	test('plans an attach only for the configured player whose session is missing', () => {

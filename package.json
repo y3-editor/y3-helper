@@ -19,6 +19,7 @@
         "workspaceContains:y3/更新日志.md",
         "workspaceContains:y3/CHANGELOG.md",
         "onDebugResolve:y3lua",
+        "onDebugDynamicConfigurations",
         "onCommand:y3-helper.startMCPServer",
         "onCommand:y3-helper.stopMCPServer",
         "onCommand:y3-helper.showMcpDoc",
