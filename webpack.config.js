@@ -71,4 +71,33 @@ const consoleWebviewConfig = {
     },
 };
 
-module.exports = [config, consoleWebviewConfig];
+/** 提权代理 bundle（可执行文件提权后由扩展拉起的独立进程，不可依赖 vscode 模块） */
+/**@type {import('webpack').Configuration}*/
+const launchAgentConfig = {
+    target: 'node',
+    entry: './src/launchAgent/agent.ts',
+    output: {
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'launchAgent.js',
+        library: {
+            type: "commonjs2",
+        },
+        devtoolModuleFilenameTemplate: "../[resource-path]",
+    },
+    devtool: 'source-map',
+    resolve: {
+        extensions: ['.ts', '.js'],
+        plugins: [new TsconfigPathsPlugin.TsconfigPathsPlugin({ configFile: path.resolve(__dirname, './tsconfig.json') })],
+    },
+    module: {
+        rules: [{
+            test: /\.ts$/,
+            exclude: /node_modules/,
+            use: [{
+                loader: 'ts-loader',
+            }]
+        }]
+    },
+};
+
+module.exports = [config, consoleWebviewConfig, launchAgentConfig];

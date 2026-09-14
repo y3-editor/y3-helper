@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { env } from './env';
-import { runShell } from './runShell';
+import { runElevated } from './launchAgent/runElevated';
 import * as y3 from 'y3-helper';
 import * as l10n from '@vscode/l10n';
 
@@ -52,7 +52,7 @@ export class EditorLauncher {
                 args.push(key + "@" + luaArgs[key].toString());
             }
         }
-        await runShell(
+        await runElevated(
             l10n.t("启动游戏"),
             editorExeUri.fsPath,
             [

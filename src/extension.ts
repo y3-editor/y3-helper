@@ -18,6 +18,7 @@ import * as console from './console';
 import * as metaBuilder from './metaBuilder';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
+import { initLaunchAgent, shutdownLaunchAgent } from './launchAgent/manager';
 import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
@@ -596,8 +597,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 初始化 CodeMaker 模块
     initCodeMaker(context);
+
+    initLaunchAgent(context);
 }
 
 export function deactivate() {
+    shutdownLaunchAgent();
     stopCodeMaker();
 }

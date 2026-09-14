@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { env } from './env';
-import { runShell } from './runShell';
+import { runElevated } from './launchAgent/runElevated';
 import * as y3 from 'y3-helper';
 import { updateHelperPortFile } from './console';
 import * as l10n from '@vscode/l10n';
@@ -133,7 +133,7 @@ export class GameLauncher {
 
         await updateHelperPortFile();
 
-        let code = await runShell(
+        let code = await runElevated(
             l10n.t("启动游戏"),
             editorExeUri.fsPath,
             [
