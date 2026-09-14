@@ -143,7 +143,7 @@ git push origin v1.22.0   # 或 git push github v1.22.0
 在本地运行 `tsc -p ./` 确认能通过，再推送。常见原因是第三方库类型不兼容，可通过 `tsconfig.json` 的 `skipLibCheck: true` 解决。
 
 ### Q：vsce package 失败，提示某些文件丢失？
-检查 `.vscodeignore` 文件，确保 `dist/extension.js`、`3rd/` 等必要文件没有被排除。
+检查 `.vscodeignore` 文件，确保 `dist/extension.js`、`dist/launchAgent.js`（提权代理，缺了会导致启动游戏回退到旧路径、每次弹 UAC）、`3rd/` 等必要文件没有被排除。
 
 ### Q：内网版如何手动发布到 GitHub？
 ```bash
