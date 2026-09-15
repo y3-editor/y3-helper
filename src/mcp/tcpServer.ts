@@ -10,8 +10,8 @@ import { GameSessionManager } from './gameSessionManager';
 import { define } from '../customDefine';
 import type { UINode } from '../customDefine/ui';
 import * as envImport from '../env';
+import { MCP_HTTP_PORT, MCP_INSTRUCTIONS } from './mcpInfo';
 
-const MCP_HTTP_PORT = 8766;
 const UI_PACKAGE_KEY = '\u754c\u9762';
 const UI_CANVAS_KEY = '\u753b\u677f';
 
@@ -286,6 +286,8 @@ export class TCPServer extends vscode.Disposable {
         const server = new McpServer({
             name: 'y3-helper',
             version: '1.0.0'
+        }, {
+            instructions: MCP_INSTRUCTIONS
         });
 
         server.registerTool('launch_game', {

@@ -97,6 +97,8 @@ Y3-Helper 内置了 MCP Server，可供 Y3Maker、Codex 和 Claude Code 等 AI �
 
 使用 VSCode 打开已初始化的 Y3 项目后，MCP Server 会自动启动；也可以在侧边栏的“Y3开发助手”中手动启动或停止服务。
 
+VSCode 1.102 及以上的内置 AI（Copilot Chat 等）无需任何配置：扩展会注册 MCP Server Definition Provider，自动把该服务提供给 VSCode。其他工具（Y3Maker / Claude Code / Codex）需手动配置，服务地址为 `http://127.0.0.1:8766/mcp`。
+
 #### Y3Maker
 
 通过 Y3-Helper 初始化项目后，项目根目录的 `.y3maker` 会自动包含所需的 MCP 配置，无需手动添加。直接打开 Y3Maker AI 即可使用。

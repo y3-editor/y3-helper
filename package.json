@@ -8,7 +8,7 @@
         "url": "https://github.com/y3-editor/y3-helper"
     },
     "engines": {
-        "vscode": "^1.96.0"
+        "vscode": "^1.102.0"
     },
     "categories": [
         "Other"
@@ -20,7 +20,9 @@
         "workspaceContains:y3/CHANGELOG.md",
         "onDebugResolve:y3lua",
         "onCommand:y3-helper.startMCPServer",
-        "onCommand:y3-helper.stopMCPServer"
+        "onCommand:y3-helper.stopMCPServer",
+        "onCommand:y3-helper.showMcpDoc",
+        "onCommand:y3-helper.killGame"
     ],
     "main": "./dist/extension.js",
     "capabilities": {
@@ -29,6 +31,12 @@
     },
     "l10n": "./l10n",
     "contributes": {
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "y3-helper.mcp-servers",
+                "label": "%Y3开发助手%"
+            }
+        ],
         "views": {
             "explorer": [
                 {
@@ -210,6 +218,11 @@
             {
                 "command": "y3-helper.launchGame",
                 "title": "启动游戏",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.killGame",
+                "title": "关闭游戏进程",
                 "category": "%Y3开发助手%"
             },
             {
@@ -397,6 +410,11 @@
             {
                 "command": "y3-helper.codemaker.open",
                 "title": "打开 Y3Maker",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.showMcpDoc",
+                "title": "查看 MCP 接入文档",
                 "category": "%Y3开发助手%"
             }
         ],
@@ -636,7 +654,7 @@
         "@types/module-alias": "^2.0.4",
         "@types/node": "^25.5.0",
         "@types/uuid": "^9.0.8",
-        "@types/vscode": "^1.96.0",
+        "@types/vscode": "^1.102.0",
         "@types/winreg": "^1.2.34",
         "@typescript-eslint/eslint-plugin": "^6.9.0",
         "@typescript-eslint/parser": "^6.9.0",

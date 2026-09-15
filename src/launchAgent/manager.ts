@@ -44,6 +44,7 @@ export class LaunchAgentManager {
     private listening?: Promise<void>;
     private waiter?: { done: (connected: boolean) => void };
     private readonly launching = new Map<number, { resolve: (code: number | undefined) => void, timer: NodeJS.Timeout }>();
+    private readonly killing = new Map<number, { resolve: (count: number) => void, timer: NodeJS.Timeout }>();
     private readonly running = new Map<number, string>();
 
     constructor(context: vscode.ExtensionContext) {
@@ -82,6 +83,27 @@ export class LaunchAgentManager {
             this.launching.set(id, { resolve: resolve, timer: timer });
             this.running.set(id, exe);
             socket!.write(encodeMessage({ type: 'launch', id: id, exe: exe, args: args, cwd: cwd }));
+        });
+    }
+
+    /**
+     * 通过提权代理终止它启动过的游戏进程，返回已终止的数量。
+     * 代理未连接时返回 0（不会为了杀进程去弹 UAC）。
+     */
+    public async kill(): Promise<number> {
+        let socket = this.socket;
+        if (!socket || socket.destroyed) {
+            return 0;
+        }
+        let id = this.nextId++;
+        return await new Promise<number>((resolve) => {
+            let timer = setTimeout(() => {
+                this.killing.delete(id);
+                tools.log.warn(l10n.t('提权代理响应超时：{0}', 'kill'));
+                resolve(0);
+            }, LAUNCH_TIMEOUT);
+            this.killing.set(id, { resolve: resolve, timer: timer });
+            socket!.write(encodeMessage({ type: 'kill', id: id }));
         });
     }
 
@@ -262,6 +284,11 @@ export class LaunchAgentManager {
             entry.resolve(undefined);
         }
         this.launching.clear();
+        for (let entry of this.killing.values()) {
+            clearTimeout(entry.timer);
+            entry.resolve(0);
+        }
+        this.killing.clear();
     }
 
     private onMessage(message: AgentMessage) {
@@ -280,6 +307,15 @@ export class LaunchAgentManager {
                 this.running.delete(message.id);
                 if (exe) {
                     tools.log.info(l10n.t('{0} 已退出，退出码：{1}', exe, String(message.code)));
+                }
+                break;
+            }
+            case 'killed': {
+                let entry = this.killing.get(message.id);
+                if (entry) {
+                    clearTimeout(entry.timer);
+                    this.killing.delete(message.id);
+                    entry.resolve(message.count);
                 }
                 break;
             }

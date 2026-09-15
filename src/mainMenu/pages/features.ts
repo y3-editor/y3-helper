@@ -501,6 +501,14 @@ export class 功能 extends TreeNode {
                             },
                             tooltip: l10n.t('停止 MCP Server'),
                         }),
+                        new TreeNode(l10n.t('查看接入文档'), {
+                            iconPath: new vscode.ThemeIcon('book'),
+                            command: {
+                                command: 'y3-helper.showMcpDoc',
+                                title: l10n.t('查看接入文档'),
+                            },
+                            tooltip: l10n.t('查看 MCP 接入文档，可发给 AI 让它自动完成配置'),
+                        }),
                     ],
                 }),
             ]

@@ -18,6 +18,7 @@ import * as console from './console';
 import * as metaBuilder from './metaBuilder';
 import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
+import { killGame } from './killGame';
 import { initLaunchAgent, shutdownLaunchAgent } from './launchAgent/manager';
 import * as editorTable from './editorTable';
 import * as plugin from './plugin';
@@ -36,6 +37,7 @@ class Helper {
     private context: vscode.ExtensionContext;
     private tcpServer?: mcp.TCPServer;
     private autoStartMCPTask?: Promise<void>;
+    private mcpDefinitionProvider?: mcp.McpDefinitionProvider;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -338,6 +340,12 @@ class Helper {
         });
     }
 
+    private registerCommandOfKillGame() {
+        vscode.commands.registerCommand('y3-helper.killGame', async () => {
+            await killGame();
+        });
+    }
+
     private registerCommandOfLaunchEditor() {
         vscode.commands.registerCommand('y3-helper.launchEditor', async () => {
             await vscode.window.withProgress({
@@ -376,6 +384,7 @@ class Helper {
             if (hub) {
                 await hub.start();
             }
+            this.mcpDefinitionProvider?.refresh();
             return true;
         } catch (error) {
             tools.log.error('[Y3-Helper] Failed to start MCP Server:', error);
@@ -390,8 +399,15 @@ class Helper {
         if (this.tcpServer) {
             this.tcpServer.dispose();
             this.tcpServer = undefined;
+            this.mcpDefinitionProvider?.refresh();
             tools.log.info('[Y3-Helper] TCP Server stopped');
         }
+    }
+
+    private registerMcpServerDefinitionProvider() {
+        const provider = new mcp.McpDefinitionProvider(() => !!this.tcpServer);
+        this.mcpDefinitionProvider = provider;
+        this.context.subscriptions.push(provider, provider.register());
     }
 
     private async tryAutoStartMCP() {
@@ -464,6 +480,14 @@ class Helper {
             this.stopTCPServer();
             vscode.window.showInformationMessage(l10n.t('MCP Server 已停止'));
         });
+
+        vscode.commands.registerCommand('y3-helper.showMcpDoc', async () => {
+            const document = await vscode.workspace.openTextDocument({
+                language: 'markdown',
+                content: mcp.MCP_DOC,
+            });
+            await vscode.window.showTextDocument(document);
+        });
     }
 
     private checkNewProject() {
@@ -506,9 +530,11 @@ class Helper {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
+        this.registerCommandOfKillGame();
         this.registerCommandOfAttach();
         this.registerCommandOfLaunchEditor();
         this.registerCommandOfMCP();
+        this.registerMcpServerDefinitionProvider();
 
         this.reloadEnvWhenConfigChange();
 

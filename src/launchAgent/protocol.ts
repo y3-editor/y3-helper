@@ -14,12 +14,18 @@ export interface PingRequest {
     type: 'ping';
 }
 
+/** 请求终止代理启动过的进程 */
+export interface KillRequest {
+    type: 'kill';
+    id: number;
+}
+
 /** 请求代理退出 */
 export interface ShutdownRequest {
     type: 'shutdown';
 }
 
-export type AgentRequest = LaunchRequest | PingRequest | ShutdownRequest;
+export type AgentRequest = LaunchRequest | PingRequest | KillRequest | ShutdownRequest;
 
 /** 代理握手，携带凭据供扩展宿主校验 */
 export interface ReadyMessage {
@@ -41,6 +47,13 @@ export interface ExitMessage {
     code: number | null;
 }
 
+/** 终止请求的处理结果，count 为已终止的进程数 */
+export interface KilledMessage {
+    type: 'killed';
+    id: number;
+    count: number;
+}
+
 /** 请求被拒绝或启动失败 */
 export interface ErrorMessage {
     type: 'error';
@@ -52,7 +65,7 @@ export interface PongMessage {
     type: 'pong';
 }
 
-export type AgentMessage = ReadyMessage | LaunchedMessage | ExitMessage | ErrorMessage | PongMessage;
+export type AgentMessage = ReadyMessage | LaunchedMessage | ExitMessage | KilledMessage | ErrorMessage | PongMessage;
 
 export function encodeMessage(message: AgentRequest | AgentMessage): string {
     return JSON.stringify(message) + '\n';

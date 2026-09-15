@@ -4,8 +4,8 @@
 import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn, ChildProcess } from 'child_process';
-import { AgentMessage, AgentRequest, LaunchRequest, LineDecoder, encodeMessage } from './protocol';
+import { spawn, execFileSync, ChildProcess } from 'child_process';
+import { AgentMessage, AgentRequest, KillRequest, LaunchRequest, LineDecoder, encodeMessage } from './protocol';
 
 /** 白名单：只允许启动游戏主程序 */
 const ALLOWED_EXE = 'game_x64h.exe';
@@ -175,10 +175,49 @@ function handleLaunch(request: LaunchRequest) {
     child.unref();
 }
 
+/** 游戏以管理员权限启动，只有同样提权的代理才能终止它 */
+function killTree(pid: number) {
+    if (process.platform === 'win32') {
+        try {
+            // /T 连同游戏拉起的子进程一起终止
+            execFileSync('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+        } catch (error) {
+            log('taskkill failed pid=' + pid + ': ' + String(error));
+        }
+        return;
+    }
+    try {
+        process.kill(-pid, 'SIGKILL');
+    } catch (error) {
+        try {
+            process.kill(pid, 'SIGKILL');
+        } catch (error) {
+            log('kill failed pid=' + pid);
+        }
+    }
+}
+
+function handleKill(request: KillRequest) {
+    let count = 0;
+    for (let [id, child] of children) {
+        let pid = child.pid;
+        if (pid === undefined) {
+            continue;
+        }
+        log('kill request id=' + request.id + ' target id=' + id + ' pid=' + pid);
+        killTree(pid);
+        count += 1;
+    }
+    send({ type: 'killed', id: request.id, count: count });
+}
+
 function handleMessage(message: AgentRequest) {
     switch (message.type) {
         case 'launch':
             handleLaunch(message);
+            break;
+        case 'kill':
+            handleKill(message);
             break;
         case 'ping':
             send({ type: 'pong' });
