@@ -1,14 +1,14 @@
 local source, level, symbol = ...
 level = (level or 0) + 2
 
+local _load
+local _unpack
 if _VERSION == "Lua 5.1" then
-	load = loadstring
-	function table.pack(...)
-		local t = {...}
-		t.n = select("#", ...)
-		return t
-	end
-	table.unpack = unpack
+	_load = loadstring
+	_unpack = unpack
+else
+	_load = load
+	_unpack = table.unpack
 end
 
 local f = assert(debug.getinfo(level,"f").func, "can't find function")
@@ -32,6 +32,9 @@ do
 		end
 		i = i + 1
 	end
+end
+if not env and getfenv then
+	env = getfenv(f)
 end
 do
 	local i = 1
@@ -74,8 +77,11 @@ end]]):gsub("%$(%w+)", {
 })
 end
 local compiled = env
-	and assert(load(full_source, '=(EVAL)', "t", env))
-	or  assert(load(full_source, '=(EVAL)'))
+	and assert(_load(full_source, '=(EVAL)', "t", env))
+	or  assert(_load(full_source, '=(EVAL)'))
+if env and setfenv then
+	setfenv(compiled, env)
+end
 local func = compiled()
 do
 	local i = 1
@@ -103,7 +109,7 @@ if vararg then
 		end
 		i = i + 1
 	end
-	return func(table.unpack(vargs))
+	return func(_unpack(vargs))
 else
 	return func()
 end

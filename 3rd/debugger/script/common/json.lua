@@ -129,7 +129,17 @@ function encode_map.string(v)
     return '"'
 end
 
-local function convertreal(v)
+function encode_map.number(v)
+    if math_type(v) == "integer" then
+        return string_format("%d", v)
+    end
+    if v ~= v then
+        error("NaN is not supported in JSON")
+    elseif v <= tiny then
+        error("-Inf is not supported in JSON")
+    elseif v >= huge then
+        error("Inf is not supported in JSON")
+    end
     local g = string_format("%.16g", v)
     if tonumber(g) == v then
         return g
@@ -138,20 +148,10 @@ local function convertreal(v)
 end
 
 if string_match(tostring(1 / 2), "%p") == "," then
-    local _convertreal = convertreal
-    function convertreal(v)
-        return string_gsub(_convertreal(v), ",", ".")
+    local _encode_number = encode_map.number
+    function encode_map.number(v)
+        return string_gsub(_encode_number(v), ",", ".")
     end
-end
-
-function encode_map.number(v)
-    if v ~= v or v <= tiny or v >= huge then
-        error("unexpected number value '"..tostring(v).."'")
-    end
-    if math_type(v) == "integer" then
-        return string_format("%d", v)
-    end
-    return convertreal(v)
 end
 
 function encode_map.boolean(v)
@@ -179,7 +179,7 @@ function encode_map.table(t)
         local keys = {}
         for k in next, t do
             if type(k) ~= "string" then
-                error("invalid table: mixed or invalid key types: "..k)
+                error("invalid table: mixed or invalid key types: "..tostring(k))
             end
             keys[#keys+1] = k
         end
@@ -204,7 +204,7 @@ function encode_map.table(t)
         local max = 0
         for k in next, t do
             if math_type(k) ~= "integer" or k <= 0 then
-                error("invalid table: mixed or invalid key types: "..k)
+                error("invalid table: mixed or invalid key types: "..tostring(k))
             end
             if max < k then
                 max = k
@@ -222,6 +222,7 @@ function encode_map.table(t)
         if t[1] == nil then
             error("invalid table: sparse array is not supported")
         end
+        ---@diagnostic disable-next-line: undefined-global
         if jit and t[0] ~= nil then
             -- 0 is the first index in luajit
             error("invalid table: mixed or invalid key types: "..0)
@@ -239,7 +240,7 @@ function encode_map.table(t)
             if type(k) == "number" then
                 error("invalid table: sparse array is not supported")
             else
-                error("invalid table: mixed or invalid key types: "..k)
+                error("invalid table: mixed or invalid key types: "..tostring(k))
             end
         end
         statusVisited[t] = nil
@@ -343,12 +344,12 @@ local function decode_string()
         if not i then
             decode_error "expected closing quote for string"
         end
-        local x = string_byte(statusBuf, i)
-        if x < 32 then
+        local char = string_byte(statusBuf, i)
+        if char < 32 then
             statusPos = i
             decode_error "control character in string"
         end
-        if x == 34 --[[ '"' ]] then
+        if char == 34 --[[ '"' ]] then
             local s = string_sub(statusBuf, statusPos + 1, i - 1)
             if has_unicode_escape then
                 s = string_gsub(string_gsub(s
@@ -361,9 +362,9 @@ local function decode_string()
             statusPos = i + 1
             return s
         end
-        --assert(x == 92 --[[ "\\" ]])
-        local nx = string_byte(statusBuf, i + 1)
-        if nx == 117 --[[ "u" ]] then
+        --assert(char == 92 --[[ "\\" ]])
+        local next_char = string_byte(statusBuf, i + 1)
+        if next_char == 117 --[[ "u" ]] then
             if not string_match(statusBuf, "^%x%x%x%x", i + 2) then
                 statusPos = i
                 decode_error "invalid unicode escape in string"
@@ -371,9 +372,9 @@ local function decode_string()
             has_unicode_escape = true
             i = i + 6
         else
-            if not decode_escape_set[nx] then
+            if not decode_escape_set[next_char] then
                 statusPos = i
-                decode_error("invalid escape char '"..(nx and string_char(nx) or "<eol>").."' in string")
+                decode_error("invalid escape char '"..(next_char and string_char(next_char) or "<eol>").."' in string")
             end
             has_escape = true
             i = i + 2
@@ -544,12 +545,15 @@ function json.decode(str)
     statusBuf = str
     statusPos = 1
     statusTop = 0
+    if str == "" then
+        decode_error("empty string is not a valid JSON value")
+    end
     local res = decode()
     while statusTop > 0 do
         decode_item()
     end
     if string_find(statusBuf, "[^ \t\r\n]", statusPos) then
-        decode_error "trailing garbage"
+        decode_error(string_format("trailing garbage '%s'", string_sub(statusBuf, statusPos)))
     end
     return res
 end

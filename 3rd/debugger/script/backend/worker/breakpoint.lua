@@ -10,17 +10,26 @@ local stdout = require 'backend.worker.stdout'
 local currentactive = {}
 local waitverify = {}
 local info = {}
+local instbreakpoints = {}  -- {[proto] = {[pc] = bp}}
+local protosById = {}       -- {["{ld}_{lld}_{srcId}"] = proto}
+local waitinstbp = {}       -- {[funcId] = {[pc] = bp}}
 local m = {}
 local enable = false
+local syntaxCompatibility = false
+
+ev.on('initializing', function(config)
+    syntaxCompatibility = config.syntaxCompatibility == true
+end)
 
 local function updateHook()
+    local hasInstBp = next(instbreakpoints) ~= nil or next(waitinstbp) ~= nil
     if enable then
-        if next(currentactive) == nil and next(waitverify) == nil then
+        if next(currentactive) == nil and next(waitverify) == nil and not hasInstBp then
             enable = false
             hookmgr.break_open(false)
         end
     else
-        if next(currentactive) ~= nil or next(waitverify) ~= nil then
+        if next(currentactive) ~= nil or next(waitverify) ~= nil or hasInstBp then
             enable = true
             hookmgr.break_open(true)
         end
@@ -75,7 +84,9 @@ local function updateBreakpoint(src, breakpoints)
     if next(bps) == nil then
         currentactive[bpkey] = nil
         for proto in pairs(src.protos) do
-            hookmgr.break_del(proto)
+            if not instbreakpoints[proto] then
+                hookmgr.break_del(proto)
+            end
         end
     else
         currentactive[bpkey] = bps
@@ -84,7 +95,7 @@ local function updateBreakpoint(src, breakpoints)
             for proto, key in pairs(src.protos) do
                 if hasActiveBreakpoint(bps, lineinfo[key]) then
                     hookmgr.break_add(proto)
-                else
+                elseif not instbreakpoints[proto] then
                     hookmgr.break_del(proto)
                 end
             end
@@ -178,6 +189,23 @@ local function verifyBreakpointByLineInfo(src, breakpoints)
     end
 end
 
+-- 降级模式：无 lineinfo 时跳过行号校正，直接标记断点为 verified
+local function verifyBreakpointWithoutLineInfo(src, breakpoints)
+    for _, bp in ipairs(breakpoints) do
+        if bp.unverified ~= nil then
+            goto continue
+        end
+        bp.source = src
+        bp.verified = true
+        ev.emit('breakpoint', 'changed', {
+            id = bp.id,
+            line = bp.line,
+            verified = true,
+        })
+        ::continue::
+    end
+end
+
 function m.find(src, currentline)
     local currentBP = currentactive[bpKey(src)]
     if not currentBP then
@@ -188,7 +216,7 @@ function m.find(src, currentline)
 end
 
 local function parserInlineLineinfo(src)
-    local old = parser(src.content)
+    local old = parser(src.content, syntaxCompatibility)
     if not old then
         return
     end
@@ -218,9 +246,9 @@ local function calcLineInfo(src, content)
         if src.content then
             src.lineinfo = parserInlineLineinfo(src)
         elseif content then
-            src.lineinfo = parser(content)
+            src.lineinfo = parser(content, syntaxCompatibility)
         elseif src.sourceReference then
-            src.lineinfo = parser(source.getCode(src.sourceReference))
+            src.lineinfo = parser(source.getCode(src.sourceReference), syntaxCompatibility)
         end
     end
     return src.lineinfo
@@ -248,9 +276,17 @@ function m.set_bp(clientsrc, breakpoints, content)
                 verifyBreakpointByLineInfo(src, breakpoints)
                 updateBreakpoint(src, breakpoints)
             end
+        elseif content == false then
+            -- 降级路径：前端已上报但 sourceContent 为空
+            for _, src in ipairs(srcarray) do
+                verifyBreakpointWithoutLineInfo(src, breakpoints)
+                updateBreakpoint(src, breakpoints)
+            end
         else
             cantVerifyBreakpoints(breakpoints)
         end
+        waitverify[bpClientKey(clientsrc)] = nil
+        updateHook()
     else
         waitverify[bpClientKey(clientsrc)] = {
             breakpoints = breakpoints,
@@ -286,7 +322,7 @@ function m.exec(bp)
             end
             return tostring(res)
         end)
-        rdebug.getinfo(1, "Sl", info)
+        rdebug.getinfo(0, "Sl", info)
         stdout(res, info)
         return false
     end
@@ -295,13 +331,40 @@ end
 
 function m.newproto(proto, src, key)
     src.protos[proto] = key
+    if rdebug.currentpc then
+        local funcId = key .. "_" .. bpClientKey(src)
+        protosById[funcId] = proto
+        local pending = waitinstbp[funcId]
+        if pending then
+            waitinstbp[funcId] = nil
+            for pc, bp in pairs(pending) do
+                if valid(bp) then
+                    if not instbreakpoints[proto] then
+                        instbreakpoints[proto] = {}
+                    end
+                    instbreakpoints[proto][pc] = bp
+                    bp.verified = true
+                    bp.statHit = 0
+                    hookmgr.break_add(proto)
+                    ev.emit('breakpoint', 'changed', bp)
+                end
+            end
+            updateHook()
+        end
+    end
     local bpkey = bpClientKey(src)
     local wv = waitverify[bpkey]
     if wv then
-        if not src.content then
+        if not wv.content then
             waitverify[bpkey] = nil
         end
         if not calcLineInfo(src, wv.content) then
+            if wv.content == false then
+                -- 降级路径：前端已上报但 sourceContent 为空
+                verifyBreakpointWithoutLineInfo(src, wv.breakpoints)
+                updateBreakpoint(src, wv.breakpoints)
+                return
+            end
             cantVerifyBreakpoints(wv.breakpoints)
             return
         end
@@ -403,12 +466,90 @@ function m.setExceptionBreakpoints(breakpoints)
     end
 end
 
+function m.set_instbp(breakpoints)
+    -- clear all existing instruction breakpoints
+    instbreakpoints = {}
+    waitinstbp = {}
+    -- add new breakpoints
+    for _, bp in ipairs(breakpoints) do
+        local ld, lld, pc, srcId = bp.instructionReference:match("^bp_(%d+)_(%d+)_(%d+)_(.+)$")
+        if not ld then
+            bp.message = nil
+            setBreakPointUnverified(bp, "Invalid instruction reference")
+            goto continue
+        end
+        pc = tonumber(pc) + (bp.offset or 0)
+        local funcId = ld .. "-" .. lld .. "_" .. srcId
+        local proto = protosById[funcId]
+        if not proto then
+            bp.message = nil
+            setBreakPointUnverified(bp, "Function not yet loaded")
+            waitinstbp[funcId] = waitinstbp[funcId] or {}
+            waitinstbp[funcId][pc] = bp
+            goto continue
+        end
+        if not valid(bp) then
+            goto continue
+        end
+        if not instbreakpoints[proto] then
+            instbreakpoints[proto] = {}
+        end
+        instbreakpoints[proto][pc] = bp
+        bp.verified = true
+        bp.statHit = 0
+        hookmgr.break_add(proto)
+        ev.emit('breakpoint', 'changed', bp)
+        ::continue::
+    end
+    if hookmgr.instbreak_open then
+        hookmgr.instbreak_open(next(instbreakpoints) ~= nil)
+    end
+    updateHook()
+end
+
+function m.hit_instbp(proto, pc)
+    local pcs = instbreakpoints[proto]
+    if not pcs then
+        return nil
+    end
+    local bp = pcs[pc]
+    if bp and m.exec(bp) then
+        return bp
+    end
+    return nil
+end
+
+function m.gate_instbreak(proto)
+    if not hookmgr.instbreak_open then
+        return
+    end
+    if next(instbreakpoints) == nil then
+        hookmgr.instbreak_open(false)
+        return
+    end
+    if not proto then
+        return
+    end
+    hookmgr.instbreak_open(instbreakpoints[proto] ~= nil)
+end
+
+function m.get_proto(funcId)
+    return protosById[funcId]
+end
+
 ev.on('terminated', function()
     currentactive = {}
     waitverify = {}
+    instbreakpoints = {}
+    protosById = {}
+    waitinstbp = {}
     info = {}
     enable = false
+    syntaxCompatibility = false
     hookmgr.break_open(false)
+    if hookmgr.instbreak_open then
+        hookmgr.instbreak_open(false)
+    end
 end)
 
 return m

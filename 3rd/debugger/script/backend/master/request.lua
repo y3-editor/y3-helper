@@ -3,6 +3,7 @@ local response = require 'backend.master.response'
 local event = require 'backend.master.event'
 local ev = require 'backend.event'
 local utility = require 'luadebug.utility'
+local resolve_config = require 'backend.master.resolve_config'
 
 local request = {}
 
@@ -14,6 +15,7 @@ local config = {
     breakpoints = {},
     function_breakpoints = {},
     exception_breakpoints = {},
+    instruction_breakpoints = {},
 }
 
 ev.on('close', function()
@@ -42,13 +44,16 @@ function request.initialize(req)
 end
 
 function request.attach(req)
+    resolve_config(req.arguments)
     response.success(req)
     state = "initializing"
+    mgr.setKeepSessionAlive(req.arguments.keepSessionAlive)
     config = {
         initialize = req.arguments,
         breakpoints = {},
         function_breakpoints = {},
         exception_breakpoints = {},
+        instruction_breakpoints = {},
     }
 end
 
@@ -110,6 +115,10 @@ local function initializeWorker(w)
         cmd = 'setExceptionBreakpoints',
         arguments = config.exception_breakpoints,
     })
+    mgr.workerSend(w, {
+        cmd = 'setInstructionBreakpoints',
+        breakpoints = config.instruction_breakpoints,
+    })
     if firstWorker and config.launch then
         mgr.workerSend(w, {
             cmd = 'setSearchPath',
@@ -170,6 +179,8 @@ function request.setBreakpoints(req)
     local args = req.arguments
     local invalidPath = args.source.path and not isValidPath(args.source.path)
     for _, bp in ipairs(args.breakpoints) do
+        bp.column = nil
+        bp.endColumn = nil
         bp.id = genBreakpointID()
         bp.verified = false
         bp.message = invalidPath
@@ -226,6 +237,36 @@ function request.setFunctionBreakpoints(req)
             cmd = 'setFunctionBreakpoints',
             breakpoints = args.breakpoints,
         }
+    end
+end
+
+function request.setInstructionBreakpoints(req)
+    local args = req.arguments
+    for _, bp in ipairs(args.breakpoints) do
+        bp.id = genBreakpointID()
+        bp.verified = false
+        bp.message = "Wait verify."
+    end
+    response.success(req, { breakpoints = args.breakpoints })
+    config.instruction_breakpoints = {}
+    for _, bp in ipairs(args.breakpoints) do
+        local ref = bp.instructionReference
+        if type(ref) == "string" then
+            local threadId, rest = ref:match("^inst_(%d+)x(.+)$")
+            threadId = tonumber(threadId)
+            if threadId and rest then
+                bp.instructionReference = rest
+                config.instruction_breakpoints[#config.instruction_breakpoints + 1] = bp
+            end
+        end
+    end
+    if state == "initialized" then
+        for w in pairs(mgr.workers()) do
+            mgr.workerSend(w, {
+                cmd = 'setInstructionBreakpoints',
+                breakpoints = config.instruction_breakpoints,
+            })
+        end
     end
 end
 
@@ -630,6 +671,35 @@ function request.writeMemory(req)
     })
 end
 
+function request.disassemble(req)
+    local args = req.arguments
+    local memoryReference = args.memoryReference
+    -- inst_<threadId>x<rest> (from instructionPointerReference)
+    local threadId, refId = memoryReference:match("inst_(%d+)x(.+)$")
+    if not refId then
+        -- memory_<threadId>x<refId> (from variable with memoryReference)
+        threadId, refId = memoryReference:match("memory_(%d+)x(%d+)")
+    end
+    threadId = tonumber(threadId)
+    if not threadId or not refId then
+        response.error(req, "Invalid memoryReference")
+        return
+    end
+    if not checkThreadId(req, threadId) then
+        return
+    end
+    mgr.workerSend(threadId, {
+        cmd = 'disassemble',
+        command = req.command,
+        seq = req.seq,
+        refId = refId,
+        offset = args.offset,
+        instructionOffset = args.instructionOffset,
+        instructionCount = args.instructionCount,
+        resolveSymbols = args.resolveSymbols,
+    })
+end
+
 function request.customRequestShowIntegerAsDec(req)
     response.success(req)
     mgr.workerBroadcast {
@@ -644,11 +714,10 @@ function request.customRequestShowIntegerAsHex(req)
     }
 end
 
---function print(...)
---    local n = select('#', ...)
+--function print(...v)
 --    local t = {}
---    for i = 1, n do
---        t[i] = tostring(select(i, ...))
+--    for i = 1, #v do
+--        t[i] = tostring(v[i])
 --    end
 --    event.output {
 --        category = 'stdout',

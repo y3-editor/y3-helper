@@ -4,6 +4,8 @@ local proto = require 'common.protocol'
 local function parseAddress(param)
     local mode, address = param:match "^([a-z]+):(.*)"
     if address:sub(1,1) == '@' then
+        local fs = require "bee.filesystem"
+        address = address:gsub("%$tmp", (fs.temp_directory_path():string():gsub("([/\\])$", "")))
         return {
             protocol = 'unix',
             address = address:sub(2),
@@ -119,12 +121,12 @@ return function (param)
             session:close()
             fds[1] = session
         elseif t.mode == "listen" then
-            server:close()
-            fds[1] = server
-            if session ~= nil then
-                session:close()
-                fds[2] = session
-            end
+			fds[1] = server
+			if session ~= nil then
+				session:close()
+				fds[2] = session
+			end
+			server:close()
         end
         local function is_finish()
             for _, fd in ipairs(fds) do

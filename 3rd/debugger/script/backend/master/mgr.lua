@@ -18,6 +18,12 @@ local threadName = {}
 local terminateDebuggeeCallback
 local quit = false
 
+mgr.keepSessionAlive = false
+
+function mgr.setKeepSessionAlive(enabled)
+    mgr.keepSessionAlive = not not enabled
+end
+
 local function genThreadId()
     maxThreadId = maxThreadId + 1
     return maxThreadId
@@ -42,7 +48,8 @@ end
 
 function mgr.init(io)
     socket = io
-    masterThread = channel.query 'DbgMaster'
+    --socket.debug(true)
+    masterThread = assert(channel.query 'DbgMaster')
     socket.event_close(event_close)
     return true
 end
@@ -169,7 +176,7 @@ function mgr.exitWorker(w)
     end
     threadStatus[w] = nil
     threadName[w] = nil
-    if next(threadChannel) == nil then
+    if not mgr.keepSessionAlive and next(threadChannel) == nil then
         quit = true
     end
 end
@@ -249,7 +256,7 @@ function mgr.update()
     local event = require 'backend.master.event'
     event.terminated()
     socket.closeall()
-    channel.destroy "DbgMaster"
+    channel.destroy("DbgMaster")
 end
 
 function mgr.setClient(c)

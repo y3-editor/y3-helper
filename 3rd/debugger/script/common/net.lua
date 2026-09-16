@@ -1,3 +1,5 @@
+local ok, platform = pcall(require, "bee.platform")
+platform = ok and platform or nil
 local socket = require "bee.socket"
 local epoll = require "bee.epoll"
 local fs = require "bee.filesystem"
@@ -8,14 +10,6 @@ local EPOLLIN <const> = epoll.EPOLLIN
 local EPOLLOUT <const> = epoll.EPOLLOUT
 local EPOLLERR <const> = epoll.EPOLLERR
 local EPOLLHUP <const> = epoll.EPOLLHUP
-
-local function fd_set_read(s)
-    if s._flags & EPOLLIN ~= 0 then
-        return
-    end
-    s._flags = s._flags | EPOLLIN
-    epfd:event_mod(s._fd, s._flags)
-end
 
 local function fd_clr_read(s)
     if s._flags & EPOLLIN == 0 then
@@ -74,7 +68,7 @@ function stream:write(data)
     if self._writebuf == "" then
         fd_set_write(self)
     end
-    self._writebuf = self._writebuf .. data
+    self._writebuf = self._writebuf..data
 end
 
 function stream:is_closed()
@@ -113,7 +107,7 @@ local function update_stream(s, event)
             on_event(s, "data", data)
         end
     end
-    if event & EPOLLOUT ~= 0 then
+    if event & EPOLLOUT ~= 0 and not s.shutdown_w then
         local n = s._fd:send(s._writebuf)
         if n == nil then
             s.shutdown_w = true
@@ -159,7 +153,7 @@ function connect:write(data)
     if data == "" then
         return
     end
-    self._writebuf = self._writebuf .. data
+    self._writebuf = self._writebuf..data
 end
 
 function connect:is_closed()
@@ -184,6 +178,15 @@ function m.listen(protocol, address, port)
             fs.remove(address)
         end
     end
+    if platform and platform.os ~= "windows" then
+        -- set SO_REUSEADDR so we can bind again to the same address
+        -- after a quick restart:
+        local ok, err = fd:option("reuseaddr", 1)
+        if not ok then
+            fd:close()
+            return nil, err
+        end
+    end
     do
         local ok, err = fd:bind(address, port)
         if not ok then
@@ -205,7 +208,7 @@ function m.listen(protocol, address, port)
         shutdown_r = false,
         shutdown_w = true,
     }
-    epfd:event_add(fd, EPOLLIN, function()
+    epfd:event_add(fd, EPOLLIN, function ()
         local new_fd, err = fd:accept()
         if new_fd == nil then
             s:close()
@@ -222,7 +225,7 @@ function m.listen(protocol, address, port)
                 shutdown_w = false,
             }, stream_mt)
             if on_event(s, "accepted", new_s) then
-                epfd:event_add(new_fd, new_s._flags, function(event)
+                epfd:event_add(new_fd, new_s._flags, function (event)
                     update_stream(new_s, event)
                 end)
             else
@@ -256,7 +259,7 @@ function m.connect(protocol, address, port)
         shutdown_r = false,
         shutdown_w = false,
     }
-    epfd:event_add(fd, EPOLLOUT, function()
+    epfd:event_add(fd, EPOLLOUT, function ()
         local ok, err = fd:status()
         if ok then
             on_event(s, "connected")
@@ -271,7 +274,7 @@ function m.connect(protocol, address, port)
             else
                 s._flags = EPOLLIN
             end
-            epfd:event_mod(s._fd, s._flags, function(event)
+            epfd:event_mod(s._fd, s._flags, function (event)
                 update_stream(s, event)
             end)
         else
