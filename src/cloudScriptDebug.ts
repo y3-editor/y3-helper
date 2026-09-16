@@ -5,6 +5,30 @@ export const cloudScriptAddress = '127.0.0.1:12306';
 const blockStart = '-- BEGIN Y3 HELPER LOCAL CLOUD DEBUG';
 const blockEnd = '-- END Y3 HELPER LOCAL CLOUD DEBUG';
 
+function entryRange(source: string): { start: number; end: number } | undefined {
+    const start = source.indexOf(blockStart);
+    const end = source.indexOf(blockEnd);
+    if (start === -1 && end === -1) { return undefined; }
+    if (start === -1 || end < start || source.indexOf(blockStart, start + 1) !== -1
+        || source.indexOf(blockEnd, end + 1) !== -1
+        || !/^\uFEFF?[\t ]*$/.test(source.slice(source.lastIndexOf('\n', start - 1) + 1, start))
+        || !/^[\t ]*$/.test(source.slice(source.lastIndexOf('\n', end - 1) + 1, end))
+        || !/^[\t ]*(?:\r?\n|$)/.test(source.slice(end + blockEnd.length))) {
+        throw new Error('云脚本调试引导标记不完整，请检查 main.lua。');
+    }
+    return { start, end: end + blockEnd.length };
+}
+
+export function hasCloudScriptEntry(source: string): boolean {
+    return entryRange(source) !== undefined;
+}
+
+export function removeCloudScriptEntry(source: string): string {
+    const range = entryRange(source);
+    if (!range) { return source; }
+    return source.slice(0, range.start) + source.slice(range.end).replace(/^(?:\r?\n){0,3}/, '');
+}
+
 export function cloudScriptPipe(projectPath: string): string {
     const key = createHash('sha256').update(projectPath.replace(/\\/g, '/').toLowerCase()).digest('hex').slice(0, 24);
     return `\\\\.\\pipe\\y3-helper-cloud-${key}`;
@@ -21,8 +45,7 @@ function luaString(value: string): string {
 /** Load at entry only when the host exposes the local debugger prerequisites. */
 export function installCloudScriptEntry(source: string, bootstrapPath: string, debuggerPath: string, pipe: string): string {
     const newline = source.includes('\r\n') ? '\r\n' : '\n';
-    const start = source.indexOf(blockStart);
-    const end = source.indexOf(blockEnd);
+    const range = entryRange(source);
     const block = [
         blockStart,
         '-- 本段代码由 Y3 Helper 自动添加和维护，用于在本地附加云脚本调试器。',
@@ -46,12 +69,9 @@ export function installCloudScriptEntry(source: string, bootstrapPath: string, d
         'end',
         blockEnd,
     ].join(newline);
-    if (start !== -1 || end !== -1) {
-        if (start === -1 || end < start || source.indexOf(blockStart, start + 1) !== -1) {
-            throw new Error('云脚本调试引导标记不完整，请检查 main.lua。');
-        }
-        const suffix = source.slice(end + blockEnd.length);
-        return source.slice(0, start) + block + newline.repeat(3) + suffix.replace(/^(?:\r?\n){0,3}/, '');
+    if (range) {
+        const suffix = source.slice(range.end);
+        return source.slice(0, range.start) + block + newline.repeat(3) + suffix.replace(/^(?:\r?\n){0,3}/, '');
     }
     const bom = source.startsWith('\uFEFF') ? '\uFEFF' : '';
     return bom + block + newline.repeat(3) + source.slice(bom.length);

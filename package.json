@@ -201,6 +201,16 @@
         },
         "commands": [
             {
+                "command": "y3-helper.enableCloudScriptDebug",
+                "title": "启用本地云脚本调试",
+                "category": "%Y3开发助手%"
+            },
+            {
+                "command": "y3-helper.removeCloudScriptDebug",
+                "title": "移除本地云脚本调试引导",
+                "category": "%Y3开发助手%"
+            },
+            {
                 "command": "y3-helper.debug.toggle",
                 "title": "Toggle Player Debugger",
                 "icon": "$(debug)"

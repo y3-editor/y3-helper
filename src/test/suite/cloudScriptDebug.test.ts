@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as net from 'net';
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { CloudScriptBridge, cloudScriptPipe, createCloudScriptDebugConfiguration, installCloudScriptEntry } from '../../cloudScriptDebug';
+import { CloudScriptBridge, cloudScriptPipe, createCloudScriptDebugConfiguration, installCloudScriptEntry, removeCloudScriptEntry } from '../../cloudScriptDebug';
 
 const bootstrap = path.resolve(__dirname, '../../..', 'resources/cloudScriptDebugger.lua');
 const extensions = path.join(os.homedir(), '.vscode', 'extensions');
@@ -42,6 +42,13 @@ suite('Cloud script entry attachment', () => {
 
     test('refuses incomplete owned markers instead of removing business code', () => {
         assert.throws(() => installCloudScriptEntry('-- BEGIN Y3 HELPER LOCAL CLOUD DEBUG\nreturn 42', 'a', 'b', 'c'));
+    });
+
+    test('removal preserves BOM and business text and rejects markers embedded in other comments', () => {
+        const original = '\uFEFF-- business\r\nreturn 42\r\n';
+        const installed = installCloudScriptEntry(original, 'bootstrap', 'debugger', 'pipe');
+        assert.strictEqual(removeCloudScriptEntry(installed), original);
+        assert.throws(() => removeCloudScriptEntry(installed.replace('-- BEGIN', '-- -- BEGIN')));
     });
 
     test('replaces old event and entry-switch blocks without retaining legacy selection', () => {

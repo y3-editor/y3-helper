@@ -5,7 +5,7 @@ import * as net from 'net';
 import { randomUUID } from 'crypto';
 import { env } from './env';
 import { config } from './config';
-import { CloudScriptBridge, cloudScriptPipe, createCloudScriptDebugConfiguration, installCloudScriptEntry } from './cloudScriptDebug';
+import { CloudScriptBridge, cloudScriptPipe, createCloudScriptDebugConfiguration, installCloudScriptEntry, hasCloudScriptEntry, removeCloudScriptEntry } from './cloudScriptDebug';
 
 let context: vscode.ExtensionContext;
 let active: { project: string; bridge: CloudScriptBridge } | undefined;
@@ -18,6 +18,22 @@ const timeoutMs = 30000;
 export function init(extensionContext: vscode.ExtensionContext) {
     context = extensionContext;
     disposed = false;
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider('lua', {
+            async resolveDebugConfiguration(_folder, debugConfig) {
+                if (debugConfig.y3HelperDebugKind !== 'cloudScript') { return debugConfig; }
+                try {
+                    if (config.multiMode) { throw new Error('本地多开使用远程云脚本服，不能附加本地云脚本。'); }
+                    if (!env.projectUri) { throw new Error('请先打开云脚本项目。'); }
+                    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(env.projectUri.fsPath, 'cloud_script/main.lua')));
+                    if (!hasCloudScriptEntry(doc.getText()) || doc.isDirty) {
+                        throw new Error('请先执行“启用本地云脚本调试”并保存，然后重新启动游戏；也可以勾选自动附加后通过 Helper 启动。');
+                    }
+                    return debugConfig;
+                } catch (error) { reportError(error); return undefined; }
+            },
+        }),
+    );
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('lua', {
         async provideDebugConfigurations(folder) {
             const project = env.projectUri;
@@ -37,9 +53,13 @@ export function init(extensionContext: vscode.ExtensionContext) {
         if (session.configuration.y3HelperDebugKind === 'cloudScript') { sessions.add(session); }
     }));
     context.subscriptions.push(vscode.debug.onDidTerminateDebugSession((session) => sessions.delete(session)));
-    const refresh = () => { void prepare().catch(reportError); };
-    refresh();
-    context.subscriptions.push(env.onDidChange(refresh));
+    context.subscriptions.push(env.onDidChange(() => {
+        if (active && active.project !== env.projectUri?.fsPath) {
+            cancelPending?.();
+            active.bridge.dispose();
+            active = undefined;
+        }
+    }));
     context.subscriptions.push({ dispose() {
         disposed = true;
         cancelPending?.();
@@ -48,12 +68,56 @@ export function init(extensionContext: vscode.ExtensionContext) {
     } });
 }
 
+async function saveEntry(doc: vscode.TextDocument, updated: string) {
+    if (updated === doc.getText()) { return; }
+    if (doc.isDirty) { throw new Error('请先保存 cloud_script/main.lua，再修改调试引导。'); }
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), updated);
+    if (!await vscode.workspace.applyEdit(edit) || !await doc.save()) { throw new Error('无法保存云脚本调试引导。'); }
+}
+
+export async function enable(): Promise<boolean> {
+    try {
+        const project = env.projectUri;
+        if (!project) { throw new Error('请先打开云脚本项目。'); }
+        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(project.fsPath, 'cloud_script/main.lua')));
+        const installed = hasCloudScriptEntry(doc.getText());
+        if (!installed) {
+            const choice = await vscode.window.showWarningMessage(
+                '启用本地云脚本调试会在 main.lua 开头插入调试器引导代码。确认要修改 main.lua 吗？',
+                { modal: true },
+                '确认修改',
+            );
+            if (choice !== '确认修改') { return false; }
+        }
+        if (env.projectUri?.fsPath !== project.fsPath) { throw new Error('项目已切换，请重新启用云脚本调试。'); }
+        if (!await prepare()) { throw new Error('未找到 cloud_script/main.lua，或当前平台不支持本地调试。'); }
+        if (!installed) { void vscode.window.showInformationMessage('本地云脚本调试引导已准备好，请重新启动游戏后附加。'); }
+        return true;
+    } catch (error) { reportError(error); return false; }
+}
+
+export async function remove(): Promise<boolean> {
+    preparing = preparing.catch(() => false).then(async () => {
+        if (!env.projectUri || disposed) { return false; }
+        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(env.projectUri.fsPath, 'cloud_script/main.lua')));
+        await saveEntry(doc, removeCloudScriptEntry(doc.getText()));
+        config.attachCloudScriptWhenLaunch = false;
+        cancelPending?.();
+        active?.bridge.dispose();
+        active = undefined;
+        void vscode.window.showInformationMessage('本地云脚本调试引导已移除，自动附加已关闭。');
+        return true;
+    });
+    try { return await preparing; } catch (error) { reportError(error); return false; }
+}
+
 function reportError(error: unknown) {
     void vscode.window.showErrorMessage(`本地云脚本调试：${String(error)}`);
 }
 
 export function prepare(): Promise<boolean> {
-    // Serialize environment refreshes and launch preparation to preserve entry edits.
+    // Serialize explicit entry edits and launch preparation.
     preparing = preparing.catch(() => false).then(async () => {
         if (disposed) { return false; }
         const project = env.projectUri?.fsPath;
@@ -84,14 +148,7 @@ export function prepare(): Promise<boolean> {
         const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(entry));
         const source = doc.getText();
         const updated = installCloudScriptEntry(source, bootstrapPath, debuggerPath, active.bridge.pipe);
-        if (updated !== source) {
-            if (doc.isDirty) { throw new Error('请先保存 cloud_script/main.lua，再准备云脚本调试。'); }
-            const edit = new vscode.WorkspaceEdit();
-            edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(source.length)), updated);
-            if (!await vscode.workspace.applyEdit(edit) || !await doc.save()) {
-                throw new Error('无法保存云脚本调试引导。');
-            }
-        }
+        await saveEntry(doc, updated);
         return true;
     });
     return preparing;

@@ -368,6 +368,13 @@ class Helper {
     }
 
     private registerCommandOfAttach() {
+        this.context.subscriptions.push(
+            vscode.commands.registerCommand('y3-helper.enableCloudScriptDebug', () => cloudScript.enable()),
+            vscode.commands.registerCommand('y3-helper.removeCloudScriptDebug', async () => {
+                await cloudScript.remove();
+                mainMenu.refresh();
+            }),
+        );
         vscode.commands.registerCommand('y3-helper.attach', async () => {
             await debug.attach();
         });

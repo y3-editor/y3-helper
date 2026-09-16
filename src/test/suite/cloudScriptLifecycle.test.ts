@@ -12,7 +12,7 @@ suite('Cloud script coordinator', function() {
     this.timeout(10000);
     let directory: string;
     let api: typeof import('../../cloudScript');
-    let config: { multiMode: boolean };
+    let config: { multiMode: boolean; attachCloudScriptWhenLaunch: boolean };
     let subscriptions: { dispose(): void }[];
     let tracker: { onDidSendMessage(message: object): void };
     let started: Promise<void>;
@@ -22,8 +22,10 @@ suite('Cloud script coordinator', function() {
     let currentProject: { fsPath: string } | undefined;
     let dynamicProvider: { provideDebugConfigurations(folder?: { uri: { fsPath: string } }): Promise<Record<string, unknown>[]> };
     let providerDisposed: boolean;
+    let resolver: { resolveDebugConfiguration(folder: unknown, configuration: Record<string, unknown>): Promise<Record<string, unknown> | undefined> };
     let setDocumentText: (text: string) => void;
     let environmentListeners: Set<(session: unknown) => void>;
+    let confirmEnable = true;
     const originalEntry = '-- user code\nreturn 42\n';
 
     setup(async function() {
@@ -34,13 +36,14 @@ suite('Cloud script coordinator', function() {
         await fs.writeFile(path.join(directory, 'script/debugger.lua'), '-- fixture');
         const entry = path.join(directory, 'cloud_script/main.lua');
         await fs.writeFile(entry, originalEntry);
-        config = { multiMode: false };
+        config = { multiMode: false, attachCloudScriptWhenLaunch: false };
         currentProject = { fsPath: directory };
         providerDisposed = false;
         subscriptions = [];
         configurations = [];
         warnings = [];
         dirty = false;
+        confirmEnable = true;
         let factory: { createDebugAdapterTracker(session: unknown): typeof tracker };
         let onStart!: () => void;
         started = new Promise((resolve) => { onStart = resolve; });
@@ -76,13 +79,25 @@ suite('Cloud script coordinator', function() {
                 applyEdit: async (edit: { text: string }) => { document.text = edit.text; return true; },
             },
             window: {
-                showWarningMessage: async (message: string) => { warnings.push(message); return '继续运行'; },
+                showWarningMessage: async (message: string, ...options: unknown[]) => {
+                    warnings.push(message);
+                    if (message.includes('插入调试器引导')) {
+                        assert.strictEqual(JSON.stringify(options), JSON.stringify([{ modal: true }, '确认修改']));
+                    }
+                    return message.includes('插入调试器引导')
+                        ? (confirmEnable ? '确认修改' : undefined)
+                        : '继续运行';
+                },
                 showErrorMessage: async (message: string) => { warnings.push(message); },
                 showInformationMessage: async (message: string) => { warnings.push(message); },
             },
             debug: {
                 registerDebugConfigurationProvider: (type: string, provider: typeof dynamicProvider, trigger: number) => {
                     assert.strictEqual(type, 'lua');
+                    if (trigger === undefined) {
+                        resolver = provider as unknown as typeof resolver;
+                        return { dispose() {} };
+                    }
                     assert.strictEqual(trigger, 2);
                     dynamicProvider = provider;
                     return { dispose() { providerDisposed = true; } };
@@ -131,12 +146,67 @@ suite('Cloud script coordinator', function() {
             subscriptions,
             asAbsolutePath: (file: string) => path.resolve(__dirname, '../../..', file),
         } as never);
-        await api.prepare();
     });
 
     teardown(async () => {
         subscriptions?.forEach((subscription) => subscription.dispose());
         if (directory) { await fs.rm(directory, { recursive: true, force: true }); }
+    });
+
+    test('opening and switching projects never writes a bootstrap, even with automatic attachment enabled', async () => {
+        config.attachCloudScriptWhenLaunch = true;
+        environmentListeners.forEach((listener) => listener(undefined));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        assert.strictEqual(await fs.readFile(path.join(directory, 'cloud_script/main.lua'), 'utf8'), originalEntry);
+    });
+
+    test('enable installs the entry and remove restores business code and disables automatic attachment', async () => {
+        assert.strictEqual(await api.enable(), true);
+        const entry = path.join(directory, 'cloud_script/main.lua');
+        assert.match(await fs.readFile(entry, 'utf8'), /BEGIN Y3 HELPER LOCAL CLOUD DEBUG/);
+        config.attachCloudScriptWhenLaunch = true;
+        assert.strictEqual(await api.remove(), true);
+        assert.strictEqual(await fs.readFile(entry, 'utf8'), originalEntry);
+        assert.strictEqual(config.attachCloudScriptWhenLaunch, false);
+        environmentListeners.forEach((listener) => listener(undefined));
+        assert.strictEqual(await fs.readFile(entry, 'utf8'), originalEntry);
+    });
+
+    test('cancelling the enable confirmation leaves main.lua unchanged', async () => {
+        confirmEnable = false;
+        assert.strictEqual(await api.enable(), false);
+        assert.strictEqual(await fs.readFile(path.join(directory, 'cloud_script/main.lua'), 'utf8'), originalEntry);
+    });
+
+    test('re-enabling an installed bootstrap does not request confirmation again', async () => {
+        assert.strictEqual(await api.enable(), true);
+        const firstWarnings = warnings.length;
+        confirmEnable = false;
+        assert.strictEqual(await api.enable(), true);
+        assert.strictEqual(warnings.length, firstWarnings);
+        await api.remove();
+        assert.strictEqual(await api.enable(), false);
+        assert.strictEqual(warnings.length, firstWarnings + 2); // removal notice and new confirmation
+    });
+
+    test('manual resolution rejects a missing bootstrap without editing and permits a prepared entry', async () => {
+        const choice = (await dynamicProvider.provideDebugConfigurations())[0];
+        assert.strictEqual(await resolver.resolveDebugConfiguration(undefined, choice), undefined);
+        assert.strictEqual(await fs.readFile(path.join(directory, 'cloud_script/main.lua'), 'utf8'), originalEntry);
+        assert.match(warnings[0], /启用本地云脚本调试/);
+        await api.prepare();
+        assert.strictEqual(await resolver.resolveDebugConfiguration(undefined, choice), choice);
+        const custom = { type: 'lua', request: 'attach', name: 'User', address: '127.0.0.1:7777' };
+        assert.strictEqual(await resolver.resolveDebugConfiguration(undefined, custom), custom);
+    });
+
+    test('removal refuses incomplete markers without changing the file', async () => {
+        const broken = '-- BEGIN Y3 HELPER LOCAL CLOUD DEBUG\n-- user edit';
+        setDocumentText(broken);
+        const entry = path.join(directory, 'cloud_script/main.lua');
+        await fs.writeFile(entry, broken);
+        assert.strictEqual(await api.remove(), false);
+        assert.strictEqual(await fs.readFile(entry, 'utf8'), broken);
     });
 
     function signalDebuggerReady() {
@@ -193,6 +263,7 @@ suite('Cloud script coordinator', function() {
     });
 
     test('does not save unrelated unsaved business edits when the entry is current', async () => {
+        await api.prepare();
         const entry = path.join(directory, 'cloud_script/main.lua');
         const disk = await fs.readFile(entry, 'utf8');
         setDocumentText(disk + '\n-- unsaved business edit');

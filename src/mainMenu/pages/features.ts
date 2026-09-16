@@ -6,6 +6,7 @@ import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
 import { WebviewTerminal } from "../../console/webviewTerminal";
 import * as globalScript from '../../globalScript';
+import * as cloudScript from '../../cloudScript';
 import * as l10n from '@vscode/l10n';
 import { getDefaultLocalArchiveNickname } from '../../multiPlayerArchives';
 
@@ -427,7 +428,7 @@ export class 功能 extends TreeNode {
                                     ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
                                     : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。');
                             },
-                            onDidChangeCheckboxState(state, node) {
+                            async onDidChangeCheckboxState(state, node) {
                                 if (config.multiMode && state === vscode.TreeItemCheckboxState.Checked) {
                                     vscode.window.showInformationMessage(l10n.t(
                                         '本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。',
@@ -435,7 +436,13 @@ export class 功能 extends TreeNode {
                                     node.refresh();
                                     return;
                                 }
-                                config.attachCloudScriptWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
+                                const enabled = state === vscode.TreeItemCheckboxState.Checked;
+                                if (enabled && !await cloudScript.enable()) {
+                                    node.refresh();
+                                    return;
+                                }
+                                if (!enabled) { cloudScript.cancelAutoAttach(); }
+                                config.attachCloudScriptWhenLaunch = enabled;
                             },
                         }),
                     ],
