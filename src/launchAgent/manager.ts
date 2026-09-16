@@ -200,6 +200,10 @@ export class LaunchAgentManager {
      * 也不用环境变量继承：`-Verb RunAs` 经 ShellExecuteEx → AppInfo 服务创建进程，
      * 提权进程的环境变量由系统重建，拿不到调用者设置的 `ELECTRON_RUN_AS_NODE`，
      * 所以必须由提权后的脚本自己设置。
+     *
+     * 脚本必须带 UTF-8 BOM：Windows PowerShell 5.1 对没有 BOM 的 .ps1 按系统 ANSI 代码页解析，
+     * 中文编辑器路径（如 `D:\Y3编辑器`）会被拆成乱码，代理拿到的 `--allow-dir` 与实际目录不符，
+     * 启动请求会被白名单校验拒绝（表现为「启动游戏失败！」）。
      */
     private prepareLauncher(allowDir: string): string {
         let agent = this.context.asAbsolutePath(path.join('dist', 'launchAgent.js'));
@@ -227,7 +231,7 @@ export class LaunchAgentManager {
             '',
         ].join('\r\n');
         fs.mkdirSync(path.dirname(this.launcherPath), { recursive: true });
-        fs.writeFileSync(this.launcherPath, content);
+        fs.writeFileSync(this.launcherPath, '\uFEFF' + content, 'utf8');
         return this.launcherPath;
     }
 

@@ -130,7 +130,9 @@ function checkExe(exe: string): string | undefined {
     }
     let relative = path.relative(options!.allowDir, path.resolve(path.dirname(exe)));
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
-        return 'path is outside of the allowed directory';
+        // 带上两侧目录，便于区分「用户换了编辑器目录」和「路径被编码破坏」两类问题
+        return 'path is outside of the allowed directory: allowDir=' + options!.allowDir
+            + ' exeDir=' + path.resolve(path.dirname(exe));
     }
     return undefined;
 }
