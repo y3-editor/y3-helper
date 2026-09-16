@@ -251,6 +251,7 @@
   "启动游戏后立即附加": "Attach immediately after starting the game",
   "启动后附加本地云脚本": "Attach local cloud script after launch",
   "本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。": "Local multi-instance mode connects to the production remote cloud script service, so the local cloud script debugger cannot attach.",
+  "在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。": "Attaches automatically at the local cloud script entry point via port 12306, then continues execution.",
   "正在请求管理员权限启动代理...": "Requesting administrator privileges to start the launch agent...",
   "提权代理已启动": "Launch agent started",
   "已重连到提权代理": "Reconnected to the launch agent",
