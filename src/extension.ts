@@ -226,6 +226,22 @@ class Helper {
                     ], y3Uri);
                 }
 
+                // 启用全局脚本时，Y3 库只应存在于全局目录。地图里残留的那份
+                // 会因为“地图脚本优先于全局脚本”而覆盖全局，必须移除。
+                if (env.globalScriptEnabled) {
+                    for (const map of env.project?.maps ?? []) {
+                        let mapY3Uri = map.y3Uri;
+                        if (!await y3.fs.isExists(mapY3Uri)) {
+                            continue;
+                        }
+                        await y3.fs.removeFile(mapY3Uri, {
+                            recursive: true,
+                            useTrash: true,
+                        });
+                        vscode.window.showInformationMessage(l10n.t('已将原有的 {0} 目录移至回收站', mapY3Uri.fsPath));
+                    }
+                }
+
                 // 初始化配置
                 await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, '.log'));
                 if (env.globalScriptUri) {
