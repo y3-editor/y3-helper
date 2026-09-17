@@ -1,4 +1,5 @@
 import * as y3 from 'y3-helper';
+import * as vscode from 'vscode';
 import * as fs from '../tools/fs';
 import { throttle } from '../utility/decorators';
 import * as l10n from '@vscode/l10n';
@@ -40,19 +41,27 @@ export abstract class BaseBuilder {
             this._mapInited.add(map);
             this.initMap(map);
         }
+        await this.writeTo(map.helperUri, map);
+        // 启用全局脚本时额外生成一份到全局目录做兜底；
+        // 加载顺序是“地图脚本优先于全局脚本”，所以地图里已有的那份会覆盖全局这份。
+        if (y3.env.globalScriptEnabled && y3.env.globalHelperUri && map === y3.env.project?.entryMap) {
+            await this.writeTo(y3.env.globalHelperUri, map);
+        }
+    }
+
+    private async writeTo(rootUri: vscode.Uri, map: y3.Map) {
         let code = await this.make(map);
         if (code === undefined) {
-            if (await fs.isExists(map.helperUri, this.path)) {
+            if (await fs.isExists(rootUri, this.path)) {
                 return;
-            } else {
-                await fs.writeFile(map.helperUri, this.path, '');
             }
-        } else {
-            code = code.replace(/\by3\b/g, l10n.t('y3'));
-            code = code.replace(/\bY3\b/g, l10n.t('Y3'));
-            if (code !== (await fs.readFile(map.helperUri))?.string) {
-                await fs.writeFile(map.helperUri, this.path, code);
-            }
+            await fs.writeFile(rootUri, this.path, '');
+            return;
+        }
+        code = code.replace(/\by3\b/g, l10n.t('y3'));
+        code = code.replace(/\bY3\b/g, l10n.t('Y3'));
+        if (code !== (await fs.readFile(rootUri, this.path))?.string) {
+            await fs.writeFile(rootUri, this.path, code);
         }
     }
 

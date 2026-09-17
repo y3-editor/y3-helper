@@ -138,7 +138,12 @@ class Helper {
                 };
 
                 let scriptUri = env.scriptUri!;
-                let y3Uri = env.y3Uri!;
+                // 启用全局脚本后 Y3 库位于 global_script/y3
+                let y3Uri = env.y3RepoUri;
+                if (!y3Uri) {
+                    vscode.window.showErrorMessage(l10n.t('未找到Y3脚本库路径！'));
+                    return;
+                }
 
                 try {
                     if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type === vscode.FileType.Directory) {
@@ -466,15 +471,10 @@ class Helper {
     /**
      * 检查 Y3 仓库是否已初始化（.git 目录存在）。
      * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
-     * 启用全局脚本后，仓库可能位于 global_script/y3。
+     * 启用全局脚本后，仓库位于 global_script/y3（由 env.y3RepoUri 统一给出）。
      */
     private async isY3Initialized(): Promise<boolean> {
-        if (await this.hasGitDirectory(env.y3Uri)) {
-            return true;
-        }
-        return this.hasGitDirectory(
-            env.globalScriptUri ? vscode.Uri.joinPath(env.globalScriptUri, l10n.t('y3')) : undefined
-        );
+        return this.hasGitDirectory(env.y3RepoUri);
     }
 
     private registerCommandOfMCP() {
@@ -602,13 +602,14 @@ class Helper {
                 await this.tryAutoStartMCP();
             })();
 
+            // 先确定全局脚本是否启用，后面的产物（meta/插件等）依赖它决定落点
+            await this.runStartupStep('globalScript.init', () => globalScript.init());
             await this.runStartupStep('metaBuilder.init', () => metaBuilder.init());
             await this.runStartupStep('debug.init', () => debug.init(this.context));
             await this.runStartupStep('cloudScript.init', () => cloudScript.init(this.context));
             await this.runStartupStep('console.init', () => console.init());
             await this.runStartupStep('editorTable.init', () => editorTable.init());
             await this.runStartupStep('plugin.init', () => plugin.init());
-            await this.runStartupStep('globalScript.init', () => globalScript.init());
             await this.runStartupStep('luaLanguage.init', () => luaLanguage.init());
             await this.runStartupStep('ecaCompiler.init', () => ecaCompiler.init());
             await this.runStartupStep('y3.version.init', () => y3.version.init());

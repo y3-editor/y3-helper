@@ -45,12 +45,20 @@ export class Events extends BaseDefine {
     }
 
     get watchPattern() {
-        return new RelativePattern(this.map.triggerMapUri, filePath);
+        let patterns = [new RelativePattern(this.map.triggerMapUri, filePath)];
+        if (y3.env.globalScriptEnabled && y3.env.globalScriptUri) {
+            patterns.push(new RelativePattern(y3.env.globalScriptUri, filePath));
+        }
+        return patterns;
     }
 
     private async loadEvents() {
         let events: Event[] = [];
+        // 地图内优先，地图里没有时回退到全局脚本目录
         let jsonFile = await tools.fs.readFile(this.map.triggerMapUri, filePath);
+        if (!jsonFile && y3.env.globalScriptEnabled && y3.env.globalScriptUri) {
+            jsonFile = await tools.fs.readFile(y3.env.globalScriptUri, filePath);
+        }
         if (!jsonFile) {
             return events;
         }

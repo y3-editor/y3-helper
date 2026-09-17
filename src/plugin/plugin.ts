@@ -153,13 +153,43 @@ export class PluginManager extends vscode.Disposable {
     }
 
     private createPluginFileWatcher() {
+        // 全局脚本启用时，全局插件目录里的插件对所有地图生效；地图内同名插件优先
+        this.watchPluginDir(this.uri, false);
+        let globalUri = this.globalPluginUri;
+        if (globalUri) {
+            this.watchPluginDir(globalUri, true);
+        }
+    }
+
+    /**
+     * 全局插件目录。启用全局脚本后，这里放的是所有地图共用的插件。
+     */
+    private get globalPluginUri(): vscode.Uri | undefined {
+        if (!y3.env.globalScriptEnabled) {
+            return undefined;
+        }
+        return y3.env.globalPluginUri;
+    }
+
+    /**
+     * 插件可能存在的目录：地图内的（优先）+ 全局的
+     */
+    private get pluginDirs(): vscode.Uri[] {
+        let globalUri = this.globalPluginUri;
+        return globalUri ? [this.uri, globalUri] : [this.uri];
+    }
+
+    private watchPluginDir(dir: vscode.Uri, fromGlobal: boolean) {
         let watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(this.uri, '**/*.js')
+            new vscode.RelativePattern(dir, '**/*.js')
         );
         this._disposables.push(watcher);
         watcher.onDidCreate((e) => {
             let name = this.getName(e);
             if (!name) {
+                return;
+            }
+            if (fromGlobal && this.plugins[name]) {
                 return;
             }
             this.plugins[name] = new Plugin(e, name);
@@ -215,14 +245,23 @@ export class PluginManager extends vscode.Disposable {
     public plugins: Record<string, Plugin> = {};
     private async loadPlugins() {
         this._ready = false;
-        for (const [filename, fileType] of await y3.fs.scan(this.uri)) {
+        // 先扫全局再扫地图，同名时地图优先
+        let globalUri = this.globalPluginUri;
+        if (globalUri && await y3.fs.isDirectory(globalUri)) {
+            await this.loadPluginsFrom(globalUri);
+        }
+        await this.loadPluginsFrom(this.uri);
+        this._ready = true;
+    }
+
+    private async loadPluginsFrom(dir: vscode.Uri) {
+        for (const [filename, fileType] of await y3.fs.scan(dir)) {
             if (fileType === vscode.FileType.File && filename.endsWith('.js')) {
                 let name = filename.replace(/\.js$/, '');
-                const plugin = new Plugin(y3.uri(this.uri, filename), name);
+                const plugin = new Plugin(y3.uri(dir, filename), name);
                 this.plugins[name] = plugin;
             }
         }
-        this._ready = true;
     }
 
     private async ready() {
@@ -301,10 +340,13 @@ export class PluginManager extends vscode.Disposable {
     }
 
     public getName(uri: vscode.Uri) {
-        if (!uri.path.toLocaleLowerCase().startsWith(this.uri.path.toLocaleLowerCase())) {
-            return undefined;
+        let path = uri.path.toLocaleLowerCase();
+        for (const dir of this.pluginDirs) {
+            if (path.startsWith(dir.path.toLocaleLowerCase())) {
+                return uri.path.slice(dir.path.length + 1).replace(/\.js$/, '');
+            }
         }
-        return uri.path.slice(this.uri.path.length + 1).replace(/\.js$/, '');
+        return undefined;
     }
 
     public async findPlugin(uri: vscode.Uri) {

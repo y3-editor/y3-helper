@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { runShell } from './runShell';
+import { env } from './env';
 import * as l10n from '@vscode/l10n';
 
 
@@ -57,7 +58,8 @@ export class LuaDocMaker {
             vscode.window.showErrorMessage(l10n.t('请先打开工作目录！'));
             return;
         }
-        let y3Uri = vscode.Uri.joinPath(currentUri, l10n.t('y3'));
+        // 启用全局脚本后 Y3 库位于 global_script/y3
+        let y3Uri = env.y3RepoUri ?? vscode.Uri.joinPath(currentUri, l10n.t('y3'));
         this.exeUri = exeUri;
         this.y3Uri = y3Uri;
     }

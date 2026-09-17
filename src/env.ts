@@ -478,6 +478,10 @@ class Env {
     public mapUri?: vscode.Uri;
     public scriptUri?: vscode.Uri;
     public globalScriptUri?: vscode.Uri;
+    // 全局脚本下的 y3-helper 产物目录（meta/plugin 等），与地图内的同名目录构成“全局兜底 + 地图覆盖”
+    public globalHelperUri?: vscode.Uri;
+    public globalMetaUri?: vscode.Uri;
+    public globalPluginUri?: vscode.Uri;
     public y3Uri?: vscode.Uri;
     public helperUri?: vscode.Uri;
     public metaUri?: vscode.Uri;
@@ -487,6 +491,22 @@ class Env {
     public ruleUri?: vscode.Uri;// rule路径
     public project?: Project;
     public currentMap?: Map;
+
+    /**
+     * 全局脚本是否已启用。读盘结果由 globalScript.refreshEnabled() 刷新到这里。
+     */
+    public globalScriptEnabled = false;
+
+    /**
+     * Y3 库（y3-lualib 仓库）所在目录。
+     * 启用全局脚本后仓库在 global_script/y3，否则在当前地图的 script/y3。
+     */
+    public get y3RepoUri(): vscode.Uri | undefined {
+        if (this.globalScriptEnabled && this.globalScriptUri) {
+            return vscode.Uri.joinPath(this.globalScriptUri, l10n.t('y3'));
+        }
+        return this.y3Uri;
+    }
 
     public get triggerMapUri(): vscode.Uri | undefined {
         if (this.project?.setting?.use_main_level_trigger_and_object) {
@@ -572,6 +592,9 @@ class Env {
         }
         this.projectUri = projectUri;
         this.globalScriptUri = vscode.Uri.joinPath(this.projectUri, 'global_script');
+        this.globalHelperUri = vscode.Uri.joinPath(this.globalScriptUri, `${l10n.t("y3-helper")}`);
+        this.globalMetaUri = vscode.Uri.joinPath(this.globalHelperUri, 'meta');
+        this.globalPluginUri = vscode.Uri.joinPath(this.globalHelperUri, 'plugin');
         this.project?.dispose();
         this.project = new Project(projectUri, () => {
             this.fireOnDidReload();

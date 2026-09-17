@@ -5,10 +5,19 @@ import * as y3 from 'y3-helper';
 import { config } from "../../config";
 import { TreeViewManager } from "../../console/treeView";
 import { WebviewTerminal } from "../../console/webviewTerminal";
-import * as globalScript from '../../globalScript';
 import * as cloudScript from '../../cloudScript';
 import * as l10n from '@vscode/l10n';
 import { getDefaultLocalArchiveNickname } from '../../multiPlayerArchives';
+
+/** “初始化Y3库”是否已完成。启用全局脚本后仓库位于 global_script/y3。 */
+async function isY3RepoInited() {
+    const y3Uri = env.y3RepoUri;
+    if (!y3Uri) {
+        return false;
+    }
+    return await y3.fs.isExists(vscode.Uri.joinPath(y3Uri, '更新日志.md'))
+        || await y3.fs.isExists(vscode.Uri.joinPath(y3Uri, 'CHANGELOG.md'));
+}
 
 function 多开模式() {
     let loadedArchives = env.project?.multiPlayerArchives;
@@ -272,15 +281,12 @@ export class 功能 extends TreeNode {
                     },
                     update: async (node) => {
                         node.iconPath = new vscode.ThemeIcon('cloud-download');
-                        if (await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md')) ||
-                            await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, 'CHANGELOG.md'))) {
+                        if (await isY3RepoInited()) {
                             node.iconPath = new vscode.ThemeIcon('check');
                         }
                     },
                     show: async () => {
-                        return !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, '更新日志.md'))
-                            && !await y3.fs.isExists(vscode.Uri.joinPath(env.y3Uri!, 'CHANGELOG.md'))
-                            && !await globalScript.isEnabled();
+                        return !await isY3RepoInited();
                     }
                 }),
                 new TreeNode(l10n.t('编辑器需要更新！'), {

@@ -140,6 +140,7 @@
   "正在启用全局脚本": "Enabling global script",
   "已启用全局脚本": "Global script enabled",
   "启用全局脚本失败": "Failed to enable global script",
+  "未找到Y3脚本库路径！": "Y3 script library path not found!",
   "跳字": "Jump Text",
   "字体": "Font",
   "多开模式": "Multi-instance Mode",

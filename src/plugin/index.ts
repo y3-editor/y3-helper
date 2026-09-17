@@ -7,29 +7,36 @@ import * as mainMenu from '../mainMenu';
 import * as l10n from '@vscode/l10n';
 import { RunButtonProvider } from './codeLen';
 
+async function isInitedDir(uri?: vscode.Uri) {
+    if (!uri) {
+        return false;
+    }
+    return await y3.fs.isDirectory(uri);
+}
+
 export async function hasInited() {
     await y3.env.mapReady();
-    if (!y3.env.pluginUri) {
-        return false;
+    if (await isInitedDir(y3.env.pluginUri)) {
+        return true;
     }
-    if (!await y3.fs.isDirectory(y3.env.pluginUri)) {
-        return false;
-    }
-    return true;
+    // 启用全局脚本后插件也可能只在全局目录里
+    return y3.env.globalScriptEnabled && await isInitedDir(y3.env.globalPluginUri);
 }
 
 async function initPlugin() {
     await y3.env.mapReady();
-    if (!y3.env.pluginUri) {
+    // 启用全局脚本时装到全局目录，所有地图共享；地图内目录仍可作为覆盖层
+    const targetUri = y3.env.globalScriptEnabled ? y3.env.globalPluginUri : y3.env.pluginUri;
+    if (!targetUri) {
         return;
     }
     const templateDir = y3.extensionPath('template/plugin');
-    await y3.fs.copy(templateDir, y3.env.pluginUri, {
+    await y3.fs.copy(templateDir, targetUri, {
         overwrite: true,
         recursive: true,
         nameMap: 'listfile.json',
     });
-    const needOpen = y3.uri(y3.env.pluginUri, l10n.t('1-使用代码修改物编.js'));
+    const needOpen = y3.uri(targetUri, l10n.t('1-使用代码修改物编.js'));
     if (!await y3.fs.isFile(needOpen)) {
         return;
     }
@@ -59,6 +66,12 @@ async function updatePluginDTS(showme = false) {
             y3.open(targetUri);
             mainMenu.refresh(l10n.t('插件'));
         }
+    }
+    // 全局插件目录也放一份，保证全局插件的类型提示
+    if (y3.env.globalScriptEnabled && y3.env.globalPluginUri) {
+        await y3.fs.copy(templateUri, y3.uri(y3.env.globalPluginUri, 'y3-helper.d.ts'), {
+            overwrite: true,
+        });
     }
 }
 

@@ -198,7 +198,7 @@ export async function migrateOldUser(projectUri: vscode.Uri): Promise<boolean> {
     }
 
     // .y3maker 不存在，但只有已初始化过的项目才自动恢复（避免对新建项目触发 clone）
-    const y3Uri = env.y3Uri;
+    const y3Uri = env.y3RepoUri;
     if (!y3Uri) {
         return false;
     }
@@ -256,7 +256,7 @@ export async function forceRemoteUpdate(projectUri: vscode.Uri): Promise<void> {
  * 根据 y3-lualib 仓库的 remote 地址推断来源（github / gitee）
  */
 function detectRepoSource(projectUri: vscode.Uri): string {
-    const y3Dir = env.y3Uri?.fsPath;
+    const y3Dir = env.y3RepoUri?.fsPath;
     if (y3Dir) {
         try {
             const result = cp.execFileSync('git', ['remote', 'get-url', 'origin'], {
