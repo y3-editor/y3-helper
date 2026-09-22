@@ -620,10 +620,17 @@ class Helper {
                     return;
                 }
 
-                await Promise.all([
-                    config.attachWhenLaunch ? debug.attach() : Promise.resolve(true),
-                    cloudScriptAttach?.completion ?? Promise.resolve(true),
-                ]);
+                // 附加调试器要等游戏真正能连上（冷启动可能几十秒），不能阻塞命令返回：
+                // 调用方（如 MCP 的 executeCommand）超时后会重试「启动游戏」，开出两个游戏。
+                if (config.attachWhenLaunch) {
+                    debug.attach().catch((error) => {
+                        tools.log.error(l10n.t('附加调试器失败：{0}', String(error)));
+                    });
+                }
+                // 云脚本自动附加同样要等游戏起来（含 30 秒等待与弹窗），也放后台，不阻塞命令返回。
+                cloudScriptAttach?.completion.catch((error) => {
+                    tools.log.error(String(error));
+                });
             });
         });
     }

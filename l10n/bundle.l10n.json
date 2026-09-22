@@ -68,6 +68,7 @@
   "附加调试器": "Attach debugger",
   "💡附加【{0}】": "💡Attach【{0}】",
   "正在启动调试器({0})": "Starting debugger ({0})",
+  "附加调试器失败：{0}": "Failed to attach debugger: {0}",
   "准备重连调试器({0})": "Preparing to reconnect debugger ({0})",
   "正在重连调试器({0})": "Reconnecting debugger ({0})",
   "更新": "Update",
