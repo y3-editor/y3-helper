@@ -209,7 +209,7 @@ export class McpHub {
 
         if (!(await fileExists(settingsPath))) {
             // 只在 .y3maker 目录已存在时才创建默认配置文件，不主动创建目录
-            // 避免在 migrateOldUser clone 之前误创建 .y3maker 目录导致 git clone 失败
+            // 避免在 y3makerConfig 克隆 .y3maker 之前误创建目录，导致 clone 失败
             try {
                 await fs.access(settingsDir);
                 await fs.writeFile(settingsPath, JSON.stringify({ mcpServers: {} }, null, 2));

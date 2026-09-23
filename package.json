@@ -449,6 +449,23 @@
                     "default": true,
                     "scope": "resource"
                 },
+                "Y3-Helper.CloneY3MakerConfig": {
+                    "title": "%拉取Y3Maker配置%",
+                    "description": "%拉取Y3Maker配置说明%",
+                    "type": "string",
+                    "enum": [
+                        "ask",
+                        "always",
+                        "never"
+                    ],
+                    "enumDescriptions": [
+                        "%拉取Y3Maker配置-ask%",
+                        "%拉取Y3Maker配置-always%",
+                        "%拉取Y3Maker配置-never%"
+                    ],
+                    "default": "ask",
+                    "scope": "window"
+                },
                 "Y3-Helper.ServerPort": {
                     "title": "%客户端连接端口%",
                     "description": "%使用0表示随机端口%",

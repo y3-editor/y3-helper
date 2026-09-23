@@ -14,6 +14,7 @@ import { 跳字 } from './pages/jumpword';
 import { 字体 } from './pages/font';
 import { CodeMaker入口 } from './pages/codemaker';
 import { Y3MakerConfigUpdate } from './pages/y3makerConfigUpdate';
+import { Y3MakerConfigInit } from './pages/y3makerConfigInit';
 import * as l10n from '@vscode/l10n';
 
 
@@ -39,6 +40,7 @@ function makeMainNode() {
                 ]
             }),
             new 环境,
+            new Y3MakerConfigInit,
             new Y3MakerConfigUpdate,
             new CodeMaker入口,
             new TreeNode(l10n.t('重新选择Y3地图路径'), {

@@ -10,7 +10,12 @@ import * as mainMenu from './mainMenu';
 
 import { env } from './env';
 import { runShell } from './runShell';
-import { getConfigRepoUrl, checkForUpdates, migrateOldUser, performUpdate, forceRemoteUpdate, clearCachedUpdateStatus, getCachedUpdateStatus } from './y3makerConfig';
+import {
+    getConfigRepoUrl, checkForUpdates, performUpdate, forceRemoteUpdate, clearCachedUpdateStatus,
+    getCachedUpdateStatus, getCloneY3MakerPreference, getY3MakerDirState,
+    listY3MakerEntries, mergeY3MakerFromRemote, replaceY3MakerFromRemote, cloneY3MakerIfMissing,
+    releaseY3MakerWatchers,
+} from './y3makerConfig';
 import { LuaDocMaker } from './makeLuaDoc';
 import { GameLauncher } from './launchGame';
 import { NetworkServer } from './networkServer';
@@ -69,6 +74,10 @@ class Helper {
             if (!env.projectUri) {
                 return;
             }
+            // 只有我们自己的仓库才 pull，别把用户自己的仓库搞乱
+            if (await getY3MakerDirState(env.projectUri) !== 'managed') {
+                return;
+            }
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: l10n.t('正在更新 Y3Maker 配置...'),
@@ -110,6 +119,175 @@ class Helper {
                 }
             });
         });
+    }
+
+    /**
+     * 按用户偏好决定是否把 y3-maker-config 克隆到 .y3maker。
+     * 只有用户主动初始化项目时才会走到这里，所以可以弹窗询问。
+     * 注意：弹窗里的选择只对这一次生效，不会去改偏好——想“以后别再问”由用户自己在设置里改。
+     */
+    private async cloneY3MakerConfig(repoSource: 'github' | 'gitee'): Promise<boolean> {
+        const preference = getCloneY3MakerPreference();
+        let shouldClone = preference === 'always';
+
+        if (preference === 'ask') {
+            const cloneOption = l10n.t('拉取');
+            // 模态框本来就自带一个“取消”（VS Code 补的），所以这里只给正向选项
+            const choice = await vscode.window.showInformationMessage(
+                l10n.t('要拉取 Y3Maker 配置吗？'),
+                {
+                    modal: true,
+                    detail: l10n.t('会在项目根目录创建 .y3maker，用来存放规则、技能和 MCP 配置。想让以后的项目不再问，可在设置里改 CloneY3MakerConfig。'),
+                },
+                cloneOption,
+            );
+            // 只有明确点「拉取」才拉；取消/关窗都是本次不拉，也都不改偏好
+            shouldClone = choice === cloneOption;
+        }
+
+        if (!shouldClone) {
+            vscode.window.showInformationMessage(l10n.t('已跳过 Y3Maker 配置。可点主菜单的“Y3Maker 配置未初始化”拉取，或在设置里改 CloneY3MakerConfig。'));
+            return false;
+        }
+
+        return await this.pullY3MakerConfig(getConfigRepoUrl(repoSource));
+    }
+
+    /**
+     * 用户主动触发的拉取：按 .y3maker 当前状态决定怎么做。
+     * - missing：直接 clone（没有任何东西会丢）
+     * - partial：弹窗三选一（合并 / 备份并替换 / 稍后再说）
+     * - managed：已经是我们管的仓库，无事可做
+     * - foreign：不是我们的仓库，绝不碰
+     * 启动后台不走这里：那里的规则是“永不弹窗、只做增量动作”。
+     */
+    private async pullY3MakerConfig(repoUrl: string): Promise<boolean> {
+        const projectUri = env.projectUri;
+        if (!projectUri) {
+            return false;
+        }
+
+        const state = await getY3MakerDirState(projectUri);
+        if (state === 'managed') {
+            return true;
+        }
+        if (state === 'foreign') {
+            vscode.window.showWarningMessage(l10n.t('.y3maker 已经是一个 git 仓库，但不是 Y3Maker 的配置仓库，已跳过。'));
+            return false;
+        }
+
+        let action: 'merge' | 'replace' = 'replace';
+        if (state === 'partial') {
+            const choice = await this.askPartialAction(projectUri);
+            if (!choice) {
+                return false;
+            }
+            action = choice;
+        }
+
+        return await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: l10n.t('正在拉取 Y3Maker 配置...'),
+        }, async () => {
+            // 目录存在时可能有 SkillsHandler / McpHub 在监听，先松开再动它
+            if (state === 'partial') {
+                releaseY3MakerWatchers();
+            }
+
+            const result = action === 'merge'
+                ? await mergeY3MakerFromRemote(projectUri, repoUrl)
+                : await replaceY3MakerFromRemote(projectUri, repoUrl);
+
+            if (!result.ok) {
+                vscode.window.showWarningMessage(l10n.t('拉取 Y3Maker 配置失败，请检查网络或 git 环境。'));
+                mainMenu.refresh();
+                return false;
+            }
+
+            // 通知 Y3Maker 重新加载 Rules/Skills/MCP（因为 openFolder 同一目录不会触发窗口重载）
+            if (webviewProvider) {
+                await webviewProvider.reloadCodemakerResources();
+            }
+            if (action === 'merge') {
+                vscode.window.showInformationMessage(l10n.t('已合并：补上了缺少的文件，你的文件没动。'));
+            } else {
+                vscode.window.showInformationMessage(result.backupDir
+                    ? l10n.t('拉取成功，原内容已备份到 {0}', result.backupDir)
+                    : l10n.t('Y3Maker 配置拉取完成。'));
+            }
+            mainMenu.refresh();
+            return true;
+        });
+    }
+
+    /**
+     * partial 状态下的三选一。返回 undefined 表示用户选了“稍后再说”。
+     */
+    private async askPartialAction(projectUri: vscode.Uri): Promise<'merge' | 'replace' | undefined> {
+        const mergeOption = l10n.t('合并');
+        const replaceOption = l10n.t('备份并替换');
+
+        const entries = await listY3MakerEntries(projectUri);
+        const found = entries.length === 0
+            ? l10n.t('目录是空的')
+            : l10n.t('里面现有 {0} 项：{1}', String(entries.length), entries.slice(0, 6).join('、'));
+
+        // 取消（模态框自带）＝ 先不动
+        const choice = await vscode.window.showInformationMessage(
+            l10n.t('.y3maker 已存在，但不是 git 仓库。要怎么处理？'),
+            {
+                modal: true,
+                detail: l10n.t('{0}\n\n合并：保留你的文件，只补缺少的。\n备份并替换：先把原目录备份成带时间戳的新目录，再放一份干净的。\n取消：先不动，主菜单里会留着入口。', found),
+            },
+            mergeOption,
+            replaceOption,
+        );
+
+        if (choice === mergeOption) {
+            return 'merge';
+        }
+        if (choice === replaceOption) {
+            return 'replace';
+        }
+        return undefined;
+    }
+
+    private registerCommandOfCloneY3MakerConfig() {
+        vscode.commands.registerCommand('y3-helper.cloneY3MakerConfig', async () => {
+            const projectUri = env.projectUri;
+            if (!projectUri) {
+                return;
+            }
+            // 手动拉取时不替用户猜来源：Gitee 镜像拉不到仓库里的大文件，
+            // 所以让用户自己选（后台自动补齐那条路没法问，才用 detectRepoUrl 推断）。
+            const repoSource = await this.askY3MakerConfigSource();
+            if (!repoSource) {
+                return;
+            }
+            await this.pullY3MakerConfig(getConfigRepoUrl(repoSource));
+        });
+    }
+
+    /** 手动拉取前问一次从哪拉；返回 undefined 表示用户取消 */
+    private async askY3MakerConfigSource(): Promise<'github' | 'gitee' | undefined> {
+        const githubOption = l10n.t('Github（可能需要代理）');
+        const giteeOption = l10n.t('Gitee（国内镜像）');
+
+        // 取消交给模态框自带的那个按钮（再放一个就成了两个“取消”）
+        const choice = await vscode.window.showInformationMessage(
+            l10n.t('从哪里拉取 Y3Maker 配置？'),
+            { modal: true },
+            githubOption,
+            giteeOption,
+        );
+
+        if (choice === githubOption) {
+            return 'github';
+        }
+        if (choice === giteeOption) {
+            return 'gitee';
+        }
+        return undefined;
     }
 
     private registerCommandOfNetworkServer() {
@@ -260,22 +438,8 @@ class Helper {
                     } catch {}
                 }
 
-                // clone y3-maker-config 独立仓库到 .y3maker 目录
-                try {
-                    const y3makerTarget = vscode.Uri.joinPath(env.projectUri!, '.y3maker');
-                    const configRepoUrl = getConfigRepoUrl(repoSource);
-                    await runShell(l10n.t("初始化 Y3Maker 配置"), "git", [
-                        "clone",
-                        configRepoUrl,
-                        y3makerTarget.fsPath,
-                    ]);
-                    // 通知 Y3Maker 重新加载 Rules/Skills/MCP（因为 openFolder 同一目录不会触发窗口重载）
-                    if (webviewProvider) {
-                        await webviewProvider.reloadCodemakerResources();
-                    }
-                } catch (e) {
-                    y3.log.warn(l10n.t('克隆 y3-maker-config 失败: {0}', String(e)));
-                }
+                // clone y3-maker-config 独立仓库到 .y3maker 目录（是否自动拉取由用户决定）
+                await this.cloneY3MakerConfig(repoSource);
 
                 // 打开项目
                 await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
@@ -573,6 +737,7 @@ class Helper {
         this.registerCommandOfNetworkServer();
         this.registerCommonCommands();
         this.registerCommandOfUpdateY3MakerConfig();
+        this.registerCommandOfCloneY3MakerConfig();
 
         // 项目切换时自动清理 MCP 连接缓存并重新初始化
         vscode.workspace.onDidChangeWorkspaceFolders(async () => {
@@ -594,16 +759,22 @@ class Helper {
             await this.runStartupStep('checkNewProject', () => this.checkNewProject());
             await this.runStartupStep('mainMenu.init', () => mainMenu.init());
 
-            // 后台检测 Y3Maker 配置更新 + MCP 启动（需保证 migrateOldUser 在 MCP 前完成，否则 McpHub 会误创建 .y3maker 目录）
+            // 后台检测 Y3Maker 配置更新 + MCP 启动（需保证 .y3maker 的恢复在 MCP 前完成，否则 McpHub 会误创建 .y3maker 目录）
             (async () => {
                 try {
                     await env.mapReady();
                     if (!env.project) {
                         return;
                     }
-                    // 先检测是否需要老用户迁移/恢复，必须在 MCP 启动前完成
-                    const migrated = await migrateOldUser(env.projectUri!);
-                    if (migrated && webviewProvider) {
+                    // 先做 .y3maker 的恢复，必须在 MCP 启动前完成。
+                    // 后台只做增量动作：目录不存在、且偏好为 always 时才 clone。
+                    // partial（需要用户决策）和 foreign（不是我们的仓库）一律不碰，
+                    // 免得静默覆盖用户目录（提示交给主菜单节点）。
+                    let cloned = false;
+                    if (getCloneY3MakerPreference() === 'always') {
+                        cloned = await cloneY3MakerIfMissing(env.projectUri!);
+                    }
+                    if (cloned && webviewProvider) {
                         await webviewProvider.reloadCodemakerResources();
                     }
                     // 检测版本更新
