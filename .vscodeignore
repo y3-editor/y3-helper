@@ -27,6 +27,7 @@ resources/webview_source_code/
 .omx/
 .y3maker/
 MCP_COMPLIANCE_REMEDIATION.md
+TESTING-y3maker-config.md
 PR_DESCRIPTION.md
 docs/
 openspec/
