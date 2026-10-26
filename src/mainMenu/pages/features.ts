@@ -8,6 +8,7 @@ import { WebviewTerminal } from "../../console/webviewTerminal";
 import * as cloudScript from '../../cloudScript';
 import * as l10n from '@vscode/l10n';
 import { getDefaultLocalArchiveNickname } from '../../multiPlayerArchives';
+import { isY3LibraryInitialized } from '../../y3LibraryInit';
 
 /** “初始化Y3库”是否已完成。启用全局脚本后仓库位于 global_script/y3。 */
 async function isY3RepoInited() {
@@ -15,8 +16,9 @@ async function isY3RepoInited() {
     if (!y3Uri) {
         return false;
     }
-    return await y3.fs.isExists(vscode.Uri.joinPath(y3Uri, '更新日志.md'))
-        || await y3.fs.isExists(vscode.Uri.joinPath(y3Uri, 'CHANGELOG.md'));
+    // 只看 .git：带 CHANGELOG 但没有 .git 的自维护副本仍然需要初始化入口。
+    // 必须与 initY3Library 的判定保持一致。
+    return await isY3LibraryInitialized(y3Uri);
 }
 
 function 多开模式() {
@@ -279,12 +281,7 @@ export class 功能 extends TreeNode {
                         command: 'y3-helper.initProject',
                         title: l10n.t('初始化Y3库'),
                     },
-                    update: async (node) => {
-                        node.iconPath = new vscode.ThemeIcon('cloud-download');
-                        if (await isY3RepoInited()) {
-                            node.iconPath = new vscode.ThemeIcon('check');
-                        }
-                    },
+                    iconPath: new vscode.ThemeIcon('cloud-download'),
                     show: async () => {
                         return !await isY3RepoInited();
                     }

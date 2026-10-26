@@ -10,6 +10,7 @@ import * as mainMenu from './mainMenu';
 
 import { env } from './env';
 import { runShell } from './runShell';
+import { initY3Library, isManagedY3LibraryRepo, isY3LibraryInitialized, Y3_LIBRARY_REPO_URLS, Y3LibraryInitResult } from './y3LibraryInit';
 import {
     getConfigRepoUrl, checkForUpdates, performUpdate, forceRemoteUpdate, clearCachedUpdateStatus,
     getCachedUpdateStatus, getCloneY3MakerPreference, getY3MakerDirState,
@@ -298,6 +299,90 @@ class Helper {
         });
     }
 
+    /** 手动初始化前问一次从哪拉；返回 undefined 表示用户取消 */
+    private async askY3LibrarySource(): Promise<'github' | 'gitee' | undefined> {
+        const optionsGithub = 'Github (可能需要代理）';
+        const optionsGitee  = 'Gitee (国内镜像）';
+
+        const result = await vscode.window.showInformationMessage(
+            l10n.t('请选择仓库来源：'),
+            { modal: true },
+            optionsGithub,
+            optionsGitee,
+        );
+
+        if (result === optionsGithub) {
+            return 'github';
+        }
+        if (result === optionsGitee) {
+            return 'gitee';
+        }
+        return undefined;
+    }
+
+    /** 已存在但不是本工具拉取的目录：只在用户明确选择后才备份替换 */
+    private async askUnmanagedY3LibraryAction(y3Uri: vscode.Uri, entries: string[]): Promise<'backup' | 'cancel'> {
+        const backupOption = l10n.t('备份并替换');
+        const preview = entries.length === 0
+            ? l10n.t('空目录')
+            : l10n.t('现有 {0} 项：{1}', String(entries.length), entries.slice(0, 6).join('、'));
+
+        const choice = await vscode.window.showInformationMessage(
+            l10n.t('检测到已存在的 Y3 库目录，要怎么处理？'),
+            {
+                modal: true,
+                detail: l10n.t('{0}\n\n这个目录不是本工具拉取的 Y3 库，直接覆盖会丢失你维护的内容。\n备份并替换：先把原目录整份移动到项目根目录的 .y3lualib-backup，再拉取官方仓库。\n取消：先不动。\n\n目录：{1}', preview, y3Uri.fsPath),
+            },
+            backupOption,
+        );
+
+        return choice === backupOption ? 'backup' : 'cancel';
+    }
+
+    private reportY3LibraryInitResult(result: Y3LibraryInitResult, y3Uri: vscode.Uri): boolean {
+        switch (result.status) {
+            case 'canceled':
+                vscode.window.showWarningMessage(l10n.t('已取消初始化项目'));
+                return false;
+            case 'initialized':
+                vscode.window.showErrorMessage(l10n.t('此项目已经初始化过了！'));
+                return false;
+            case 'occupied':
+                vscode.window.showErrorMessage(l10n.t('{0} 已被占用，请手动删除它！', y3Uri.fsPath));
+                return false;
+            case 'backup-failed':
+                vscode.window.showErrorMessage(result.backupUri
+                    ? l10n.t('备份 {0} 失败，部分内容可能在 {1}，请手动处理！', y3Uri.fsPath, result.backupUri.fsPath)
+                    : l10n.t('备份 {0} 失败，请手动处理！', y3Uri.fsPath));
+                return false;
+            case 'clone-failed':
+                this.logY3LibraryCloneFailure(result);
+                if (result.restored) {
+                    vscode.window.showErrorMessage(l10n.t('仓库拉取失败，已还原原有目录。'));
+                } else if (result.backupUri) {
+                    vscode.window.showErrorMessage(l10n.t('仓库拉取失败！原有目录已备份到 {0}', result.backupUri.fsPath));
+                } else {
+                    vscode.window.showErrorMessage(l10n.t('仓库拉取失败！'));
+                }
+                return false;
+            case 'success':
+                if (result.backupUri) {
+                    vscode.window.showInformationMessage(l10n.t('已备份原目录到 {0}', result.backupUri.fsPath));
+                }
+                return true;
+        }
+    }
+
+    private logY3LibraryCloneFailure(result: { exitCode?: number; error?: unknown }): void {
+        const details = [
+            result.exitCode !== undefined ? l10n.t('git 退出码 {0}', String(result.exitCode)) : undefined,
+            result.error !== undefined ? String(result.error) : undefined,
+        ].filter(Boolean).join('；');
+        if (details) {
+            y3.log.warn(l10n.t('初始化Y3库失败：{0}', details));
+        }
+    }
+
     private registerCommandOfInitProject() {
         let running = false;
         vscode.commands.registerCommand('y3-helper.initProject', async () => {
@@ -305,151 +390,129 @@ class Helper {
                 return;
             }
             running = true;
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: l10n.t('正在初始化Y3项目...'),
-            }, async (progress, token) => {
-                await env.mapReady(true);
-                if (!env.scriptUri) {
-                    vscode.window.showErrorMessage(l10n.t('未找到Y3地图路径，请先用编辑器创建地图或重新指定！'));
-                    return;
-                };
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: l10n.t('正在初始化Y3项目...'),
+                }, async () => {
+                    await env.mapReady(true);
+                    if (!env.scriptUri) {
+                        vscode.window.showErrorMessage(l10n.t('未找到Y3地图路径，请先用编辑器创建地图或重新指定！'));
+                        return;
+                    };
 
-                let scriptUri = env.scriptUri!;
-                // 启用全局脚本后 Y3 库位于 global_script/y3
-                let y3Uri = env.y3RepoUri;
-                if (!y3Uri) {
-                    vscode.window.showErrorMessage(l10n.t('未找到Y3脚本库路径！'));
-                    return;
-                }
-
-                try {
-                    if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type === vscode.FileType.Directory) {
-                        vscode.window.showErrorMessage(l10n.t('此项目已经初始化过了！'));
+                    const scriptUri = env.scriptUri!;
+                    // 启用全局脚本后 Y3 库位于 global_script/y3
+                    const y3Uri = env.y3RepoUri;
+                    if (!y3Uri) {
+                        vscode.window.showErrorMessage(l10n.t('未找到Y3脚本库路径！'));
                         return;
                     }
-                } catch {}
+                    const projectUri = env.projectUri;
+                    if (!projectUri) {
+                        vscode.window.showErrorMessage(l10n.t('未找到Y3项目路径！'));
+                        return;
+                    }
 
-                try {
-                    let state = await vscode.workspace.fs.stat(y3Uri);
-                    if (state.type === vscode.FileType.Directory) {
-                        // 直接删除这个目录
-                        try {
-                            await vscode.workspace.fs.delete(y3Uri, {
+                    // 所有“问用户”的动作都在这里完成，取消时磁盘不会被改动
+                    const result = await initY3Library({
+                        projectUri,
+                        y3Uri,
+                        fixedSource: env.language === 'zh-cn' ? undefined : 'legacy',
+                        prompts: {
+                            askRepoSource: () => this.askY3LibrarySource(),
+                            askUnmanagedAction: (uri, entries) => this.askUnmanagedY3LibraryAction(uri, entries),
+                        },
+                        clone: (source) => runShell(
+                            source === 'gitee'
+                                ? l10n.t('初始化Y3项目（Gitee）')
+                                : l10n.t('初始化Y3项目（Github）'),
+                            'git',
+                            ['clone', Y3_LIBRARY_REPO_URLS[source], y3Uri.fsPath],
+                        ),
+                    });
+
+                    if (!this.reportY3LibraryInitResult(result, y3Uri)) {
+                        return;
+                    }
+                    const repoSource = result.status === 'success' && result.source === 'gitee' ? 'gitee' : 'github';
+
+                    // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
+                    const editorVersion = env.editorVersion;
+                    if (editorVersion === '1.0') {
+                        await runShell(l10n.t("初始化Y3项目"), "git", [
+                            "checkout",
+                            "-b",
+                            "1.0",
+                            "origin/1.0"
+                        ], y3Uri);
+                    }
+
+                    // 启用全局脚本时，Y3 库只应存在于全局目录。地图里残留的副本
+                    // 会因为“地图脚本优先于全局脚本”而覆盖全局，需要移除；
+                    // 但只移除本工具拉取的仓库，用户自己维护的副本一律保留。
+                    if (env.globalScriptEnabled) {
+                        const skippedMapY3: string[] = [];
+                        for (const map of env.project?.maps ?? []) {
+                            const mapY3Uri = map.y3Uri;
+                            if (!await y3.fs.isExists(mapY3Uri)) {
+                                continue;
+                            }
+                            if (!await isManagedY3LibraryRepo(mapY3Uri)) {
+                                y3.log.warn(l10n.t('已跳过 {0}：它不是本工具拉取的 Y3 库，未删除。', mapY3Uri.fsPath));
+                                skippedMapY3.push(mapY3Uri.fsPath);
+                                continue;
+                            }
+                            const removed = await y3.fs.removeFile(mapY3Uri, {
                                 recursive: true,
                                 useTrash: true,
                             });
-                            vscode.window.showInformationMessage(l10n.t('已将原有的 {0} 目录移至回收站', y3Uri.fsPath));
-                        } catch (error) {
-                            vscode.window.showErrorMessage(l10n.t('{0} 已被占用，请手动删除它！', y3Uri.fsPath));
-                            return;
-                        }
-                    } else {
-                        vscode.window.showErrorMessage(l10n.t('{0} 已被占用，请手动删除它！', y3Uri.fsPath));
-                        return;
-                    };
-                } catch (error) {
-                    // ignore
-                }
-
-                const optionsGithub = 'Github (可能需要代理）';
-                const optionsGitee  = 'Gitee (国内镜像）';
-                let repoSource: 'github' | 'gitee' = 'github';
-                if (env.language === 'zh-cn') {
-                    let result = await vscode.window.showInformationMessage(l10n.t('请选择仓库来源：'),
-                    {
-                        modal: true,
-                    }, optionsGithub, optionsGitee);
-
-                    if (result === optionsGithub) {
-                        repoSource = 'github';
-                        // 从github上 clone 项目，地址为 "https://github.com/y3-editor/y3-lualib"
-                        await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
-                            "clone",
-                            "https://github.com/y3-editor/y3-lualib.git",
-                            y3Uri.fsPath,
-                        ]);
-                    } else if (result === optionsGitee)  {
-                        repoSource = 'gitee';
-                        await runShell(l10n.t("初始化Y3项目（Gitee）"), "git", [
-                            "clone",
-                            "https://gitee.com/tsukiko/y3-lualib.git",
-                            y3Uri.fsPath,
-                        ]);
-                    } else {
-                        vscode.window.showWarningMessage(l10n.t('已取消初始化项目'));
-                        return;
-                    }
-                } else {
-                    await runShell(l10n.t("初始化Y3项目（Github）"), "git", [
-                        "clone",
-                        "https://github.com/CliCli-Editor/lualib.git",
-                        y3Uri.fsPath,
-                    ]);
-                }
-
-                if (!y3.fs.isExists(y3Uri, 'README.md')) {
-                    vscode.window.showWarningMessage(l10n.t('仓库拉取失败！'));
-                    return;
-                }
-
-                // 检查编辑器版本，如果是 1.0 版本则切换到 1.0 分支
-                let editorVersion = env.editorVersion;
-                if (editorVersion === '1.0') {
-                    await runShell(l10n.t("初始化Y3项目"), "git", [
-                        "checkout",
-                        "-b",
-                        "1.0",
-                        "origin/1.0"
-                    ], y3Uri);
-                }
-
-                // 启用全局脚本时，Y3 库只应存在于全局目录。地图里残留的那份
-                // 会因为“地图脚本优先于全局脚本”而覆盖全局，必须移除。
-                if (env.globalScriptEnabled) {
-                    for (const map of env.project?.maps ?? []) {
-                        let mapY3Uri = map.y3Uri;
-                        if (!await y3.fs.isExists(mapY3Uri)) {
-                            continue;
-                        }
-                        await y3.fs.removeFile(mapY3Uri, {
-                            recursive: true,
-                            useTrash: true,
-                        });
-                        vscode.window.showInformationMessage(l10n.t('已将原有的 {0} 目录移至回收站', mapY3Uri.fsPath));
-                    }
-                }
-
-                // 初始化配置
-                await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, '.log'));
-                if (env.globalScriptUri) {
-                    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(env.globalScriptUri, '.log'));
-                }
-                let copySource = vscode.Uri.joinPath(y3Uri, l10n.t('演示/项目配置'));
-                for await (const entry of await vscode.workspace.fs.readDirectory(copySource)) {
-                    try {
-                        await vscode.workspace.fs.copy(
-                            vscode.Uri.joinPath(copySource, entry[0]),
-                            vscode.Uri.joinPath(scriptUri, entry[0]),
-                            {
-                                overwrite: true,
+                            if (removed) {
+                                vscode.window.showInformationMessage(l10n.t('已将原有的 {0} 目录移至回收站', mapY3Uri.fsPath));
+                            } else {
+                                vscode.window.showWarningMessage(l10n.t('{0} 删除失败，请手动处理。', mapY3Uri.fsPath));
                             }
-                        );
-                    } catch {}
-                }
+                        }
+                        if (skippedMapY3.length > 0) {
+                            vscode.window.showWarningMessage(l10n.t(
+                                '以下目录不是本工具拉取的 Y3 库，已保留；它们会覆盖全局脚本，请自行确认是否需要移除：\n{0}',
+                                skippedMapY3.join('\n'),
+                            ));
+                        }
+                    }
 
-                // clone y3-maker-config 独立仓库到 .y3maker 目录（是否自动拉取由用户决定）
-                await this.cloneY3MakerConfig(repoSource);
+                    // 初始化配置
+                    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(scriptUri, '.log'));
+                    if (env.globalScriptUri) {
+                        await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(env.globalScriptUri, '.log'));
+                    }
+                    let copySource = vscode.Uri.joinPath(y3Uri, l10n.t('演示/项目配置'));
+                    for await (const entry of await vscode.workspace.fs.readDirectory(copySource)) {
+                        try {
+                            await vscode.workspace.fs.copy(
+                                vscode.Uri.joinPath(copySource, entry[0]),
+                                vscode.Uri.joinPath(scriptUri, entry[0]),
+                                {
+                                    overwrite: true,
+                                }
+                            );
+                        } catch {}
+                    }
 
-                // 打开项目
-                await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
-                await vscode.commands.executeCommand('vscode.openFolder', env.projectUri);
+                    // clone y3-maker-config 独立仓库到 .y3maker 目录（是否自动拉取由用户决定）
+                    await this.cloneY3MakerConfig(repoSource);
 
-                this.checkNewProject();
+                    // 打开项目
+                    await this.context.globalState.update("NewProjectPath", scriptUri.fsPath);
+                    await vscode.commands.executeCommand('vscode.openFolder', env.projectUri);
 
-                mainMenu.init();
-            });
-            running = false;
+                    this.checkNewProject();
+
+                    mainMenu.init();
+                });
+            } finally {
+                running = false;
+            }
         });
     }
 
@@ -619,7 +682,8 @@ class Helper {
         this.autoStartMCPTask = (async () => {
             try {
                 await env.mapReady();
-                if (this.tcpServer || !await this.isY3Initialized()) {
+                const y3Uri = env.y3RepoUri;
+                if (this.tcpServer || !y3Uri || !await isY3LibraryInitialized(y3Uri)) {
                     return;
                 }
                 await this.runStartupStep('startMCPServer', () => this.startTCPServer(true));
@@ -633,28 +697,6 @@ class Helper {
         } finally {
             this.autoStartMCPTask = undefined;
         }
-    }
-
-    private async hasGitDirectory(y3Uri?: vscode.Uri): Promise<boolean> {
-        if (!y3Uri) {
-            return false;
-        }
-        try {
-            const gitUri = vscode.Uri.joinPath(y3Uri, '.git');
-            const stat = await vscode.workspace.fs.stat(gitUri);
-            return stat.type === vscode.FileType.Directory;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * 检查 Y3 仓库是否已初始化（.git 目录存在）。
-     * 用于 MCP Server 自动启动守卫：未初始化的仓库不应自动启动 MCP。
-     * 启用全局脚本后，仓库位于 global_script/y3（由 env.y3RepoUri 统一给出）。
-     */
-    private async isY3Initialized(): Promise<boolean> {
-        return this.hasGitDirectory(env.y3RepoUri);
     }
 
     private registerCommandOfMCP() {

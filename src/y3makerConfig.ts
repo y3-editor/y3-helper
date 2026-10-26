@@ -6,6 +6,9 @@ import { runShell } from './runShell';
 import * as y3 from 'y3-helper';
 import { disposeMcpHub } from './codemaker/mcpHandlers';
 import SkillsHandler from './codemaker/skillsHandler';
+import { execGit } from './tools/git';
+import { moveDirContents } from './tools/fs';
+import { isY3LibraryInitialized } from './y3LibraryInit';
 
 // ─── 仓库地址 ────────────────────────────────────────────────
 
@@ -123,32 +126,6 @@ export function clearCachedUpdateStatus(): void {
 
 const FETCH_TIMEOUT_MS = 10_000;
 
-function execGit(
-    args: string[],
-    cwd: string,
-    timeoutMs?: number,
-    extraEnv?: Record<string, string>,
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    return new Promise((resolve) => {
-        const options: cp.ExecFileOptions = {
-            cwd,
-            timeout: timeoutMs,
-            windowsHide: true,
-            encoding: 'utf8',
-        };
-        if (extraEnv) {
-            options.env = { ...process.env, ...extraEnv };
-        }
-        const proc = cp.execFile('git', args, options, (error, stdout, stderr) => {
-            resolve({
-                stdout: String(stdout ?? '').trim(),
-                stderr: String(stderr ?? '').trim(),
-                exitCode: error ? (error as any).code ?? 1 : 0,
-            });
-        });
-    });
-}
-
 /**
  * 从 git 输出里挑出最值得看的一行：进度信息会刷屏，真正的原因在 error/fatal/remote 行。
  */
@@ -178,21 +155,6 @@ async function dirExists(uri: vscode.Uri): Promise<boolean> {
         return true;
     } catch {
         return false;
-    }
-}
-
-/**
- * 把目录内容逐个移动过去。顶层目录本身可能被 VSCode 监听/占用而移不动，
- * 但它的子项可以。
- */
-async function moveDirContents(srcDir: vscode.Uri, dstDir: vscode.Uri): Promise<void> {
-    await vscode.workspace.fs.createDirectory(dstDir);
-    for (const [name] of await vscode.workspace.fs.readDirectory(srcDir)) {
-        await vscode.workspace.fs.rename(
-            vscode.Uri.joinPath(srcDir, name),
-            vscode.Uri.joinPath(dstDir, name),
-            { overwrite: true },
-        );
     }
 }
 
@@ -250,7 +212,10 @@ async function cloneToStaging(projectUri: vscode.Uri, repoUrl: string): Promise<
     if (exitCode !== 0) {
         y3.log.warn('拉取 y3-maker-config 已成功，但 LFS 资产没下下来（会用占位文件代替）；终端里那段 git 报错就是这个原因');
         // 检出可能没走完，补一次跳过 LFS 的检出，保证工作区里文件是齐的
-        const restore = await execGit(['checkout', '--force', 'HEAD', '--', '.'], stagingUri.fsPath, CLONE_TIMEOUT_MS, SKIP_LFS_ENV);
+        const restore = await execGit(['checkout', '--force', 'HEAD', '--', '.'], stagingUri.fsPath, {
+            timeoutMs: CLONE_TIMEOUT_MS,
+            env: SKIP_LFS_ENV,
+        });
         if (restore.exitCode !== 0) {
             y3.log.warn(`补检出没完全成功: ${describeGitOutput(restore.stderr) || restore.exitCode}`);
         }
@@ -302,7 +267,7 @@ export async function mergeY3MakerFromRemote(projectUri: vscode.Uri, repoUrl: st
     const dir = y3makerUri.fsPath;
     const initResult = await execGit(['init'], dir);
     const remoteResult = await execGit(['remote', 'add', 'origin', repoUrl], dir);
-    const fetchResult = await execGit(['fetch', 'origin'], dir, CLONE_TIMEOUT_MS);
+    const fetchResult = await execGit(['fetch', 'origin'], dir, { timeoutMs: CLONE_TIMEOUT_MS });
     if (initResult.exitCode === 0 && remoteResult.exitCode === 0 && fetchResult.exitCode === 0) {
         await execGit(['reset', '--mixed', 'origin/main'], dir);
         await execGit(['branch', '-M', 'main'], dir);
@@ -359,16 +324,8 @@ export async function cloneY3MakerIfMissing(projectUri: vscode.Uri): Promise<boo
     }
 
     const y3Uri = env.y3RepoUri;
-    if (!y3Uri) {
-        return false;
-    }
-    try {
-        if ((await vscode.workspace.fs.stat(vscode.Uri.joinPath(y3Uri, '.git'))).type !== vscode.FileType.Directory) {
-            // y3/.git 存在但不是目录，不视为已初始化
-            return false;
-        }
-    } catch {
-        // y3/.git 不存在 → 项目从未初始化，不需要自动 clone .y3maker
+    if (!y3Uri || !await isY3LibraryInitialized(y3Uri)) {
+        // y3/.git 不存在或不是目录 → 项目从未初始化，不需要自动 clone .y3maker
         return false;
     }
 
@@ -401,7 +358,7 @@ export async function checkForUpdates(projectUri: vscode.Uri): Promise<UpdateSta
     const y3makerDir = vscode.Uri.joinPath(projectUri, '.y3maker').fsPath;
 
     // git fetch
-    const fetchResult = await execGit(['fetch', 'origin', '--quiet'], y3makerDir, FETCH_TIMEOUT_MS);
+    const fetchResult = await execGit(['fetch', 'origin', '--quiet'], y3makerDir, { timeoutMs: FETCH_TIMEOUT_MS });
     if (fetchResult.exitCode !== 0) {
         // 网络不可达等，静默跳过
         return null;

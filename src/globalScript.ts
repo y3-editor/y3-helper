@@ -1,6 +1,7 @@
 import * as y3 from 'y3-helper';
 import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
+import { isManagedY3LibraryRepo } from './y3LibraryInit';
 
 
 function mergeArray(a: any, b: any[]): any[] {
@@ -128,13 +129,29 @@ export async function enable() {
     }
     // 修改全局里的luarc文件
     await rcRemoveGlobalPath(globalRcUri);
-    // 遍历所有地图，删除他们的y3文件夹
+    // 遍历所有地图，删除他们的y3文件夹。
+    // 只删本工具拉取的仓库，用户自己维护的副本不动。
+    const skippedMapY3: string[] = [];
     for (const map of y3.env.project!.maps) {
-        let y3Uri = vscode.Uri.joinPath(map.uri, `script/${l10n.t('y3')}`);
+        const y3Uri = map.y3Uri;
+        if (!await y3.fs.isExists(y3Uri)) {
+            continue;
+        }
+        if (!await isManagedY3LibraryRepo(y3Uri)) {
+            y3.log.warn(l10n.t('已跳过 {0}：它不是本工具拉取的 Y3 库，未删除。', y3Uri.fsPath));
+            skippedMapY3.push(y3Uri.fsPath);
+            continue;
+        }
         await y3.fs.removeFile(y3Uri, {
             recursive: true,
             useTrash: true,
         });
+    }
+    if (skippedMapY3.length > 0) {
+        vscode.window.showWarningMessage(l10n.t(
+            '以下目录不是本工具拉取的 Y3 库，已保留；它们会覆盖全局脚本，请自行确认是否需要移除：\n{0}',
+            skippedMapY3.join('\n'),
+        ));
     }
     y3.env.globalScriptEnabled = true;
     return true;

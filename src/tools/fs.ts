@@ -32,6 +32,20 @@ export async function readFile(uri: vscode.Uri | string, relativePath?: string) 
     } catch {}
 }
 
+/**
+ * 把目录内容逐个移动过去。目录本身可能被监听/占用而移不动，但它的子项可以。
+ */
+export async function moveDirContents(srcDir: vscode.Uri, dstDir: vscode.Uri): Promise<void> {
+    await vscode.workspace.fs.createDirectory(dstDir);
+    for (const [name] of await vscode.workspace.fs.readDirectory(srcDir)) {
+        await vscode.workspace.fs.rename(
+            vscode.Uri.joinPath(srcDir, name),
+            vscode.Uri.joinPath(dstDir, name),
+            { overwrite: true },
+        );
+    }
+}
+
 export async function writeFile(uri: vscode.Uri | string, relativePath: string | undefined, data: string): Promise<boolean>;
 export async function writeFile(uri: vscode.Uri | string, data: string): Promise<boolean>;
 export async function writeFile(uri: vscode.Uri | string, ...args: any[]) {
