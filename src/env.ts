@@ -23,6 +23,7 @@ import {
     applyLocalArchiveAssignments,
     serializeLocalArchiveData,
 } from './multiPlayerArchives';
+import { filterPlayerSelection } from './configSnapshot';
 
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
@@ -160,6 +161,24 @@ class Project extends vscode.Disposable {
         await Promise.all(started);
 
         this.entryMap = this.maps.find(map => map.id === this.entryMapId);
+
+        // Runtime validation only: startup must not rewrite the persisted snapshot.
+        if (!this.multiPlayerRolesError) {
+            const filtered = filterPlayerSelection(
+                config.multiPlayers,
+                config.debugPlayers,
+                this.multiPlayerRoles.map((role) => role.id),
+            );
+            config.multiPlayers = filtered.multiPlayers;
+            config.debugPlayers = filtered.debugPlayers;
+        }
+        if (config.attachCloudScriptWhenLaunch) {
+            const available = process.platform === 'win32'
+                && await y3.fs.isExists(vscode.Uri.joinPath(this.uri, 'cloud_script/main.lua'));
+            if (!available) {
+                config.attachCloudScriptWhenLaunch = false;
+            }
+        }
     }
 
     private async loadSetting() {

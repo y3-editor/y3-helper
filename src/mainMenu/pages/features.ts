@@ -9,6 +9,7 @@ import * as cloudScript from '../../cloudScript';
 import * as l10n from '@vscode/l10n';
 import { getDefaultLocalArchiveNickname } from '../../multiPlayerArchives';
 import { isY3LibraryInitialized } from '../../y3LibraryInit';
+import { filterPlayerSelection, normalizeLaunchMap } from '../../configSnapshot';
 
 /** “初始化Y3库”是否已完成。启用全局脚本后仓库位于 global_script/y3。 */
 async function isY3RepoInited() {
@@ -19,6 +20,19 @@ async function isY3RepoInited() {
     // 只看 .git：带 CHANGELOG 但没有 .git 的自维护副本仍然需要初始化入口。
     // 必须与 initY3Library 的判定保持一致。
     return await isY3LibraryInitialized(y3Uri);
+}
+
+async function hasLocalCloudScript() {
+    const project = env.projectUri;
+    if (!project || process.platform !== 'win32') {
+        return false;
+    }
+    try {
+        await vscode.workspace.fs.stat(vscode.Uri.joinPath(project, 'cloud_script', 'main.lua'));
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 function 多开模式() {
@@ -118,24 +132,26 @@ function 多开模式() {
                 arguments: [id],
             },
             onDidChangeCheckboxState(state) {
-                if (state === vscode.TreeItemCheckboxState.Checked) {
-                    if (!config.multiPlayerNicknames[id]) {
-                        setPlayerNickname(id, getDefaultNickname());
+                config.update(() => {
+                    if (state === vscode.TreeItemCheckboxState.Checked) {
+                        if (!config.multiPlayerNicknames[id]) {
+                            setPlayerNickname(id, getDefaultNickname());
+                        }
+                        if (!config.multiPlayers.includes(id)) {
+                            config.multiPlayers.push(id);
+                        }
+                    } else {
+                        const index = config.multiPlayers.indexOf(id);
+                        if (index !== -1) {
+                            config.multiPlayers.splice(index, 1);
+                        }
+                        const debugIndex = config.debugPlayers.indexOf(id);
+                        if (debugIndex !== -1) {
+                            config.debugPlayers.splice(debugIndex, 1);
+                        }
+                        delete config.multiPlayerNicknames[id];
                     }
-                    if (!config.multiPlayers.includes(id)) {
-                        config.multiPlayers.push(id);
-                    }
-                } else {
-                    const index = config.multiPlayers.indexOf(id);
-                    if (index !== -1) {
-                        config.multiPlayers.splice(index, 1);
-                    }
-                    const debugIndex = config.debugPlayers.indexOf(id);
-                    if (debugIndex !== -1) {
-                        config.debugPlayers.splice(debugIndex, 1);
-                    }
-                    delete config.multiPlayerNicknames[id];
-                }
+                });
                 playerNode.refresh();
             },
             update: async (node) => {
@@ -162,27 +178,35 @@ function 多开模式() {
         checkboxState: config.multiMode ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
         collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
         onDidChangeCheckboxState(state) {
-            config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
+            config.update(() => {
+                config.multiMode = state === vscode.TreeItemCheckboxState.Checked;
+            });
             node.tree?.refresh.fire(undefined);
         },
         childs: [],
         update: async (node) => {
             await env.mapReady();
             const roles = env.project?.multiPlayerRoles ?? [];
-            const validIds = new Set(roles.map((role) => role.id));
-            config.multiPlayers = config.multiPlayers.filter((id) => validIds.has(id));
-            config.debugPlayers = config.debugPlayers.filter((id) => validIds.has(id) && config.multiPlayers.includes(id));
-            config.multiPlayerNicknames = Object.fromEntries(
-                Object.entries(config.multiPlayerNicknames).filter(([id]) => validIds.has(Number(id))),
-            );
-
-            if (loadedArchives !== env.project?.multiPlayerArchives) {
-                loadedArchives = env.project?.multiPlayerArchives;
+            const roleIds = roles.map((role) => role.id);
+            const validIds = new Set(roleIds);
+            const rolesReady = env.project !== undefined && !env.project.multiPlayerRolesError;
+            if (rolesReady) {
+                // Runtime validation only: refresh must not rewrite the persisted snapshot.
+                const filtered = filterPlayerSelection(config.multiPlayers, config.debugPlayers, roleIds);
+                config.multiPlayers = filtered.multiPlayers;
+                config.debugPlayers = filtered.debugPlayers;
                 config.multiPlayerNicknames = Object.fromEntries(
-                    (env.project?.getMultiPlayerArchiveAssignments() ?? [])
-                        .filter((assignment) => validIds.has(assignment.roleId))
-                        .map((assignment) => [assignment.roleId, assignment.nickname]),
+                    Object.entries(config.multiPlayerNicknames).filter(([id]) => validIds.has(Number(id))),
                 );
+
+                if (loadedArchives !== env.project?.multiPlayerArchives) {
+                    loadedArchives = env.project?.multiPlayerArchives;
+                    config.multiPlayerNicknames = Object.fromEntries(
+                        (env.project?.getMultiPlayerArchiveAssignments() ?? [])
+                            .filter((assignment) => validIds.has(assignment.roleId))
+                            .map((assignment) => [assignment.roleId, assignment.nickname]),
+                    );
+                }
             }
 
             if (env.project?.multiPlayerRolesError) {
@@ -218,12 +242,14 @@ function 多开模式() {
         if (!config.multiPlayers.includes(id)) {
             return;
         }
-        const index = config.debugPlayers.indexOf(id);
-        if (index === -1) {
-            config.debugPlayers.push(id);
-        } else {
-            config.debugPlayers.splice(index, 1);
-        }
+        config.update(() => {
+            const index = config.debugPlayers.indexOf(id);
+            if (index === -1) {
+                config.debugPlayers.push(id);
+            } else {
+                config.debugPlayers.splice(index, 1);
+            }
+        });
         node.childs?.find((child) => child.data?.roleId === id)?.refresh();
     });
     return node;
@@ -234,7 +260,9 @@ function 启用Tracy() {
         tooltip: l10n.t('对Lua进行性能分析，但是会大幅影响运行效率'),
         checkboxState: config.tracy ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
         onDidChangeCheckboxState(state) {
-            config.tracy = state === vscode.TreeItemCheckboxState.Checked;
+            config.update(() => {
+                config.tracy = state === vscode.TreeItemCheckboxState.Checked;
+            });
         },
     });
     return node;
@@ -346,6 +374,16 @@ export class 功能 extends TreeNode {
                             for (const map of env.project.maps) {
                                 options.push(['map', map.name, map]);
                             }
+
+                            const normalized = normalizeLaunchMap(config.launchMap, {
+                                hasCurrent: env.currentMap !== undefined,
+                                mapNames: options
+                                    .filter((option) => option[0] === 'map')
+                                    .map((option) => option[1]),
+                            });
+                            if (normalized[0] !== config.launchMap[0] || normalized[1] !== config.launchMap[1]) {
+                                config.launchMap = normalized;
+                            }
                 
                             let target: (typeof options[0]) | undefined;
                             for (const option of options) {
@@ -396,7 +434,9 @@ export class 功能 extends TreeNode {
                             node.refresh();
                         });
                         vscode.commands.registerCommand('y3-helper.selectLaunchingMap', async (type: 'option' | 'map', name: string) => {
-                            config.launchMap = [type, name];
+                            config.update(() => {
+                                config.launchMap = [type, name];
+                            });
                             node.refresh();
                         });
                     },
@@ -413,7 +453,9 @@ export class 功能 extends TreeNode {
                                         ? vscode.TreeItemCheckboxState.Checked
                                         : vscode.TreeItemCheckboxState.Unchecked,
                             onDidChangeCheckboxState(state) {
-                                config.attachWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
+                                config.update(() => {
+                                    config.attachWhenLaunch = state === vscode.TreeItemCheckboxState.Checked;
+                                });
                             },
                         }),
                         new TreeNode(l10n.t('启动后附加本地云脚本'), {
@@ -423,7 +465,10 @@ export class 功能 extends TreeNode {
                             tooltip: config.multiMode
                                 ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
                                 : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。'),
-                            update(node) {
+                            async update(node) {
+                                if (config.attachCloudScriptWhenLaunch && !await hasLocalCloudScript()) {
+                                    config.attachCloudScriptWhenLaunch = false;
+                                }
                                 node.checkboxState = config.attachCloudScriptWhenLaunch && !config.multiMode
                                     ? vscode.TreeItemCheckboxState.Checked
                                     : vscode.TreeItemCheckboxState.Unchecked;
@@ -445,7 +490,9 @@ export class 功能 extends TreeNode {
                                     return;
                                 }
                                 if (!enabled) { cloudScript.cancelAutoAttach(); }
-                                config.attachCloudScriptWhenLaunch = enabled;
+                                config.update(() => {
+                                    config.attachCloudScriptWhenLaunch = enabled;
+                                });
                             },
                         }),
                     ],

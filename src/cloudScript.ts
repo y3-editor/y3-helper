@@ -102,7 +102,9 @@ export async function remove(): Promise<boolean> {
         if (!env.projectUri || disposed) { return false; }
         const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(env.projectUri.fsPath, 'cloud_script/main.lua')));
         await saveEntry(doc, removeCloudScriptEntry(doc.getText()));
-        config.attachCloudScriptWhenLaunch = false;
+        config.update(() => {
+            config.attachCloudScriptWhenLaunch = false;
+        });
         cancelPending?.();
         active?.bridge.dispose();
         active = undefined;

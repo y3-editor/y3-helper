@@ -39,6 +39,36 @@ import * as mcp from './mcp';
 import { getMcpHub } from './codemaker/mcpHandlers';
 import { initCodeMaker, stopCodeMaker, webviewProvider } from './codemaker';
 
+export interface TestConfigApi {
+    multiMode: boolean;
+    multiPlayers: number[];
+    debugPlayers: number[];
+    tracy: boolean;
+    attachWhenLaunch: boolean;
+    attachCloudScriptWhenLaunch: boolean;
+    launchMap: ['option' | 'map', string];
+    update(mutator: (config: TestConfigApi) => void): void;
+    flush(): Promise<void>;
+}
+
+export interface TestEnvApi {
+    mapReady(): Promise<void>;
+    readonly project?: {
+        readonly maps: readonly { name: string }[];
+        readonly entryMap?: { name: string };
+        readonly selectedMap?: { name: string };
+        readonly multiPlayerRoles: readonly { id: number }[];
+        readonly multiPlayerRolesError?: string;
+    };
+    readonly currentMap?: { name: string };
+}
+
+export interface Y3HelperTestApi {
+    config: TestConfigApi;
+    env: TestEnvApi;
+    readPersistedConfig(): Promise<unknown>;
+}
+
 class Helper {
     private context: vscode.ExtensionContext;
     private tcpServer?: mcp.TCPServer;
@@ -846,7 +876,8 @@ class Helper {
     }
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext): Promise<Y3HelperTestApi | undefined> {
+    await config.load(context.storageUri);
     let osLocale = await import('os-locale');
     y3.setContext(context);
     let language = vscode.workspace.getConfiguration('Y3-Helper').get('Language');
@@ -872,6 +903,15 @@ export async function activate(context: vscode.ExtensionContext) {
     initCodeMaker(context);
 
     initLaunchAgent(context);
+
+    if (context.extensionMode === vscode.ExtensionMode.Test) {
+        return {
+            config: config as unknown as TestConfigApi,
+            env: env as unknown as TestEnvApi,
+            readPersistedConfig: () => config.readPersisted(),
+        };
+    }
+    return undefined;
 }
 
 export function deactivate() {
