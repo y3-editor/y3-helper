@@ -603,12 +603,12 @@ class Helper {
 
                 let suc: boolean;
                 try {
-                    suc = await gameLauncher.launch({
+                    suc = (await gameLauncher.launch({
                         luaArgs: luaArgs,
                         multi: config.multiMode ? [...config.multiPlayers].sort((a, b) => a - b) : undefined,
                         multiNicknames: config.multiMode ? {...config.multiPlayerNicknames} : undefined,
                         tracy: config.tracy,
-                    });
+                    })).success;
                 } catch (error) {
                     cloudScriptAttach?.cancel();
                     throw error;

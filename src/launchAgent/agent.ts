@@ -271,7 +271,7 @@ function connect() {
         deadline = undefined;
         writeLock();
         log('connected');
-        send({ type: 'ready', token: options!.token });
+        send({ type: 'ready', token: options!.token, allowDir: options!.allowDir });
     });
     connection.on('error', (error: NodeJS.ErrnoException) => {
         log('connect error: ' + (error.code ?? '') + ' ' + error.message);

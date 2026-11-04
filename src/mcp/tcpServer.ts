@@ -291,9 +291,20 @@ export class TCPServer extends vscode.Disposable {
         });
 
         server.registerTool('launch_game', {
-            description: 'Launch the game',
+            description: 'Launch the game. Set multiMode=true with players (role ids) to launch multiple game windows at once. Use get_multi_player_roles to discover role ids and existing nicknames.',
+            inputSchema: {
+                multiMode: z.boolean().optional(),
+                players: z.array(z.number().int().positive()).optional(),
+                nicknames: z.record(z.string(), z.string()).optional(),
+            }
+        }, async ({ multiMode, players, nicknames }) => this.runTool(
+            async () => await this.sessionManager.launchGame({ multiMode, players, nicknames })
+        ));
+
+        server.registerTool('get_multi_player_roles', {
+            description: 'List roles available for multi-player launch, including resolved names, current nickname bindings, editor nickname, and available local archive nicknames.',
             inputSchema: {}
-        }, async () => this.runTool(async () => await this.sessionManager.launchGame({})));
+        }, async () => this.runTool(async () => await this.sessionManager.getMultiPlayerRoles()));
 
         server.registerTool('get_game_status', {
             description: 'Get the current game status',
@@ -301,41 +312,57 @@ export class TCPServer extends vscode.Disposable {
         }, async () => this.runTool(() => this.sessionManager.getGameStatus()));
 
         server.registerTool('execute_lua', {
-            description: 'Execute Lua code in the running game. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            description: 'Execute Lua code in the running game. Use clientSlot or roleId to select a specific game window; they are mutually exclusive. Default is the client attached to current session.',
             inputSchema: {
                 code: z.string(),
-                clientSlot: z.number().optional()
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
             }
-        }, async ({ code, clientSlot }) => this.runTool(async () => await this.sessionManager.executeLua({ code, clientSlot })));
+        }, async ({ code, clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.executeLua({ code, clientSlot, roleId })
+        ));
 
         server.registerTool('quick_restart', {
-            description: 'Quickly restart the game session. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            description: 'Quickly restart the game session. Use clientSlot or roleId to select a specific game window; they are mutually exclusive. In a multi-player session, omitting both restarts every connected window.',
             inputSchema: {
-                clientSlot: z.number().optional()
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
             }
-        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.quickRestart({ clientSlot })));
+        }, async ({ clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.quickRestart({ clientSlot, roleId })
+        ));
 
         server.registerTool('stop_game', {
-            description: 'Stop the running game session. Use clientSlot to stop a specific game window (stable slot number from get_game_status clients list); default stops the client attached to current session and cleans up the session.',
+            description: 'Stop the running game session. Use clientSlot or roleId to stop a specific game window; they are mutually exclusive. In a multi-player session, omitting both stops every connected window; set forceKillAll=true there to also kill remaining game processes for this project (never the editor).',
             inputSchema: {
-                clientSlot: z.number().optional()
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional(),
+                forceKillAll: z.boolean().optional()
             }
-        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.stopGame({ clientSlot })));
+        }, async ({ clientSlot, roleId, forceKillAll }) => this.runTool(
+            async () => await this.sessionManager.stopGame({ clientSlot, roleId, forceKillAll })
+        ));
 
         server.registerTool('get_logs', {
-            description: 'Fetch recent game logs. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            description: 'Fetch recent game logs. Use clientSlot or roleId to select a specific game window; they are mutually exclusive. Default is the client attached to current session.',
             inputSchema: {
                 limit: z.number().optional(),
-                clientSlot: z.number().optional()
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
             }
-        }, async ({ limit, clientSlot }) => this.runTool(async () => await this.sessionManager.getLogs({ limit, clientSlot })));
+        }, async ({ limit, clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.getLogs({ limit, clientSlot, roleId })
+        ));
 
         server.registerTool('capture_screenshot', {
-            description: 'Capture a screenshot from the running game. Use clientSlot to select a specific game window (stable slot number from get_game_status clients list), default is the client attached to current session.',
+            description: 'Capture a screenshot from the running game. Use clientSlot or roleId to select a specific game window; they are mutually exclusive. Default is the client attached to current session.',
             inputSchema: {
-                clientSlot: z.number().optional()
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
             }
-        }, async ({ clientSlot }) => this.runTool(async () => await this.sessionManager.captureScreenshot({ clientSlot })));
+        }, async ({ clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.captureScreenshot({ clientSlot, roleId })
+        ));
 
         server.registerTool('read_problems_lua', {
             description: 'Run Lua diagnostics on project files',

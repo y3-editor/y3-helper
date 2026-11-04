@@ -42,7 +42,7 @@ async function killByCommandLine(projectPath: string): Promise<number> {
     return Number.isNaN(count) ? 0 : count;
 }
 
-export async function killGame(): Promise<void> {
+export async function killGame(options: { silent?: boolean } = {}): Promise<number> {
     let agent = getLaunchAgent();
     let killedByAgent = agent ? await agent.kill() : 0;
 
@@ -52,8 +52,13 @@ export async function killGame(): Promise<void> {
     let total = killedByAgent + killedByCommandLine;
     tools.log.info(`[Y3-Helper] 关闭游戏进程：提权代理 ${killedByAgent} 个，命令行匹配 ${killedByCommandLine} 个`);
     if (total === 0) {
-        vscode.window.showInformationMessage(l10n.t('未找到正在运行的游戏进程'));
-        return;
+        if (!options.silent) {
+            vscode.window.showInformationMessage(l10n.t('未找到正在运行的游戏进程'));
+        }
+        return 0;
     }
-    vscode.window.showInformationMessage(l10n.t('已关闭 {0} 个游戏进程', String(total)));
+    if (!options.silent) {
+        vscode.window.showInformationMessage(l10n.t('已关闭 {0} 个游戏进程', String(total)));
+    }
+    return total;
 }

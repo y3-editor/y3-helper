@@ -8,7 +8,7 @@ import * as crypto from 'crypto';
 import { spawn } from 'child_process';
 import * as tools from '../tools';
 import * as l10n from '@vscode/l10n';
-import { AgentMessage, LineDecoder, encodeMessage } from './protocol';
+import { AgentMessage, LineDecoder, ReadyMessage, encodeMessage } from './protocol';
 
 /** 握手凭据在 globalState 中的键名，用于扩展宿主重启后重连 */
 const TOKEN_KEY = 'launchAgent.token';
@@ -27,6 +27,14 @@ function quoteShellArg(value: string): string {
 
 function quotePowerShell(value: string): string {
     return "'" + value.replace(/'/g, "''") + "'";
+}
+
+function normalizeDir(dir: string | undefined): string | undefined {
+    if (!dir) {
+        return undefined;
+    }
+    let resolved = path.resolve(dir);
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
 export class LaunchAgentManager {
@@ -121,13 +129,20 @@ export class LaunchAgentManager {
 
     private async ensureAgent(allowDir: string): Promise<void> {
         if (this.socket && !this.socket.destroyed) {
-            if (this.allowDir === allowDir) {
+            if (normalizeDir(this.allowDir) === normalizeDir(allowDir)) {
                 return;
             }
-            throw new Error('launch agent was started for another directory: ' + this.allowDir);
+            tools.log.info(l10n.t('编辑器目录已变化，正在重启提权代理：{0} -> {1}', this.allowDir ?? '', allowDir));
+            await this.stopAgent();
         }
         if (this.starting) {
-            return await this.starting;
+            await this.starting;
+            if (this.socket && !this.socket.destroyed) {
+                if (normalizeDir(this.allowDir) === normalizeDir(allowDir)) {
+                    return;
+                }
+                await this.stopAgent();
+            }
         }
         this.starting = this.startAgent(allowDir).finally(() => {
             this.starting = undefined;
@@ -137,22 +152,81 @@ export class LaunchAgentManager {
 
     private async startAgent(allowDir: string): Promise<void> {
         await this.listen();
-        this.allowDir = allowDir;
         // 存活标记存在时，说明上一个扩展宿主留下的代理还在等待重连
         if (fs.existsSync(this.lockPath)) {
             if (await this.waitForAgent(RECONNECT_WAIT)) {
-                tools.log.info(l10n.t('已重连到提权代理'));
-                return;
+                if (normalizeDir(this.allowDir) === normalizeDir(allowDir)) {
+                    tools.log.info(l10n.t('已重连到提权代理'));
+                    return;
+                }
+                tools.log.info(l10n.t('提权代理的编辑器目录不匹配，正在重启代理：{0} -> {1}', this.allowDir ?? '', allowDir));
+                await this.stopAgent();
+            } else {
+                fs.rmSync(this.lockPath, { force: true });
             }
-            fs.rmSync(this.lockPath, { force: true });
         }
         this.elevate(allowDir);
         if (await this.waitForAgent(HANDSHAKE_TIMEOUT)) {
-            tools.log.info(l10n.t('提权代理已启动'));
-            return;
+            if (normalizeDir(this.allowDir) === normalizeDir(allowDir)) {
+                tools.log.info(l10n.t('提权代理已启动'));
+                return;
+            }
+            let actual = this.allowDir;
+            tools.log.warn(l10n.t('提权代理返回的编辑器目录不匹配：{0}', actual ?? ''));
+            await this.stopAgent();
+            throw new Error('launch agent was started for another directory: ' + (actual ?? 'unknown'));
         }
         this.allowDir = undefined;
         throw new Error('failed to start launch agent');
+    }
+
+    /** 通知旧代理退出，并等待它清理锁文件；避免切换编辑器目录后继续复用旧代理 */
+    private async stopAgent(): Promise<void> {
+        let socket = this.socket;
+        if (!socket || socket.destroyed) {
+            if (this.socket === socket) {
+                this.socket = undefined;
+                this.allowDir = undefined;
+            }
+            return;
+        }
+
+        await new Promise<void>((resolve) => {
+            let finished = false;
+            let timer: NodeJS.Timeout;
+            const finish = () => {
+                if (finished) {
+                    return;
+                }
+                finished = true;
+                clearTimeout(timer);
+                socket.off('close', onClose);
+                if (this.socket === socket) {
+                    this.socket = undefined;
+                    this.allowDir = undefined;
+                }
+                resolve();
+            };
+            const onClose = () => finish();
+            socket.once('close', onClose);
+            try {
+                socket.write(encodeMessage({ type: 'shutdown' }));
+            } catch (error) {
+                socket.destroy();
+            }
+            timer = setTimeout(() => {
+                socket.destroy();
+                finish();
+            }, 3000);
+        });
+
+        for (let i = 0; i < 10 && fs.existsSync(this.lockPath); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        try {
+            fs.rmSync(this.lockPath, { force: true });
+        } catch (error) {
+        }
     }
 
     private async listen(): Promise<void> {
@@ -254,7 +328,7 @@ export class LaunchAgentManager {
             if (!handshaked) {
                 if (message?.type === 'ready' && message.token === this.token) {
                     handshaked = true;
-                    this.onAgentReady(socket);
+                    this.onAgentReady(socket, message);
                 } else {
                     socket.destroy();
                 }
@@ -273,15 +347,19 @@ export class LaunchAgentManager {
         });
     }
 
-    private onAgentReady(socket: net.Socket) {
+    private onAgentReady(socket: net.Socket, message: ReadyMessage) {
         if (this.socket && this.socket !== socket) {
             this.socket.destroy();
         }
         this.socket = socket;
+        this.allowDir = typeof message.allowDir === 'string' && message.allowDir
+            ? path.resolve(message.allowDir)
+            : undefined;
         this.waiter?.done(true);
     }
 
     private onAgentLost() {
+        this.allowDir = undefined;
         this.running.clear();
         for (let entry of this.launching.values()) {
             clearTimeout(entry.timer);

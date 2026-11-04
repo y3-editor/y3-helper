@@ -141,6 +141,7 @@ function registerAllMethods() {
 
     registerMethod('updatePlayer', async (client, params: UpdatePlayerParams) => {
         client.setName(`${params.name}【${params.id}】`);
+        client.setRoleId(params.id);
         if (params.multiMode) {
             client.setMultiMode(true);
         } else {

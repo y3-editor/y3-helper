@@ -12,16 +12,18 @@ Typical workflow:
 2. execute_lua to inspect or change runtime state. Keep snippets small and read the returned value.
 3. After editing Lua files, quick_restart to reload game code instead of relaunching.
 4. get_logs and read_problems_lua to diagnose failures.
-5. When several game windows run, take clientSlot from get_game_status to target a specific one.`;
+5. For multi-player testing, call get_multi_player_roles, then launch_game with { multiMode: true, players: [roleId, ...] }.
+6. When several game windows run, target one with clientSlot or roleId from get_game_status. In a multi-player session, omitting both from quick_restart/stop_game operates on every connected window.`;
 
 const TOOL_TABLE = [
     '| 工具 | 说明 |',
     '| --- | --- |',
-    '| `launch_game` | 启动游戏并附加调试器 |',
+    '| `launch_game` | 启动游戏；传 `multiMode/players` 可多开 |',
+    '| `get_multi_player_roles` | 查询多开角色、名称与本地存档昵称 |',
     '| `get_game_status` | 查询游戏与已连接客户端的运行状态 |',
     '| `execute_lua` | 在运行中的游戏里执行 Lua 代码 |',
-    '| `quick_restart` | 快速重启游戏会话，用于让 Lua 改动生效 |',
-    '| `stop_game` | 停止游戏会话 |',
+    '| `quick_restart` | 快速重启游戏；多开无目标时重启全部窗口 |',
+    '| `stop_game` | 停止游戏；多开无目标时停止全部已连接窗口 |',
     '| `get_logs` | 读取最近的游戏日志 |',
     '| `capture_screenshot` | 截取游戏画面 |',
     '| `read_problems_lua` | 获取工程内 Lua 文件的静态检查诊断 |',
@@ -114,9 +116,10 @@ ${TOOL_TABLE}
 ## 典型工作流
 
 1. \`launch_game\` 启动游戏，再用 \`get_game_status\` 确认客户端已连接
-2. \`execute_lua\` 读取或修改游戏运行时状态
-3. 修改工程内 Lua 代码后，\`quick_restart\` 重载游戏代码
-4. 出错时用 \`get_logs\`、\`read_problems_lua\` 定位问题
-5. 同时运行多个游戏窗口时，从 \`get_game_status\` 的 \`clients\` 中取 \`clientSlot\` 指定目标窗口
+2. 多开测试：\`get_multi_player_roles\` 查询角色，再调用 \`launch_game({ multiMode: true, players: [1, 2] })\`
+3. \`execute_lua\` 读取或修改游戏运行时状态；用 \`clientSlot\` 或 \`roleId\` 指定窗口
+4. 修改工程内 Lua 代码后，\`quick_restart\` 重载游戏代码
+5. 出错时用 \`get_logs\`、\`read_problems_lua\` 定位问题
+6. 多开会话不指定目标时，\`quick_restart\` / \`stop_game\` 作用于全部已连接窗口；\`stop_game\` 可传 \`forceKillAll: true\` 清理未连接窗口
 `;
 

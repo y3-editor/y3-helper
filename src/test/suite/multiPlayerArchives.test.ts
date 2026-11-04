@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
     applyLocalArchiveAssignments,
+    assignMissingLocalArchiveNicknames,
     getDefaultLocalArchiveNickname,
     getLocalArchiveAssignments,
     parseEditorNickname,
@@ -86,6 +87,70 @@ suite('Multi-player local archives', () => {
             ],
             missingRoleIds: [3],
         });
+    });
+
+    test('auto-assigns missing nicknames in the requested role order', () => {
+        const result = assignMissingLocalArchiveNicknames(
+            [3, 1],
+            undefined,
+            parseLocalArchiveData('{}'),
+            'BAIM',
+        );
+
+        assert.deepStrictEqual(result.generatedRoleIds, [3, 1]);
+        assert.deepStrictEqual(result.assignments, [
+            {roleId: 3, nickname: 'BAIM'},
+            {roleId: 1, nickname: 'test_account1'},
+        ]);
+    });
+
+    test('auto-assigns test accounts when the editor nickname is unavailable', () => {
+        const result = assignMissingLocalArchiveNicknames(
+            [1, 2, 3],
+            undefined,
+            parseLocalArchiveData('{}'),
+            undefined,
+        );
+
+        assert.deepStrictEqual(result.assignments, [
+            {roleId: 1, nickname: 'test_account1'},
+            {roleId: 2, nickname: 'test_account2'},
+            {roleId: 3, nickname: 'test_account3'},
+        ]);
+    });
+
+    test('reuses persisted nicknames before generating new ones', () => {
+        const result = assignMissingLocalArchiveNicknames(
+            [1, 2, 3],
+            undefined,
+            parseLocalArchiveData(JSON.stringify({
+                BAIM: {role_id: 1, archive: {}},
+                test_account1: {role_id: 2, archive: {}},
+            })),
+            'BAIM',
+        );
+
+        assert.deepStrictEqual(result.assignments, [
+            {roleId: 1, nickname: 'BAIM'},
+            {roleId: 2, nickname: 'test_account1'},
+            {roleId: 3, nickname: 'test_account2'},
+        ]);
+    });
+
+    test('explicit nickname overrides take precedence over persisted bindings', () => {
+        const result = assignMissingLocalArchiveNicknames(
+            [1, 2],
+            {1: 'custom_player'},
+            parseLocalArchiveData(JSON.stringify({
+                BAIM: {role_id: 1, archive: {}},
+            })),
+            'BAIM',
+        );
+
+        assert.deepStrictEqual(result.assignments, [
+            {roleId: 1, nickname: 'custom_player'},
+            {roleId: 2, nickname: 'test_account1'},
+        ]);
     });
 
     test('repairs stale archive bindings but rejects ambiguous launch assignments', () => {

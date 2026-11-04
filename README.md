@@ -107,6 +107,8 @@ npx vsce package
 
 Y3-Helper 内置 MCP Server，可供 Y3Maker、Codex 和 Claude Code 等 AI 工具连接，用于启动和控制游戏、执行 Lua、读取日志等操作。
 
+`launch_game` 支持通过 `multiMode: true` 和 `players` 以多开模式启动游戏；先用 `get_multi_player_roles` 查询可用角色和本地存档昵称。
+
 用 VSCode 打开已初始化的 Y3 项目后，MCP Server 会自动启动；也可以在侧边栏的“Y3开发助手”中手动启动或停止。
 
 VSCode 1.102 及以上的内置 AI（Copilot Chat 等）无需配置：扩展会注册 MCP Server Definition Provider，自动把服务提供给 VSCode。其他工具（Y3Maker / Claude Code / Codex）需手动配置，服务地址为 `http://127.0.0.1:8766/mcp`。

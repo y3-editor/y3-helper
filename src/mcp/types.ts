@@ -43,8 +43,14 @@ export interface GameSession {
     id: string;
     launcher: GameLauncher;
     client?: Client;
+    /** 多开会话中已连接的全部窗口；未连接成功的窗口不在此列表中 */
+    clients?: Client[];
+    multiMode?: boolean;
+    expectedPlayers?: number[];
     logManager: LogManager;
-    status: 'launching' | 'running' | 'stopped' | 'restarting';
+    status: 'launching' | 'running' | 'partial' | 'stopped' | 'restarting';
     startTime: number;
+    errorCode?: string;
     errorMessage?: string;
+    errorDetails?: Record<string, unknown>;
 }

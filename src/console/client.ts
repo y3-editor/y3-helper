@@ -104,7 +104,10 @@ export class Client extends vscode.Disposable {
                 Client.onDidChangeTerminalHistory.fire();
             }
             this.treeViewManager.dispose();
-            Client.allClients.splice(Client.allClients.indexOf(this), 1);
+            const index = Client.allClients.indexOf(this);
+            if (index !== -1) {
+                Client.allClients.splice(index, 1);
+            }
             Client.updateButton();
         });
         // 分配稳定窗口编号（push 前计算，不占用自身）
@@ -193,6 +196,17 @@ export class Client extends vscode.Disposable {
         if (this.terminal) {
             this.terminal.multiMode = this.multiMode;
         }
+    }
+
+    get isMultiMode() {
+        return this.multiMode;
+    }
+
+    /** 游戏侧 updatePlayer 上报的角色 id；多开时用于稳定定位窗口 */
+    public roleId?: number;
+
+    setRoleId(roleId: number | undefined) {
+        this.roleId = Number.isSafeInteger(roleId) && roleId! > 0 ? roleId : undefined;
     }
 
     readonly treeViewManager = new TreeViewManager(this);

@@ -16,6 +16,11 @@ export interface ResolvedMultiPlayerArchiveAssignments {
     missingRoleIds: number[];
 }
 
+export interface AutoAssignedMultiPlayerArchives {
+    assignments: MultiPlayerArchiveAssignment[];
+    generatedRoleIds: number[];
+}
+
 export function parseEditorNickname(content: string): string | undefined {
     const root: unknown = JSON.parse(content);
     if (typeof root !== 'object' || root === null || Array.isArray(root)) {
@@ -101,6 +106,47 @@ export function resolveLocalArchiveAssignments(
         missingRoleIds: assignments
             .filter((assignment) => !assignment.nickname)
             .map((assignment) => assignment.roleId),
+    };
+}
+
+/**
+ * 按侧边栏的规则补齐缺失昵称：
+ * - 调用方显式指定 > 已有存档绑定 > 自动生成
+ * - 自动生成顺序按传入 roleIds 的顺序
+ * - 还没有任何角色拥有昵称时，第一个缺失角色沿用编辑器昵称；
+ *   其余情况使用最小未占用的 test_accountN
+ */
+export function assignMissingLocalArchiveNicknames(
+    roleIds: readonly number[],
+    selectedNicknames: Readonly<Record<number, string | undefined>> | undefined,
+    data: LocalArchiveData,
+    editorNickname?: string,
+): AutoAssignedMultiPlayerArchives {
+    const existing = new Map(
+        getLocalArchiveAssignments(data).map((assignment) => [assignment.roleId, assignment.nickname]),
+    );
+    const nicknames: Record<number, string> = {};
+
+    for (const roleId of roleIds) {
+        const nickname = selectedNicknames?.[roleId]?.trim() || existing.get(roleId);
+        if (nickname) {
+            nicknames[roleId] = nickname;
+        }
+    }
+
+    const generatedRoleIds: number[] = [];
+    for (const roleId of roleIds) {
+        if (nicknames[roleId]) {
+            continue;
+        }
+        const assignedRoleIds = roleIds.filter((id) => Boolean(nicknames[id]));
+        nicknames[roleId] = getDefaultLocalArchiveNickname(assignedRoleIds, nicknames, editorNickname);
+        generatedRoleIds.push(roleId);
+    }
+
+    return {
+        assignments: roleIds.map((roleId) => ({ roleId, nickname: nicknames[roleId] })),
+        generatedRoleIds,
     };
 }
 

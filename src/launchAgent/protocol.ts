@@ -31,6 +31,8 @@ export type AgentRequest = LaunchRequest | PingRequest | KillRequest | ShutdownR
 export interface ReadyMessage {
     type: 'ready';
     token: string;
+    /** 代理被授权启动的目录；用于识别编辑器路径变更后遗留的旧代理 */
+    allowDir?: string;
 }
 
 /** 进程创建成功 */
