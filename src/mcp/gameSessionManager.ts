@@ -14,7 +14,8 @@ import {
     getLocalArchiveAssignments,
 } from '../multiPlayerArchives';
 import { killGame } from '../killGame';
-import { getMultiLaunchTimeoutMs } from './multiLaunch';
+import { buildMultiLaunchLuaArgs, getMultiLaunchTimeoutMs } from './multiLaunch';
+import { selectReconnectedClient } from './reconnect';
 
 /**
  * 游戏会话管理器
@@ -192,6 +193,7 @@ export class GameSessionManager extends vscode.Disposable {
             return normalizedNicknames;
         }
 
+        const createdPlayers = await project.ensureMultiPlayerRoles(rawPlayers);
         await project.reloadMultiPlayerRoles();
         if (project.multiPlayerRolesError) {
             return this.failure(
@@ -202,11 +204,9 @@ export class GameSessionManager extends vscode.Disposable {
 
         const invalidRoles = findInvalidMultiPlayerRoles(rawPlayers, project.multiPlayerRoles);
         if (invalidRoles.length > 0) {
-            return this.failure(
-                'MULTI_PLAYERS_INVALID',
-                `Role ids are not available in campinfo.json: ${invalidRoles.join(', ')}`,
-                {roleIds: invalidRoles, availableRoles: project.multiPlayerRoles.map((role) => role.id)},
-            );
+            // 引擎的 role_ids 支持按玩家槽位创建角色，不要求 campinfo 预先声明。
+            // campinfo 只用于侧边栏提示，不能作为 MCP 启动的硬性白名单。
+            tools.log.info(`[MCP] 角色 ${invalidRoles.join(', ')} 不在 campinfo.json 中，交由引擎创建`);
         }
 
         await project.reloadMultiPlayerArchives();
@@ -260,6 +260,7 @@ export class GameSessionManager extends vscode.Disposable {
             players: [...rawPlayers].sort((a, b) => a - b),
             nicknames,
             generatedRoleIds: assigned.generatedRoleIds,
+            createdPlayers,
         };
     }
 
@@ -402,6 +403,7 @@ export class GameSessionManager extends vscode.Disposable {
             status: 'launching',
             multi_mode: multiMode,
             expected_players: session.expectedPlayers,
+            created_players: prepared?.createdPlayers ?? [],
             message: multiMode
                 ? 'Multi-player game is launching. Use get_game_status to check when every player is ready.'
                 : 'Game is launching. Use get_game_status to check when it is ready.'
@@ -422,7 +424,9 @@ export class GameSessionManager extends vscode.Disposable {
                 return;
             }
 
-            const luaArgs: Record<string, string> = {};
+            const luaArgs: Record<string, string> = session.multiMode
+                ? buildMultiLaunchLuaArgs(session.expectedPlayers ?? [])
+                : {};
 
             // 启动游戏
             const launchResult = await session.launcher.launch({
@@ -1001,7 +1005,11 @@ export class GameSessionManager extends vscode.Disposable {
      * 等待指定客户端断开并重新连接（用于指定窗口的快速重启）
      * @returns 重连后的新 Client；超时返回 undefined
      */
-    private async waitForClientReconnect(oldClient: Client, timeout: number): Promise<Client | undefined> {
+    private async waitForClientReconnect(
+        oldClient: Client,
+        timeout: number,
+        expectedRoleId?: number,
+    ): Promise<Client | undefined> {
         // 快照当前已知客户端集合：排除其它仍在运行的窗口，
         // 只认"重连后新出现"的客户端，避免多窗口下误把其它窗口当重启结果
         const knownClients = new Set(Client.allClients);
@@ -1012,9 +1020,10 @@ export class GameSessionManager extends vscode.Disposable {
                 // 旧客户端已断开（重启生效），等待新客户端出现
                 const waitStart = Date.now();
                 while (Date.now() - waitStart < 30000) {
-                    const newClient = Client.allClients.find(c => !knownClients.has(c));
-                    if (newClient) {
-                        return newClient;
+                    const newClients = Client.allClients.filter(c => !knownClients.has(c));
+                    const matched = selectReconnectedClient(newClients, expectedRoleId);
+                    if (matched) {
+                        return matched;
                     }
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
@@ -1057,7 +1066,11 @@ export class GameSessionManager extends vscode.Disposable {
             // 指定窗口：仅重启该窗口，不影响 session 绑定
             client.notify('command', { data: '.rr' });
 
-            const newClient = await this.waitForClientReconnect(client, this.RESTART_TIMEOUT_MS);
+            const newClient = await this.waitForClientReconnect(
+                client,
+                this.RESTART_TIMEOUT_MS,
+                client.roleId,
+            );
             if (!newClient) {
                 return {
                     success: false,

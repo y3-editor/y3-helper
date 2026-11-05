@@ -20,12 +20,19 @@ export interface KillRequest {
     id: number;
 }
 
+/** 请求终止本工程的全部游戏进程（包括代理未跟踪的窗口） */
+export interface KillAllRequest {
+    type: 'killAll';
+    id: number;
+    projectPath?: string;
+}
+
 /** 请求代理退出 */
 export interface ShutdownRequest {
     type: 'shutdown';
 }
 
-export type AgentRequest = LaunchRequest | PingRequest | KillRequest | ShutdownRequest;
+export type AgentRequest = LaunchRequest | PingRequest | KillRequest | KillAllRequest | ShutdownRequest;
 
 /** 代理握手，携带凭据供扩展宿主校验 */
 export interface ReadyMessage {

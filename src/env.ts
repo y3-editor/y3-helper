@@ -12,7 +12,12 @@ import { EditorManager } from './editorTable/editorTable';
 import * as l10n from '@vscode/l10n';
 import { config } from './config';
 import { PluginManager } from './plugin/plugin';
-import { MultiPlayerRole, parseLegacyMultiPlayerRoles, parseMultiPlayerRoles } from './multiPlayerRoles';
+import {
+    MultiPlayerRole,
+    addMissingMultiPlayerRoles,
+    parseLegacyMultiPlayerRoles,
+    parseMultiPlayerRoles,
+} from './multiPlayerRoles';
 import {
     emptyLocalArchiveData,
     getLocalArchiveAssignments,
@@ -224,6 +229,29 @@ class Project extends vscode.Disposable {
             this.multiPlayerRolesError = 'invalid';
             y3.log.error(l10n.t('解析阵营配置失败：{0}', String(error)));
         }
+    }
+
+    /**
+     * 补齐 MCP 多开请求中 campinfo 尚未声明的玩家角色。
+     * 只处理顶层 campinfo.json；旧版 EntryMap/campinfo.json 保持只读。
+     */
+    async ensureMultiPlayerRoles(roleIds: readonly number[]): Promise<number[]> {
+        const campInfoUri = vscode.Uri.joinPath(this.uri, 'campinfo.json');
+        const campInfoFile = await y3.fs.readFile(campInfoUri);
+        if (!campInfoFile) {
+            return [];
+        }
+        const result = addMissingMultiPlayerRoles(campInfoFile.string, roleIds);
+        if (result.addedRoleIds.length === 0) {
+            return [];
+        }
+        await vscode.workspace.fs.writeFile(
+            campInfoUri,
+            new TextEncoder().encode(result.content),
+        );
+        await this.reloadMultiPlayerRoles();
+        tools.log.info(l10n.t('已在 campinfo.json 中创建玩家角色：{0}', result.addedRoleIds.join(', ')));
+        return result.addedRoleIds;
     }
 
     private async loadMultiPlayerRoles() {

@@ -115,6 +115,27 @@ export class LaunchAgentManager {
         });
     }
 
+    /**
+     * 清理本工程全部游戏进程，包括当前代理未跟踪的窗口。
+     * 代理未连接时不弹 UAC，返回 0。
+     */
+    public async killAll(projectPath?: string): Promise<number> {
+        let socket = this.socket;
+        if (!socket || socket.destroyed) {
+            return 0;
+        }
+        let id = this.nextId++;
+        return await new Promise<number>((resolve) => {
+            let timer = setTimeout(() => {
+                this.killing.delete(id);
+                tools.log.warn(l10n.t('提权代理响应超时：{0}', 'killAll'));
+                resolve(0);
+            }, LAUNCH_TIMEOUT);
+            this.killing.set(id, { resolve: resolve, timer: timer });
+            socket!.write(encodeMessage({ type: 'killAll', id: id, projectPath: projectPath }));
+        });
+    }
+
     /** 扩展宿主退出时只断开连接，不结束代理，以便重载窗口后直接复用（避免再次弹 UAC） */
     public shutdown() {
         if (this.socket) {

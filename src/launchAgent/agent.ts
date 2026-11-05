@@ -5,7 +5,8 @@ import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, execFileSync, ChildProcess } from 'child_process';
-import { AgentMessage, AgentRequest, KillRequest, LaunchRequest, LineDecoder, encodeMessage } from './protocol';
+import { AgentMessage, AgentRequest, KillAllRequest, KillRequest, LaunchRequest, LineDecoder, encodeMessage } from './protocol';
+import { buildKillAllScript } from './killAllScript';
 
 /** 白名单：只允许启动游戏主程序 */
 const ALLOWED_EXE = 'game_x64h.exe';
@@ -213,6 +214,33 @@ function handleKill(request: KillRequest) {
     send({ type: 'killed', id: request.id, count: count });
 }
 
+/**
+ * 清理本工程的全部游戏进程。
+ *
+ * 多开启动时，代理拉起的父进程会先退出，真正的游戏窗口是它的子进程，
+ * 因此仅靠 children 表无法覆盖。这里在提权进程中按命令行匹配 editor_map_path，
+ * 可以同时清理代理重启前遗留的窗口。
+ */
+function killAllByCommandLine(projectPath?: string): number {
+    if (process.platform !== 'win32') {
+        return 0;
+    }
+    let script = buildKillAllScript(projectPath, options!.allowDir, ALLOWED_EXE);
+    try {
+        let output = execFileSync('powershell.exe', [
+            '-NoProfile',
+            '-NonInteractive',
+            '-ExecutionPolicy', 'Bypass',
+            '-Command', script,
+        ], {windowsHide: true, encoding: 'utf8'});
+        let count = Number.parseInt(output.trim(), 10);
+        return Number.isNaN(count) ? 0 : count;
+    } catch (error) {
+        log('killAll failed: ' + String(error));
+        return 0;
+    }
+}
+
 function handleMessage(message: AgentRequest) {
     switch (message.type) {
         case 'launch':
@@ -221,6 +249,11 @@ function handleMessage(message: AgentRequest) {
         case 'kill':
             handleKill(message);
             break;
+        case 'killAll': {
+            let count = killAllByCommandLine(message.projectPath);
+            send({ type: 'killed', id: message.id, count: count });
+            break;
+        }
         case 'ping':
             send({ type: 'pong' });
             break;

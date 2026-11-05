@@ -91,6 +91,7 @@ export class GameLauncher {
 
         let archiveAssignments: MultiPlayerArchiveAssignment[] | undefined;
         if (options?.multi) {
+            await env.project?.ensureMultiPlayerRoles(options.multi);
             await env.project?.reloadMultiPlayerRoles();
             if (env.project?.multiPlayerRolesError) {
                 return this.fail(
@@ -117,12 +118,8 @@ export class GameLauncher {
             }
             const invalidRoles = findInvalidMultiPlayerRoles(options.multi, env.project?.multiPlayerRoles ?? []);
             if (invalidRoles.length > 0) {
-                return this.fail(
-                    options,
-                    'MULTI_PLAYERS_INVALID',
-                    l10n.t('以下玩家已不在阵营配置中：{0}', invalidRoles.join(', ')),
-                    {roleIds: invalidRoles},
-                );
+                // 多开 role_ids 由引擎按玩家槽位创建，campinfo 只作为侧边栏提示。
+                y3.log.info(l10n.t('以下玩家不在阵营配置中，将由引擎自动创建：{0}', invalidRoles.join(', ')));
             }
             await env.project?.reloadMultiPlayerArchives();
             if (env.project?.multiPlayerArchivesError) {

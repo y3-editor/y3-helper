@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import {
+    addMissingMultiPlayerRoles,
     findDuplicateMultiPlayerRoles,
     findInvalidMultiPlayerRoles,
     parseLegacyMultiPlayerRoles,
@@ -63,5 +64,27 @@ suite('Multi-player roles', () => {
 
     test('reports duplicate selected roles before slot generation', () => {
         assert.deepStrictEqual(findDuplicateMultiPlayerRoles([2, 2, 12, 2, 12]), [2, 12]);
+    });
+
+    test('creates missing player roles and adds them to camp one', () => {
+        const input = JSON.stringify({
+            camps: [
+                {__tuple__: true, items: [1, {id: 1, name: 'camp', role_ids: [1]}]},
+            ],
+            roles: [
+                {__tuple__: true, items: [1, {id: 1, camp_id: 1, name: '$player 1', type: 1}]},
+            ],
+        });
+        const result = addMissingMultiPlayerRoles(input, [1, 5, 4]);
+        assert.deepStrictEqual(result.addedRoleIds, [4, 5]);
+        assert.deepStrictEqual(
+            parseMultiPlayerRoles(result.content).map((role) => role.id),
+            [1, 4, 5],
+        );
+        const output = JSON.parse(result.content);
+        assert.deepStrictEqual(output.camps[0].items[1].role_ids, [1, 4, 5]);
+
+        const second = addMissingMultiPlayerRoles(result.content, [4, 5]);
+        assert.deepStrictEqual(second.addedRoleIds, []);
     });
 });

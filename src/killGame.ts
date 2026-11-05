@@ -47,10 +47,11 @@ export async function killGame(options: { silent?: boolean } = {}): Promise<numb
     let killedByAgent = agent ? await agent.kill() : 0;
 
     let projectPath = env.projectUri?.fsPath;
+    let killedByAgentAll = agent && projectPath ? await agent.killAll(projectPath) : 0;
     let killedByCommandLine = projectPath ? await killByCommandLine(projectPath) : 0;
 
-    let total = killedByAgent + killedByCommandLine;
-    tools.log.info(`[Y3-Helper] 关闭游戏进程：提权代理 ${killedByAgent} 个，命令行匹配 ${killedByCommandLine} 个`);
+    let total = killedByAgent + killedByAgentAll + killedByCommandLine;
+    tools.log.info(`[Y3-Helper] 关闭游戏进程：提权代理 ${killedByAgent} 个，代理全量 ${killedByAgentAll} 个，命令行匹配 ${killedByCommandLine} 个`);
     if (total === 0) {
         if (!options.silent) {
             vscode.window.showInformationMessage(l10n.t('未找到正在运行的游戏进程'));
