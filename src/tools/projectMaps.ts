@@ -123,9 +123,13 @@ export async function scanGmpProject(projectPath: string): Promise<ProjectMapSca
         }
         const setting = await readDocument(path.join(projectPath, 'setting.json'), true);
         if (entryMap && result.errors.length === 0) {
+            const majorVersion = jsonc.findNodeAtLocation(project.tree, ['major_version_number'])?.value;
+            const physicsMode = jsonc.findNodeAtLocation(project.tree, ['phy_mode'])?.value;
             result.context = {
                 projectPath,
                 entryMapName: entryMap.name,
+                ...(typeof majorVersion === 'string' && typeof physicsMode === 'string'
+                    ? { projectFormat: { majorVersion, physicsMode } } : {}),
                 maps: result.maps,
                 useMainLevelTriggerAndObject: setting
                     ? jsonc.findNodeAtLocation(setting.tree, ['use_main_level_trigger_and_object'])?.value === true : false,

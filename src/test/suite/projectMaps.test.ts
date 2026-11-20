@@ -4,6 +4,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vm from 'vm';
 import { createRequire } from 'module';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GmpBuilder, packSectionDataOldStyle } from '../../tools/y3SaveGmp';
 
 suite('GMP project map discovery', function() {
@@ -126,6 +129,7 @@ suite('GMP project map discovery', function() {
 
     test('ignores Project_Map4 leftovers and ordinary files instead of treating them as levels', async function() {
         const entry = await map();
+        await map('Cave', '2');
         const leftover = path.join(directory, 'maps', 'Project_Map4');
         fs.mkdirSync(path.join(leftover, 'script'), { recursive: true });
         fs.writeFileSync(path.join(directory, 'maps', 'notes.txt'), 'not a level');
@@ -136,12 +140,56 @@ suite('GMP project map discovery', function() {
         ]);
         const result = await api.generateAllGmp({ dryRun: true });
         assert.strictEqual(result.success, true);
-        assert.deepStrictEqual(Array.from(result.maps, m => m.name), ['Entry']);
+        assert.deepStrictEqual(Array.from(result.maps, m => m.name).sort(), ['Cave', 'Entry']);
         assert.ok(api.messages.some(message => message.includes('Project_Map4')));
         assert.strictEqual(fs.existsSync(path.join(leftover, 'script', '.log')), false);
         assert.strictEqual(fs.existsSync(path.join(directory, 'global_script')), false);
     });
 
+    test('MCP uses the same full-project scope as the sidebar and rejects a retired selector', async function() {
+        const entry = await map();
+        const cave = await map('Cave', '2');
+        for (const m of [entry, cave]) {
+            fs.writeFileSync(path.join(m.path, 'ruledata.json'), JSON.stringify({ rule: { '408': true } }));
+        }
+        const api = adapter();
+        const filename = require.resolve('../../mcp/tcpServer');
+        const localRequire = createRequire(filename);
+        const module = { exports: {} as { TCPServer: { prototype: { createMcpServer(): McpServer } } } };
+        const load = vm.runInNewContext(`(function(require,module,exports){${fs.readFileSync(filename, 'utf8')}\n})`, {});
+        let calls = 0;
+        load((name: string) => {
+            if (name === 'vscode') return { Disposable: class {} };
+            if (name === '../tools/gmpProject') {
+                return { generateAllGmp: (options: { dryRun?: boolean }) => { calls++; return api.generateAllGmp(options); } };
+            }
+            if (['../tools', './gameSessionManager', '../customDefine', '../env'].includes(name)) return {};
+            return localRequire(name);
+        }, module, module.exports);
+        const server = Object.create(module.exports.TCPServer.prototype).createMcpServer() as McpServer;
+        const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+        const client = new Client({ name: 'gmp-test', version: '1' });
+        await server.connect(serverTransport);
+        try {
+            await client.connect(clientTransport);
+            const dryRun = await client.callTool({ name: 'generate_gmp', arguments: { dryRun: true } });
+            assert.ok(!dryRun.isError);
+            const text = (dryRun.content as { text: string }[])[0].text;
+            const preview = JSON.parse(text);
+            assert.strictEqual(preview.dryRun, true);
+            assert.deepStrictEqual(preview.maps.map((m: { name: string }) => m.name).sort(), ['Cave', 'Entry']);
+            assert.ok([entry, cave].every(m => !fs.existsSync(m.gmp + '.bak')));
+            const rejected = await client.callTool({ name: 'generate_gmp', arguments: { mapNames: ['Entry'] } });
+            assert.strictEqual(rejected.isError, true);
+            assert.strictEqual(calls, 1);
+            const sideBarResult = await api.generateAllGmp();
+            assert.deepStrictEqual(sideBarResult.maps.map(m => m.name).sort(), preview.maps.map((m: { name: string }) => m.name).sort());
+            assert.ok([entry, cave].every(m => fs.existsSync(m.gmp + '.bak')));
+        } finally {
+            await client.close();
+            await server.close();
+        }
+    });
     test('rediscovers a renamed entry level by ID instead of its cached path or header display name', async function() {
         const entry = await map('Project_Map4');
         writeProject('1', 'Project_Map4');

@@ -11,7 +11,7 @@
 
 ### Requirement: 遍历工程内所有关卡
 
-系统 SHALL 从当前 Y3 工程的 `maps/` 枚举所有关卡，并逐关卡重建 gmp。
+系统 SHALL 从当前 Y3 工程的 `maps/` 枚举所有有效关卡，并逐关卡重建 GMP。侧边栏与 MCP 的重建范围一致，均不支持指定部分关卡；MCP 的 `dryRun` 预演同一范围且不写入文件。
 
 初始化工程与生成 GMP SHALL 共用只读的有效关卡扫描：只接纳包含可解析 `header.map`、且 ID 为正整数的目录；数字 ID SHALL 无损读取。缺少 `header.map` 的残留目录记录日志后忽略；已存在但损坏的 `header.map`、无效 ID 或重复 ID SHALL 明确报错。
 
@@ -21,6 +21,10 @@
 - **WHEN** 工程包含 `EntryMap` 和多个子关卡
 - **THEN** 系统依次处理每个关卡
 - **THEN** 任一步失败时返回该关卡的错误，不静默跳过
+
+#### Scenario: MCP 收到旧版关卡筛选参数
+- **WHEN** 调用 `generate_gmp` 时仍传入 `mapNames`
+- **THEN** 拒绝无效参数，不执行重建
 
 #### Scenario: 残留目录或旧缓存
 - **WHEN** `maps/Project_Map4` 没有 `header.map`，或缓存名单仍有已删除/改名的关卡

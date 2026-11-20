@@ -658,6 +658,15 @@ class Helper {
                     return;
                 }
 
+                const warnings = result.maps.flatMap(map => (map.warnings ?? []).map(message => `${map.name}：${message}`));
+                if (warnings.length > 0) {
+                    vscode.window.showWarningMessage(l10n.t('GMP 生成完成，部分段未重建'), {
+                        modal: true,
+                        detail: warnings.join('\n'),
+                    });
+                    return;
+                }
+
                 const changed = result.maps
                     .filter((map) => map.changed)
                     .map((map) => map.name);

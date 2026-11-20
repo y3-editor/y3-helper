@@ -443,7 +443,7 @@ export class 功能 extends TreeNode {
                 }),
                 new TreeNode(l10n.t('重建所有关卡 GMP'), {
                     iconPath: new vscode.ThemeIcon('sync'),
-                    tooltip: l10n.t('离线重建所有关卡的 GMP。\n触发器、表格和存档配置保留原 GMP 中的内容，相关修改需在编辑器中保存后生效。'),
+                    tooltip: l10n.t('离线重建所有关卡的 GMP，支持既有段的地表纹理、纹理植被、场景装饰、资源对象和编辑器保存的 JSON 表格。\n符合已验证包格式的 2.0/2.5D 工程可新增首个 JSON 表格段，并将项目级存档配置写入关卡 GMP。\n触发器和两类资源清单仍保留原包内容。'),
                     command: {
                         command: 'y3-helper.generateGmp',
                         title: l10n.t('重建所有关卡 GMP'),

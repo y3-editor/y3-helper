@@ -3,6 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
 import { writeGeneratedGmp } from './gmpWrite';
+import { readEditorPickle } from './gmpPickle';
+import { decodeGmpValue, encodeGmpValue, equalGmpValue, GmpValue, utf8 } from './gmpValue';
+import { parseGmpJson } from './gmpJson';
+import { rebuildRuntimeTableSection } from './gmpTableSection';
+import { rebuildArchiveSection } from './gmpArchiveSection';
 
 import {
     GmpBuilder,
@@ -11,6 +16,7 @@ import {
     buildPrefabSectionsFromEditorTable,
     buildUISection,
     compressZstd,
+    decompressZstd,
     packSectionDataNewStyle,
     packSectionDataOldStyle,
 } from './y3SaveGmp';
@@ -28,11 +34,11 @@ export interface GmpProjectContext {
     maps: GmpMapContext[];
     useMainLevelTriggerAndObject: boolean;
     useMainLevelUI: boolean;
+    projectFormat?: { majorVersion: string; physicsMode: string };
 }
 
 export interface GenerateGmpOptions {
     dryRun?: boolean;
-    mapNames?: string[];
     /** 仅供本地校验使用：把生成结果一并返回，不写入磁盘。 */
     captureOutput?: boolean;
 }
@@ -43,7 +49,11 @@ export interface MapGmpResult {
     gmpFile: string;
     changed: boolean;
     replacedSections: string[];
+    addedSections?: string[];
+    removedSections?: string[];
     preservedSections: string[];
+    sectionNotes?: Record<string, string>;
+    warnings?: string[];
     errors: string[];
     outputSize?: number;
     outputBase64?: string;
@@ -65,6 +75,10 @@ type SectionKind =
     | 'json-old'
     | 'raw-zstd'
     | 'zlib-zstd'
+    | 'texture'
+    | 'scene'
+    | 'tables'
+    | 'archive'
     | 'raw'
     | 'lua'
     | 'preserve';
@@ -117,14 +131,13 @@ export const SECTION_DEFS: SectionDef[] = [
 
     { name: 'terrain_data', oldId: 12, kind: 'raw-zstd', file: 'terrain.json' },
     { name: 'navimap', oldId: 3, kind: 'zlib-zstd', file: 'navimap.data' },
-    { name: 'dec_data', oldId: 4, kind: 'preserve' },
+    { name: 'dec_data', oldId: 4, kind: 'scene', file: 'decorationdata.data' },
     { name: 'trigger_data', oldId: 6, kind: 'preserve', shared: 'trigger' },
     { name: 'resource_data', oldId: 8, kind: 'preserve' },
     { name: 'ai_data', oldId: 9, kind: 'json-old', file: 'ai.json' },
     { name: 'ui_data', oldId: 10, kind: 'ui', shared: 'ui' },
-    // 纹理/植被的磁盘文件不是 gmp section 的直接字节源。
-    { name: 'texture_data', oldId: 93, kind: 'preserve' },
-    { name: 'texture_foliage_data', oldId: 105, kind: 'preserve' },
+    { name: 'texture_data', oldId: 93, kind: 'texture', file: 'texture.json' },
+    { name: 'texture_foliage_data', oldId: 105, kind: 'texture', file: 'texturefoliage.json' },
     { name: 'foliage_data', oldId: 87, kind: 'raw-zstd', file: 'foliage.json' },
     { name: 'foliage_using_data', oldId: 140, kind: 'json-old', file: 'foliageusing.json' },
     { name: 'ui_trigger', oldId: 113, kind: 'preserve' },
@@ -170,12 +183,12 @@ export const SECTION_DEFS: SectionDef[] = [
     { name: 'terrain_edit_data', oldId: 94, kind: 'json-old', file: 'terrainedit.json' },
     { name: 'user_language_data', oldId: 54, kind: 'json-old', file: 'userlanguage.json' },
     { name: 'user_resource_data', oldId: 119, kind: 'json-old', file: 'userresource.json' },
-    { name: 'archive_data', oldId: 95, kind: 'preserve' },
-    { name: 'global_archive_data', oldId: 110, kind: 'preserve' },
+    { name: 'archive_data', oldId: 95, kind: 'archive' },
+    { name: 'global_archive_data', oldId: 110, kind: 'archive' },
     { name: 'precondition_data', oldId: 97, kind: 'json-old', file: 'precondition.json' },
     { name: 'table_editor_data', oldId: 98, kind: 'preserve', shared: 'trigger' },
     { name: 'env_time_data', oldId: 99, kind: 'json-old', file: 'envtime.json' },
-    { name: 'table_data', oldId: 96, kind: 'preserve', shared: 'trigger' },
+    { name: 'table_data', oldId: 96, kind: 'tables', shared: 'trigger' },
     { name: 'tid_index_info', oldId: 100, kind: 'json-old', file: 'tidindexinfo.json' },
     { name: 'custom_event', oldId: 101, kind: 'json-old', file: 'customevent.json', shared: 'trigger' },
     { name: 'game_world_id', oldId: 103, kind: 'json-old', file: 'gameworld.json' },
@@ -192,7 +205,7 @@ export const SECTION_DEFS: SectionDef[] = [
     { name: 'manual_res_dep_data', oldId: 117, kind: 'json-old', file: 'manualdependence.json' },
     { name: 'cloud_res_dep_data', oldId: 116, kind: 'preserve' },
     { name: 'hit_point_data', oldId: 115, kind: 'json-old', file: 'hitpointdata.json' },
-    { name: 'resource_object_data', oldId: 114, kind: 'preserve' },
+    { name: 'resource_object_data', oldId: 114, kind: 'scene', file: 'resourceobjectdata.data' },
     {
         name: 'amp_trigger_dep_explorer_keys',
         oldId: 125,
@@ -407,6 +420,84 @@ function getSourceCache(mapPath: string): Promise<SourceCache> {
     return cache;
 }
 
+function readOptional(file: string): Buffer | undefined {
+    try {
+        return fs.readFileSync(file);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+        throw error;
+    }
+}
+
+function inflateEditorSource(bytes: Buffer): Buffer {
+    const result = zlib.inflateSync(bytes, { maxOutputLength: 64 * 1024 * 1024, info: true }) as unknown as {
+        buffer: Buffer; engine: { bytesWritten: number };
+    };
+    if (result.engine.bytesWritten !== bytes.length) throw new Error('zlib 流存在尾随数据');
+    return result.buffer;
+}
+
+function validateTexture(name: string, raw: Buffer): void {
+    if (raw.length === 0) return;
+    if (name === 'texture_data') {
+        const textures = readEditorPickle(raw);
+        if (!Array.isArray(textures) || !textures.every(id => typeof id === 'bigint')) {
+            throw new Error('地表纹理载荷应为纹理 ID 列表');
+        }
+    } else {
+        // BinaryChunkStream: one LE length-prefixed chunk per terrain texture.
+        // Each chunk contains a sequence of (density length, foliage ID, opaque density bytes).
+        let cursor = 0;
+        while (cursor < raw.length) {
+            if (raw.length - cursor < 4) throw new Error('纹理植被块头截断');
+            const size = raw.readInt32LE(cursor);
+            cursor += 4;
+            if (size < 0 || size > raw.length - cursor) throw new Error('纹理植被块长度无效');
+            const end = cursor + size;
+            while (cursor < end) {
+                if (end - cursor < 8) throw new Error('纹理植被密度头截断');
+                const density = raw.readInt32LE(cursor);
+                cursor += 8;
+                if (density < 0 || density > end - cursor) throw new Error('纹理植被密度长度无效');
+                cursor += density;
+            }
+        }
+    }
+}
+
+type SectionUpdate = { body: Buffer } | { omit: true; note: string } | { reason: string; unverified?: boolean };
+
+async function rebuildSceneSection(def: SectionDef, sourcePath: string, original?: Buffer): Promise<SectionUpdate> {
+    let file = path.join(sourcePath, def.file!);
+    try {
+        let bytes = readOptional(file);
+        if (def.kind === 'scene' && bytes === undefined) {
+            file = file.replace(/\.data$/, '.json');
+            bytes = readOptional(file);
+        }
+        if (bytes === undefined) return { reason: `缺少可选源，保留原包：${file}` };
+        let raw: Buffer | undefined;
+        let scene: GmpValue | undefined;
+        if (def.kind === 'texture') {
+            raw = inflateEditorSource(bytes);
+            validateTexture(def.name, raw);
+        } else {
+            scene = file.endsWith('.data') ? readEditorPickle(inflateEditorSource(bytes)) : parseGmpJson(utf8.decode(bytes), true);
+            if (!(scene instanceof Map)) throw new Error('场景载荷应为字典');
+        }
+        if (!original) return { reason: `原包无此段，尚未验证可新增：${file}`, unverified: true };
+        const old = await decompressZstd(original);
+        if (raw !== undefined ? old.equals(raw) : equalGmpValue(decodeGmpValue(old), scene!)) {
+            return { reason: '载荷未变，复用原段字节' };
+        }
+        if (raw?.length === 0 || (scene instanceof Map && scene.size === 0)) {
+            throw new Error('尚未验证空载荷的段省略规则');
+        }
+        return { body: await compressZstd(raw ?? encodeGmpValue(scene!)) };
+    } catch (error) {
+        throw new Error(`${file}：${error instanceof Error ? error.message : String(error)}`);
+    }
+}
 async function buildSectionBody(
     def: SectionDef,
     sourcePath: string,
@@ -537,26 +628,19 @@ async function generateOneMap(
         parser.header.editorPackStamp ?? '',
     );
 
-    // 按编辑器的 SectionProp 声明顺序重排，而不是沿用当前 gmp 的顺序。
-    // 这样即使当前 gmp 曾被其他工具按 index 排序过，也能恢复编辑器顺序。
-    const canonicalOrder = SECTION_DEFS.map((def) => sectionIndex(def));
-    const knownIndexes = new Set(canonicalOrder);
-    const orderedIndexes = canonicalOrder.filter((index) => parser.sections.has(index));
-    for (const index of parser.sections.keys()) {
-        if (!knownIndexes.has(index)) {
-            orderedIndexes.push(index);
-        }
-    }
-    for (const index of orderedIndexes) {
-        const section = parser.sections.get(index);
-        if (section) {
-            builder.setSection(index, section.body, section.isOldSection, section.binTable);
-        }
-    }
-
+    const rebuiltSections = new Map<number, Buffer>();
+    const addedSections: string[] = [];
+    const removed = new Set<number>();
+    const removedSections: string[] = [];
     const replacedSections: string[] = [];
     const preservedSections: string[] = [];
+    const sectionNotes: Record<string, string> = {};
+    const warnings: string[] = [];
     const errors: string[] = [];
+    let generatedDesc: Buffer | undefined;
+    // 1120test 编辑器样本验证的项目模式与包版本。
+    const verifiedMode73 = parser.header.version === 73 && context.projectFormat?.majorVersion === '2.0'
+        && context.projectFormat.physicsMode === '2.5d';
 
     for (const def of SECTION_DEFS) {
         if (def.kind === 'preserve') {
@@ -565,13 +649,20 @@ async function generateOneMap(
         }
 
         const index = sectionIndex(def);
-        if (!parser.sections.has(index)) {
+        const originalSection = parser.sections.get(index);
+        const rebuildScene = def.kind === 'texture' || def.kind === 'scene';
+        if (def.kind === 'archive' && !verifiedMode73) {
+            if (originalSection) preservedSections.push(def.name);
+            sectionNotes[def.name] = '存档仅验证过 2.0/2.5D、版本 73 的关卡包，保留原包';
+            continue;
+        }
+        if (!originalSection && !rebuildScene && def.kind !== 'tables' && def.kind !== 'archive') {
             continue;
         }
 
         // 带 binary table 的 section 需要同时重建二进制表；v1 先保留，避免写出
         // 与新数据不匹配的旧表。
-        if (parser.sections.get(index)?.binTable) {
+        if (originalSection?.binTable) {
             preservedSections.push(def.name);
             continue;
         }
@@ -579,7 +670,36 @@ async function generateOneMap(
         const sourceMap = resolveSourceMap(context, map, entryMap, def);
         let body: Buffer | undefined;
         try {
-            body = await buildSectionBody(def, sourceMap.path);
+            if (rebuildScene || def.kind === 'tables' || def.kind === 'archive') {
+                let update: SectionUpdate;
+                if (def.kind === 'tables') {
+                    update = await rebuildRuntimeTableSection(sourceMap.path, context.projectPath, {
+                        original: originalSection?.body,
+                        originalDesc: parser.sections.get(SECTION_INDEXES.get('desc')!)?.body,
+                        generatedDesc,
+                        verifiedPresenceMode: verifiedMode73,
+                    });
+                } else if (def.kind === 'archive') {
+                    update = await rebuildArchiveSection(context.projectPath, def.name === 'global_archive_data', originalSection?.body);
+                } else {
+                    update = await rebuildSceneSection(def, sourceMap.path, originalSection?.body);
+                }
+                if ('omit' in update) {
+                    removed.add(index);
+                    removedSections.push(def.name);
+                    sectionNotes[def.name] = update.note;
+                    continue;
+                }
+                if ('reason' in update) {
+                    if (originalSection) preservedSections.push(def.name);
+                    sectionNotes[def.name] = update.reason;
+                    if (update.unverified) warnings.push(`${def.name}: ${update.reason}`);
+                    continue;
+                }
+                body = update.body;
+            } else {
+                body = await buildSectionBody(def, sourceMap.path);
+            }
         } catch (error) {
             errors.push(
                 `${def.name}: ${error instanceof Error ? error.message : String(error)}`,
@@ -594,15 +714,38 @@ async function generateOneMap(
             continue;
         }
 
-        builder.setSection(index, body, def.oldId !== undefined, null);
-        replacedSections.push(def.name);
+        if (def.name === 'desc') generatedDesc = body;
+        rebuiltSections.set(index, body);
+        if (originalSection) replacedSections.push(def.name);
+        else addedSections.push(def.name);
     }
 
+    if (errors.length > 0) {
+        return {
+            name: map.name, displayName: map.displayName, gmpFile, changed: false,
+            replacedSections: [], preservedSections, sectionNotes, warnings, errors,
+        };
+    }
+
+    // 新增段也按 SectionProp 的声明顺序写入，未知段维持原相对顺序。
+    const knownIndexes = new Set<number>();
+    for (const def of SECTION_DEFS) {
+        const index = sectionIndex(def);
+        knownIndexes.add(index);
+        if (removed.has(index)) continue;
+        const rebuilt = rebuiltSections.get(index);
+        const originalSection = parser.sections.get(index);
+        if (rebuilt !== undefined) builder.setSection(index, rebuilt, def.oldId !== undefined);
+        else if (originalSection) builder.setSection(index, originalSection.body, originalSection.isOldSection, originalSection.binTable);
+    }
+    for (const [index, section] of parser.sections) {
+        if (!knownIndexes.has(index)) builder.setSection(index, section.body, section.isOldSection, section.binTable);
+    }
     const output = builder.build();
     const original = fs.readFileSync(gmpFile);
     const changed = !output.equals(original);
 
-    if (!options.dryRun && changed && errors.length === 0) {
+    if (!options.dryRun && changed) {
         try {
             const backupFile = gmpFile + '.bak';
             if (!fs.existsSync(backupFile)) {
@@ -622,7 +765,11 @@ async function generateOneMap(
         gmpFile,
         changed,
         replacedSections,
+        ...(addedSections.length > 0 ? { addedSections } : {}),
+        ...(removedSections.length > 0 ? { removedSections } : {}),
         preservedSections,
+        ...(Object.keys(sectionNotes).length > 0 ? { sectionNotes } : {}),
+        ...(warnings.length > 0 ? { warnings } : {}),
         errors,
         outputSize: output.length,
         ...(options.captureOutput ? { outputBase64: output.toString('base64') } : {}),
@@ -641,8 +788,6 @@ export async function generateProjectGmp(
     context: GmpProjectContext,
     options: GenerateGmpOptions = {},
 ): Promise<GenerateGmpResult> {
-    const selectedNames = options.mapNames ? new Set(options.mapNames) : undefined;
-    const maps = context.maps.filter((map) => !selectedNames || selectedNames.has(map.name));
     const entryMap = context.maps.find((map) => map.name === context.entryMapName);
 
     if (!entryMap) {
@@ -655,19 +800,9 @@ export async function generateProjectGmp(
         };
     }
 
-    if (maps.length === 0) {
-        return {
-            success: false,
-            dryRun: options.dryRun === true,
-            projectPath: context.projectPath,
-            maps: [],
-            message: '没有匹配的关卡',
-        };
-    }
-
     sourceCaches.clear();
     const results: MapGmpResult[] = [];
-    for (const map of maps) {
+    for (const map of context.maps) {
         try {
             results.push(await generateOneMap(context, map, entryMap, options));
         } catch (error) {

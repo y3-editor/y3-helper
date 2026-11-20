@@ -381,13 +381,13 @@ export class TCPServer extends vscode.Disposable {
         }, async ({ nodePath, depth }) => this.runTool(async () => await this.getUICanvas({ nodePath, depth })));
 
         server.registerTool('generate_gmp', {
-            description: 'Regenerate every level gmp file offline from project sources. Shared sections follow the project settings; level-specific sections come from each map. trigger_data and sections that cannot be rebuilt offline are preserved from the existing gmp. Use dryRun=true to only inspect changes.',
-            inputSchema: {
+            description: 'Regenerate every level gmp file offline from project sources. Shared sections follow the project settings; level-specific sections come from each map. Rebuild existing terrain texture, texture foliage, decoration, and resource object sections. Runtime tables are rebuilt only from editor-saved JSON. Verified 2.0/2.5D packages can also gain their first JSON table section and rebuild archive settings from project JSON. Actual saves, triggers, and resource lists stay unchanged. Use dryRun=true to only inspect changes.',
+            // Reject retired selectors instead of silently switching a partial request to a full rebuild.
+            inputSchema: z.object({
                 dryRun: z.boolean().optional(),
-                mapNames: z.array(z.string()).optional(),
-            }
-        }, async ({ dryRun, mapNames }) => this.runTool(
-            async () => await generateAllGmp({ dryRun, mapNames })
+            }).strict(),
+        }, async ({ dryRun }) => this.runTool(
+            async () => await generateAllGmp({ dryRun })
         ));
 
         return server;
