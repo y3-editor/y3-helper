@@ -26,6 +26,7 @@ import * as debug from './debug';
 import { EditorLauncher } from './launchEditor';
 import { killGame } from './killGame';
 import { initLaunchAgent, shutdownLaunchAgent } from './launchAgent/manager';
+import { generateAllGmp } from './tools/gmpProject';
 import * as editorTable from './editorTable';
 import * as plugin from './plugin';
 import * as y3 from 'y3-helper';
@@ -627,6 +628,48 @@ class Helper {
         });
     }
 
+    private registerCommandOfGenerateGmp() {
+        vscode.commands.registerCommand('y3-helper.generateGmp', async () => {
+            await env.mapReady();
+            if (!env.project) {
+                vscode.window.showErrorMessage(l10n.t('未找到 Y3 工程'));
+                return;
+            }
+
+            await vscode.window.withProgress({
+                title: l10n.t('正在生成所有关卡 GMP...'),
+                location: vscode.ProgressLocation.Notification,
+            }, async () => {
+                const result = await generateAllGmp();
+                const errors = result.maps.flatMap((map) =>
+                    map.errors.map((error) => map.displayName && map.displayName !== map.name
+                        ? `${map.displayName}（目录：${map.name}）：${error}`
+                        : `${map.name}：${error}`),
+                );
+                if (!result.success && errors.length === 0) {
+                    errors.push(result.message ?? l10n.t('GMP 生成失败'));
+                }
+                if (errors.length > 0) {
+                    const projectPath = result.projectPath ?? env.projectUri?.fsPath;
+                    vscode.window.showWarningMessage(
+                        result.maps.length > 0 ? l10n.t('GMP 生成完成，但有错误') : l10n.t('GMP 生成失败'),
+                        { modal: true, detail: [projectPath ? `工程：${projectPath}` : '', ...errors].filter(Boolean).join('\n') },
+                    );
+                    return;
+                }
+
+                const changed = result.maps
+                    .filter((map) => map.changed)
+                    .map((map) => map.name);
+                vscode.window.showInformationMessage(
+                    changed.length > 0
+                        ? l10n.t('GMP 已更新：{0}', changed.join(', '))
+                        : l10n.t('所有关卡 GMP 已是最新'),
+                );
+            });
+        });
+    }
+
     private registerCommandOfKillGame() {
         vscode.commands.registerCommand('y3-helper.killGame', async () => {
             await killGame();
@@ -798,6 +841,7 @@ class Helper {
         this.registerCommandOfInitProject();
         this.registerCommandOfMakeLuaDoc();
         this.registerCommandOfLaunchGame();
+        this.registerCommandOfGenerateGmp();
         this.registerCommandOfKillGame();
         this.registerCommandOfAttach();
         this.registerCommandOfLaunchEditor();

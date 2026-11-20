@@ -27,6 +27,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import * as msgpack from '@msgpack/msgpack';
+import * as zlib from 'zlib';
+import { writeGeneratedGmp } from './gmpWrite';
 
 // zstd-codec 没有类型声明
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -119,6 +121,28 @@ async function getZstdSimple(): Promise<ZstdSimple> {
     });
     
     return zstdInitPromise;
+}
+
+/**
+ * 使用共享的 Zstd 实例压缩数据。
+ * 多关卡 GMP 生成会复用这个入口，避免重复初始化 WASM。
+ */
+async function compressZstd(data: Uint8Array, level: number = COMPRESS_LEVEL): Promise<Buffer> {
+    if (typeof zlib.zstdCompressSync === 'function') {
+        return zlib.zstdCompressSync(data, {
+            params: { [zlib.constants.ZSTD_c_compressionLevel]: level },
+        });
+    }
+    const simple = await getZstdSimple();
+    return Buffer.from(simple.compress(data, level));
+}
+
+async function decompressZstd(data: Uint8Array): Promise<Buffer> {
+    if (typeof zlib.zstdDecompressSync === 'function') {
+        return zlib.zstdDecompressSync(data);
+    }
+    const simple = await getZstdSimple();
+    return Buffer.from(simple.decompress(data));
 }
 
 /** UI Section 的固定 ID（旧版 Section） */
@@ -530,9 +554,55 @@ async function packSectionDataNewStyle(data: Record<string, any>): Promise<Buffe
     const packed = msgpack.encode(jsonStr);
 
     // 3. zstd 压缩（使用单例）
-    const simple = await getZstdSimple();
-    const compressed = simple.compress(packed, COMPRESS_LEVEL);
-    return Buffer.from(compressed);
+    return compressZstd(packed);
+}
+
+/** MapSection._JsonObjHook restores numeric JSON keys to Python integers. */
+function encodeEditorMsgpack(data: unknown): Buffer {
+    const chunks: Uint8Array[] = [];
+
+    function containerHeader(length: number, isArray: boolean): void {
+        if (length < 16) {
+            chunks.push(Buffer.from([(isArray ? 0x90 : 0x80) | length]));
+        } else {
+            const header = Buffer.alloc(length < 0x10000 ? 3 : 5);
+            header[0] = isArray ? (header.length === 3 ? 0xdc : 0xdd) : (header.length === 3 ? 0xde : 0xdf);
+            if (header.length === 3) {
+                header.writeUInt16BE(length, 1);
+            } else {
+                header.writeUInt32BE(length, 1);
+            }
+            chunks.push(header);
+        }
+    }
+
+    function visit(value: unknown): void {
+        if (Array.isArray(value)) {
+            containerHeader(value.length, true);
+            value.forEach(visit);
+        } else if (value !== null && typeof value === 'object' && !ArrayBuffer.isView(value)) {
+            const entries = new Map<string | number | bigint, unknown>();
+            for (const [key, child] of Object.entries(value)) {
+                let restoredKey: string | number | bigint = key;
+                if (/^\s*[+-]?\d+\s*$/.test(key)) {
+                    const integer = BigInt(key.trim());
+                    restoredKey = integer >= BigInt(Number.MIN_SAFE_INTEGER) && integer <= BigInt(Number.MAX_SAFE_INTEGER)
+                        ? Number(integer) : integer;
+                }
+                entries.set(restoredKey, child);
+            }
+            containerHeader(entries.size, false);
+            for (const [key, child] of entries) {
+                chunks.push(msgpack.encode(key, { useBigInt64: typeof key === 'bigint' }));
+                visit(child);
+            }
+        } else {
+            chunks.push(msgpack.encode(value, { useBigInt64: typeof value === 'bigint' }));
+        }
+    }
+
+    visit(data);
+    return Buffer.concat(chunks);
 }
 
 /**
@@ -546,12 +616,10 @@ async function packSectionDataNewStyle(data: Record<string, any>): Promise<Buffe
  */
 async function packSectionDataOldStyle(data: Record<string, any>): Promise<Buffer> {
     // 1. msgpack 编码（直接编码字典，不转 JSON 字符串）
-    const packed = msgpack.encode(data);
+    const packed = encodeEditorMsgpack(data);
 
     // 2. zstd 压缩（使用单例）
-    const simple = await getZstdSimple();
-    const compressed = simple.compress(packed, COMPRESS_LEVEL);
-    return Buffer.from(compressed);
+    return compressZstd(packed);
 }
 
 // ============================================================
@@ -667,6 +735,12 @@ class GmpBuilder {
     private sections: Map<number, BuilderSectionInfo> = new Map();
 
     /**
+     * 保留 setSection 的插入顺序。
+     * 编辑器按 SectionProp 声明顺序写 gmp，多关卡生成需要保持同样的顺序。
+     */
+    public preserveInsertionOrder = false;
+
+    /**
      * 设置 GMP header
      */
     setHeader(
@@ -708,8 +782,11 @@ class GmpBuilder {
      * 构建 GMP 二进制文件
      */
     build(): Buffer {
-        // 准备 sections 列表（按索引排序）
-        const sortedSections = Array.from(this.sections.entries()).sort((a, b) => a[0] - b[0]);
+        // 默认按索引排序；多关卡生成时保留原始声明顺序。
+        const entries = Array.from(this.sections.entries());
+        const sortedSections = this.preserveInsertionOrder
+            ? entries
+            : entries.sort((a, b) => a[0] - b[0]);
 
         // 计算总 pack_size
         let totalPackSize = 2; // sec_cnt
@@ -787,7 +864,7 @@ class GmpBuilder {
      */
     save(filePath: string): void {
         const data = this.build();
-        fs.writeFileSync(filePath, new Uint8Array(data));
+        writeGeneratedGmp(filePath, data);
         console.log(`[GmpBuilder] 保存 GMP 文件: ${filePath} (${data.length} bytes)`);
     }
 }
@@ -807,7 +884,10 @@ function convertTupleFormat(obj: any): any {
     if (typeof obj === 'object' && !Array.isArray(obj)) {
         // 检查是否是 tuple 格式
         if (obj.__tuple__ === true && 'items' in obj) {
-            return (obj.items as any[]).map(item => convertTupleFormat(item));
+            return [
+                ...(obj.items as any[]).map(item => convertTupleFormat(item)),
+                Buffer.from([0x11]),
+            ];
         } else {
             const result: Record<string, any> = {};
             for (const [k, v] of Object.entries(obj)) {
@@ -921,6 +1001,7 @@ function buildUIData(mapPath: string): Record<string, any> {
                 throw new Error(`UI 面板 '${filename}' 缺少 'key' 字段`);
             }
 
+            delete prefabJson.key;
             uiData.prefab_data[key] = prefabJson;
         } catch (e) {
             console.log(`[y3-save-gmp] 读取 ${prefabFile} 失败: ${e}`);
@@ -1189,7 +1270,7 @@ async function saveGmpWithNewData(
         console.log(`[y3-save-gmp] 备份原文件: ${backupFile}`);
     }
 
-    fs.writeFileSync(outputFile, new Uint8Array(newGmpData));
+    writeGeneratedGmp(outputFile, newGmpData);
 
     // 构建返回结果
     const result: SaveResult = {
@@ -1263,8 +1344,11 @@ export {
     packSectionDataOldStyle,
     buildPrefabSectionsFromEditorTable,
     buildUISection,
+    buildLanguageSection,
     buildUSLanguageSection,
     buildZHLanguageSection,
+    compressZstd,
+    decompressZstd,
     PREFAB_SECTIONS,
     SECTION_TO_FOLDER,
     UI_SECTION_ID,

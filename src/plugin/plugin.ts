@@ -5,6 +5,7 @@ import * as vm from 'vm';
 import * as path from 'path';
 import * as fs from 'fs';
 import { queue, throttle } from '../utility/decorators';
+import { isGeneratedGmpWrite } from '../tools/gmpWrite';
 
 declare const __non_webpack_require__: NodeRequire | undefined;
 const rawRequire = __non_webpack_require__ ?? require;
@@ -221,7 +222,10 @@ export class PluginManager extends vscode.Disposable {
         this._disposables.push(watcher);
     
         let delay: NodeJS.Timeout | undefined;
-        let onSave = () => {
+        let onSave = (uri: vscode.Uri) => {
+            if (isGeneratedGmpWrite(uri.fsPath)) {
+                return;
+            }
             if (delay) {
                 clearTimeout(delay);
             }

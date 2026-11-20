@@ -11,6 +11,7 @@ import { define } from '../customDefine';
 import type { UINode } from '../customDefine/ui';
 import * as envImport from '../env';
 import { MCP_HTTP_PORT, MCP_INSTRUCTIONS } from './mcpInfo';
+import { generateAllGmp } from '../tools/gmpProject';
 
 const UI_PACKAGE_KEY = '\u754c\u9762';
 const UI_CANVAS_KEY = '\u753b\u677f';
@@ -378,6 +379,16 @@ export class TCPServer extends vscode.Disposable {
                 depth: z.number().optional()
             }
         }, async ({ nodePath, depth }) => this.runTool(async () => await this.getUICanvas({ nodePath, depth })));
+
+        server.registerTool('generate_gmp', {
+            description: 'Regenerate every level gmp file offline from project sources. Shared sections follow the project settings; level-specific sections come from each map. trigger_data and sections that cannot be rebuilt offline are preserved from the existing gmp. Use dryRun=true to only inspect changes.',
+            inputSchema: {
+                dryRun: z.boolean().optional(),
+                mapNames: z.array(z.string()).optional(),
+            }
+        }, async ({ dryRun, mapNames }) => this.runTool(
+            async () => await generateAllGmp({ dryRun, mapNames })
+        ));
 
         return server;
     }

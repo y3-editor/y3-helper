@@ -29,6 +29,7 @@ import {
     serializeLocalArchiveData,
 } from './multiPlayerArchives';
 import { filterPlayerSelection } from './configSnapshot';
+import { ProjectMapInfo, readProjectMap, scanProjectMaps } from './tools/projectMaps';
 
 
 type EditorVersion = '1.0' | '2.0' | 'unknown';
@@ -75,35 +76,15 @@ export class Map extends vscode.Disposable {
         }
     }
 
-    async start() {
+    async start(snapshot?: ProjectMapInfo) {
+        const info = snapshot ?? await readProjectMap(this.uri.fsPath);
+        if (!info) {
+            return;
+        }
+        this.id = BigInt(info.id);
+        this.description = info.displayName;
         await Promise.all([
             this.language.start(),
-            (async () => {
-                let headerMap = await y3.fs.readFile(vscode.Uri.joinPath(this.uri, 'header.map'));
-                if (!headerMap) {
-                    return;
-                }
-                let headerMapJson = jsonc.parseTree(headerMap.string);
-                if (!headerMapJson) {
-                    return;
-                }
-                let idNode = jsonc.findNodeAtLocation(headerMapJson, ['id']);
-                if (!idNode) {
-                    return;
-                }
-                this.id = BigInt(headerMap.string.slice(idNode.offset, idNode.offset + idNode.length));
-            })(),
-            (async () => {
-                let descFile = await y3.fs.readFile(y3.uri(this.uri, 'desc.json'));
-                if (!descFile) {
-                    return;
-                }
-                let descJson = jsonc.parse(descFile.string);
-                if (!descJson) {
-                    return;
-                }
-                this.description = descJson.name;
-            })(),
             vscode.workspace.fs.createDirectory(y3.uri(this.scriptUri, '.log')),
         ]);
     }
@@ -157,10 +138,17 @@ class Project extends vscode.Disposable {
         started.push(this.loadMultiPlayerRoles());
         started.push(this.loadMultiPlayerArchives());
 
-        for (const [mapName] of await y3.fs.dir(this.uri, 'maps')) {
-            let map = new Map(mapName, vscode.Uri.joinPath(this.uri, 'maps', mapName));
+        const mapScan = await scanProjectMaps(this.uri.fsPath);
+        for (const directory of mapScan.ignoredDirectories) {
+            tools.log.info(`忽略非关卡目录（缺少 header.map）：${directory}`);
+        }
+        for (const error of mapScan.errors) {
+            tools.log.error(error);
+        }
+        for (const info of mapScan.maps) {
+            let map = new Map(info.name, vscode.Uri.joinPath(this.uri, 'maps', info.name));
             this.maps.push(map);
-            started.push(map.start());
+            started.push(map.start(info));
         }
 
         await Promise.all(started);

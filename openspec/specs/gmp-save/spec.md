@@ -1,5 +1,9 @@
 # gmp-save Specification
 
+> 注意：当前 MCP 入口是 `generate_gmp`，多关卡离线生成的行为见 `gmp-generate/spec.md`。
+> 本文档描述的是旧的单关卡 `save()` 能力。
+> `save()` 产生的 GMP 文件事件同样不触发 `onSave` 插件；后续编辑器保存仍按原规则触发。
+
 GMP 文件保存功能 - 将 JSON 格式的物编和 UI 数据打包为二进制 GMP 格式。
 
 ## ADDED Requirements

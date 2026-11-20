@@ -441,6 +441,15 @@ export class 功能 extends TreeNode {
                         });
                     },
                 }),
+                new TreeNode(l10n.t('重建所有关卡 GMP'), {
+                    iconPath: new vscode.ThemeIcon('sync'),
+                    tooltip: l10n.t('离线重建所有关卡的 GMP。\n触发器、表格和存档配置保留原 GMP 中的内容，相关修改需在编辑器中保存后生效。'),
+                    command: {
+                        command: 'y3-helper.generateGmp',
+                        title: l10n.t('重建所有关卡 GMP'),
+                    },
+                    show: () => env.project !== undefined,
+                }),
                 new TreeNode(l10n.t('附加调试器'), {
                     command: {
                         command: 'y3-helper.attach',
