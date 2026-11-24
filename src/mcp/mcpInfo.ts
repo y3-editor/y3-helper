@@ -14,7 +14,8 @@ Typical workflow:
 4. get_logs and read_problems_lua to diagnose failures.
 5. For multi-player testing, call get_multi_player_roles, then launch_game with { multiMode: true, players: [roleId, ...] }.
 6. When several game windows run, target one with clientSlot or roleId from get_game_status. In a multi-player session, omitting both from quick_restart/stop_game operates on every connected window.
-7. After editing editor_table/UI/terrain/Lua files, call generate_gmp to rebuild every level gmp offline before launch_game.`;
+7. After editing editor_table/UI/terrain/Lua files, call generate_gmp to rebuild every level gmp offline before launch_game.
+8. Use get_ui_canvas to discover dot-separated UI node paths, then call get_ui_center_by_path or trigger_ui_touch_event_by_path to inspect screen coordinates or click runtime UI controls.`;
 
 const TOOL_TABLE = [
     '| 工具 | 说明 |',
@@ -29,6 +30,8 @@ const TOOL_TABLE = [
     '| `capture_screenshot` | 截取游戏画面 |',
     '| `read_problems_lua` | 获取工程内 Lua 文件的静态检查诊断 |',
     '| `get_ui_canvas` | 导出当前地图的 UI 画布树 |',
+    '| `get_ui_center_by_path` | 查询运行态 UI 控件中心点的 Windows 屏幕坐标 |',
+    '| `trigger_ui_touch_event_by_path` | 触发运行态 UI 控件的左键或右键点击事件 |',
     '| `generate_gmp` | 离线重建所有关卡的 gmp；保留 trigger_data |',
 ].join('\n');
 

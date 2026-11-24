@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { GameLauncher } from '../launchGame';
@@ -16,6 +17,24 @@ import {
 import { killGame } from '../killGame';
 import { buildMultiLaunchLuaArgs, getMultiLaunchTimeoutMs } from './multiLaunch';
 import { selectReconnectedClient } from './reconnect';
+import {
+    buildGetUiCenterLua,
+    buildTriggerUiTouchLua,
+    dispatchPrintListeners,
+    isRuntimeUiTouch,
+    parseUiCenterPayload,
+    parseUiTouchPayload,
+    resolveRuntimeTargetClient,
+    runRuntimeUiLuaCall,
+    RuntimeUiAbortHandler,
+    RuntimeUiPrintListener,
+    RUNTIME_UI_TIMEOUT_MS,
+} from './runtimeUi';
+
+interface ClientPrintSubscription {
+    listener: RuntimeUiPrintListener;
+    onAbort?: RuntimeUiAbortHandler;
+}
 
 /**
  * 游戏会话管理器
@@ -28,6 +47,8 @@ export class GameSessionManager extends vscode.Disposable {
     private cancelLaunch: boolean = false;  // 取消启动标记
     // 保存每个 Client 的原始 print，保证 attachClient 幂等，避免多层包装导致日志重复
     private readonly originalClientPrints = new WeakMap<Client, (msg: string) => void>();
+    // 运行态工具的临时 print 订阅（命中后仅剥离内部标记段，保留同行或同批其它日志）
+    private readonly clientPrintListeners = new Map<Client, Set<ClientPrintSubscription>>();
     // 每个 Client 独立的日志记录（支持多游戏窗口按 index 选择日志）
     private readonly clientLogManagers = new Map<Client, LogManager>();
     private clientLogSeq = 0;
@@ -605,6 +626,14 @@ export class GameSessionManager extends vscode.Disposable {
                     this.clientLogManagers.delete(client);
                 }
             }
+            for (const client of [...this.clientPrintListeners.keys()]) {
+                if (!Client.allClients.includes(client)) {
+                    this.abortClientPrintListeners(
+                        client,
+                        'Game client disconnected while waiting for runtime UI response.'
+                    );
+                }
+            }
 
             if (this.currentSession) {
                 const session = this.currentSession;
@@ -714,11 +743,72 @@ export class GameSessionManager extends vscode.Disposable {
         const clientLogManager = this.getClientLogManager(client);
         const sessionRef = session;
         client.print = (msg: string) => {
+            const subscriptions = this.clientPrintListeners.get(client);
+            if (subscriptions && subscriptions.size > 0) {
+                const dispatched = dispatchPrintListeners(
+                    Array.from(subscriptions, (sub) => sub.listener),
+                    msg
+                );
+                if (dispatched.anyMatched) {
+                    if (dispatched.remaining.length === 0) {
+                        return;
+                    }
+                    msg = dispatched.remaining;
+                }
+            }
             clientLogManager.appendLog(msg);
             if (sessionRef) {
                 sessionRef.logManager.appendLog(msg);
             }
             return originalPrint!(msg);
+        };
+    }
+
+    private abortClientPrintListeners(client: Client, reason: string): void {
+        const subscriptions = this.clientPrintListeners.get(client);
+        if (!subscriptions) {
+            return;
+        }
+        for (const sub of [...subscriptions]) {
+            sub.onAbort?.('CLIENT_NOT_CONNECTED', reason);
+        }
+        this.clientPrintListeners.delete(client);
+    }
+
+    /**
+     * 订阅指定 Client 的控制台输出，返回幂等的取消订阅函数；
+     * listener 可剥离消费到的内部标记段，并保留剩余普通日志。
+     */
+    private subscribeClientPrint(
+        client: Client,
+        listener: RuntimeUiPrintListener,
+        onAbort?: RuntimeUiAbortHandler
+    ): () => void {
+        if (!this.originalClientPrints.has(client)) {
+            this.wrapClientPrint(client);
+        }
+        let subscriptions = this.clientPrintListeners.get(client);
+        if (!subscriptions) {
+            subscriptions = new Set();
+            this.clientPrintListeners.set(client, subscriptions);
+        }
+        const subscription: ClientPrintSubscription = { listener, onAbort };
+        subscriptions.add(subscription);
+
+        let unsubscribed = false;
+        return () => {
+            if (unsubscribed) {
+                return;
+            }
+            unsubscribed = true;
+            const current = this.clientPrintListeners.get(client);
+            if (!current) {
+                return;
+            }
+            current.delete(subscription);
+            if (current.size === 0) {
+                this.clientPrintListeners.delete(client);
+            }
         };
     }
 
@@ -1447,6 +1537,171 @@ export class GameSessionManager extends vscode.Disposable {
         }
     }
 
+    private async executeRuntimeUiCall<T extends { ok: true } | { ok: false; code: string; message: string }>(options: {
+        uiPath: unknown;
+        clientSlot?: number;
+        roleId?: number;
+        extraDetails?: Record<string, unknown>;
+        buildLua: (uiPath: string, requestId: string) => string;
+        parsePayload: (rawJson: string) => T;
+    }): Promise<
+        | {
+            success: true;
+            uiPath: string;
+            clientMeta: { client_slot: number; client_name: string; role_id: number | undefined };
+            parsed: Extract<T, { ok: true }>;
+        }
+        | { success: false; response: any }
+    > {
+        if (typeof options.uiPath !== 'string' || options.uiPath.trim().length === 0) {
+            return {
+                success: false,
+                response: this.failure('INVALID_PARAMS', 'ui_path must be a non-empty string.', {
+                    ui_path: options.uiPath,
+                    ...(options.extraDetails ?? {}),
+                }),
+            };
+        }
+        const uiPath = options.uiPath;
+
+        const resolved = resolveRuntimeTargetClient({
+            allClients: Client.allClients,
+            sessionClient: this.currentSession?.client,
+            clientSlot: options.clientSlot,
+            roleId: options.roleId,
+        });
+        if (!resolved.ok) {
+            return {
+                success: false,
+                response: this.failure(resolved.code, resolved.message, {
+                    ui_path: uiPath,
+                    ...(options.extraDetails ?? {}),
+                }),
+            };
+        }
+
+        const { client, slot } = resolved;
+        const clientMeta = {
+            client_slot: slot,
+            client_name: client.name,
+            role_id: client.roleId,
+        };
+        const details = {
+            ui_path: uiPath,
+            ...(options.extraDetails ?? {}),
+            ...clientMeta,
+        };
+
+        const requestId = crypto.randomBytes(6).toString('hex');
+        const luaCode = options.buildLua(uiPath, requestId);
+        const callResult = await runRuntimeUiLuaCall({
+            sendCommand: (code) => client.notify('command', { data: code }),
+            subscribePrint: (listener, onAbort) => this.subscribeClientPrint(client, listener, onAbort),
+            luaCode,
+            requestId,
+            timeoutMs: RUNTIME_UI_TIMEOUT_MS,
+        });
+
+        if (!callResult.ok) {
+            return {
+                success: false,
+                response: this.failure(callResult.code, callResult.message, details),
+            };
+        }
+
+        const parsed = options.parsePayload(callResult.payload);
+        if (!parsed.ok) {
+            return {
+                success: false,
+                response: this.failure(parsed.code, parsed.message, details),
+            };
+        }
+
+        return {
+            success: true,
+            uiPath,
+            clientMeta,
+            parsed: parsed as Extract<T, { ok: true }>,
+        };
+    }
+
+    /**
+     * 查询运行态 UI 控件中心点的 Windows 屏幕坐标
+     */
+    async getUiCenterByPath(params: {
+        ui_path?: string;
+        clientSlot?: number;
+        roleId?: number;
+    } = {}): Promise<any> {
+        const result = await this.executeRuntimeUiCall({
+            uiPath: params.ui_path,
+            clientSlot: params.clientSlot,
+            roleId: params.roleId,
+            buildLua: (uiPath, requestId) => buildGetUiCenterLua(uiPath, requestId),
+            parsePayload: parseUiCenterPayload,
+        });
+        if (!result.success) {
+            return result.response;
+        }
+
+        return {
+            success: true,
+            x: result.parsed.x,
+            y: result.parsed.y,
+            ui_path: result.uiPath,
+            ...result.clientMeta,
+        };
+    }
+
+    /**
+     * 触发运行态 UI 控件点击事件（左键/右键）
+     */
+    async triggerUiTouchEventByPath(params: {
+        ui_path?: string;
+        touch?: string;
+        clientSlot?: number;
+        roleId?: number;
+    } = {}): Promise<any> {
+        const touch = params.touch ?? '';
+        if (!isRuntimeUiTouch(touch)) {
+            return this.failure('INVALID_PARAMS', 'touch must be "左键" or "右键".', {
+                ui_path: params.ui_path,
+                touch: params.touch,
+            });
+        }
+
+        const result = await this.executeRuntimeUiCall({
+            uiPath: params.ui_path,
+            clientSlot: params.clientSlot,
+            roleId: params.roleId,
+            extraDetails: { touch },
+            buildLua: (uiPath, requestId) => buildTriggerUiTouchLua(uiPath, touch, requestId),
+            parsePayload: parseUiTouchPayload,
+        });
+        if (!result.success) {
+            return result.response;
+        }
+
+        if (!result.parsed.success) {
+            return this.failure(
+                'UI_NOT_FOUND',
+                `UI node not found or touch event was not triggered: ${result.uiPath}`,
+                {
+                    ui_path: result.uiPath,
+                    touch,
+                    ...result.clientMeta,
+                },
+            );
+        }
+
+        return {
+            success: true,
+            ui_path: result.uiPath,
+            touch,
+            ...result.clientMeta,
+        };
+    }
+
     /**
      * 读取 Lua 文件的诊断问题
      * 调用 sumneko.vscode-operator 扩展的 vscodeOperator_readProblems 功能
@@ -1546,6 +1801,13 @@ export class GameSessionManager extends vscode.Disposable {
     dispose(): void {
         if (this.clientCheckInterval) {
             clearInterval(this.clientCheckInterval);
+        }
+
+        for (const client of [...this.clientPrintListeners.keys()]) {
+            this.abortClientPrintListeners(
+                client,
+                'Game session manager disposed while waiting for runtime UI response.'
+            );
         }
 
         if (this.currentSession) {

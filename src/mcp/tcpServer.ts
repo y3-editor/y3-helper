@@ -11,6 +11,7 @@ import { define } from '../customDefine';
 import type { UINode } from '../customDefine/ui';
 import * as envImport from '../env';
 import { MCP_HTTP_PORT, MCP_INSTRUCTIONS } from './mcpInfo';
+import { RUNTIME_UI_TOUCH_OPTIONS } from './runtimeUi';
 import { generateAllGmp } from '../tools/gmpProject';
 
 const UI_PACKAGE_KEY = '\u754c\u9762';
@@ -363,6 +364,30 @@ export class TCPServer extends vscode.Disposable {
             }
         }, async ({ clientSlot, roleId }) => this.runTool(
             async () => await this.sessionManager.captureScreenshot({ clientSlot, roleId })
+        ));
+
+        // Keep `ui_path` (snake_case) for parity with legacy y3runtime MCP while preserving y3-helper's `clientSlot`/`roleId` selectors.
+        server.registerTool('get_ui_center_by_path', {
+            description: 'Get the Windows screen center coordinates (x, y) of a UI control in the running game by its dot-separated UI node path (from get_ui_canvas). Requires a running game; call launch_game first. Use clientSlot or roleId to select a specific game window; they are mutually exclusive.',
+            inputSchema: {
+                ui_path: z.string().min(1),
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
+            }
+        }, async ({ ui_path, clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.getUiCenterByPath({ ui_path, clientSlot, roleId })
+        ));
+
+        server.registerTool('trigger_ui_touch_event_by_path', {
+            description: 'Trigger a left or right click (touch begin + touch end) event on a UI control in the running game by its dot-separated UI node path (from get_ui_canvas). Requires a running game; call launch_game first. Use clientSlot or roleId to select a specific game window; they are mutually exclusive.',
+            inputSchema: {
+                ui_path: z.string().min(1),
+                touch: z.enum(RUNTIME_UI_TOUCH_OPTIONS),
+                clientSlot: z.number().optional(),
+                roleId: z.number().optional()
+            }
+        }, async ({ ui_path, touch, clientSlot, roleId }) => this.runTool(
+            async () => await this.sessionManager.triggerUiTouchEventByPath({ ui_path, touch, clientSlot, roleId })
         ));
 
         server.registerTool('read_problems_lua', {
