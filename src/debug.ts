@@ -65,8 +65,13 @@ export function init(context: vscode.ExtensionContext) {
 
     let attach = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
     attach.text = l10n.t('💡附加');
-    attach.tooltip = l10n.t('附加调试器');
+    attach.tooltip = l10n.t('调试器附加客户端');
     attach.command = 'y3-helper.attach';
+
+    let attachCloud = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+    attachCloud.text = l10n.t('☁️附加云脚本');
+    attachCloud.tooltip = l10n.t('调试器附加云脚本');
+    attachCloud.command = 'y3-helper.attachCloudScript';
 
     function updateItems() {
         if (vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('ShowStatusBarItem')) {
@@ -76,10 +81,19 @@ export function init(context: vscode.ExtensionContext) {
             launch.hide();
             attach.hide();
         }
+        if (env.hasCloudScript && process.platform === 'win32'
+            && vscode.workspace.getConfiguration('Y3-Helper', vscode.workspace.workspaceFolders?.[0]).get('ShowStatusBarItem')) {
+            attachCloud.show();
+        } else {
+            attachCloud.hide();
+        }
     }
 
     updateItems();
     vscode.workspace.onDidChangeConfiguration(() => {
+        updateItems();
+    });
+    env.onDidChange(() => {
         updateItems();
     });
 
@@ -174,7 +188,7 @@ async function startWaitDebuggerHelper() {
 }
 
 function getName(id?: number) {
-    return id ? l10n.t('💡附加【{0}】', id) : l10n.t('💡附加');
+    return id ? l10n.t('💡客户端【{0}】', id) : l10n.t('💡客户端');
 }
 
 function findDebugSession(id?: number) {

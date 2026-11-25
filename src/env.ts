@@ -166,8 +166,7 @@ class Project extends vscode.Disposable {
             config.debugPlayers = filtered.debugPlayers;
         }
         if (config.attachCloudScriptWhenLaunch) {
-            const available = process.platform === 'win32'
-                && await y3.fs.isExists(vscode.Uri.joinPath(this.uri, 'cloud_script/main.lua'));
+            const available = process.platform === 'win32' && env.hasCloudScript;
             if (!available) {
                 config.attachCloudScriptWhenLaunch = false;
             }
@@ -533,6 +532,12 @@ class Env {
     public globalScriptEnabled = false;
 
     /**
+     * 项目里是否存在云脚本。判定只看 `cloud_script` 目录，与入口文件是否齐全无关。
+     * 云脚本相关按钮的显隐以此为准。
+     */
+    public hasCloudScript = false;
+
+    /**
      * Y3 库（y3-lualib 仓库）所在目录。
      * 启用全局脚本后仓库在 global_script/y3，否则在当前地图的 script/y3。
      */
@@ -630,6 +635,7 @@ class Env {
         this.globalHelperUri = vscode.Uri.joinPath(this.globalScriptUri, `${l10n.t("y3-helper")}`);
         this.globalMetaUri = vscode.Uri.joinPath(this.globalHelperUri, 'meta');
         this.globalPluginUri = vscode.Uri.joinPath(this.globalHelperUri, 'plugin');
+        this.hasCloudScript = await y3.fs.isExists(vscode.Uri.joinPath(this.projectUri, 'cloud_script'));
         this.project?.dispose();
         this.project = new Project(projectUri, () => {
             this.fireOnDidReload();

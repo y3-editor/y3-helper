@@ -22,19 +22,6 @@ async function isY3RepoInited() {
     return await isY3LibraryInitialized(y3Uri);
 }
 
-async function hasLocalCloudScript() {
-    const project = env.projectUri;
-    if (!project || process.platform !== 'win32') {
-        return false;
-    }
-    try {
-        await vscode.workspace.fs.stat(vscode.Uri.joinPath(project, 'cloud_script', 'main.lua'));
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 function 多开模式() {
     let loadedArchives = env.project?.multiPlayerArchives;
 
@@ -441,23 +428,14 @@ export class 功能 extends TreeNode {
                         });
                     },
                 }),
-                new TreeNode(l10n.t('重建所有关卡 GMP'), {
-                    iconPath: new vscode.ThemeIcon('sync'),
-                    tooltip: l10n.t('离线重建所有关卡的 GMP，支持既有段的地表纹理、纹理植被、场景装饰、资源对象和编辑器保存的 JSON 表格。\n符合已验证包格式的 2.0/2.5D 工程可新增首个 JSON 表格段，并将项目级存档配置写入关卡 GMP。\n触发器和两类资源清单仍保留原包内容。'),
-                    command: {
-                        command: 'y3-helper.generateGmp',
-                        title: l10n.t('重建所有关卡 GMP'),
-                    },
-                    show: () => env.project !== undefined,
-                }),
-                new TreeNode(l10n.t('附加调试器'), {
+                new TreeNode(l10n.t('调试器附加客户端'), {
                     command: {
                         command: 'y3-helper.attach',
-                        title: l10n.t('附加调试器'),
+                        title: l10n.t('调试器附加客户端'),
                     },
                     iconPath: new vscode.ThemeIcon('run-all'),
                     childs: [
-                        new TreeNode(l10n.t('启动游戏后立即附加'), {
+                        new TreeNode(l10n.t('自动附加'), {
                             checkboxState: config.attachWhenLaunch
                                         ? vscode.TreeItemCheckboxState.Checked
                                         : vscode.TreeItemCheckboxState.Unchecked,
@@ -467,15 +445,26 @@ export class 功能 extends TreeNode {
                                 });
                             },
                         }),
-                        new TreeNode(l10n.t('启动后附加本地云脚本'), {
+                    ],
+                }),
+                new TreeNode(l10n.t('调试器附加云脚本'), {
+                    command: {
+                        command: 'y3-helper.attachCloudScript',
+                        title: l10n.t('调试器附加云脚本'),
+                    },
+                    iconPath: new vscode.ThemeIcon('debug-alt'),
+                    tooltip: l10n.t('附加到已经启动的本地云脚本；需要让游戏处于运行状态。'),
+                    show: () => env.hasCloudScript,
+                    childs: [
+                        new TreeNode(l10n.t('自动附加'), {
                             checkboxState: config.attachCloudScriptWhenLaunch && !config.multiMode
                                 ? vscode.TreeItemCheckboxState.Checked
                                 : vscode.TreeItemCheckboxState.Unchecked,
                             tooltip: config.multiMode
                                 ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
-                                : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。'),
+                                : l10n.t('启动游戏时自动附加本地云脚本调试器。'),
                             async update(node) {
-                                if (config.attachCloudScriptWhenLaunch && !await hasLocalCloudScript()) {
+                                if (config.attachCloudScriptWhenLaunch && !env.hasCloudScript) {
                                     config.attachCloudScriptWhenLaunch = false;
                                 }
                                 node.checkboxState = config.attachCloudScriptWhenLaunch && !config.multiMode
@@ -483,7 +472,7 @@ export class 功能 extends TreeNode {
                                     : vscode.TreeItemCheckboxState.Unchecked;
                                 node.tooltip = config.multiMode
                                     ? l10n.t('本地多开连接正式远程云脚本服，不能附加本地云脚本调试器。')
-                                    : l10n.t('在本地云脚本入口通过端口 12306 自动附加，附加完成后继续执行。');
+                                    : l10n.t('启动游戏时自动附加本地云脚本调试器。');
                             },
                             async onDidChangeCheckboxState(state, node) {
                                 if (config.multiMode && state === vscode.TreeItemCheckboxState.Checked) {
@@ -494,10 +483,6 @@ export class 功能 extends TreeNode {
                                     return;
                                 }
                                 const enabled = state === vscode.TreeItemCheckboxState.Checked;
-                                if (enabled && !await cloudScript.enable()) {
-                                    node.refresh();
-                                    return;
-                                }
                                 if (!enabled) { cloudScript.cancelAutoAttach(); }
                                 config.update(() => {
                                     config.attachCloudScriptWhenLaunch = enabled;
@@ -512,6 +497,15 @@ export class 功能 extends TreeNode {
                         title: l10n.t('在编辑器中打开'),
                     },
                     iconPath: new vscode.ThemeIcon('mortar-board'),
+                }),
+                new TreeNode(l10n.t('重建所有关卡 GMP'), {
+                    iconPath: new vscode.ThemeIcon('sync'),
+                    tooltip: l10n.t('离线重建所有关卡的 GMP，支持既有段的地表纹理、纹理植被、场景装饰、资源对象和编辑器保存的 JSON 表格。\n符合已验证包格式的 2.0/2.5D 工程可新增首个 JSON 表格段，并将项目级存档配置写入关卡 GMP。\n触发器和两类资源清单仍保留原包内容。'),
+                    command: {
+                        command: 'y3-helper.generateGmp',
+                        title: l10n.t('重建所有关卡 GMP'),
+                    },
+                    show: () => env.project !== undefined,
                 }),
                 new TreeNode(l10n.t('查看物编数据'), {
                     command: {

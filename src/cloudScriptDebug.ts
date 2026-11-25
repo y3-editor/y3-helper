@@ -1,37 +1,24 @@
-import { createHash } from 'crypto';
+import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
 import * as net from 'net';
+import * as os from 'os';
+import * as path from 'path';
 
-export const cloudScriptAddress = '127.0.0.1:12306';
-const blockStart = '-- BEGIN Y3 HELPER LOCAL CLOUD DEBUG';
-const blockEnd = '-- END Y3 HELPER LOCAL CLOUD DEBUG';
+const debuggerExtensionPrefix = 'actboy168.lua-debug-';
+const debuggerEntry = path.join('script', 'debugger.lua');
 
-function entryRange(source: string): { start: number; end: number } | undefined {
-    const start = source.indexOf(blockStart);
-    const end = source.indexOf(blockEnd);
-    if (start === -1 && end === -1) { return undefined; }
-    if (start === -1 || end < start || source.indexOf(blockStart, start + 1) !== -1
-        || source.indexOf(blockEnd, end + 1) !== -1
-        || !/^\uFEFF?[\t ]*$/.test(source.slice(source.lastIndexOf('\n', start - 1) + 1, start))
-        || !/^[\t ]*$/.test(source.slice(source.lastIndexOf('\n', end - 1) + 1, end))
-        || !/^[\t ]*(?:\r?\n|$)/.test(source.slice(end + blockEnd.length))) {
-        throw new Error('云脚本调试引导标记不完整，请检查 main.lua。');
+function parseVersion(name: string): number[] | undefined {
+    const match = name.match(/^actboy168\.lua-debug-(\d+)\.(\d+)\.(\d+)(?:-|$)/);
+    if (!match) { return undefined; }
+    return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareVersion(a: number[], b: number[]): number {
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const diff = (a[i] ?? 0) - (b[i] ?? 0);
+        if (diff !== 0) { return diff; }
     }
-    return { start, end: end + blockEnd.length };
-}
-
-export function hasCloudScriptEntry(source: string): boolean {
-    return entryRange(source) !== undefined;
-}
-
-export function removeCloudScriptEntry(source: string): string {
-    const range = entryRange(source);
-    if (!range) { return source; }
-    return source.slice(0, range.start) + source.slice(range.end).replace(/^(?:\r?\n){0,3}/, '');
-}
-
-export function cloudScriptPipe(projectPath: string): string {
-    const key = createHash('sha256').update(projectPath.replace(/\\/g, '/').toLowerCase()).digest('hex').slice(0, 24);
-    return `\\\\.\\pipe\\y3-helper-cloud-${key}`;
+    return 0;
 }
 
 function luaString(value: string): string {
@@ -42,111 +29,122 @@ function luaString(value: string): string {
     return `[${equals}[${value}]${equals}]`;
 }
 
-/** Load at entry only when the host exposes the local debugger prerequisites. */
-export function installCloudScriptEntry(source: string, bootstrapPath: string, debuggerPath: string, pipe: string): string {
-    const newline = source.includes('\r\n') ? '\r\n' : '\n';
-    const range = entryRange(source);
-    const block = [
-        blockStart,
-        '-- 本段代码由 Y3 Helper 自动添加和维护，用于在本地附加云脚本调试器。',
-        '-- 如果不清楚这段代码的作用，请不要修改本段代码及首尾标记。',
-        '-- 入口检查 loadfile、io.open、os.getenv 和 package.loadlib；接口不完整时直接继续业务。',
-        '-- 通过 Helper 开启自动附加后启动，会等待调试器就绪，再执行后续 require。',
-        '-- 编辑器直接启动不等待，可稍后手动附加；捕获入口断点请使用 Helper 调试启动。',
-        'do',
-        '    if type(loadfile) == "function"',
-        '        and type(io) == "table" and type(io.open) == "function"',
-        '        and type(os) == "table" and type(os.getenv) == "function"',
-        '        and type(package) == "table" and type(package.loadlib) == "function" then',
-        '        local ok, err = pcall(function()',
-        `            local bootstrap = assert(loadfile(${luaString(bootstrapPath.replace(/\\/g, '/'))}))`,
-        `            bootstrap()(${luaString(debuggerPath.replace(/\\/g, '/'))}, ${luaString(pipe)})`,
-        '        end)',
-        '        if not ok and type(Log) == "table" and type(Log.warn) == "function" then',
-        '            pcall(Log.warn, "[Y3 Helper] cloud debugger: " .. tostring(err))',
-        '        end',
-        '    end',
-        'end',
-        blockEnd,
-    ].join(newline);
-    if (range) {
-        const suffix = source.slice(range.end);
-        return source.slice(0, range.start) + block + newline.repeat(3) + suffix.replace(/^(?:\r?\n){0,3}/, '');
+/**
+ * 取本地调试器目录：优先用当前窗口加载的 actboy168.lua-debug，
+ * 取不到才扫扩展目录里最新版本的安装。
+ */
+export async function resolveLuaDebuggerPath(extraDirs: string[] = []): Promise<string | undefined> {
+    const loaded = vscode.extensions.getExtension('actboy168.lua-debug')?.extensionPath;
+    if (loaded) {
+        try {
+            await fs.access(path.join(loaded, debuggerEntry));
+            return loaded;
+        } catch {
+            // 当前扩展缺 debugger.lua 时退回扫目录
+        }
     }
-    const bom = source.startsWith('\uFEFF') ? '\uFEFF' : '';
-    return bom + block + newline.repeat(3) + source.slice(bom.length);
+
+    const roots = new Set<string>();
+    const home = os.homedir();
+    for (const dir of ['.vscode', '.vscode-insiders', '.vscode-oss', '.cursor']) {
+        roots.add(path.join(home, dir, 'extensions'));
+    }
+    if (process.env.VSCODE_EXTENSIONS) {
+        roots.add(process.env.VSCODE_EXTENSIONS);
+    }
+    for (const dir of extraDirs) {
+        roots.add(dir);
+    }
+
+    let best: { version: number[]; full: string } | undefined;
+    for (const root of roots) {
+        let entries;
+        try {
+            entries = await fs.readdir(root, { withFileTypes: true });
+        } catch {
+            continue;
+        }
+        for (const entry of entries) {
+            if (!entry.isDirectory() || !entry.name.startsWith(debuggerExtensionPrefix)) {
+                continue;
+            }
+            const version = parseVersion(entry.name);
+            if (!version) { continue; }
+            if (best && compareVersion(version, best.version) <= 0) { continue; }
+            const full = path.join(root, entry.name);
+            try {
+                await fs.access(path.join(full, debuggerEntry));
+            } catch {
+                continue;
+            }
+            best = { version, full };
+        }
+    }
+    return best?.full;
 }
 
-export function createCloudScriptDebugConfiguration(projectPath: string, attempt?: string) {
+/** 申请一个空闲端口：监听 0 端口拿到号后立刻释放 */
+export async function allocatePort(): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => {
+            const address = server.address();
+            const port = typeof address === 'object' && address ? address.port : 0;
+            server.close(() => {
+                if (port > 0) {
+                    resolve(port);
+                } else {
+                    reject(new Error('无法分配云脚本调试端口。'));
+                }
+            });
+        });
+    });
+}
+
+/** 端口是否已经有进程在监听（云脚本已起监听） */
+export async function portListening(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const socket = net.connect(port, '127.0.0.1');
+        socket.once('connect', () => {
+            socket.destroy();
+            resolve(true);
+        });
+        socket.once('error', () => resolve(false));
+    });
+}
+
+export function cloudScriptDebugDir(project: string): string {
+    return path.join(project, 'cloud_script', 'script_log');
+}
+
+/** 云脚本启动前写入调试器目录与端口，云脚本入口读这两个文件起监听 */
+export async function writeCloudScriptDebugFiles(project: string, debuggerPath: string, port: number): Promise<void> {
+    const dir = cloudScriptDebugDir(project);
+    await fs.mkdir(dir, { recursive: true });
+    await Promise.all([
+        fs.writeFile(path.join(dir, 'debugger_path.lua'), `return ${luaString(debuggerPath.replace(/\\/g, '/'))}\n`, 'utf8'),
+        fs.writeFile(path.join(dir, 'debugger_port.lua'), `return ${port}\n`, 'utf8'),
+    ]);
+}
+
+/** 读回上次写入的调试端口，手动附加时用 */
+export async function readCloudScriptDebugPort(project: string): Promise<number | undefined> {
+    try {
+        const text = await fs.readFile(path.join(cloudScriptDebugDir(project), 'debugger_port.lua'), 'utf8');
+        const port = Number(text.match(/return\s+(\d+)/)?.[1]);
+        return Number.isInteger(port) && port > 0 ? port : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+export function createCloudScriptDebugConfiguration(projectPath: string, port: number, attempt?: string) {
     return {
-        type: 'lua', request: 'attach', name: 'Y3 Local Cloud Script',
-        address: cloudScriptAddress, stopOnEntry: false, sourceCoding: 'utf8',
+        type: 'lua', request: 'attach', name: '☁️云脚本',
+        address: `127.0.0.1:${port}`, stopOnEntry: false, sourceCoding: 'utf8',
         sourceMaps: [['./*', projectPath.replace(/\\/g, '/') + '/cloud_script/*']],
         y3HelperDebugKind: 'cloudScript',
         ...(attempt ? { y3HelperCloudAttempt: attempt } : {}),
     };
-}
-
-/** A pipe supplies sleeping ticks to Lua without busy loops or debugger-private APIs.
- * Closing it (including when VS Code exits) releases the Lua callback through EOF.
- */
-export class CloudScriptBridge {
-    private readonly server = net.createServer((socket) => this.accept(socket));
-    private sockets = new Map<net.Socket, NodeJS.Timeout>();
-    private waiting = false;
-    private ready?: () => void;
-
-    constructor(readonly pipe: string) {}
-
-    async listen(): Promise<void> {
-        await new Promise<void>((resolve, reject) => {
-            this.server.once('error', reject);
-            this.server.listen(this.pipe, () => {
-                this.server.off('error', reject);
-                resolve();
-            });
-        });
-    }
-
-    beginWait(): Promise<void> {
-        this.release();
-        this.waiting = true;
-        return new Promise((resolve) => { this.ready = resolve; });
-    }
-
-    private accept(socket: net.Socket) {
-        socket.on('error', () => socket.destroy());
-        if (!this.waiting) {
-            socket.end('continue\n', () => socket.destroy());
-            return;
-        }
-        socket.write('wait\n');
-        const timer = setInterval(() => {
-            if (socket.writableLength === 0) {
-                socket.write('wait\n');
-            }
-        }, 100);
-        this.sockets.set(socket, timer);
-        socket.on('close', () => {
-            clearInterval(timer);
-            this.sockets.delete(socket);
-        });
-        this.ready?.();
-        this.ready = undefined;
-    }
-
-    release() {
-        this.waiting = false;
-        this.ready = undefined;
-        for (const [socket, timer] of this.sockets) {
-            clearInterval(timer);
-            socket.end('continue\n', () => socket.destroy());
-        }
-        this.sockets.clear();
-    }
-
-    dispose() {
-        this.release();
-        this.server.close();
-    }
 }

@@ -594,6 +594,12 @@ class Helper {
                 let gameLauncher = new GameLauncher();
                 let cloudScriptAttach: cloudScript.CloudScriptAutoAttachOperation | undefined;
                 try {
+                    // 每次启动前刷新调试器目录与随机端口，云端入口靠这两个文件起监听。
+                    await cloudScript.prepare();
+                } catch (error) {
+                    tools.log.warn(`[Y3-Helper] 云脚本调试准备失败：${String(error)}`);
+                }
+                try {
                     if (config.attachCloudScriptWhenLaunch && !config.multiMode) {
                         cloudScriptAttach = await cloudScript.beginAutoAttach();
                     }
@@ -705,15 +711,11 @@ class Helper {
     }
 
     private registerCommandOfAttach() {
-        this.context.subscriptions.push(
-            vscode.commands.registerCommand('y3-helper.enableCloudScriptDebug', () => cloudScript.enable()),
-            vscode.commands.registerCommand('y3-helper.removeCloudScriptDebug', async () => {
-                await cloudScript.remove();
-                mainMenu.refresh();
-            }),
-        );
         vscode.commands.registerCommand('y3-helper.attach', async () => {
             await debug.attach();
+        });
+        vscode.commands.registerCommand('y3-helper.attachCloudScript', async () => {
+            await cloudScript.attach();
         });
     }
 
