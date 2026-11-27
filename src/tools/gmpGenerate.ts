@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as zlib from 'zlib';
 import { writeGeneratedGmp } from './gmpWrite';
 import { readEditorPickle } from './gmpPickle';
-import { decodeGmpValue, encodeGmpValue, equalGmpValue, GmpValue, utf8 } from './gmpValue';
+import { decodeGmpValue, encodeGmpValue, equalGmpValue, GmpDict, GmpTuple, GmpValue, utf8 } from './gmpValue';
 import { parseGmpJson } from './gmpJson';
 import { rebuildRuntimeTableSection } from './gmpTableSection';
 import { rebuildArchiveSection } from './gmpArchiveSection';
@@ -14,11 +14,10 @@ import {
     GmpParser,
     buildLanguageSection,
     buildPrefabSectionsFromEditorTable,
-    buildUISection,
+    buildUIDataValue,
     compressZstd,
     decompressZstd,
     packSectionDataNewStyle,
-    packSectionDataOldStyle,
 } from './y3SaveGmp';
 
 export interface GmpMapContext {
@@ -85,12 +84,19 @@ type SectionKind =
 
 type SharedKind = 'none' | 'trigger' | 'ui';
 
+interface SkipReleaseRule {
+    shape: 'nonNegativeInt' | 'dict';
+    physicsMode?: '2.5d';
+}
+
 export interface SectionDef {
     name: string;
     oldId?: number;
     kind: SectionKind;
     file?: string;
     shared?: SharedKind;
+    /** 遵循 MapSection.skip_release（非空/非零写入，空/零省略），允许按源文件新增或省略段。 */
+    skipRelease?: SkipReleaseRule;
 }
 
 /**
@@ -156,8 +162,8 @@ export const SECTION_DEFS: SectionDef[] = [
     { name: 'ui_anim_data', oldId: 25, kind: 'json-old', file: 'uianim.json', shared: 'ui' },
     { name: 'cam_anim_data', oldId: 104, kind: 'json-old', file: 'cameraanim.json' },
     { name: 'curve_data', oldId: 118, kind: 'json-old', file: 'curve.json' },
-    { name: 'tod_template_data', oldId: 134, kind: 'json-old', file: 'todtemplate.json' },
-    { name: 'engine_effect_data', oldId: 26, kind: 'json-old', file: 'engineeffectdata.json' },
+    { name: 'tod_template_data', oldId: 134, kind: 'json-old', file: 'todtemplate.json', skipRelease: { shape: 'dict' } },
+    { name: 'engine_effect_data', oldId: 26, kind: 'json-old', file: 'engineeffectdata.json', skipRelease: { shape: 'dict' } },
     { name: 'mini_map_image_data', oldId: 31, kind: 'raw', file: 'minimapimage.png' },
     // logicres.json 丢失了嵌套 tuple 的类型信息，当前无法无损重建。
     { name: 'logic_res', oldId: 56, kind: 'preserve' },
@@ -176,7 +182,7 @@ export const SECTION_DEFS: SectionDef[] = [
     { name: 'scene_projectile_data', oldId: 73, kind: 'json-old', file: 'projectile.json' },
     { name: 'destructible_data', oldId: 80, kind: 'json-old', file: 'destructible.json' },
     { name: 'grid_data', oldId: 83, kind: 'preserve' },
-    { name: 'global_weather', oldId: 86, kind: 'json-old', file: 'globalweather.json' },
+    { name: 'global_weather', oldId: 86, kind: 'json-old', file: 'globalweather.json', skipRelease: { shape: 'nonNegativeInt', physicsMode: '2.5d' } },
     { name: 'lua_file_data', oldId: 88, kind: 'lua', file: 'script' },
     { name: 'custom_resource', oldId: 91, kind: 'preserve' },
     { name: 'pinch', oldId: 92, kind: 'json-old', file: 'editorpinch.json' },
@@ -187,7 +193,7 @@ export const SECTION_DEFS: SectionDef[] = [
     { name: 'global_archive_data', oldId: 110, kind: 'archive' },
     { name: 'precondition_data', oldId: 97, kind: 'json-old', file: 'precondition.json' },
     { name: 'table_editor_data', oldId: 98, kind: 'preserve', shared: 'trigger' },
-    { name: 'env_time_data', oldId: 99, kind: 'json-old', file: 'envtime.json' },
+    { name: 'env_time_data', oldId: 99, kind: 'json-old', file: 'envtime.json', skipRelease: { shape: 'dict' } },
     { name: 'table_data', oldId: 96, kind: 'tables', shared: 'trigger' },
     { name: 'tid_index_info', oldId: 100, kind: 'json-old', file: 'tidindexinfo.json' },
     { name: 'custom_event', oldId: 101, kind: 'json-old', file: 'customevent.json', shared: 'trigger' },
@@ -278,59 +284,68 @@ function readJsonFile(file: string): any | undefined {
     return JSON.parse(text);
 }
 
-function convertTuplesForMsgpack(value: any): any {
-    if (Array.isArray(value)) {
-        return value.map(convertTuplesForMsgpack);
-    }
-    if (value && typeof value === 'object') {
-        if (value.__tuple__ === true && Array.isArray(value.items)) {
-            return [...value.items.map(convertTuplesForMsgpack), Buffer.from([0x11])];
-        }
-        const result: Record<string, any> = {};
-        for (const [key, child] of Object.entries(value)) {
-            result[key] = convertTuplesForMsgpack(child);
-        }
-        return result;
-    }
-    return value;
-}
+function restoreSectionTuples(sectionName: string, data: GmpValue): GmpValue {
+    const items = (value: GmpValue | undefined): GmpValue | undefined =>
+        value instanceof GmpTuple ? value.items : value;
+    const tuple = (value: GmpValue): GmpValue =>
+        Array.isArray(value) ? new GmpTuple(value) : value;
 
-function restoreSectionTuples(sectionName: string, data: any): any {
-    const items = (value: any): any => value?.__tuple__ === true ? value.items : value;
-    const tuple = (value: any): any => Array.isArray(value)
-        ? { __tuple__: true, items: value } : value;
-
-    if (sectionName === 'attr_data') {
+    if (sectionName === 'attr_data' && data instanceof Map) {
         // PrimaryAttr.serialize() returns dict.items() pairs. hint_tuples()
         // does not preserve tuple hints below the outer attribute pair.
-        for (const primary of data.p ?? []) {
-            const attribute = items(primary)?.[1];
-            if (Array.isArray(attribute?.m)) {
-                attribute.m = attribute.m.map(tuple);
+        const primaryList = data.get('p');
+        if (Array.isArray(primaryList)) {
+            for (const primary of primaryList) {
+                const pair = items(primary);
+                const attribute = Array.isArray(pair) ? pair[1] : undefined;
+                if (attribute instanceof Map) {
+                    const mappings = attribute.get('m');
+                    if (Array.isArray(mappings)) {
+                        attribute.set('m', mappings.map(tuple));
+                    }
+                }
             }
         }
     }
 
     if (['unit_data', 'item_data', 'scene_projectile_data', 'destructible_data',
-        'physics_object_data', 'physics_entity_data'].includes(sectionName)) {
+        'physics_object_data', 'physics_entity_data'].includes(sectionName) && data instanceof Map) {
         // BaseMovementMember.serialize_position() returns a tuple of three
         // Fix32.value tuples, even when JSON represents those values as lists.
-        for (const group of Object.values(data)) {
-            if (!group || typeof group !== 'object') {
+        for (const group of data.values()) {
+            if (!(group instanceof Map)) {
                 continue;
             }
-            for (const entity of Object.values(group)) {
-                const movement = entity?.components?.movement;
-                const coordinates = items(movement?.position);
-                if (Array.isArray(coordinates) && coordinates.length === 3
-                    && coordinates.every((coordinate: any) => Array.isArray(items(coordinate))
-                        && items(coordinate).length === 2)) {
-                    movement.position = tuple(coordinates.map(tuple));
+            for (const entity of group.values()) {
+                if (!(entity instanceof Map)) {
+                    continue;
+                }
+                const components = entity.get('components');
+                const movement = components instanceof Map ? components.get('movement') : undefined;
+                const coordinates = movement instanceof Map ? items(movement.get('position')) : undefined;
+                if (movement instanceof Map && Array.isArray(coordinates) && coordinates.length === 3
+                    && coordinates.every((coordinate) => {
+                        const coordItems = items(coordinate);
+                        return Array.isArray(coordItems) && coordItems.length === 2;
+                    })) {
+                    movement.set('position', new GmpTuple(coordinates.map((coordinate) => {
+                        const coordItems = items(coordinate);
+                        return Array.isArray(coordItems) ? new GmpTuple(coordItems) : coordinate;
+                    })));
                 }
             }
         }
     }
     return data;
+}
+
+async function isUnchangedGmpSection(original: Buffer, nextValue: GmpValue): Promise<boolean> {
+    try {
+        const decoded = decodeGmpValue(await decompressZstd(original));
+        return equalGmpValue(decoded, nextValue);
+    } catch {
+        return false;
+    }
 }
 
 function walkFiles(dir: string, result: string[] = []): string[] {
@@ -398,24 +413,34 @@ async function buildLuaSection(scriptPath: string): Promise<Buffer | undefined> 
     return Buffer.concat(parts);
 }
 
-interface SourceCache {
-    prefabs: Map<string, Buffer>;
-    ui: Buffer;
+interface UiCacheEntry {
+    value: GmpDict;
+    body?: Promise<Buffer>;
 }
 
-const sourceCaches = new Map<string, Promise<SourceCache>>();
+interface GenerateRunCaches {
+    prefabs: Map<string, Promise<Map<string, Buffer>>>;
+    ui: Map<string, UiCacheEntry>;
+}
 
-function getSourceCache(mapPath: string): Promise<SourceCache> {
-    let cache = sourceCaches.get(mapPath);
+function createRunCaches(): GenerateRunCaches {
+    return { prefabs: new Map(), ui: new Map() };
+}
+
+function getPrefabCache(caches: GenerateRunCaches, mapPath: string): Promise<Map<string, Buffer>> {
+    let cache = caches.prefabs.get(mapPath);
     if (!cache) {
-        cache = (async () => {
-            const [prefabs, ui] = await Promise.all([
-                buildPrefabSectionsFromEditorTable(mapPath),
-                buildUISection(mapPath),
-            ]);
-            return { prefabs, ui };
-        })();
-        sourceCaches.set(mapPath, cache);
+        cache = buildPrefabSectionsFromEditorTable(mapPath);
+        caches.prefabs.set(mapPath, cache);
+    }
+    return cache;
+}
+
+function getUiCache(caches: GenerateRunCaches, mapPath: string): UiCacheEntry {
+    let cache = caches.ui.get(mapPath);
+    if (!cache) {
+        cache = { value: buildUIDataValue(mapPath, { strict: true }) };
+        caches.ui.set(mapPath, cache);
     }
     return cache;
 }
@@ -498,9 +523,132 @@ async function rebuildSceneSection(def: SectionDef, sourcePath: string, original
         throw new Error(`${file}：${error instanceof Error ? error.message : String(error)}`);
     }
 }
+async function rebuildJsonOldSection(
+    def: SectionDef,
+    sourcePath: string,
+    context: GmpProjectContext,
+    original?: Buffer,
+): Promise<SectionUpdate> {
+    if (!original && def.skipRelease?.physicsMode && context.projectFormat?.physicsMode !== def.skipRelease.physicsMode) {
+        const mode = context.projectFormat?.physicsMode ?? '未声明';
+        return { reason: `当前工程物理模式（${mode}）不支持新增 ${def.name} 段` };
+    }
+    if (!original && !def.skipRelease) {
+        return { reason: '原包无此段，跳过' };
+    }
+
+    const file = def.file ? path.join(sourcePath, def.file) : undefined;
+    if (!file) {
+        return original
+            ? { reason: `缺少源文件，保留原包：${def.name}` }
+            : { reason: '缺少源文件，跳过' };
+    }
+
+    try {
+        const bytes = readOptional(file);
+        if (bytes === undefined) {
+            return original
+                ? { reason: `缺少源文件，保留原包：${file}` }
+                : { reason: '缺少源文件，跳过' };
+        }
+        const text = utf8.decode(bytes);
+        if (!text.trim()) {
+            return original
+                ? { reason: `源文件为空，保留原包：${file}` }
+                : { reason: '源文件为空，跳过' };
+        }
+
+        const parsed = restoreSectionTuples(def.name, parseGmpJson(text, true));
+        if (def.skipRelease) {
+            if (def.skipRelease.shape === 'nonNegativeInt') {
+                if (typeof parsed !== 'bigint' || parsed < 0n) {
+                    throw new Error('全局天气应为非负整数');
+                }
+                if (parsed === 0n) {
+                    return original
+                        ? { omit: true, note: '配置为默认零值，按编辑器规则省略原段' }
+                        : { reason: '配置为默认零值，无需写入段' };
+                }
+            } else {
+                if (!(parsed instanceof Map)) {
+                    throw new Error('配置载荷应为字典');
+                }
+                if (parsed.size === 0) {
+                    return original
+                        ? { omit: true, note: '配置为空字典，按编辑器规则省略原段' }
+                        : { reason: '配置为空字典，无需写入段' };
+                }
+            }
+        }
+
+        if (original && await isUnchangedGmpSection(original, parsed)) {
+            return { reason: '载荷未变，复用原段字节' };
+        }
+        return { body: await compressZstd(encodeGmpValue(parsed)) };
+    } catch (error) {
+        throw new Error(`${file}：${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+async function rebuildUiSection(
+    sourcePath: string,
+    caches: GenerateRunCaches,
+    original?: Buffer,
+): Promise<SectionUpdate> {
+    const entry = getUiCache(caches, sourcePath);
+    if (original && await isUnchangedGmpSection(original, entry.value)) {
+        return { reason: '载荷未变，复用原段字节' };
+    }
+    entry.body ??= compressZstd(encodeGmpValue(entry.value));
+    return { body: await entry.body };
+}
+
+function canAddWithoutOriginal(def: SectionDef): boolean {
+    return def.kind === 'texture'
+        || def.kind === 'scene'
+        || def.kind === 'tables'
+        || def.kind === 'archive'
+        || Boolean(def.skipRelease);
+}
+
+async function rebuildManagedSection(
+    def: SectionDef,
+    sourcePath: string,
+    context: GmpProjectContext,
+    caches: GenerateRunCaches,
+    options: {
+        original?: Buffer;
+        originalDesc?: Buffer;
+        generatedDesc?: Buffer;
+        verifiedMode73: boolean;
+    },
+): Promise<SectionUpdate | undefined> {
+    switch (def.kind) {
+        case 'tables':
+            return rebuildRuntimeTableSection(sourcePath, context.projectPath, {
+                original: options.original,
+                originalDesc: options.originalDesc,
+                generatedDesc: options.generatedDesc,
+                verifiedPresenceMode: options.verifiedMode73,
+            });
+        case 'archive':
+            return rebuildArchiveSection(context.projectPath, def.name === 'global_archive_data', options.original);
+        case 'json-old':
+            return rebuildJsonOldSection(def, sourcePath, context, options.original);
+        case 'ui':
+            return rebuildUiSection(sourcePath, caches, options.original);
+        case 'texture':
+        case 'scene':
+            return rebuildSceneSection(def, sourcePath, options.original);
+        default:
+            return undefined;
+    }
+}
+
 async function buildSectionBody(
     def: SectionDef,
     sourcePath: string,
+    caches: GenerateRunCaches,
 ): Promise<Buffer | undefined> {
     if (def.kind === 'preserve') {
         return undefined;
@@ -509,12 +657,8 @@ async function buildSectionBody(
     const file = def.file ? path.join(sourcePath, def.file) : undefined;
     switch (def.kind) {
         case 'prefab': {
-            const cache = await getSourceCache(sourcePath);
-            return cache.prefabs.get(def.name);
-        }
-        case 'ui': {
-            const cache = await getSourceCache(sourcePath);
-            return cache.ui;
+            const prefabs = await getPrefabCache(caches, sourcePath);
+            return prefabs.get(def.name);
         }
         case 'language': {
             if (!def.file) {
@@ -528,13 +672,6 @@ async function buildSectionBody(
                 return undefined;
             }
             return packSectionDataNewStyle(data);
-        }
-        case 'json-old': {
-            const data = file ? readJsonFile(file) : undefined;
-            if (data === undefined) {
-                return undefined;
-            }
-            return packSectionDataOldStyle(convertTuplesForMsgpack(restoreSectionTuples(def.name, data)));
         }
         case 'raw-zstd': {
             if (!file || !fs.existsSync(file)) {
@@ -590,6 +727,7 @@ async function generateOneMap(
     map: GmpMapContext,
     entryMap: GmpMapContext | undefined,
     options: GenerateGmpOptions,
+    caches: GenerateRunCaches,
 ): Promise<MapGmpResult> {
     const gmpFile = resolveGmpFile(map);
     if (!gmpFile) {
@@ -650,13 +788,12 @@ async function generateOneMap(
 
         const index = sectionIndex(def);
         const originalSection = parser.sections.get(index);
-        const rebuildScene = def.kind === 'texture' || def.kind === 'scene';
         if (def.kind === 'archive' && !verifiedMode73) {
             if (originalSection) preservedSections.push(def.name);
             sectionNotes[def.name] = '存档仅验证过 2.0/2.5D、版本 73 的关卡包，保留原包';
             continue;
         }
-        if (!originalSection && !rebuildScene && def.kind !== 'tables' && def.kind !== 'archive') {
+        if (!originalSection && !canAddWithoutOriginal(def)) {
             continue;
         }
 
@@ -670,20 +807,13 @@ async function generateOneMap(
         const sourceMap = resolveSourceMap(context, map, entryMap, def);
         let body: Buffer | undefined;
         try {
-            if (rebuildScene || def.kind === 'tables' || def.kind === 'archive') {
-                let update: SectionUpdate;
-                if (def.kind === 'tables') {
-                    update = await rebuildRuntimeTableSection(sourceMap.path, context.projectPath, {
-                        original: originalSection?.body,
-                        originalDesc: parser.sections.get(SECTION_INDEXES.get('desc')!)?.body,
-                        generatedDesc,
-                        verifiedPresenceMode: verifiedMode73,
-                    });
-                } else if (def.kind === 'archive') {
-                    update = await rebuildArchiveSection(context.projectPath, def.name === 'global_archive_data', originalSection?.body);
-                } else {
-                    update = await rebuildSceneSection(def, sourceMap.path, originalSection?.body);
-                }
+            const update = await rebuildManagedSection(def, sourceMap.path, context, caches, {
+                original: originalSection?.body,
+                originalDesc: parser.sections.get(SECTION_INDEXES.get('desc')!)?.body,
+                generatedDesc,
+                verifiedMode73,
+            });
+            if (update !== undefined) {
                 if ('omit' in update) {
                     removed.add(index);
                     removedSections.push(def.name);
@@ -698,7 +828,7 @@ async function generateOneMap(
                 }
                 body = update.body;
             } else {
-                body = await buildSectionBody(def, sourceMap.path);
+                body = await buildSectionBody(def, sourceMap.path, caches);
             }
         } catch (error) {
             errors.push(
@@ -800,11 +930,11 @@ export async function generateProjectGmp(
         };
     }
 
-    sourceCaches.clear();
+    const caches = createRunCaches();
     const results: MapGmpResult[] = [];
     for (const map of context.maps) {
         try {
-            results.push(await generateOneMap(context, map, entryMap, options));
+            results.push(await generateOneMap(context, map, entryMap, options, caches));
         } catch (error) {
             results.push({
                 name: map.name,

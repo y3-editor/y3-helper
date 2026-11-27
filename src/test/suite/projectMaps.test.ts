@@ -282,4 +282,112 @@ suite('GMP project map discovery', function() {
             assert.ok(result.message?.includes('ID'));
         }
     });
+
+    test('sidebar generateGmp command requires modal confirmation before rebuilding', async function() {
+        const commands = new Map<string, () => Promise<void>>();
+        const warningPrompts: Array<{ message: string; options: { modal?: boolean; detail?: string }; items: string[] }> = [];
+        const infoMessages: string[] = [];
+        const errorMessages: string[] = [];
+        let nextWarningChoice: string | undefined;
+        let progressCalls = 0;
+        let generateCalls = 0;
+        let hasProject = false;
+
+        const vscodeStub = {
+            ProgressLocation: { Notification: 15 },
+            commands: {
+                registerCommand: (id: string, handler: () => Promise<void>) => {
+                    commands.set(id, handler);
+                    return { dispose() {} };
+                },
+            },
+            window: {
+                showWarningMessage: async (message: string, options: { modal?: boolean; detail?: string }, ...items: string[]) => {
+                    warningPrompts.push({ message, options, items });
+                    return nextWarningChoice;
+                },
+                showInformationMessage: (message: string) => {
+                    infoMessages.push(message);
+                },
+                showErrorMessage: (message: string) => {
+                    errorMessages.push(message);
+                },
+                withProgress: async (_options: unknown, task: () => Promise<void>) => {
+                    progressCalls++;
+                    await task();
+                },
+            },
+        };
+
+        const filename = require.resolve('../../extension');
+        const source = fs.readFileSync(filename, 'utf8');
+        const module = { exports: {} as { TestHelper: { prototype: { registerCommandOfGenerateGmp(): void } } } };
+        const load = vm.runInNewContext(
+            `(function(require,module,exports,__dirname){${source}\nexports.TestHelper = Helper;\n})`,
+            {},
+        );
+        load((name: string) => {
+            if (name === 'module-alias') { return { addAliases() {} }; }
+            if (name === 'vscode') { return vscodeStub; }
+            if (name === '@vscode/l10n') {
+                return {
+                    t: (text: string, ...args: string[]) =>
+                        text.replace(/\{(\d+)\}/g, (_m, i) => args[Number(i)] ?? ''),
+                };
+            }
+            if (name === './env') {
+                return {
+                    env: {
+                        mapReady: async () => {},
+                        get project() { return hasProject ? {} : undefined; },
+                        get projectUri() { return hasProject ? { fsPath: directory } : undefined; },
+                    },
+                };
+            }
+            if (name === './tools/gmpProject') {
+                return {
+                    generateAllGmp: async () => {
+                        generateCalls++;
+                        return {
+                            success: true,
+                            dryRun: false,
+                            projectPath: directory,
+                            maps: [{ name: 'Entry', gmpFile: path.join(directory, '1.gmp'), changed: true, replacedSections: [], preservedSections: [], errors: [] }],
+                        };
+                    },
+                };
+            }
+            return {};
+        }, module, module.exports, path.dirname(filename));
+
+        const helper = Object.create(module.exports.TestHelper.prototype) as { registerCommandOfGenerateGmp(): void };
+        helper.registerCommandOfGenerateGmp();
+        const runGenerateGmp = commands.get('y3-helper.generateGmp');
+        assert.ok(runGenerateGmp);
+
+        // No project loaded: show error without popping confirmation dialog.
+        await runGenerateGmp!();
+        assert.strictEqual(errorMessages.length, 1);
+        assert.strictEqual(warningPrompts.length, 0);
+        assert.strictEqual(generateCalls, 0);
+
+        // Project loaded, user cancels modal: do not start progress or rebuild.
+        hasProject = true;
+        nextWarningChoice = undefined;
+        await runGenerateGmp!();
+        assert.strictEqual(warningPrompts.length, 1);
+        assert.strictEqual(warningPrompts[0].options.modal, true);
+        assert.ok(warningPrompts[0].options.detail?.includes(directory));
+        assert.deepStrictEqual(warningPrompts[0].items, ['确认重建']);
+        assert.strictEqual(progressCalls, 0);
+        assert.strictEqual(generateCalls, 0);
+
+        // Project loaded, user confirms modal: rebuild runs and reports update.
+        nextWarningChoice = '确认重建';
+        await runGenerateGmp!();
+        assert.strictEqual(warningPrompts.length, 2);
+        assert.strictEqual(progressCalls, 1);
+        assert.strictEqual(generateCalls, 1);
+        assert.deepStrictEqual(infoMessages, ['GMP 已更新：Entry']);
+    });
 });

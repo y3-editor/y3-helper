@@ -29,6 +29,8 @@ import * as crypto from 'crypto';
 import * as msgpack from '@msgpack/msgpack';
 import * as zlib from 'zlib';
 import { writeGeneratedGmp } from './gmpWrite';
+import { parseGmpJson } from './gmpJson';
+import { checkKey, encodeGmpValue, GmpDict, GmpValue, utf8 } from './gmpValue';
 
 // zstd-codec 没有类型声明
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -873,35 +875,6 @@ class GmpBuilder {
 // UI 数据处理
 // ============================================================
 
-/**
- * 递归转换 JSON 中的 tuple 格式
- */
-function convertTupleFormat(obj: any): any {
-    if (obj === null || obj === undefined) {
-        return obj;
-    }
-
-    if (typeof obj === 'object' && !Array.isArray(obj)) {
-        // 检查是否是 tuple 格式
-        if (obj.__tuple__ === true && 'items' in obj) {
-            return [
-                ...(obj.items as any[]).map(item => convertTupleFormat(item)),
-                Buffer.from([0x11]),
-            ];
-        } else {
-            const result: Record<string, any> = {};
-            for (const [k, v] of Object.entries(obj)) {
-                result[k] = convertTupleFormat(v);
-            }
-            return result;
-        }
-    } else if (Array.isArray(obj)) {
-        return obj.map(item => convertTupleFormat(item));
-    } else {
-        return obj;
-    }
-}
-
 interface UIScanResult {
     uiConfig: string | null;
     prefabFiles: string[];
@@ -953,17 +926,23 @@ function scanUIFolder(mapPath: string): UIScanResult {
 }
 
 /**
- * 从 ui/ 目录构建 UI 数据结构
- * 即使 UI 目录为空，也返回空的 UI 数据结构，保持流程统一
+ * 从 ui/ 目录构建保类型的 UI 数据结构（保留 float64、int64、整数键与 tuple）。
+ * 即使 UI 目录为空，也返回空的 UI 数据结构，保持流程统一。
+ *
+ * `strict: false`（默认，供旧版 `save()` / `buildUISection()` 使用）沿用 gmp-save 规范：
+ * 单个坏文件记录日志并跳过；`strict: true`（供 `generateProjectGmp` 使用）携带文件路径抛错。
  */
-function buildUIData(mapPath: string): Record<string, any> {
+function buildUIDataValue(mapPath: string, options: { strict?: boolean } = {}): GmpDict {
+    const strict = options.strict === true;
     const scanResult = scanUIFolder(mapPath);
 
     // 初始化空的 UI 数据结构
-    const uiData: Record<string, any> = {
-        ui_data: [],
-        prefab_data: {},
-    };
+    const layers: GmpValue[] = [];
+    const prefabs: GmpDict = new Map();
+    const uiData: GmpDict = new Map<string | bigint, GmpValue>([
+        ['ui_data', layers],
+        ['prefab_data', prefabs],
+    ]);
 
     // 即使没有找到任何 UI 文件，也继续处理（返回空结构）
     if (!scanResult.uiConfig && scanResult.prefabFiles.length === 0 && scanResult.layerFiles.length === 0) {
@@ -971,69 +950,78 @@ function buildUIData(mapPath: string): Record<string, any> {
         return uiData;
     }
 
+    const readUiDict = (filePath: string, label: string): GmpDict | undefined => {
+        try {
+            const content = utf8.decode(fs.readFileSync(filePath));
+            const parsed = parseGmpJson(content, true);
+            if (!(parsed instanceof Map)) {
+                throw new Error(`${label}载荷应为字典`);
+            }
+            return parsed;
+        } catch (error) {
+            if (strict) {
+                throw new Error(`${filePath}：${error instanceof Error ? error.message : String(error)}`);
+            }
+            console.log(`[y3-save-gmp] 读取 ${filePath} 失败: ${error}`);
+            return undefined;
+        }
+    };
+
     // 1. 读取 ui_config.json 作为基础配置
     if (scanResult.uiConfig && fs.existsSync(scanResult.uiConfig)) {
-        try {
-            const content = fs.readFileSync(scanResult.uiConfig, 'utf-8');
-            let configData = JSON.parse(content);
-            configData = convertTupleFormat(configData);
-            for (const [k, v] of Object.entries(configData)) {
+        const configData = readUiDict(scanResult.uiConfig, 'UI 配置');
+        if (configData) {
+            for (const [k, v] of configData) {
                 if (k !== 'ui_data' && k !== 'prefab_data') {
-                    uiData[k] = v;
+                    uiData.set(k, v);
                 }
             }
             console.log(`[y3-save-gmp] 读取 ui_config.json`);
-        } catch (e) {
-            console.log(`[y3-save-gmp] 读取 ui_config.json 失败: ${e}`);
         }
     }
 
     // 2. 读取 prefab/ 下的面板文件
     for (const prefabFile of scanResult.prefabFiles) {
+        const prefabJson = readUiDict(prefabFile, 'UI 面板');
+        if (!prefabJson) {
+            continue;
+        }
         try {
-            const content = fs.readFileSync(prefabFile, 'utf-8');
-            let prefabJson = JSON.parse(content);
-            prefabJson = convertTupleFormat(prefabJson);
-
-            const key = prefabJson.key;
+            const key = prefabJson.get('key');
             if (key === undefined) {
                 const filename = path.basename(prefabFile);
                 throw new Error(`UI 面板 '${filename}' 缺少 'key' 字段`);
             }
-
-            delete prefabJson.key;
-            uiData.prefab_data[key] = prefabJson;
-        } catch (e) {
-            console.log(`[y3-save-gmp] 读取 ${prefabFile} 失败: ${e}`);
-            // 继续处理其他文件，不中断流程
+            prefabJson.delete('key');
+            prefabs.set(checkKey(key), prefabJson);
+        } catch (error) {
+            if (strict) {
+                throw new Error(`${prefabFile}：${error instanceof Error ? error.message : String(error)}`);
+            }
+            console.log(`[y3-save-gmp] 读取 ${prefabFile} 失败: ${error}`);
         }
     }
 
     // 3. 读取层 JSON 文件
     for (const layerFile of scanResult.layerFiles) {
-        try {
-            const content = fs.readFileSync(layerFile, 'utf-8');
-            let layerJson = JSON.parse(content);
-            layerJson = convertTupleFormat(layerJson);
-            uiData.ui_data.push(layerJson);
-        } catch (e) {
-            console.log(`[y3-save-gmp] 读取 ${layerFile} 失败: ${e}`);
+        const layerJson = readUiDict(layerFile, 'UI 层');
+        if (layerJson) {
+            layers.push(layerJson);
         }
     }
 
-    console.log(`[y3-save-gmp] 构建 UI 数据: ${Object.keys(uiData.prefab_data).length} 个面板, ${uiData.ui_data.length} 个层`);
+    console.log(`[y3-save-gmp] 构建 UI 数据: ${prefabs.size} 个面板, ${layers.length} 个层`);
     return uiData;
 }
 
 /**
  * 从 ui/ 目录构建 UI Section 的二进制数据
  * 即使 UI 目录为空，也会打包空的 UI 数据结构
- * UI Section 继承自 NormalUploadSection，使用 OldStyle 打包
+ * UI Section 继承自 NormalUploadSection，使用保类型 MessagePack + Zstd 打包
  */
 async function buildUISection(mapPath: string): Promise<Buffer> {
-    const uiData = buildUIData(mapPath);
-    // UI Section 使用 OldStyle：dict -> msgpack -> zstd
-    const compressed = await packSectionDataOldStyle(uiData);
+    const uiData = buildUIDataValue(mapPath);
+    const compressed = await compressZstd(encodeGmpValue(uiData));
     console.log(`[y3-save-gmp] 构建 UI Section: ${compressed.length} bytes`);
     return compressed;
 }
@@ -1343,6 +1331,7 @@ export {
     packSectionDataNewStyle,
     packSectionDataOldStyle,
     buildPrefabSectionsFromEditorTable,
+    buildUIDataValue,
     buildUISection,
     buildLanguageSection,
     buildUSLanguageSection,

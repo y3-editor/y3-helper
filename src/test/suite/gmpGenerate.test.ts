@@ -21,6 +21,7 @@ import {
 } from '../../tools/y3SaveGmp';
 import { writeGeneratedGmp } from '../../tools/gmpWrite';
 import { scanGmpProject } from '../../tools/projectMaps';
+import { decodeGmpValue, encodeGmpValue, GmpDict, GmpTuple } from '../../tools/gmpValue';
 
 /** Load the real save watcher with VS Code events and its debounce clock controlled. */
 function pluginSaveWatcher(directory: string) {
@@ -728,5 +729,228 @@ suite('Offline GMP generation', function() {
         assert.deepStrictEqual(fs.readFileSync(gmpFile), original);
         assert.strictEqual(fs.existsSync(gmpFile + '.bak'), false);
         assert.strictEqual(fs.existsSync(gmpFile + '.tmp'), false);
+    });
+
+    test('json-old and ui_data preserve float64 vs int64 types, repair degraded ints, reuse unchanged bytes, and report file-scoped errors', async function() {
+        const gmpFile = path.join(directory, '1.gmp');
+        const uiDir = path.join(directory, 'ui');
+        const prefabDir = path.join(uiDir, 'prefab');
+        fs.mkdirSync(prefabDir, { recursive: true });
+
+        const engineEffectRaw = '{"bloom":{"bloom_strength":1.0,"enable_bloom":true},"color_grading":{"total_control":0.0},"sky_light":{"sky_light_const_tod_time":8.0,"mode":2}}';
+        const todTemplateRaw = '{"300001":{"0":{"Longitude":0.0,"SkyLightBaseColor":[255.0,255.0,255.0,1.0],"time":0.0}}}';
+        const envTimeRaw = '{"init_time":8.0,"time_speed":1.0,"loop":1}';
+        const ruleDataRaw = '{"rule":{"408":false}}';
+        const uiConfigRaw = '{"version":1,"scale":1.0}';
+        const uiPrefabRaw = '{"key":"panel-1","name":"HUD","opacity":1.0,"anchor":{"__tuple__":true,"items":[0.0,1.0]}}';
+        const uiLayerRaw = '{"uid":"layer-1","name":"Main","opacity":1.0,"pos_data":[960.0,540.0,50.0,50.0],"size":[1920.0,1080.0],"type":1}';
+
+        fs.writeFileSync(path.join(directory, 'engineeffectdata.json'), engineEffectRaw);
+        fs.writeFileSync(path.join(directory, 'todtemplate.json'), todTemplateRaw);
+        fs.writeFileSync(path.join(directory, 'envtime.json'), envTimeRaw);
+        fs.writeFileSync(path.join(directory, 'ruledata.json'), ruleDataRaw);
+        fs.writeFileSync(path.join(uiDir, 'ui_config.json'), uiConfigRaw);
+        fs.writeFileSync(path.join(prefabDir, 'HUD.json'), uiPrefabRaw);
+        fs.writeFileSync(path.join(uiDir, 'Main.json'), uiLayerRaw);
+
+        // Seed base GMP with old-style degraded ints (1, 0, 8 instead of 1.0, 0.0, 8.0)
+        // for 26/134/99/10, and an already-valid level-1 zstd payload for rule_data (21).
+        const builder = new GmpBuilder();
+        builder.preserveInsertionOrder = true;
+        builder.setHeader(Buffer.alloc(16), 73, '202611201424', '');
+        const ruleOriginalBody = await compressZstd(
+            encodeGmpValue(new Map([['rule', new Map<string | bigint, boolean>([[408n, false]])]])),
+            1,
+        );
+        builder.setSection(10, await packSectionDataOldStyle({
+            ui_data: [JSON.parse(uiLayerRaw)],
+            prefab_data: { 'panel-1': { name: 'HUD', opacity: 1, anchor: [0, 1, Buffer.from([0x11])] } },
+            version: 1,
+            scale: 1,
+        }), true);
+        builder.setSection(21, ruleOriginalBody, true);
+        builder.setSection(134, await packSectionDataOldStyle(JSON.parse(todTemplateRaw)), true);
+        builder.setSection(26, await packSectionDataOldStyle(JSON.parse(engineEffectRaw)), true);
+        builder.setSection(99, await packSectionDataOldStyle(JSON.parse(envTimeRaw)), true);
+        fs.writeFileSync(gmpFile, builder.build());
+
+        // First run: detects int-vs-float mismatch and repairs 10/26/99/134, while preserving untouched 21 byte-for-byte.
+        const repaired = await generateProjectGmp(singleMap());
+        assert.ok(repaired.success, repaired.maps[0].errors.join('\n'));
+        assert.strictEqual(repaired.maps[0].changed, true);
+        assert.ok(repaired.maps[0].replacedSections.includes('engine_effect_data'));
+        assert.ok(repaired.maps[0].replacedSections.includes('tod_template_data'));
+        assert.ok(repaired.maps[0].replacedSections.includes('env_time_data'));
+        assert.ok(repaired.maps[0].replacedSections.includes('ui_data'));
+        assert.ok(repaired.maps[0].preservedSections.includes('rule_data'));
+
+        const parser = new GmpParser();
+        assert.ok(parser.parse(gmpFile));
+        assert.deepStrictEqual(parser.sections.get(21)!.body, ruleOriginalBody);
+
+        // Strictly verify msgpack wire types via decodeGmpValue (bigint = int, number = float64).
+        const effect = decodeGmpValue(await decompressZstd(parser.sections.get(26)!.body)) as GmpDict;
+        const bloom = effect.get('bloom') as GmpDict;
+        const colorGrading = effect.get('color_grading') as GmpDict;
+        const skyLight = effect.get('sky_light') as GmpDict;
+        assert.strictEqual(typeof bloom.get('bloom_strength'), 'number');
+        assert.strictEqual(bloom.get('bloom_strength'), 1);
+        assert.strictEqual(typeof colorGrading.get('total_control'), 'number');
+        assert.strictEqual(colorGrading.get('total_control'), 0);
+        assert.strictEqual(typeof skyLight.get('sky_light_const_tod_time'), 'number');
+        assert.strictEqual(skyLight.get('sky_light_const_tod_time'), 8);
+        assert.strictEqual(skyLight.get('mode'), 2n);
+
+        const tod = decodeGmpValue(await decompressZstd(parser.sections.get(134)!.body)) as GmpDict;
+        const frame = (tod.get(300001n) as GmpDict).get(0n) as GmpDict;
+        assert.strictEqual(typeof frame.get('Longitude'), 'number');
+        assert.strictEqual(typeof frame.get('time'), 'number');
+        const baseColor = frame.get('SkyLightBaseColor') as unknown[];
+        assert.deepStrictEqual(baseColor.map(v => typeof v), ['number', 'number', 'number', 'number']);
+
+        const envTime = decodeGmpValue(await decompressZstd(parser.sections.get(99)!.body)) as GmpDict;
+        assert.strictEqual(typeof envTime.get('init_time'), 'number');
+        assert.strictEqual(envTime.get('init_time'), 8);
+        assert.strictEqual(typeof envTime.get('time_speed'), 'number');
+        assert.strictEqual(envTime.get('time_speed'), 1);
+        assert.strictEqual(envTime.get('loop'), 1n);
+
+        const ui = decodeGmpValue(await decompressZstd(parser.sections.get(10)!.body)) as GmpDict;
+        assert.strictEqual(ui.get('version'), 1n);
+        assert.strictEqual(typeof ui.get('scale'), 'number');
+        const layer = (ui.get('ui_data') as GmpDict[])[0];
+        assert.strictEqual(typeof layer.get('opacity'), 'number');
+        assert.strictEqual(layer.get('type'), 1n);
+        assert.deepStrictEqual((layer.get('pos_data') as unknown[]).map(v => typeof v), ['number', 'number', 'number', 'number']);
+        assert.deepStrictEqual((layer.get('size') as unknown[]).map(v => typeof v), ['number', 'number']);
+        const prefab = (ui.get('prefab_data') as GmpDict).get('panel-1') as GmpDict;
+        assert.strictEqual(prefab.has('key'), false);
+        assert.strictEqual(typeof prefab.get('opacity'), 'number');
+        const anchor = prefab.get('anchor');
+        assert.ok(anchor instanceof GmpTuple);
+        assert.deepStrictEqual(anchor.items.map(v => typeof v), ['number', 'number']);
+
+        // Second run: all sections match semantically and reuse exact bytes with changed=false.
+        const stableBytes = fs.readFileSync(gmpFile);
+        const second = await generateProjectGmp(singleMap());
+        assert.ok(second.success);
+        assert.strictEqual(second.maps[0].changed, false);
+        assert.deepStrictEqual(second.maps[0].replacedSections, []);
+        assert.deepStrictEqual(fs.readFileSync(gmpFile), stableBytes);
+
+        // Corrupt UI prefab (missing key) fails atomically with file path in generateProjectGmp,
+        // while legacy buildUISection still logs and skips it per gmp-save spec.
+        const brokenPrefab = path.join(prefabDir, 'Broken.json');
+        fs.writeFileSync(brokenPrefab, '{"name":"NoKey"}');
+        const uiFailure = await generateProjectGmp(singleMap());
+        assert.ok(!uiFailure.success);
+        assert.ok(uiFailure.maps[0].errors.some(e => e.startsWith('ui_data:') && e.includes(brokenPrefab)));
+        assert.deepStrictEqual(fs.readFileSync(gmpFile), stableBytes);
+        const legacyUi = decodeGmpValue(await decompressZstd(await buildUISection(directory))) as GmpDict;
+        assert.strictEqual((legacyUi.get('prefab_data') as GmpDict).size, 1);
+        fs.unlinkSync(brokenPrefab);
+
+        // Non-UTF-8 bytes in a json-old file fail fatally with the source file path.
+        const ruleFile = path.join(directory, 'ruledata.json');
+        fs.writeFileSync(ruleFile, Buffer.from([0x7b, 0xff, 0x7d]));
+        const utf8Failure = await generateProjectGmp(singleMap());
+        assert.ok(!utf8Failure.success);
+        assert.ok(utf8Failure.maps[0].errors.some(e => e.startsWith('rule_data:') && e.includes(ruleFile)));
+        assert.deepStrictEqual(fs.readFileSync(gmpFile), stableBytes);
+    });
+
+    test('global_weather, engine_effect_data, tod_template_data, and env_time_data follow skip_release add/omit and fail-closed 2.5d mode rules', async function() {
+        const gmpFile = path.join(directory, '1.gmp');
+        const builder = new GmpBuilder();
+        builder.preserveInsertionOrder = true;
+        builder.setHeader(Buffer.alloc(16), 73, '202611201424', '');
+        builder.setSection(21, await compressZstd(encodeGmpValue(new Map([['rule', new Map()]]))), true);
+        builder.setSection(101, await compressZstd(encodeGmpValue(new Map())), true);
+        const base = builder.build();
+        fs.writeFileSync(gmpFile, base);
+
+        const weatherFile = path.join(directory, 'globalweather.json');
+        const effectFile = path.join(directory, 'engineeffectdata.json');
+        const todFile = path.join(directory, 'todtemplate.json');
+        const envTimeFile = path.join(directory, 'envtime.json');
+
+        // Default falsy disk values keep sections absent.
+        fs.writeFileSync(weatherFile, '0');
+        fs.writeFileSync(effectFile, '{}');
+        fs.writeFileSync(todFile, '{}');
+        fs.writeFileSync(envTimeFile, '{}');
+        const context25d: GmpProjectContext = {
+            ...singleMap(),
+            projectFormat: { majorVersion: '2.0', physicsMode: '2.5d' },
+        };
+        const emptyRun = await generateProjectGmp(context25d);
+        assert.ok(emptyRun.success && !emptyRun.maps[0].changed);
+        assert.strictEqual(fs.existsSync(gmpFile + '.bak'), false);
+
+        // Non-empty disk values: fail closed for global_weather when projectFormat is missing or 2d.
+        // In 2d mode, an invalid globalweather.json is not even parsed when the section is absent.
+        fs.writeFileSync(weatherFile, '"rain"');
+        fs.writeFileSync(effectFile, '{"sky_light":{"sky_light_const_tod_time":8.0}}');
+        fs.writeFileSync(todFile, '{"300001":{"0":{"time":0.0}}}');
+        fs.writeFileSync(envTimeFile, '{"init_time":8.0,"time_speed":1.0}');
+        const mode2dPreview = await generateProjectGmp({
+            ...singleMap(),
+            projectFormat: { majorVersion: '2.0', physicsMode: '2d' },
+        }, { dryRun: true });
+        assert.ok(mode2dPreview.success, mode2dPreview.maps[0].errors.join('\n'));
+        assert.deepStrictEqual(mode2dPreview.maps[0].addedSections, ['tod_template_data', 'engine_effect_data', 'env_time_data']);
+        assert.ok(mode2dPreview.maps[0].sectionNotes?.global_weather?.includes('2d'));
+
+        fs.writeFileSync(weatherFile, '4');
+        const missingFormatPreview = await generateProjectGmp(singleMap(), { dryRun: true });
+        assert.ok(missingFormatPreview.success);
+        assert.deepStrictEqual(missingFormatPreview.maps[0].addedSections, ['tod_template_data', 'engine_effect_data', 'env_time_data']);
+        assert.ok(missingFormatPreview.maps[0].sectionNotes?.global_weather?.includes('未声明'));
+
+        // In 2.5d mode, all four are added at SECTION_DEFS declaration order [21, 134, 26, 86, 99, 101].
+        const added = await generateProjectGmp(context25d);
+        assert.ok(added.success, added.maps[0].errors.join('\n'));
+        assert.deepStrictEqual(added.maps[0].addedSections, ['tod_template_data', 'engine_effect_data', 'global_weather', 'env_time_data']);
+        const parser = new GmpParser();
+        assert.ok(parser.parse(gmpFile));
+        assert.deepStrictEqual([...parser.sections.keys()], [21, 134, 26, 86, 99, 101]);
+        assert.strictEqual(decodeGmpValue(await decompressZstd(parser.sections.get(86)!.body)), 4n);
+        const addedEffect = decodeGmpValue(await decompressZstd(parser.sections.get(26)!.body)) as GmpDict;
+        assert.strictEqual(typeof (addedEffect.get('sky_light') as GmpDict).get('sky_light_const_tod_time'), 'number');
+        assert.strictEqual(typeof (decodeGmpValue(await decompressZstd(parser.sections.get(99)!.body)) as GmpDict).get('init_time'), 'number');
+
+        // Stable repeat run.
+        const stable = await generateProjectGmp(context25d);
+        assert.ok(stable.success && !stable.maps[0].changed);
+
+        // Missing file preserves existing section instead of treating absence as clearing.
+        fs.unlinkSync(weatherFile);
+        fs.unlinkSync(effectFile);
+        const missingFiles = await generateProjectGmp(context25d);
+        assert.ok(missingFiles.success && !missingFiles.maps[0].changed);
+        assert.ok(missingFiles.maps[0].preservedSections.includes('global_weather'));
+        assert.ok(missingFiles.maps[0].preservedSections.includes('engine_effect_data'));
+
+        // Invalid weather or non-dict engine_effect fails atomically without altering GMP.
+        const beforeInvalid = fs.readFileSync(gmpFile);
+        fs.writeFileSync(weatherFile, '"rain"');
+        fs.writeFileSync(effectFile, '[]');
+        const invalidRun = await generateProjectGmp(context25d);
+        assert.ok(!invalidRun.success);
+        assert.ok(invalidRun.maps[0].errors.some(e => e.startsWith('global_weather:') && e.includes(weatherFile)));
+        assert.ok(invalidRun.maps[0].errors.some(e => e.startsWith('engine_effect_data:') && e.includes(effectFile)));
+        assert.deepStrictEqual(fs.readFileSync(gmpFile), beforeInvalid);
+
+        // Explicit zero/empty values omit sections per MapSection.skip_release.
+        fs.writeFileSync(weatherFile, '0');
+        fs.writeFileSync(effectFile, '{}');
+        fs.writeFileSync(todFile, '{}');
+        fs.writeFileSync(envTimeFile, '{}');
+        const cleared = await generateProjectGmp(context25d);
+        assert.ok(cleared.success, cleared.maps[0].errors.join('\n'));
+        assert.deepStrictEqual(cleared.maps[0].removedSections, ['tod_template_data', 'engine_effect_data', 'global_weather', 'env_time_data']);
+        const clearedParser = new GmpParser();
+        assert.ok(clearedParser.parse(gmpFile));
+        assert.deepStrictEqual([...clearedParser.sections.keys()], [21, 101]);
     });
 });

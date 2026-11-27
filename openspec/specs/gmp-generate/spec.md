@@ -4,8 +4,8 @@
 
 ## 入口
 
-- MCP 工具 `generate_gmp`：供 AI 在修改 `editor_table/`、`ui/`、`terrain.json`、`script/` 等文件后调用。
-- VS Code 命令 `y3-helper.generateGmp`：侧边栏「功能 -> 重建所有关卡 GMP」按钮触发。
+- MCP 工具 `generate_gmp`：供 AI 在修改 `editor_table/`、`ui/`、`terrain.json`、`script/` 等文件后调用（无交互弹窗）。
+- VS Code 命令 `y3-helper.generateGmp`：侧边栏「功能 -> 重建所有关卡 GMP」按钮触发，执行前弹出模态二次确认框（提示磁盘覆盖、`.gmp.bak` 备份、未保存修改提醒与工程路径），用户取消时不执行重建。
 
 ## Requirements
 
@@ -68,11 +68,19 @@
 
 ### Requirement: 只替换已存在的 section
 
-系统 SHALL 只替换原 gmp 中已经存在的 section，不新增 section。
+系统 SHALL 默认只替换原 gmp 中已经存在的 section，不新增未验证规则的 section。对遵循引擎 `MapSection.skip_release` 规则的 `global_weather`（仅 `2.5d` 物理模式允许新增）、`tod_template_data`、`engine_effect_data` 与 `env_time_data`，系统 SHALL 按以下规则增删：
+- 源文件缺失或为空白时保留原段，不视为清空。
+- 磁盘为显式零值/空字典（`0` / `{}`）时省略或移除对应段。
+- 磁盘为有效非空/非零值且原包无此段时（`global_weather` 须明确处于 `2.5d` 模式），按 `SECTION_DEFS` 声明顺序新增写入。
+- 载荷类型非法或损坏时报错并保留原包与备份。
 
 #### Scenario: 源文件存在但 gmp 中没有该 section
-- **WHEN** 某个可选 section 的磁盘文件存在，但原 gmp 未包含该 section
+- **WHEN** 某个不支持新增规则的可选 section 的磁盘文件存在，但原 gmp 未包含该 section
 - **THEN** 系统跳过它，保持原 gmp 的 section 集合不变
+
+#### Scenario: 全局天气与光效/昼夜段按 skip_release 增删
+- **WHEN** 2.5D 工程的原包无 `global_weather`（86），磁盘 `globalweather.json` 改为非零正整数（如 `4`）
+- **THEN** 按声明顺序新增段 86；再次改为 `0` 时省略段 86；缺失文件时保留原段；非 `2.5d` 或未声明物理模式时不新增段 86
 
 ### Requirement: 原子写入与备份
 
@@ -101,9 +109,9 @@
 
 ### Requirement: 保留编辑器序列化类型
 
-旧版 section SHALL 按编辑器 `_JsonObjHook` 的规则将数字形式的 JSON 键编码为 msgpack 整数键，并保留 int64 的整数类型。UI 面板文件的 `key` SHALL 只作为 `prefab_data` 的索引，不进入面板内容。
+旧版 `json-old` 与 `ui_data` section SHALL 通过保类型 JSON 解析与 MessagePack 编码按编辑器 `_JsonObjHook` 规则保留数字形式的整数键、`int64`、`float64`（不得将 `1.0`/`8.0`/`255.0` 等整型值浮点退化为整数）以及显式 tuple。UI 面板文件的 `key` SHALL 只作为 `prefab_data` 的索引，不进入面板内容。
 
-系统 SHALL 还原显式 tuple，以及属性映射、场景实体定点坐标中由编辑器序列化规则决定的嵌套 tuple。不能从 JSON 恢复类型的其他 section 仍按 v1 保留策略处理。
+系统 SHALL 还原属性映射、场景实体定点坐标中由编辑器序列化规则决定的嵌套 tuple。对于 `json-old` 与 `ui_data`，若原包对应段解码后与当前源逻辑数据完全一致（含 int/float 类型），系统 SHALL 直接复用原段字节；若原包存在类型退化，SHALL 自动以正确类型重写修复。不能从 JSON 恢复类型的其他 section 仍按保留策略处理。
 
 #### Scenario: 大关卡地形
 - **WHEN** 地形源文件约 6MB

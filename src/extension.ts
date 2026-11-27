@@ -641,11 +641,37 @@ class Helper {
         });
     }
 
+    private async confirmGenerateGmp(projectPath?: string): Promise<boolean> {
+        const confirmOption = l10n.t('确认重建');
+        const detail = projectPath
+            ? l10n.t(
+                '将根据磁盘上的源文件离线重建当前工程所有关卡的 GMP，并覆盖现有 .gmp 文件（首次重建会自动备份为 .gmp.bak）。\n如果编辑器中还有未保存的修改，请先在编辑器中保存。\n\n工程：{0}',
+                projectPath,
+            )
+            : l10n.t(
+                '将根据磁盘上的源文件离线重建当前工程所有关卡的 GMP，并覆盖现有 .gmp 文件（首次重建会自动备份为 .gmp.bak）。\n如果编辑器中还有未保存的修改，请先在编辑器中保存。',
+            );
+        // 模态框自带“取消”按钮，这里只给确认选项
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t('确定要重建所有关卡 GMP 吗？'),
+            {
+                modal: true,
+                detail,
+            },
+            confirmOption,
+        );
+        return choice === confirmOption;
+    }
+
     private registerCommandOfGenerateGmp() {
         vscode.commands.registerCommand('y3-helper.generateGmp', async () => {
             await env.mapReady();
             if (!env.project) {
                 vscode.window.showErrorMessage(l10n.t('未找到 Y3 工程'));
+                return;
+            }
+
+            if (!await this.confirmGenerateGmp(env.projectUri?.fsPath)) {
                 return;
             }
 

@@ -333,5 +333,9 @@
   "合并": "Merge",
   "备份并替换": "Back up and replace",
   "已合并：补上了缺少的文件，你的文件没动。": "Merged: missing files were added and your files were left untouched.",
-  "拉取成功，原内容已备份到 {0}": "Pulled. The original content was backed up to {0}"
+  "拉取成功，原内容已备份到 {0}": "Pulled. The original content was backed up to {0}",
+  "确定要重建所有关卡 GMP 吗？": "Rebuild GMP for all levels?",
+  "确认重建": "Rebuild",
+  "将根据磁盘上的源文件离线重建当前工程所有关卡的 GMP，并覆盖现有 .gmp 文件（首次重建会自动备份为 .gmp.bak）。\n如果编辑器中还有未保存的修改，请先在编辑器中保存。\n\n工程：{0}": "This will rebuild GMP files offline for all levels from source files on disk and overwrite existing .gmp files (the first rebuild automatically creates a .gmp.bak backup).\nIf you have unsaved changes in the editor, save them in the editor first.\n\nProject: {0}",
+  "将根据磁盘上的源文件离线重建当前工程所有关卡的 GMP，并覆盖现有 .gmp 文件（首次重建会自动备份为 .gmp.bak）。\n如果编辑器中还有未保存的修改，请先在编辑器中保存。": "This will rebuild GMP files offline for all levels from source files on disk and overwrite existing .gmp files (the first rebuild automatically creates a .gmp.bak backup).\nIf you have unsaved changes in the editor, save them in the editor first."
 }
