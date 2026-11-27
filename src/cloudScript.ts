@@ -19,7 +19,7 @@ let preparing: Promise<boolean> = Promise.resolve(false);
 let cancelPending: (() => void) | undefined;
 const sessions = new Set<vscode.DebugSession>();
 let disposed = false;
-const timeoutMs = 30000;
+const connectTimeoutMs = 30000;
 
 export function init(extensionContext: vscode.ExtensionContext) {
     context = extensionContext;
@@ -107,10 +107,12 @@ export async function attach(): Promise<boolean> {
     } catch (error) { reportError(error); return false; }
 }
 
-async function waitListening(port: number, ms: number): Promise<boolean> {
-    const deadline = Date.now() + ms;
-    while (Date.now() < deadline) {
+/** 轮询等待端口进入监听；不传 ms 表示一直等到取消。 */
+async function waitListening(port: number, ms?: number, signal?: AbortSignal): Promise<boolean> {
+    const deadline = ms === undefined ? Number.POSITIVE_INFINITY : Date.now() + ms;
+    while (!signal?.aborted) {
         if (await portListening(port)) { return true; }
+        if (Date.now() >= deadline) { return false; }
         await delay(100);
     }
     return false;
@@ -147,7 +149,7 @@ async function connect(project: string, port: number, signal: AbortSignal): Prom
             };
         },
     });
-    const timer = setTimeout(() => finish(false), timeoutMs);
+    const timer = setTimeout(() => finish(false), connectTimeoutMs);
     signal.addEventListener('abort', abort, { once: true });
     try {
         if (signal.aborted) { return false; }
@@ -192,19 +194,13 @@ export async function beginAutoAttach(): Promise<CloudScriptAutoAttachOperation 
     cancelPending = cancel;
     const completion = (async () => {
         try {
-            let listening = false;
+            // 冷启动时云脚本起监听可能比游戏进程晚数十秒，端口等待不设上限，由取消与附加失败弹窗兜底。
+            if (!await waitListening(port, undefined, controller.signal)) { return false; }
             while (!controller.signal.aborted) {
-                if (!listening) {
-                    listening = await Promise.race([
-                        waitListening(port, timeoutMs),
-                        cancelled.then(() => false),
-                    ]);
-                }
-                if (listening && await connect(project, port, controller.signal)) { return true; }
+                if (await connect(project, port, controller.signal)) { return true; }
                 if (controller.signal.aborted) { return false; }
                 const action = await Promise.race([vscode.window.showWarningMessage(
-                    listening ? '本地云脚本附加失败或超时。请选择重试，或继续运行云脚本。'
-                        : '30 秒内未检测到本地云脚本调试端口，请检查云脚本日志。',
+                    '本地云脚本附加失败。请选择重试，或继续运行云脚本。',
                     '重试', '继续运行',
                 ), cancelled.then(() => undefined)]);
                 if (action !== '重试') { return false; }
